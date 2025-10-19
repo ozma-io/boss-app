@@ -4,16 +4,16 @@ export interface Boss {
   name: string;
   position: string;
   company: string;
-  email: string;
-  phone: string;
-  meetingFrequency: string;
-  communicationStyle: string;
-  keyInterests: string[];
-  workingHours: string;
-  preferredContactMethod: string;
-  startedAt: string;
   department: string;
-  location: string;
+  startedAt: string;
+  birthday: string;
+  managementStyle: string;
+  currentMood: string;
+  favoriteColor: string;
+  communicationPreference: string;
+  meetingFrequency: string;
+  workingHours: string;
+  keyInterests: string[];
 }
 
 // Timeline entry types

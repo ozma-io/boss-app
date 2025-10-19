@@ -3,19 +3,19 @@ import { Boss, TimelineEntry } from '@/types';
 // Mock boss data with all attributes
 export const mockBoss: Boss = {
   id: 'boss-1',
-  name: 'Olga Ivanovna',
+  name: 'Sarah',
   position: 'CTO',
   company: 'TechCorp',
-  email: 'olga.ivanovna@techcorp.com',
-  phone: '+7 (999) 123-45-67',
-  meetingFrequency: 'Weekly 1-on-1s',
-  communicationStyle: 'Direct and data-driven',
-  keyInterests: ['AI/ML', 'Team growth', 'Product quality'],
-  workingHours: '9:00 - 18:00',
-  preferredContactMethod: 'Slack for urgent, email for non-urgent',
-  startedAt: '2024-09-01',
   department: 'Engineering',
-  location: 'Moscow Office, 5th floor',
+  startedAt: '2024-09-01',
+  birthday: 'March 15',
+  managementStyle: 'Collaborative and empowering',
+  currentMood: 'Focused and optimistic',
+  favoriteColor: 'Deep blue',
+  communicationPreference: 'Clear and concise updates',
+  meetingFrequency: 'Weekly 1-on-1s',
+  workingHours: '9:00 - 18:00',
+  keyInterests: ['AI/ML', 'Team growth', 'Product quality'],
 };
 
 // Mock timeline entries (sorted newest first)

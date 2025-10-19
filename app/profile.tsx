@@ -3,9 +3,8 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 // MOCKED DATA - temporary, will be replaced with real data later
 const mockProfile = {
-  name: 'Ivan Petrov',
-  email: 'ivan.petrov@example.com',
-  phone: '+7 (999) 987-65-43',
+  name: 'Alex',
+  email: 'alex@example.com',
   position: 'Senior Developer',
   department: 'Engineering',
   joinedAt: '2023-03-15',
@@ -38,11 +37,6 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.label}>Email</Text>
             <Text style={styles.value}>{mockProfile.email}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Phone</Text>
-            <Text style={styles.value}>{mockProfile.phone}</Text>
           </View>
 
           <View style={styles.section}>

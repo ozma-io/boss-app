@@ -42,38 +42,38 @@ export default function BossDetailsScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{mockBoss.email}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Phone</Text>
-            <Text style={styles.value}>{mockBoss.phone}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Location</Text>
-            <Text style={styles.value}>{mockBoss.location}</Text>
-          </View>
-
-          <View style={styles.section}>
             <Text style={styles.label}>Started At</Text>
             <Text style={styles.value}>{mockBoss.startedAt}</Text>
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.label}>Birthday</Text>
+            <Text style={styles.value}>{mockBoss.birthday}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Management Style</Text>
+            <Text style={styles.value}>{mockBoss.managementStyle}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Current Mood</Text>
+            <Text style={styles.value}>{mockBoss.currentMood}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Favorite Color</Text>
+            <Text style={styles.value}>{mockBoss.favoriteColor}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>Communication Preference</Text>
+            <Text style={styles.value}>{mockBoss.communicationPreference}</Text>
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.label}>Meeting Frequency</Text>
             <Text style={styles.value}>{mockBoss.meetingFrequency}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Communication Style</Text>
-            <Text style={styles.value}>{mockBoss.communicationStyle}</Text>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.label}>Preferred Contact Method</Text>
-            <Text style={styles.value}>{mockBoss.preferredContactMethod}</Text>
           </View>
 
           <View style={styles.section}>
