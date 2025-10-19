@@ -29,6 +29,7 @@ export interface NoteEntry extends BaseEntry {
   type: 'note';
   content: string;
   title?: string;
+  tags?: string[];
 }
 
 // Survey entry
@@ -39,6 +40,7 @@ export interface SurveyEntry extends BaseEntry {
     question: string;
     answer: string | number;
   }[];
+  notes?: string;
 }
 
 // Interaction entry
@@ -48,6 +50,8 @@ export interface InteractionEntry extends BaseEntry {
   mood: string;
   notes: string;
   duration?: number;
+  participants?: string[];
+  topics?: string[];
 }
 
 // Discriminated union for all timeline entries

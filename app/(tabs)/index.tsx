@@ -15,8 +15,10 @@ export default function BossScreen() {
   };
 
   const handleTimelineEntryPress = (entry: TimelineEntry): void => {
-    // TODO: Navigate to entry detail screen based on entry type
-    console.log('Entry pressed:', entry.id, entry.type);
+    router.push({
+      pathname: '/entry-details',
+      params: { entryId: entry.id },
+    });
   };
 
   return (
