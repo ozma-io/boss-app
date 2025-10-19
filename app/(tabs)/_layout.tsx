@@ -15,15 +15,19 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#007AFF',
         headerShown: false,
-        // Tab bar hidden in UI - pending design decision on bottom navigation
-        // Structure kept intact for future use
-        tabBarStyle: { display: 'none' },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Boss',
+          title: 'My Boss',
           tabBarIcon: ({ color }) => <TabBarIcon name="briefcase" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'My Profile',
+          tabBarIcon: ({ color }) => <TabBarIcon name="user-circle" color={color} />,
         }}
       />
     </Tabs>

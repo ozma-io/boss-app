@@ -1,17 +1,12 @@
 import { TimelineItem } from '@/components/timeline/TimelineItem';
 import { TimelineEntry } from '@/types';
 import { mockBoss, mockTimelineEntries } from '@/utils/mockData';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function BossScreen() {
   const handleBossHeaderPress = (): void => {
     router.push('/boss-details');
-  };
-
-  const handleProfilePress = (): void => {
-    router.push('/profile');
   };
 
   const handleTimelineEntryPress = (entry: TimelineEntry): void => {
@@ -23,7 +18,7 @@ export default function BossScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Boss Header with User Icon */}
+      {/* Boss Header */}
       <View style={styles.headerContainer}>
         <TouchableOpacity
           style={styles.bossHeader}
@@ -39,15 +34,6 @@ export default function BossScreen() {
               Meeting: {mockBoss.meetingFrequency}
             </Text>
           </View>
-        </TouchableOpacity>
-
-        {/* User Profile Icon */}
-        <TouchableOpacity
-          style={styles.profileIcon}
-          onPress={handleProfilePress}
-          activeOpacity={0.7}
-        >
-          <FontAwesome name="user-circle" size={32} color="#007AFF" />
         </TouchableOpacity>
       </View>
 
@@ -87,7 +73,6 @@ const styles = StyleSheet.create({
   bossHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 48,
   },
   bossInfo: {
     flex: 1,
@@ -106,11 +91,6 @@ const styles = StyleSheet.create({
   bossDetail: {
     fontSize: 12,
     color: '#999',
-  },
-  profileIcon: {
-    position: 'absolute',
-    top: 60,
-    right: 16,
   },
   timeline: {
     flex: 1,
