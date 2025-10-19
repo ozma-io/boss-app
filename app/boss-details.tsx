@@ -32,11 +32,6 @@ export default function BossDetailsScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.label}>Company</Text>
-            <Text style={styles.value}>{mockBoss.company}</Text>
-          </View>
-
-          <View style={styles.section}>
             <Text style={styles.label}>Department</Text>
             <Text style={styles.value}>{mockBoss.department}</Text>
           </View>

@@ -31,7 +31,7 @@ export default function BossScreen() {
           <View style={styles.bossInfo}>
             <Text style={styles.bossName}>{mockBoss.name}</Text>
             <Text style={styles.bossPosition}>
-              {mockBoss.position} at {mockBoss.company}
+              {mockBoss.position}, {mockBoss.department}
             </Text>
             <Text style={styles.bossDetail}>
               Meeting: {mockBoss.meetingFrequency}

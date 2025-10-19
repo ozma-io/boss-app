@@ -3,7 +3,6 @@ export interface Boss {
   id: string;
   name: string;
   position: string;
-  company: string;
   department: string;
   startedAt: string;
   birthday: string;

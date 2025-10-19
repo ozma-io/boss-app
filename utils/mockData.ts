@@ -5,7 +5,6 @@ export const mockBoss: Boss = {
   id: 'boss-1',
   name: 'Sarah',
   position: 'CTO',
-  company: 'TechCorp',
   department: 'Engineering',
   startedAt: '2024-09-01',
   birthday: 'March 15',
