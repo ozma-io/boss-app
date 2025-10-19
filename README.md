@@ -20,7 +20,10 @@
 ### Deployment
 - **Expo EAS Build** — cloud builds for iOS and Android
 - **Expo EAS Submit** — submission to App Store and Google Play
+- **Expo EAS Update** — over-the-air (OTA) updates for JS/TS code and assets (no store resubmission needed)
 - **Firebase Console / Hosting** — backend and data configuration
+
+*Note: Using direct production rollouts (100% immediately). Gradual rollouts postponed until product validation.*
 
 ---
 
