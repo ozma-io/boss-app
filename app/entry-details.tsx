@@ -167,8 +167,7 @@ export default function EntryDetailsScreen() {
           title: 'Entry Details',
           headerShown: true,
           headerBackTitle: '',
-          presentation: 'card',
-          animation: 'slide_from_bottom',
+          headerTintColor: '#000',
         }}
       />
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
