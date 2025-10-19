@@ -6,7 +6,7 @@
 - **React Native** — cross-platform development (iOS + Android)
 - **Expo** — fast setup, simplified build and deployment
 - **TypeScript** — required; improves type safety and developer experience
-- **React Navigation** — screen routing and navigation
+- **Expo Router** — file-based routing and navigation (like Next.js)
 - **Expo Notifications** — receiving push notifications on the device
 
 ### Backend / BaaS
