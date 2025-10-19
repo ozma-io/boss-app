@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "boss-app-temp",
-    "slug": "boss-app-temp",
+    "name": "Boss Relationship Tracker",
+    "slug": "boss-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "bossapptemp",
+    "scheme": "bossapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
