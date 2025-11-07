@@ -2,11 +2,8 @@ name: EAS Build
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    tags:
+      - 'v*'
 
 jobs:
   build:
@@ -38,9 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build preview for iOS
-        run: eas build --platform ios --profile preview --non-interactive --no-wait
+      - name: Build production for iOS
+        run: eas build --platform ios --profile production --non-interactive --no-wait
 
-      - name: Build preview for Android
-        run: eas build --platform android --profile preview --non-interactive --no-wait
+      - name: Build production for Android
+        run: eas build --platform android --profile production --non-interactive --no-wait
 
