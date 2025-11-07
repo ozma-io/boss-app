@@ -1,4 +1,6 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { signOut } from '@/services/auth.service';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 // MOCKED DATA - temporary, will be replaced with real data later
 const mockProfile = {
@@ -10,6 +12,17 @@ const mockProfile = {
 };
 
 export default function ProfileScreen() {
+  const { user } = useAuth();
+
+  const handleSignOut = async (): Promise<void> => {
+    try {
+      await signOut();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+      console.error('Sign out error:', error);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -23,7 +36,7 @@ export default function ProfileScreen() {
 
         <View style={styles.section}>
           <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>{mockProfile.email}</Text>
+          <Text style={styles.value}>{user?.email || mockProfile.email}</Text>
         </View>
 
         <View style={styles.section}>
@@ -40,6 +53,16 @@ export default function ProfileScreen() {
           <Text style={styles.label}>Joined At</Text>
           <Text style={styles.value}>{mockProfile.joinedAt}</Text>
         </View>
+
+        <Pressable 
+          style={({ pressed }) => [
+            styles.signOutButton,
+            pressed && styles.signOutButtonPressed
+          ]}
+          onPress={handleSignOut}
+        >
+          <Text style={styles.signOutButtonText}>Выйти</Text>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -89,6 +112,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
+  },
+  signOutButton: {
+    backgroundColor: '#ff3b30',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  signOutButtonPressed: {
+    opacity: 0.7,
+  },
+  signOutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
