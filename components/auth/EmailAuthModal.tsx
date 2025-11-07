@@ -384,6 +384,7 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 12,
     textAlign: 'center',
+    fontFamily: 'Manrope-Bold',
   },
   subtitle: {
     fontSize: 16,
@@ -391,10 +392,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 48,
+    fontFamily: 'Manrope-Regular',
   },
   emailText: {
     color: '#000',
     fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
   input: {
     width: '100%',
@@ -406,6 +409,7 @@ const styles = StyleSheet.create({
     color: '#000',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    fontFamily: 'Manrope-Regular',
   },
   continueButton: {
     backgroundColor: '#000',
@@ -421,6 +425,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
   iconContainer: {
     width: 120,
@@ -437,6 +442,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
+    fontFamily: 'Manrope-Regular',
   },
   resendText: {
     fontSize: 14,
@@ -444,6 +450,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
     textDecorationLine: 'underline',
+    fontFamily: 'Manrope-Regular',
   },
   resendTextDisabled: {
     color: '#999',
@@ -463,6 +470,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
   debugButton: {
     marginTop: 32,
@@ -473,6 +481,7 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     textDecorationLine: 'underline',
+    fontFamily: 'Manrope-Regular',
   },
   debugContainer: {
     marginTop: 24,
@@ -486,11 +495,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000',
     marginBottom: 8,
+    fontFamily: 'Manrope-SemiBold',
   },
   debugInstruction: {
     fontSize: 12,
     color: '#666',
     marginBottom: 12,
+    fontFamily: 'Manrope-Regular',
   },
   debugInput: {
     backgroundColor: '#fff',
@@ -503,6 +514,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     marginBottom: 12,
     minHeight: 80,
+    fontFamily: 'Manrope-Regular',
   },
   debugSubmitButton: {
     backgroundColor: '#000',
@@ -514,6 +526,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
 });
 
