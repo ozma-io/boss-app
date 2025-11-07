@@ -26,11 +26,14 @@ export function NotificationOnboardingProvider({ children }: NotificationOnboard
       return;
     }
 
+    console.log(`[NotificationOnboarding] Starting onboarding check for user: ${user.id}`);
+
     try {
       const shouldShow = await shouldShowNotificationOnboarding(user.id);
+      console.log(`[NotificationOnboarding] Onboarding check result: ${shouldShow ? 'show' : 'skip'}`);
       setShouldShowOnboarding(shouldShow);
     } catch (error) {
-      console.error('Error checking if should show onboarding:', error);
+      console.warn('[NotificationOnboarding] Failed to check onboarding status:', error);
       setShouldShowOnboarding(false);
     }
   };

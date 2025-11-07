@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { enableIndexedDbPersistence, initializeFirestore } from 'firebase/firestore';
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "",
@@ -13,5 +14,26 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+export const db = initializeFirestore(app, {
+  experimentalAutoDetectLongPolling: true,
+});
+
+console.log('[Firebase] Firestore initialized with auto-detect long polling');
+
+if (Platform.OS === 'web') {
+  enableIndexedDbPersistence(db)
+    .then(() => {
+      console.log('[Firebase] Offline persistence enabled successfully');
+    })
+    .catch((error) => {
+      if (error.code === 'failed-precondition') {
+        console.warn('[Firebase] Persistence failed: Multiple tabs open');
+      } else if (error.code === 'unimplemented') {
+        console.warn('[Firebase] Persistence not available in this browser');
+      } else {
+        console.error('[Firebase] Failed to enable persistence:', error);
+      }
+    });
+}
 

@@ -81,3 +81,10 @@ export interface UserNotificationData {
   notificationPromptHistory: NotificationPromptHistoryItem[];
 }
 
+// Retry options for network operations
+export interface RetryOptions {
+  maxRetries: number;
+  initialDelayMs: number;
+  shouldRetry: (error: Error) => boolean;
+}
+
