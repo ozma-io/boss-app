@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 import { Platform } from 'react-native';
 
 const firebaseConfig = {
@@ -14,6 +15,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+export const functions = getFunctions(app);
 
 // WebSocket is fully supported on all platforms
 // Web needs special cache configuration

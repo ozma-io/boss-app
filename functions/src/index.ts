@@ -6,6 +6,7 @@
  * - Firestore triggers
  * - FCM push notifications
  * - Test user authentication
+ * - Intercom JWT authentication
  */
 
 import * as admin from 'firebase-admin';
@@ -13,6 +14,8 @@ import * as functions from 'firebase-functions';
 import { onCall } from 'firebase-functions/v2/https';
 
 admin.initializeApp();
+
+export { getIntercomJwt } from './intercom';
 
 const TEST_EMAIL = 'test@test.test';
 

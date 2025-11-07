@@ -1,5 +1,6 @@
 import { auth } from '@/constants/firebase.config';
 import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
+import { logoutIntercomUser, registerIntercomUser } from '@/services/intercom.service';
 import { AuthState, User } from '@/types';
 import { isSignInWithEmailLink } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
@@ -72,6 +73,14 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       console.log(`🔐 [AuthContext] Auth state changed: ${newUser ? 'authenticated' : 'unauthenticated'} at ${new Date().toISOString()}`);
       setUser(newUser);
       setAuthState(newUser ? 'authenticated' : 'unauthenticated');
+      
+      if (newUser) {
+        registerIntercomUser(newUser.id, newUser.email, undefined)
+          .catch(err => console.error('Intercom registration failed:', err));
+      } else {
+        logoutIntercomUser()
+          .catch(err => console.error('Intercom logout failed:', err));
+      }
     });
 
     return unsubscribe;
