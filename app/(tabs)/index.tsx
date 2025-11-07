@@ -1,4 +1,3 @@
-import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/auth.service';
 import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
@@ -296,7 +295,7 @@ const styles = StyleSheet.create({
   },
   goalCard: {
     backgroundColor: '#B8E986',
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     marginBottom: 24,
     padding: 20,
     borderRadius: 16,
@@ -363,7 +362,7 @@ const styles = StyleSheet.create({
   },
   metricsSection: {
     backgroundColor: '#fff',
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     marginBottom: 24,
     padding: 20,
     borderRadius: 16,
@@ -410,30 +409,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   settingsSectionContainer: {
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginBottom: 24,
   },
   settingsSection: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   settingsItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   settingsItemPressed: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   settingsItemText: {
     fontSize: 16,
