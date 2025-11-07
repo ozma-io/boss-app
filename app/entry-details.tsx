@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { mockTimelineEntries } from '@/utils/mockData';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -180,7 +181,7 @@ export default function EntryDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.background,
   },
   content: {
     padding: 20,
@@ -260,7 +261,7 @@ const styles = StyleSheet.create({
   },
   questionText: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 8,
     fontWeight: '500',
   },

@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { StyleSheet, Text, View } from 'react-native';
 import { InteractionEntry as InteractionEntryType } from '@/types';
 
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
   },
   notes: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     lineHeight: 20,
   },
   duration: {

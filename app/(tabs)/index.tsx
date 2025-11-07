@@ -1,4 +1,5 @@
 import { TimelineItem } from '@/components/timeline/TimelineItem';
+import { AppColors } from '@/constants/Colors';
 import { TimelineEntry } from '@/types';
 import { mockBoss, mockTimelineEntries } from '@/utils/mockData';
 import { router } from 'expo-router';
@@ -55,7 +56,7 @@ export default function BossScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.background,
   },
   headerContainer: {
     backgroundColor: '#fff',
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
   },
   bossPosition: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     marginBottom: 2,
   },
   bossDetail: {

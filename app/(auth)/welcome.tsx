@@ -1,4 +1,5 @@
 import { AuthButton } from '@/components/auth/AuthButton';
+import { AppColors } from '@/constants/Colors';
 import { signInWithApple } from '@/services/auth.service';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -107,7 +108,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
   },

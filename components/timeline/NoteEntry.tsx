@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { StyleSheet, Text, View } from 'react-native';
 import { NoteEntry as NoteEntryType } from '@/types';
 
@@ -74,7 +75,7 @@ const styles = StyleSheet.create({
   },
   content: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     lineHeight: 20,
   },
 });

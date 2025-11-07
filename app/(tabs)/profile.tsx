@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/auth.service';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -71,7 +72,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.background,
   },
   header: {
     backgroundColor: '#fff',

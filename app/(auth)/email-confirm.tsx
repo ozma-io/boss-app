@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendEmailVerificationCode, verifyEmailCode } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 24,

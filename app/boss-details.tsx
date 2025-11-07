@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { mockBoss } from '@/utils/mockData';
 import { Stack } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -93,7 +94,7 @@ export default function BossDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: AppColors.background,
   },
   content: {
     padding: 16,

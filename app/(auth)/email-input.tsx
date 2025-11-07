@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { sendEmailVerificationCode } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -109,7 +110,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: AppColors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 48,

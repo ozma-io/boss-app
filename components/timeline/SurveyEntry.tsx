@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { StyleSheet, Text, View } from 'react-native';
 import { SurveyEntry as SurveyEntryType } from '@/types';
 
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
   },
   question: {
     fontSize: 14,
-    color: '#666',
+    color: AppColors.textSecondary,
     flex: 1,
   },
   answer: {
