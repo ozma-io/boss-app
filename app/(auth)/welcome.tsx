@@ -3,7 +3,7 @@ import { AppColors } from '@/constants/Colors';
 import { signInWithApple } from '@/services/auth.service';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function WelcomeScreen(): React.JSX.Element {
   const router = useRouter();
@@ -27,15 +27,11 @@ export default function WelcomeScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={styles.emojiContainer}>
-        <Text style={styles.emoji}>😊</Text>
-        <Text style={styles.emoji}>😌</Text>
-        <Text style={styles.emoji}>😄</Text>
-        <Text style={styles.emoji}>🙂</Text>
-        <Text style={styles.emoji}>😁</Text>
-        <Text style={styles.emoji}>😐</Text>
-        <Text style={styles.emoji}>😬</Text>
-        <Text style={styles.emoji}>😔</Text>
-        <Text style={styles.emoji}>🤔</Text>
+        <Image
+          source={require('@/assets/images/emoji-faces.png')}
+          style={styles.emojiImage}
+          resizeMode="cover"
+        />
       </View>
 
       <View style={styles.titleContainer}>
@@ -68,43 +64,40 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAF8F5',
-    paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 40,
   },
   emojiContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 16,
-    marginBottom: 40,
-    paddingHorizontal: 20,
+    height: 200,
+    width: '100%',
+    marginBottom: 30,
+    marginHorizontal: 0,
+    paddingHorizontal: 0,
   },
-  emoji: {
-    fontSize: 40,
-    width: 64,
-    height: 64,
-    textAlign: 'center',
-    lineHeight: 64,
-    backgroundColor: '#E8E0D5',
-    borderRadius: 32,
+  emojiImage: {
+    width: '100%',
+    height: '100%',
   },
   titleContainer: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 40,
+    paddingHorizontal: 24,
   },
   title: {
-    fontSize: 36,
-    fontWeight: 'bold',
+    fontSize: 40,
+    fontWeight: '700',
     fontStyle: 'italic',
     color: '#000',
-    marginBottom: 4,
+    marginBottom: 0,
+    fontFamily: 'System',
   },
   subtitle: {
-    fontSize: 24,
+    fontSize: 28,
+    fontWeight: '600',
     fontStyle: 'italic',
     color: '#000',
-    marginBottom: 24,
+    marginBottom: 20,
+    fontFamily: 'System',
   },
   description: {
     fontSize: 16,
@@ -115,12 +108,14 @@ const styles = StyleSheet.create({
   buttonContainer: {
     width: '100%',
     marginBottom: 24,
+    paddingHorizontal: 24,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 40,
     marginTop: 'auto',
+    paddingHorizontal: 24,
   },
   footerLink: {
     fontSize: 14,
