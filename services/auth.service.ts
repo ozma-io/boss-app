@@ -17,12 +17,22 @@ import {
 WebBrowser.maybeCompleteAuthSession();
 
 export async function sendEmailVerificationCode(email: string): Promise<void> {
-  const defaultUrl = Platform.OS === 'web' 
-    ? 'http://localhost:8081' 
-    : 'exp://localhost:8081';
+  let redirectUrl: string;
+  
+  if (Platform.OS === 'web') {
+    redirectUrl = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081';
+  } else if (Platform.OS === 'ios') {
+    const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
+    redirectUrl = `${scheme}://`;
+  } else if (Platform.OS === 'android') {
+    const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
+    redirectUrl = `${scheme}://`;
+  } else {
+    redirectUrl = 'exp://localhost:8081';
+  }
   
   const actionCodeSettings = {
-    url: `${process.env.EXPO_PUBLIC_APP_URL || defaultUrl}?email=${email}`,
+    url: `${redirectUrl}?email=${email}`,
     handleCodeInApp: true,
     iOS: {
       bundleId: process.env.EXPO_PUBLIC_IOS_BUNDLE_ID || 'com.anonymous.bossapp',

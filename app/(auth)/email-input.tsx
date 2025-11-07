@@ -2,7 +2,7 @@ import { sendEmailVerificationCode } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function EmailInputScreen(): React.JSX.Element {
   const router = useRouter();
@@ -26,6 +26,10 @@ export default function EmailInputScreen(): React.JSX.Element {
 
     setIsLoading(true);
     try {
+      if (Platform.OS === 'web') {
+        window.localStorage.setItem('emailForSignIn', email);
+      }
+      
       await sendEmailVerificationCode(email);
       router.push({
         pathname: '/(auth)/email-confirm',

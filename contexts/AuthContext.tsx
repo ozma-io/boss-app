@@ -1,6 +1,9 @@
-import { getCurrentUser, onAuthStateChanged } from '@/services/auth.service';
+import { auth } from '@/constants/firebase.config';
+import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { AuthState, User } from '@/types';
+import { isSignInWithEmailLink } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 
 interface AuthContextType {
   user: User | null;
@@ -19,13 +22,43 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const [authState, setAuthState] = useState<AuthState>('loading');
 
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-      setAuthState('authenticated');
-    } else {
-      setAuthState('unauthenticated');
-    }
+    const initAuth = async (): Promise<void> => {
+      if (Platform.OS === 'web') {
+        const url = window.location.href;
+        
+        if (isSignInWithEmailLink(auth, url)) {
+          let email = window.localStorage.getItem('emailForSignIn');
+          
+          if (!email) {
+            const urlParams = new URLSearchParams(window.location.search);
+            email = urlParams.get('email');
+          }
+          
+          if (email) {
+            try {
+              const signedInUser = await verifyEmailCode(email, url);
+              setUser(signedInUser);
+              setAuthState('authenticated');
+              window.localStorage.removeItem('emailForSignIn');
+              window.history.replaceState({}, document.title, window.location.pathname);
+              return;
+            } catch (error) {
+              console.error('Error signing in with email link:', error);
+            }
+          }
+        }
+      }
+      
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        setAuthState('authenticated');
+      } else {
+        setAuthState('unauthenticated');
+      }
+    };
+
+    initAuth();
 
     const unsubscribe = onAuthStateChanged((newUser: User | null) => {
       setUser(newUser);
