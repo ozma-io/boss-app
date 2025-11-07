@@ -1,7 +1,8 @@
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
@@ -40,14 +41,42 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
 }
 
 function RootLayoutNav() {
+  const { authState } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (authState === 'loading') {
+      return;
+    }
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (authState === 'unauthenticated' && !inAuthGroup) {
+      router.replace('/(auth)/welcome');
+    } else if (authState === 'authenticated' && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [authState, segments]);
+
   // Always use light theme for now, ignore system color scheme
   return (
     <ThemeProvider value={DefaultTheme}>
       <Stack>
+        <Stack.Screen 
+          name="(auth)" 
+          options={{ 
+            headerShown: false,
+          }} 
+        />
         <Stack.Screen 
           name="(tabs)" 
           options={{ 
@@ -56,6 +85,8 @@ function RootLayoutNav() {
           }} 
         />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="boss-details" options={{ headerShown: true, title: 'Boss Details' }} />
+        <Stack.Screen name="entry-details" options={{ headerShown: true, title: 'Entry Details' }} />
       </Stack>
     </ThemeProvider>
   );

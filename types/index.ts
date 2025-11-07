@@ -57,3 +57,13 @@ export interface InteractionEntry extends BaseEntry {
 // Discriminated union for all timeline entries
 export type TimelineEntry = NoteEntry | SurveyEntry | InteractionEntry;
 
+// User type definition
+export interface User {
+  id: string;
+  email: string;
+  createdAt: string;
+}
+
+// Auth state type
+export type AuthState = 'authenticated' | 'unauthenticated' | 'loading';
+
