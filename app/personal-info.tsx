@@ -37,53 +37,55 @@ export default function PersonalInfoScreen() {
   return (
     <ScrollView style={styles.container} testID="personal-info-scroll">
       <View style={styles.content} testID="personal-info-content">
-        <View style={styles.infoItem} testID="info-item-name">
-          <View style={styles.iconContainer} testID="icon-container-name">
-            <FontAwesome name="user" size={20} color="#666" testID="icon-name" />
+        <View style={styles.infoBlock}>
+          <View style={styles.infoItem} testID="info-item-name">
+            <View style={styles.iconContainer} testID="icon-container-name">
+              <FontAwesome name="user" size={20} color="#666" testID="icon-name" />
+            </View>
+            <View style={styles.infoContent} testID="info-content-name">
+              <Text style={styles.label} testID="label-name">Name</Text>
+              <Text style={styles.value} testID="value-name">{mockUserProfile.name}</Text>
+            </View>
           </View>
-          <View style={styles.infoContent} testID="info-content-name">
-            <Text style={styles.label} testID="label-name">Name</Text>
-            <Text style={styles.value} testID="value-name">{mockUserProfile.name}</Text>
-          </View>
-        </View>
 
-        <View style={styles.infoItem} testID="info-item-email">
-          <View style={styles.iconContainer} testID="icon-container-email">
-            <FontAwesome name="envelope" size={20} color="#666" testID="icon-email" />
+          <View style={styles.infoItem} testID="info-item-email">
+            <View style={styles.iconContainer} testID="icon-container-email">
+              <FontAwesome name="envelope" size={20} color="#666" testID="icon-email" />
+            </View>
+            <View style={styles.infoContent} testID="info-content-email">
+              <Text style={styles.label} testID="label-email">Email</Text>
+              <Text style={styles.value} testID="value-email">{user?.email || mockUserProfile.email}</Text>
+            </View>
           </View>
-          <View style={styles.infoContent} testID="info-content-email">
-            <Text style={styles.label} testID="label-email">Email</Text>
-            <Text style={styles.value} testID="value-email">{user?.email || mockUserProfile.email}</Text>
-          </View>
-        </View>
 
-        <View style={styles.infoItem} testID="info-item-position">
-          <View style={styles.iconContainer} testID="icon-container-position">
-            <FontAwesome name="briefcase" size={20} color="#666" testID="icon-position" />
+          <View style={styles.infoItem} testID="info-item-position">
+            <View style={styles.iconContainer} testID="icon-container-position">
+              <FontAwesome name="briefcase" size={20} color="#666" testID="icon-position" />
+            </View>
+            <View style={styles.infoContent} testID="info-content-position">
+              <Text style={styles.label} testID="label-position">Position</Text>
+              <Text style={styles.value} testID="value-position">{mockUserProfile.position}</Text>
+            </View>
           </View>
-          <View style={styles.infoContent} testID="info-content-position">
-            <Text style={styles.label} testID="label-position">Position</Text>
-            <Text style={styles.value} testID="value-position">{mockUserProfile.position}</Text>
-          </View>
-        </View>
 
-        <View style={styles.infoItem} testID="info-item-department">
-          <View style={styles.iconContainer} testID="icon-container-department">
-            <FontAwesome name="building" size={20} color="#666" testID="icon-department" />
+          <View style={styles.infoItem} testID="info-item-department">
+            <View style={styles.iconContainer} testID="icon-container-department">
+              <FontAwesome name="building" size={20} color="#666" testID="icon-department" />
+            </View>
+            <View style={styles.infoContent} testID="info-content-department">
+              <Text style={styles.label} testID="label-department">Department</Text>
+              <Text style={styles.value} testID="value-department">{mockUserProfile.department}</Text>
+            </View>
           </View>
-          <View style={styles.infoContent} testID="info-content-department">
-            <Text style={styles.label} testID="label-department">Department</Text>
-            <Text style={styles.value} testID="value-department">{mockUserProfile.department}</Text>
-          </View>
-        </View>
 
-        <View style={styles.infoItem} testID="info-item-joined">
-          <View style={styles.iconContainer} testID="icon-container-joined">
-            <FontAwesome name="calendar" size={20} color="#666" testID="icon-joined" />
-          </View>
-          <View style={styles.infoContent} testID="info-content-joined">
-            <Text style={styles.label} testID="label-joined">Joined at</Text>
-            <Text style={styles.value} testID="value-joined">{mockUserProfile.joinedAt}</Text>
+          <View style={[styles.infoItem, styles.lastInfoItem]} testID="info-item-joined">
+            <View style={styles.iconContainer} testID="icon-container-joined">
+              <FontAwesome name="calendar" size={20} color="#666" testID="icon-joined" />
+            </View>
+            <View style={styles.infoContent} testID="info-content-joined">
+              <Text style={styles.label} testID="label-joined">Joined at</Text>
+              <Text style={styles.value} testID="value-joined">{mockUserProfile.joinedAt}</Text>
+            </View>
           </View>
         </View>
 
@@ -121,14 +123,21 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
   },
+  infoBlock: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
+  },
+  lastInfoItem: {
+    borderBottomWidth: 0,
   },
   iconContainer: {
     width: 40,
@@ -137,46 +146,41 @@ const styles = StyleSheet.create({
   infoContent: {
     flex: 1,
     marginLeft: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   label: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
+    fontSize: 16,
+    color: '#333',
   },
   value: {
     fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
+    color: '#999',
   },
   signOutButton: {
     backgroundColor: '#fff',
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    paddingHorizontal: 16,
     marginTop: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ff3b30',
+    borderRadius: 12,
+    alignItems: 'flex-start',
   },
   signOutButtonText: {
     color: '#ff3b30',
     fontSize: 16,
-    fontWeight: '600',
   },
   deleteButton: {
     backgroundColor: '#fff',
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    paddingHorizontal: 16,
     marginTop: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ff3b30',
+    borderRadius: 12,
+    alignItems: 'flex-start',
   },
   deleteButtonText: {
     color: '#ff3b30',
     fontSize: 16,
-    fontWeight: '600',
   },
   buttonPressed: {
     opacity: 0.7,
