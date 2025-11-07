@@ -37,7 +37,12 @@ export default function EmailInputScreen(): React.JSX.Element {
         params: { email },
       });
     } catch (error) {
-      Alert.alert('Error', 'Failed to send magic link. Please try again.');
+      console.error('[EmailInput] Error sending magic link:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      Alert.alert(
+        'Error', 
+        `Failed to send magic link.\n\nDetails: ${errorMessage}\n\nPlease try again.`
+      );
     } finally {
       setIsLoading(false);
     }

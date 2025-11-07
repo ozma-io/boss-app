@@ -67,3 +67,17 @@ export interface User {
 // Auth state type
 export type AuthState = 'authenticated' | 'unauthenticated' | 'loading';
 
+// Notification permission types
+export type NotificationPermissionStatus = 'granted' | 'denied' | 'not_asked';
+
+export interface NotificationPromptHistoryItem {
+  timestamp: string;
+  action: 'shown' | 'granted' | 'denied';
+}
+
+export interface UserNotificationData {
+  notificationPermissionStatus: NotificationPermissionStatus;
+  lastNotificationPromptAt: string | null;
+  notificationPromptHistory: NotificationPromptHistoryItem[];
+}
+

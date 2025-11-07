@@ -1,5 +1,6 @@
 import { AppColors } from '@/constants/Colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -10,8 +11,8 @@ import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 export {
-    // Catch any errors thrown by the Layout component.
-    ErrorBoundary
+  // Catch any errors thrown by the Layout component.
+  ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -45,13 +46,16 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <NotificationOnboardingProvider>
+        <RootLayoutNav />
+      </NotificationOnboardingProvider>
     </AuthProvider>
   );
 }
 
 function RootLayoutNav() {
   const { authState } = useAuth();
+  const { shouldShowOnboarding, setShouldShowOnboarding } = useNotificationOnboarding();
   const segments = useSegments();
   const router = useRouter();
 
@@ -61,13 +65,20 @@ function RootLayoutNav() {
     }
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === 'notification-onboarding';
 
     if (authState === 'unauthenticated' && !inAuthGroup) {
       router.replace('/(auth)/welcome');
     } else if (authState === 'authenticated' && inAuthGroup) {
-      router.replace('/(tabs)');
+      if (shouldShowOnboarding) {
+        router.replace('/notification-onboarding');
+      } else {
+        router.replace('/(tabs)');
+      }
+    } else if (authState === 'authenticated' && shouldShowOnboarding && !inOnboarding) {
+      router.replace('/notification-onboarding');
     }
-  }, [authState, segments]);
+  }, [authState, segments, shouldShowOnboarding]);
 
   if (authState === 'loading') {
     return (
@@ -86,6 +97,14 @@ function RootLayoutNav() {
           options={{ 
             headerShown: false,
           }} 
+        />
+        <Stack.Screen 
+          name="notification-onboarding"
+          options={{
+            headerShown: false,
+            presentation: 'fullScreenModal',
+            gestureEnabled: false,
+          }}
         />
         <Stack.Screen 
           name="(tabs)" 

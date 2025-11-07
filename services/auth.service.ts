@@ -1,34 +1,74 @@
 import { auth } from '@/constants/firebase.config';
 import { User } from '@/types';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
 import {
+  User as FirebaseUser,
   GoogleAuthProvider,
   OAuthProvider,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   sendSignInLinkToEmail,
   signInWithCredential,
-  signInWithEmailLink,
-  User as FirebaseUser
+  signInWithEmailLink
 } from 'firebase/auth';
+import { Platform } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
+
+function getExpoDevServerUrl(): string | null {
+  // In Expo Go, use http:// (required by Firebase)
+  // The web version will handle redirecting back to Expo Go
+  
+  // Try manifest2 first (newer SDK versions)
+  const manifest2HostUri = Constants.expoConfig?.hostUri;
+  if (manifest2HostUri) {
+    console.log('[Auth] Found hostUri from expoConfig:', manifest2HostUri);
+    return `http://${manifest2HostUri}`;
+  }
+  
+  // Try manifest (legacy)
+  const manifestHostUri = (Constants.manifest2?.extra?.expoGo?.debuggerHost || 
+                           Constants.manifest?.debuggerHost);
+  if (manifestHostUri) {
+    // debuggerHost format: "192.168.1.74:19000" - need to change port to 8081
+    const host = manifestHostUri.split(':')[0];
+    console.log('[Auth] Found debuggerHost, using:', `http://${host}:8081`);
+    return `http://${host}:8081`;
+  }
+  
+  console.warn('[Auth] Could not detect dev server URL, falling back to localhost');
+  return null;
+}
 
 export async function sendEmailVerificationCode(email: string): Promise<void> {
   let redirectUrl: string;
   
+  // Check if running in Expo Go or standalone build
+  const isExpoGo = Constants.executionEnvironment === 'storeClient';
+  
+  // Debug: log all relevant Constants values
+  console.log('[Auth] Debug - Constants info:', {
+    executionEnvironment: Constants.executionEnvironment,
+    expoConfigHostUri: Constants.expoConfig?.hostUri,
+    manifest2DebuggerHost: Constants.manifest2?.extra?.expoGo?.debuggerHost,
+    manifestDebuggerHost: Constants.manifest?.debuggerHost,
+  });
+  
   if (Platform.OS === 'web') {
+    // Web: use localhost or production URL
     redirectUrl = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081';
-  } else if (Platform.OS === 'ios') {
-    const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
-    redirectUrl = `${scheme}://`;
-  } else if (Platform.OS === 'android') {
-    const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
-    redirectUrl = `${scheme}://`;
+  } else if (isExpoGo) {
+    // Expo Go: automatically detect dev server IP address (prioritize auto-detection over env var for mobile)
+    const devServerUrl = getExpoDevServerUrl();
+    redirectUrl = devServerUrl || process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081';
+    console.log('[Auth] Expo Go detected. Using redirect URL:', redirectUrl);
   } else {
-    redirectUrl = 'exp://localhost:8081';
+    // Standalone build: use custom scheme
+    const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
+    redirectUrl = `${scheme}://`;
+    console.log('[Auth] Standalone build detected. Using redirect URL:', redirectUrl);
   }
   
   const actionCodeSettings = {
@@ -43,7 +83,20 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     },
   };
 
-  await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+  console.log('[Auth] Sending sign-in link with settings:', {
+    url: actionCodeSettings.url,
+    handleCodeInApp: actionCodeSettings.handleCodeInApp,
+    iOS: actionCodeSettings.iOS,
+    android: actionCodeSettings.android,
+  });
+
+  try {
+    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+    console.log('[Auth] Sign-in link sent successfully to:', email);
+  } catch (error) {
+    console.error('[Auth] Failed to send sign-in link:', error);
+    throw error;
+  }
 }
 
 export async function verifyEmailCode(email: string, emailLink: string): Promise<User> {
