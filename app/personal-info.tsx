@@ -3,10 +3,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/auth.service';
 import { mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export default function PersonalInfoScreen() {
   const { user } = useAuth();
+  const [name, setName] = useState(mockUserProfile.name);
+  const [position, setPosition] = useState(mockUserProfile.position);
+  const [department, setDepartment] = useState(mockUserProfile.department);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingPosition, setIsEditingPosition] = useState(false);
+  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
 
   const handleSignOut = async (): Promise<void> => {
     try {
@@ -17,19 +24,62 @@ export default function PersonalInfoScreen() {
     }
   };
 
+  const handleBlurName = (): void => {
+    setIsEditingName(false);
+    // TODO: Save name to backend
+  };
+
+  const handleBlurPosition = (): void => {
+    setIsEditingPosition(false);
+    // TODO: Save position to backend
+  };
+
+  const handleBlurDepartment = (): void => {
+    setIsEditingDepartment(false);
+    // TODO: Save department to backend
+  };
+
+  const saveAllFields = (): void => {
+    // TODO: Save all fields to backend
+    console.log('Saving fields:', { name, position, department });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (isEditingName || isEditingPosition || isEditingDepartment) {
+        saveAllFields();
+      }
+    };
+  }, [isEditingName, isEditingPosition, isEditingDepartment, name, position, department]);
+
   return (
     <ScrollView style={styles.container} testID="personal-info-scroll">
       <View style={styles.content} testID="personal-info-content">
         <View style={styles.infoBlock}>
-          <View style={styles.infoItem} testID="info-item-name">
+          <Pressable
+            style={styles.infoItem}
+            onPress={() => setIsEditingName(true)}
+            testID="info-item-name"
+          >
             <View style={styles.iconContainer} testID="icon-container-name">
               <FontAwesome name="user" size={20} color="#666" testID="icon-name" />
             </View>
             <View style={styles.infoContent} testID="info-content-name">
               <Text style={styles.label} testID="label-name">Name</Text>
-              <Text style={styles.value} testID="value-name">{mockUserProfile.name}</Text>
+              {isEditingName ? (
+                <TextInput
+                  style={[styles.valueInput, { outlineStyle: 'none' } as any]}
+                  value={name}
+                  onChangeText={setName}
+                  onBlur={handleBlurName}
+                  autoFocus
+                  testID="input-name"
+                />
+              ) : (
+                <Text style={styles.value} testID="value-name">{name}</Text>
+              )}
             </View>
-          </View>
+          </Pressable>
 
           <View style={styles.infoItem} testID="info-item-email">
             <View style={styles.iconContainer} testID="icon-container-email">
@@ -41,25 +91,55 @@ export default function PersonalInfoScreen() {
             </View>
           </View>
 
-          <View style={styles.infoItem} testID="info-item-position">
+          <Pressable
+            style={styles.infoItem}
+            onPress={() => setIsEditingPosition(true)}
+            testID="info-item-position"
+          >
             <View style={styles.iconContainer} testID="icon-container-position">
               <FontAwesome name="briefcase" size={20} color="#666" testID="icon-position" />
             </View>
             <View style={styles.infoContent} testID="info-content-position">
               <Text style={styles.label} testID="label-position">Position</Text>
-              <Text style={styles.value} testID="value-position">{mockUserProfile.position}</Text>
+              {isEditingPosition ? (
+                <TextInput
+                  style={[styles.valueInput, { outlineStyle: 'none' } as any]}
+                  value={position}
+                  onChangeText={setPosition}
+                  onBlur={handleBlurPosition}
+                  autoFocus
+                  testID="input-position"
+                />
+              ) : (
+                <Text style={styles.value} testID="value-position">{position}</Text>
+              )}
             </View>
-          </View>
+          </Pressable>
 
-          <View style={styles.infoItem} testID="info-item-department">
+          <Pressable
+            style={styles.infoItem}
+            onPress={() => setIsEditingDepartment(true)}
+            testID="info-item-department"
+          >
             <View style={styles.iconContainer} testID="icon-container-department">
               <FontAwesome name="building" size={20} color="#666" testID="icon-department" />
             </View>
             <View style={styles.infoContent} testID="info-content-department">
               <Text style={styles.label} testID="label-department">Department</Text>
-              <Text style={styles.value} testID="value-department">{mockUserProfile.department}</Text>
+              {isEditingDepartment ? (
+                <TextInput
+                  style={[styles.valueInput, { outlineStyle: 'none' } as any]}
+                  value={department}
+                  onChangeText={setDepartment}
+                  onBlur={handleBlurDepartment}
+                  autoFocus
+                  testID="input-department"
+                />
+              ) : (
+                <Text style={styles.value} testID="value-department">{department}</Text>
+              )}
             </View>
-          </View>
+          </Pressable>
 
           <View style={[styles.infoItem, styles.lastInfoItem]} testID="info-item-joined">
             <View style={styles.iconContainer} testID="icon-container-joined">
@@ -131,6 +211,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     fontFamily: 'Manrope-Regular',
+  },
+  valueInput: {
+    fontSize: 16,
+    color: '#999',
+    fontFamily: 'Manrope-Regular',
+    padding: 0,
+    margin: 0,
+    borderWidth: 0,
+    textAlign: 'right',
   },
   signOutButton: {
     backgroundColor: '#fff',
