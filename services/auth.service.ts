@@ -62,10 +62,10 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     url: `${redirectUrl}?email=${email}`,
     handleCodeInApp: true,
     iOS: {
-      bundleId: process.env.EXPO_PUBLIC_IOS_BUNDLE_ID || 'com.anonymous.bossapp',
+      bundleId: process.env.EXPO_PUBLIC_IOS_BUNDLE_ID || 'com.ozmaio.bossapp',
     },
     android: {
-      packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE || 'com.anonymous.bossapp',
+      packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE || 'com.ozmaio.bossapp',
       installApp: true,
     },
   };
