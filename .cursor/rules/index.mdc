@@ -1,0 +1,20 @@
+---
+alwaysApply: true
+---
+
+# Boss Relationship Tracker
+
+## Tech Stack
+React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functions)
+
+## Key Rules
+- TypeScript strict typing required
+- Functional components with hooks
+- Expo Router file-based routing
+- User data scoped to `userId` (Firebase rules enforce `request.auth.uid === userId`)
+
+## Find Details In
+- **Tech stack & data model**: `README.md`
+- **Setup instructions**: `SETUP.md`
+- **Project structure**: See `README.md` or explore `app/`, `components/`, `services/`, `types/`
+- **Firebase paths**: `/users/{userId}/bosses/{bossId}/entries/{entryId}`
