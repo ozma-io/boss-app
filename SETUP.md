@@ -91,6 +91,21 @@ npm install
 npm run build
 ```
 
+**Important:** For Cloud Functions 2nd gen to create custom tokens, grant the service account permission:
+
+```bash
+# First, get your project number
+gcloud projects describe the-boss-app-e42b6 --format="value(projectNumber)"
+
+# Then grant permission (replace PROJECT_NUMBER with the number from above)
+gcloud iam service-accounts add-iam-policy-binding PROJECT_NUMBER-compute@developer.gserviceaccount.com \
+  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project=the-boss-app-e42b6
+```
+
+This is required once per project for the test user authentication feature to work.
+
 ### 6. Initialize Firebase Project
 
 ```bash
