@@ -20,7 +20,7 @@ export const functions = getFunctions(app);
 // WebSocket is fully supported on all platforms
 // Web needs special cache configuration
 export const db = initializeFirestore(app, {
-  localCache: Platform.OS === 'web' 
+  localCache: Platform.OS === 'web' && typeof window !== 'undefined'
     ? persistentLocalCache({ tabManager: persistentSingleTabManager({}) })
     : undefined,
 });
