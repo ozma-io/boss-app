@@ -1,6 +1,8 @@
 import { AppColors } from '@/constants/Colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
+import { Lobster_400Regular } from '@expo-google-fonts/lobster';
+import { Manrope_400Regular } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -26,6 +28,8 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    'Lobster-Regular': Lobster_400Regular,
+    'Manrope-Regular': Manrope_400Regular,
     ...FontAwesome.font,
   });
 
