@@ -4,7 +4,7 @@ import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function MainScreen() {
   const { user } = useAuth();
@@ -73,7 +73,11 @@ export default function MainScreen() {
 
         <View style={styles.profileSection}>
           <View style={styles.avatarContainer}>
-            <Text style={styles.avatar}>👤</Text>
+            <Image 
+              source={require('@/assets/images/avatar.png')} 
+              style={styles.avatar}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.username}>{mockUserProfile.username}</Text>
           <Text style={styles.email}>{user?.email || mockUserProfile.email}</Text>
@@ -236,7 +240,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    paddingTop: 60,
+    paddingTop: 27,
     paddingBottom: 16,
     alignItems: 'center',
   },
@@ -247,19 +251,17 @@ const styles = StyleSheet.create({
   },
   profileSection: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingTop: 20,
+    paddingBottom: 36,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#E8A87C',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 120,
+    height: 120,
     marginBottom: 12,
   },
   avatar: {
-    fontSize: 40,
+    width: 120,
+    height: 120,
   },
   username: {
     fontSize: 24,
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
   goalCard: {
     backgroundColor: '#B8E986',
     marginHorizontal: 12,
-    marginBottom: 24,
+    marginBottom: 16,
     padding: 20,
     borderRadius: 16,
   },
