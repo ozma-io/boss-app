@@ -35,55 +35,55 @@ export default function PersonalInfoScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.infoItem}>
-          <View style={styles.iconContainer}>
-            <FontAwesome name="user" size={20} color="#666" />
+    <ScrollView style={styles.container} testID="personal-info-scroll">
+      <View style={styles.content} testID="personal-info-content">
+        <View style={styles.infoItem} testID="info-item-name">
+          <View style={styles.iconContainer} testID="icon-container-name">
+            <FontAwesome name="user" size={20} color="#666" testID="icon-name" />
           </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.label}>Name</Text>
-            <Text style={styles.value}>{mockUserProfile.name}</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoItem}>
-          <View style={styles.iconContainer}>
-            <FontAwesome name="envelope" size={20} color="#666" />
-          </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{user?.email || mockUserProfile.email}</Text>
+          <View style={styles.infoContent} testID="info-content-name">
+            <Text style={styles.label} testID="label-name">Name</Text>
+            <Text style={styles.value} testID="value-name">{mockUserProfile.name}</Text>
           </View>
         </View>
 
-        <View style={styles.infoItem}>
-          <View style={styles.iconContainer}>
-            <FontAwesome name="briefcase" size={20} color="#666" />
+        <View style={styles.infoItem} testID="info-item-email">
+          <View style={styles.iconContainer} testID="icon-container-email">
+            <FontAwesome name="envelope" size={20} color="#666" testID="icon-email" />
           </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.label}>Position</Text>
-            <Text style={styles.value}>{mockUserProfile.position}</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoItem}>
-          <View style={styles.iconContainer}>
-            <FontAwesome name="building" size={20} color="#666" />
-          </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.label}>Department</Text>
-            <Text style={styles.value}>{mockUserProfile.department}</Text>
+          <View style={styles.infoContent} testID="info-content-email">
+            <Text style={styles.label} testID="label-email">Email</Text>
+            <Text style={styles.value} testID="value-email">{user?.email || mockUserProfile.email}</Text>
           </View>
         </View>
 
-        <View style={styles.infoItem}>
-          <View style={styles.iconContainer}>
-            <FontAwesome name="calendar" size={20} color="#666" />
+        <View style={styles.infoItem} testID="info-item-position">
+          <View style={styles.iconContainer} testID="icon-container-position">
+            <FontAwesome name="briefcase" size={20} color="#666" testID="icon-position" />
           </View>
-          <View style={styles.infoContent}>
-            <Text style={styles.label}>Joined at</Text>
-            <Text style={styles.value}>{mockUserProfile.joinedAt}</Text>
+          <View style={styles.infoContent} testID="info-content-position">
+            <Text style={styles.label} testID="label-position">Position</Text>
+            <Text style={styles.value} testID="value-position">{mockUserProfile.position}</Text>
+          </View>
+        </View>
+
+        <View style={styles.infoItem} testID="info-item-department">
+          <View style={styles.iconContainer} testID="icon-container-department">
+            <FontAwesome name="building" size={20} color="#666" testID="icon-department" />
+          </View>
+          <View style={styles.infoContent} testID="info-content-department">
+            <Text style={styles.label} testID="label-department">Department</Text>
+            <Text style={styles.value} testID="value-department">{mockUserProfile.department}</Text>
+          </View>
+        </View>
+
+        <View style={styles.infoItem} testID="info-item-joined">
+          <View style={styles.iconContainer} testID="icon-container-joined">
+            <FontAwesome name="calendar" size={20} color="#666" testID="icon-joined" />
+          </View>
+          <View style={styles.infoContent} testID="info-content-joined">
+            <Text style={styles.label} testID="label-joined">Joined at</Text>
+            <Text style={styles.value} testID="value-joined">{mockUserProfile.joinedAt}</Text>
           </View>
         </View>
 
@@ -93,8 +93,9 @@ export default function PersonalInfoScreen() {
             pressed && styles.buttonPressed
           ]}
           onPress={handleSignOut}
+          testID="sign-out-button"
         >
-          <Text style={styles.signOutButtonText}>Sign out</Text>
+          <Text style={styles.signOutButtonText} testID="sign-out-button-text">Sign out</Text>
         </Pressable>
 
         <Pressable
@@ -103,8 +104,9 @@ export default function PersonalInfoScreen() {
             pressed && styles.buttonPressed
           ]}
           onPress={handleDeleteAccount}
+          testID="delete-account-button"
         >
-          <Text style={styles.deleteButtonText}>Delete account</Text>
+          <Text style={styles.deleteButtonText} testID="delete-account-button-text">Delete account</Text>
         </Pressable>
       </View>
     </ScrollView>

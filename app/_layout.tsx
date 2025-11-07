@@ -82,8 +82,8 @@ function RootLayoutNav() {
 
   if (authState === 'loading') {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: AppColors.background }}>
-        <ActivityIndicator size="large" color={AppColors.loaderColor} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: AppColors.background }} testID="auth-loading-container">
+        <ActivityIndicator size="large" color={AppColors.loaderColor} testID="auth-loading-indicator" />
       </View>
     );
   }

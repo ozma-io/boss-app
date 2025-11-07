@@ -14,18 +14,21 @@ export default function ChatScreen() {
           styles.messageContainer,
           isUser ? styles.userMessageContainer : styles.aiMessageContainer,
         ]}
+        testID={`message-${message.id}`}
       >
         <View
           style={[
             styles.messageBubble,
             isUser ? styles.userMessageBubble : styles.aiMessageBubble,
           ]}
+          testID={`message-bubble-${message.id}`}
         >
           <Text
             style={[
               styles.messageText,
               isUser ? styles.userMessageText : styles.aiMessageText,
             ]}
+            testID={`message-text-${message.id}`}
           >
             {message.text}
           </Text>
@@ -35,26 +38,28 @@ export default function ChatScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>The Boss App</Text>
+    <View style={styles.container} testID="chat-container">
+      <View style={styles.header} testID="chat-header">
+        <Text style={styles.headerTitle} testID="chat-header-title">The Boss App</Text>
       </View>
 
       <ScrollView
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
+        testID="messages-scroll"
       >
         {mockChatMessages.map(renderMessage)}
       </ScrollView>
 
-      <View style={styles.inputContainer}>
+      <View style={styles.inputContainer} testID="input-container">
         <TextInput
           style={styles.input}
           placeholder="Lorem ipsum"
           placeholderTextColor="#999"
+          testID="message-input"
         />
-        <TouchableOpacity style={styles.micButton}>
-          <FontAwesome name="microphone" size={20} color="#666" />
+        <TouchableOpacity style={styles.micButton} testID="mic-button">
+          <FontAwesome name="microphone" size={20} color="#666" testID="mic-icon" />
         </TouchableOpacity>
       </View>
     </View>

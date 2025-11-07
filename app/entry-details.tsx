@@ -15,8 +15,8 @@ export default function EntryDetailsScreen() {
 
   if (!entry) {
     return (
-      <View style={styles.container}>
-        <Text>Entry not found</Text>
+      <View style={styles.container} testID="entry-not-found-container">
+        <Text testID="entry-not-found-text">Entry not found</Text>
       </View>
     );
   }
@@ -36,24 +36,24 @@ export default function EntryDetailsScreen() {
       case 'note':
         return (
           <>
-            <View style={styles.iconContainer}>
-              <Text style={styles.largeIcon}>📝</Text>
+            <View style={styles.iconContainer} testID="note-icon-container">
+              <Text style={styles.largeIcon} testID="note-icon">📝</Text>
             </View>
-            <Text style={styles.title}>{entry.title || 'Note'}</Text>
-            <Text style={styles.timestamp}>{formattedDate}</Text>
+            <Text style={styles.title} testID="note-title">{entry.title || 'Note'}</Text>
+            <Text style={styles.timestamp} testID="note-timestamp">{formattedDate}</Text>
             
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>CONTENT</Text>
-              <Text style={styles.contentText}>{entry.content}</Text>
+            <View style={styles.section} testID="note-content-section">
+              <Text style={styles.sectionLabel} testID="note-content-label">CONTENT</Text>
+              <Text style={styles.contentText} testID="note-content-text">{entry.content}</Text>
             </View>
 
             {entry.tags && entry.tags.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>TAGS</Text>
-                <View style={styles.tagContainer}>
+              <View style={styles.section} testID="note-tags-section">
+                <Text style={styles.sectionLabel} testID="note-tags-label">TAGS</Text>
+                <View style={styles.tagContainer} testID="note-tags-container">
                   {entry.tags.map((tag, index) => (
-                    <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>{tag}</Text>
+                    <View key={index} style={styles.tag} testID={`note-tag-${index}`}>
+                      <Text style={styles.tagText} testID={`note-tag-text-${index}`}>{tag}</Text>
                     </View>
                   ))}
                 </View>
@@ -65,26 +65,26 @@ export default function EntryDetailsScreen() {
       case 'survey':
         return (
           <>
-            <View style={styles.iconContainer}>
-              <Text style={styles.largeIcon}>📊</Text>
+            <View style={styles.iconContainer} testID="survey-icon-container">
+              <Text style={styles.largeIcon} testID="survey-icon">📊</Text>
             </View>
-            <Text style={styles.title}>{entry.surveyTitle}</Text>
-            <Text style={styles.timestamp}>{formattedDate}</Text>
+            <Text style={styles.title} testID="survey-title">{entry.surveyTitle}</Text>
+            <Text style={styles.timestamp} testID="survey-timestamp">{formattedDate}</Text>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>RESPONSES</Text>
+            <View style={styles.section} testID="survey-responses-section">
+              <Text style={styles.sectionLabel} testID="survey-responses-label">RESPONSES</Text>
               {entry.responses.map((response, index) => {
                 const answerValue = response.answer;
                 const isNumericRating = typeof answerValue === 'number' && answerValue <= 5;
                 return (
-                  <View key={index} style={styles.responseItem}>
-                    <Text style={styles.questionText}>{response.question}</Text>
-                    <View style={styles.answerContainer}>
-                      <Text style={styles.answerValue}>{answerValue}</Text>
+                  <View key={index} style={styles.responseItem} testID={`survey-response-${index}`}>
+                    <Text style={styles.questionText} testID={`survey-question-${index}`}>{response.question}</Text>
+                    <View style={styles.answerContainer} testID={`survey-answer-container-${index}`}>
+                      <Text style={styles.answerValue} testID={`survey-answer-value-${index}`}>{answerValue}</Text>
                       {isNumericRating && (
-                        <View style={styles.ratingBar}>
+                        <View style={styles.ratingBar} testID={`survey-rating-bar-${index}`}>
                           {[1, 2, 3, 4, 5].map((star) => (
-                            <Text key={star} style={styles.star}>
+                            <Text key={star} style={styles.star} testID={`survey-star-${index}-${star}`}>
                               {star <= (answerValue as number) ? '⭐' : '☆'}
                             </Text>
                           ))}
@@ -97,9 +97,9 @@ export default function EntryDetailsScreen() {
             </View>
 
             {entry.notes && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>NOTES</Text>
-                <Text style={styles.contentText}>{entry.notes}</Text>
+              <View style={styles.section} testID="survey-notes-section">
+                <Text style={styles.sectionLabel} testID="survey-notes-label">NOTES</Text>
+                <Text style={styles.contentText} testID="survey-notes-text">{entry.notes}</Text>
               </View>
             )}
           </>
@@ -109,48 +109,48 @@ export default function EntryDetailsScreen() {
         const moodEmoji = moodEmojis[entry.mood] || '😐';
         return (
           <>
-            <View style={styles.iconContainer}>
-              <Text style={styles.largeIcon}>💬</Text>
+            <View style={styles.iconContainer} testID="interaction-icon-container">
+              <Text style={styles.largeIcon} testID="interaction-icon">💬</Text>
             </View>
-            <Text style={styles.title}>{entry.interactionType}</Text>
-            <Text style={styles.timestamp}>{formattedDate}</Text>
+            <Text style={styles.title} testID="interaction-title">{entry.interactionType}</Text>
+            <Text style={styles.timestamp} testID="interaction-timestamp">{formattedDate}</Text>
 
-            <View style={styles.moodSection}>
-              <Text style={styles.moodLabel}>Mood</Text>
-              <View style={styles.moodDisplay}>
-                <Text style={styles.moodEmojiLarge}>{moodEmoji}</Text>
-                <Text style={styles.moodText}>{entry.mood}</Text>
+            <View style={styles.moodSection} testID="interaction-mood-section">
+              <Text style={styles.moodLabel} testID="interaction-mood-label">Mood</Text>
+              <View style={styles.moodDisplay} testID="interaction-mood-display">
+                <Text style={styles.moodEmojiLarge} testID="interaction-mood-emoji">{moodEmoji}</Text>
+                <Text style={styles.moodText} testID="interaction-mood-text">{entry.mood}</Text>
               </View>
             </View>
 
             {entry.duration !== undefined && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>DURATION</Text>
-                <Text style={styles.durationText}>{entry.duration} minutes</Text>
+              <View style={styles.section} testID="interaction-duration-section">
+                <Text style={styles.sectionLabel} testID="interaction-duration-label">DURATION</Text>
+                <Text style={styles.durationText} testID="interaction-duration-text">{entry.duration} minutes</Text>
               </View>
             )}
 
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel}>NOTES</Text>
-              <Text style={styles.contentText}>{entry.notes}</Text>
+            <View style={styles.section} testID="interaction-notes-section">
+              <Text style={styles.sectionLabel} testID="interaction-notes-label">NOTES</Text>
+              <Text style={styles.contentText} testID="interaction-notes-text">{entry.notes}</Text>
             </View>
 
             {entry.participants && entry.participants.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>PARTICIPANTS</Text>
+              <View style={styles.section} testID="interaction-participants-section">
+                <Text style={styles.sectionLabel} testID="interaction-participants-label">PARTICIPANTS</Text>
                 {entry.participants.map((participant, index) => (
-                  <Text key={index} style={styles.participantText}>• {participant}</Text>
+                  <Text key={index} style={styles.participantText} testID={`interaction-participant-${index}`}>• {participant}</Text>
                 ))}
               </View>
             )}
 
             {entry.topics && entry.topics.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionLabel}>TOPICS DISCUSSED</Text>
-                <View style={styles.tagContainer}>
+              <View style={styles.section} testID="interaction-topics-section">
+                <Text style={styles.sectionLabel} testID="interaction-topics-label">TOPICS DISCUSSED</Text>
+                <View style={styles.tagContainer} testID="interaction-topics-container">
                   {entry.topics.map((topic, index) => (
-                    <View key={index} style={styles.tag}>
-                      <Text style={styles.tagText}>{topic}</Text>
+                    <View key={index} style={styles.tag} testID={`interaction-topic-${index}`}>
+                      <Text style={styles.tagText} testID={`interaction-topic-text-${index}`}>{topic}</Text>
                     </View>
                   ))}
                 </View>
@@ -171,7 +171,7 @@ export default function EntryDetailsScreen() {
           headerTintColor: '#000',
         }}
       />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="entry-details-scroll">
         {renderContent()}
       </ScrollView>
     </>

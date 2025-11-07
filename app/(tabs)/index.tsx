@@ -54,33 +54,34 @@ export default function MainScreen() {
     router.push('/support');
   };
 
-  const renderProgressBar = (value: number, color: string) => {
+  const renderProgressBar = (value: number, color: string, testId: string) => {
     return (
-      <View style={styles.progressBarContainer}>
-        <View style={styles.progressBarBackground}>
-          <View style={[styles.progressBarFill, { width: `${value * 100}%`, backgroundColor: color }]} />
+      <View style={styles.progressBarContainer} testID={`${testId}-container`}>
+        <View style={styles.progressBarBackground} testID={`${testId}-background`}>
+          <View style={[styles.progressBarFill, { width: `${value * 100}%`, backgroundColor: color }]} testID={`${testId}-fill`} />
         </View>
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>The Boss App</Text>
+    <View style={styles.container} testID="main-container">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="main-scroll-view">
+        <View style={styles.header} testID="main-header">
+          <Text style={styles.headerTitle} testID="header-title">The Boss App</Text>
         </View>
 
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
+        <View style={styles.profileSection} testID="profile-section">
+          <View style={styles.avatarContainer} testID="avatar-container">
             <Image 
               source={require('@/assets/images/avatar.png')} 
               style={styles.avatar}
               resizeMode="contain"
+              testID="avatar-image"
             />
           </View>
-          <Text style={styles.username}>{mockUserProfile.username}</Text>
-          <Text style={styles.email}>{user?.email || mockUserProfile.email}</Text>
+          <Text style={styles.username} testID="username-text">{mockUserProfile.username}</Text>
+          <Text style={styles.email} testID="email-text">{user?.email || mockUserProfile.email}</Text>
         </View>
 
         {/* Temporarily commented out Boss Timeline button */}
@@ -94,15 +95,15 @@ export default function MainScreen() {
           <FontAwesome name="chevron-right" size={16} color="#666" />
         </TouchableOpacity> */}
 
-        <View style={styles.goalCard}>
-          <View style={styles.goalHeader}>
-            <View style={styles.goalTitleContainer}>
-              <FontAwesome name="flag" size={20} color="#333" />
-              <Text style={styles.goalTitle}>{mockUserGoal.title}</Text>
+        <View style={styles.goalCard} testID="goal-card">
+          <View style={styles.goalHeader} testID="goal-header">
+            <View style={styles.goalTitleContainer} testID="goal-title-container">
+              <FontAwesome name="flag" size={20} color="#333" testID="goal-flag-icon" />
+              <Text style={styles.goalTitle} testID="goal-title">{mockUserGoal.title}</Text>
             </View>
             {!isEditingGoal && (
-              <TouchableOpacity onPress={handleEditGoal} style={styles.editButton}>
-                <FontAwesome name="pencil" size={18} color="#333" />
+              <TouchableOpacity onPress={handleEditGoal} style={styles.editButton} testID="goal-edit-button">
+                <FontAwesome name="pencil" size={18} color="#333" testID="goal-edit-icon" />
               </TouchableOpacity>
             )}
           </View>
@@ -115,61 +116,63 @@ export default function MainScreen() {
                 multiline
                 autoFocus
                 placeholder="Enter your goal"
+                testID="goal-input"
               />
-              <View style={styles.goalEditButtons}>
-                <TouchableOpacity onPress={handleCancelEditGoal} style={styles.goalCancelButton}>
-                  <Text style={styles.goalCancelButtonText}>Cancel</Text>
+              <View style={styles.goalEditButtons} testID="goal-edit-buttons">
+                <TouchableOpacity onPress={handleCancelEditGoal} style={styles.goalCancelButton} testID="goal-cancel-button">
+                  <Text style={styles.goalCancelButtonText} testID="goal-cancel-text">Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveGoal} style={styles.goalSaveButton}>
-                  <Text style={styles.goalSaveButtonText}>Save</Text>
+                <TouchableOpacity onPress={handleSaveGoal} style={styles.goalSaveButton} testID="goal-save-button">
+                  <Text style={styles.goalSaveButtonText} testID="goal-save-text">Save</Text>
                 </TouchableOpacity>
               </View>
             </>
           ) : (
-            <Text style={styles.goalDescription}>{goalDescription}</Text>
+            <Text style={styles.goalDescription} testID="goal-description">{goalDescription}</Text>
           )}
         </View>
 
-        <View style={styles.metricsSection}>
-          <Text style={styles.sectionTitle}>Where You Now</Text>
+        <View style={styles.metricsSection} testID="metrics-section">
+          <Text style={styles.sectionTitle} testID="metrics-title">Where You Now</Text>
 
-          <View style={styles.metricItem}>
-            <View style={styles.metricHeader}>
-              <Text style={styles.metricLabel}>Your stress level</Text>
-              <Text style={styles.metricValue}>Higher than {Math.round(mockUserMetrics.stressLevel * 100)}%</Text>
+          <View style={styles.metricItem} testID="metric-stress-level">
+            <View style={styles.metricHeader} testID="metric-stress-level-header">
+              <Text style={styles.metricLabel} testID="metric-stress-level-label">Your stress level</Text>
+              <Text style={styles.metricValue} testID="metric-stress-level-value">Higher than {Math.round(mockUserMetrics.stressLevel * 100)}%</Text>
             </View>
-            {renderProgressBar(mockUserMetrics.stressLevel, '#B8E986')}
+            {renderProgressBar(mockUserMetrics.stressLevel, '#B8E986', 'metric-stress-level-progress')}
           </View>
 
-          <View style={styles.metricItem}>
-            <View style={styles.metricHeader}>
-              <Text style={styles.metricLabel}>Boss relationship challenges</Text>
-              <Text style={styles.metricValue}>More than {Math.round(mockUserMetrics.bossRelationshipChallenges * 100)}%</Text>
+          <View style={styles.metricItem} testID="metric-boss-challenges">
+            <View style={styles.metricHeader} testID="metric-boss-challenges-header">
+              <Text style={styles.metricLabel} testID="metric-boss-challenges-label">Boss relationship challenges</Text>
+              <Text style={styles.metricValue} testID="metric-boss-challenges-value">More than {Math.round(mockUserMetrics.bossRelationshipChallenges * 100)}%</Text>
             </View>
-            {renderProgressBar(mockUserMetrics.bossRelationshipChallenges, '#FF6B6B')}
+            {renderProgressBar(mockUserMetrics.bossRelationshipChallenges, '#FF6B6B', 'metric-boss-challenges-progress')}
           </View>
 
-          <View style={styles.metricItem}>
-            <View style={styles.metricHeader}>
-              <Text style={styles.metricLabel}>Self-doubt / confidence gap</Text>
-              <Text style={styles.metricValue}>Higher than {Math.round(mockUserMetrics.selfDoubtConfidenceGap * 100)}%</Text>
+          <View style={styles.metricItem} testID="metric-confidence-gap">
+            <View style={styles.metricHeader} testID="metric-confidence-gap-header">
+              <Text style={styles.metricLabel} testID="metric-confidence-gap-label">Self-doubt / confidence gap</Text>
+              <Text style={styles.metricValue} testID="metric-confidence-gap-value">Higher than {Math.round(mockUserMetrics.selfDoubtConfidenceGap * 100)}%</Text>
             </View>
-            {renderProgressBar(mockUserMetrics.selfDoubtConfidenceGap, '#B8E986')}
+            {renderProgressBar(mockUserMetrics.selfDoubtConfidenceGap, '#B8E986', 'metric-confidence-gap-progress')}
           </View>
         </View>
 
-        <View style={styles.settingsSectionContainer}>
-          <Text style={styles.sectionTitle}>Settings</Text>
-          <View style={styles.settingsSection}>
+        <View style={styles.settingsSectionContainer} testID="settings-section-container">
+          <Text style={styles.sectionTitle} testID="settings-title">Settings</Text>
+          <View style={styles.settingsSection} testID="settings-section">
             <Pressable
               style={({ pressed }) => [
                 styles.settingsItem,
                 pressed && styles.settingsItemPressed
               ]}
               onPress={handleOpenPersonalInfo}
+              testID="settings-personal-info-button"
             >
-              <Text style={styles.settingsItemText}>Personal information</Text>
-              <FontAwesome name="chevron-right" size={16} color="#666" />
+              <Text style={styles.settingsItemText} testID="settings-personal-info-text">Personal information</Text>
+              <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-personal-info-icon" />
             </Pressable>
 
             <Pressable
@@ -178,9 +181,10 @@ export default function MainScreen() {
                 pressed && styles.settingsItemPressed
               ]}
               onPress={handleOpenSubscription}
+              testID="settings-subscription-button"
             >
-              <Text style={styles.settingsItemText}>Subscription</Text>
-              <FontAwesome name="chevron-right" size={16} color="#666" />
+              <Text style={styles.settingsItemText} testID="settings-subscription-text">Subscription</Text>
+              <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-subscription-icon" />
             </Pressable>
 
             <Pressable
@@ -189,19 +193,20 @@ export default function MainScreen() {
                 pressed && styles.settingsItemPressed
               ]}
               onPress={handleOpenSupport}
+              testID="settings-support-button"
             >
-              <Text style={styles.settingsItemText}>Support</Text>
-              <FontAwesome name="chevron-right" size={16} color="#666" />
+              <Text style={styles.settingsItemText} testID="settings-support-text">Support</Text>
+              <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-support-icon" />
             </Pressable>
           </View>
         </View>
 
-        <View style={styles.footer}>
-          <Pressable onPress={handleSignOut}>
-            <Text style={styles.footerLink}>Privacy policy</Text>
+        <View style={styles.footer} testID="footer">
+          <Pressable onPress={handleSignOut} testID="footer-privacy-button">
+            <Text style={styles.footerLink} testID="footer-privacy-text">Privacy policy</Text>
           </Pressable>
-          <Pressable onPress={handleSignOut}>
-            <Text style={styles.footerLink}>Terms of service</Text>
+          <Pressable onPress={handleSignOut} testID="footer-terms-button">
+            <Text style={styles.footerLink} testID="footer-terms-text">Terms of service</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -210,8 +215,9 @@ export default function MainScreen() {
         style={styles.chatButton}
         onPress={handleOpenChat}
         activeOpacity={0.8}
+        testID="chat-button"
       >
-        <FontAwesome name="comment" size={24} color="#333" />
+        <FontAwesome name="comment" size={24} color="#333" testID="chat-icon" />
       </TouchableOpacity>
     </View>
   );

@@ -4,6 +4,7 @@ import { InteractionEntry as InteractionEntryType } from '@/types';
 
 interface InteractionEntryProps {
   entry: InteractionEntryType;
+  testID?: string;
 }
 
 const moodEmojis: Record<string, string> = {
@@ -12,7 +13,7 @@ const moodEmojis: Record<string, string> = {
   negative: '😕',
 };
 
-export function InteractionEntry({ entry }: InteractionEntryProps) {
+export function InteractionEntry({ entry, testID }: InteractionEntryProps) {
   const date = new Date(entry.timestamp);
   const formattedDate = date.toLocaleDateString('en-US', {
     month: 'short',
@@ -24,20 +25,20 @@ export function InteractionEntry({ entry }: InteractionEntryProps) {
   const moodEmoji = moodEmojis[entry.mood] || '😐';
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>💬</Text>
+    <View style={styles.container} testID={testID ? `${testID}-container` : 'interaction-entry-container'}>
+      <View style={styles.header} testID={testID ? `${testID}-header` : 'interaction-entry-header'}>
+        <View style={styles.iconContainer} testID={testID ? `${testID}-icon-container` : 'interaction-entry-icon-container'}>
+          <Text style={styles.icon} testID={testID ? `${testID}-icon` : 'interaction-entry-icon'}>💬</Text>
         </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>{entry.interactionType}</Text>
-          <Text style={styles.timestamp}>{formattedDate}</Text>
+        <View style={styles.headerContent} testID={testID ? `${testID}-header-content` : 'interaction-entry-header-content'}>
+          <Text style={styles.title} testID={testID ? `${testID}-title` : 'interaction-entry-title'}>{entry.interactionType}</Text>
+          <Text style={styles.timestamp} testID={testID ? `${testID}-timestamp` : 'interaction-entry-timestamp'}>{formattedDate}</Text>
         </View>
-        <Text style={styles.moodEmoji}>{moodEmoji}</Text>
+        <Text style={styles.moodEmoji} testID={testID ? `${testID}-mood-emoji` : 'interaction-entry-mood-emoji'}>{moodEmoji}</Text>
       </View>
-      <Text style={styles.notes}>{entry.notes}</Text>
+      <Text style={styles.notes} testID={testID ? `${testID}-notes` : 'interaction-entry-notes'}>{entry.notes}</Text>
       {entry.duration !== undefined && (
-        <Text style={styles.duration}>{entry.duration} min</Text>
+        <Text style={styles.duration} testID={testID ? `${testID}-duration` : 'interaction-entry-duration'}>{entry.duration} min</Text>
       )}
     </View>
   );

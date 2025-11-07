@@ -148,33 +148,33 @@ export default function EmailConfirmScreen(): React.JSX.Element {
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Ionicons name="arrow-back" size={28} color="#000" />
+    <View style={styles.container} testID="email-confirm-container">
+      <TouchableOpacity style={styles.backButton} onPress={handleBack} testID="back-button">
+        <Ionicons name="arrow-back" size={28} color="#000" testID="back-icon" />
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-        <Ionicons name="close" size={28} color="#000" />
+      <TouchableOpacity style={styles.closeButton} onPress={handleClose} testID="close-button">
+        <Ionicons name="close" size={28} color="#000" testID="close-icon" />
       </TouchableOpacity>
 
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="mail-outline" size={64} color="#000" />
+      <View style={styles.content} testID="content">
+        <View style={styles.iconContainer} testID="icon-container">
+          <Ionicons name="mail-outline" size={64} color="#000" testID="mail-icon" />
         </View>
 
-        <Text style={styles.title}>Check your email</Text>
-        <Text style={styles.subtitle}>
+        <Text style={styles.title} testID="title">Check your email</Text>
+        <Text style={styles.subtitle} testID="subtitle">
           We sent a magic link to{'\n'}
-          <Text style={styles.emailText}>{email}</Text>
+          <Text style={styles.emailText} testID="email-text">{email}</Text>
         </Text>
 
-        <Text style={styles.instructionText}>
+        <Text style={styles.instructionText} testID="instruction-text">
           Click the link in the email to sign in.{'\n'}
           The link will expire in 1 hour.
         </Text>
 
-        <TouchableOpacity onPress={handleResend} disabled={!canResend}>
-          <Text style={[styles.resendText, !canResend && styles.resendTextDisabled]}>
+        <TouchableOpacity onPress={handleResend} disabled={!canResend} testID="resend-button">
+          <Text style={[styles.resendText, !canResend && styles.resendTextDisabled]} testID="resend-text">
             {canResend ? 'Resend link' : `Resend link in ${formatTimer(resendTimer)}`}
           </Text>
         </TouchableOpacity>
@@ -183,17 +183,18 @@ export default function EmailConfirmScreen(): React.JSX.Element {
           <TouchableOpacity 
             style={styles.debugButton}
             onPress={() => setShowDebugInput(!showDebugInput)}
+            testID="debug-button"
           >
-            <Text style={styles.debugButtonText}>
+            <Text style={styles.debugButtonText} testID="debug-button-text">
               {showDebugInput ? 'Hide' : 'Paste link manually'}
             </Text>
           </TouchableOpacity>
         )}
 
         {showDebugInput && (
-          <View style={styles.debugContainer}>
-            <Text style={styles.debugTitle}>Development Mode</Text>
-            <Text style={styles.debugInstruction}>
+          <View style={styles.debugContainer} testID="debug-container">
+            <Text style={styles.debugTitle} testID="debug-title">Development Mode</Text>
+            <Text style={styles.debugInstruction} testID="debug-instruction">
               Paste the magic link from your email:
             </Text>
             <TextInput
@@ -205,21 +206,23 @@ export default function EmailConfirmScreen(): React.JSX.Element {
               autoCapitalize="none"
               autoCorrect={false}
               multiline
+              testID="debug-input"
             />
             <TouchableOpacity
               style={styles.debugSubmitButton}
               onPress={handleDebugSubmit}
               disabled={!debugLinkInput.trim()}
+              testID="debug-submit-button"
             >
-              <Text style={styles.debugSubmitText}>Verify Link</Text>
+              <Text style={styles.debugSubmitText} testID="debug-submit-text">Verify Link</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
       {isLoading && (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Verifying...</Text>
+        <View style={styles.loadingContainer} testID="loading-container">
+          <Text style={styles.loadingText} testID="loading-text">Verifying...</Text>
         </View>
       )}
     </View>

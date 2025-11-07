@@ -30,14 +30,14 @@ export default function SupportScreen() {
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <FontAwesome name="comments" size={64} color="#B8E986" />
+      <View style={styles.container} testID="support-error-container">
+        <View style={styles.content} testID="support-error-content">
+          <View style={styles.iconContainer} testID="support-error-icon-container">
+            <FontAwesome name="comments" size={64} color="#B8E986" testID="support-error-icon" />
           </View>
-          <Text style={styles.title}>Support</Text>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoText}>{error}</Text>
+          <Text style={styles.title} testID="support-error-title">Support</Text>
+          <View style={styles.infoCard} testID="support-error-card">
+            <Text style={styles.infoText} testID="support-error-text">{error}</Text>
           </View>
         </View>
       </View>
@@ -46,10 +46,10 @@ export default function SupportScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <ActivityIndicator size="large" color="#B8E986" />
-          <Text style={styles.loadingText}>Opening support messenger...</Text>
+      <View style={styles.container} testID="support-loading-container">
+        <View style={styles.content} testID="support-loading-content">
+          <ActivityIndicator size="large" color="#B8E986" testID="support-loading-indicator" />
+          <Text style={styles.loadingText} testID="support-loading-text">Opening support messenger...</Text>
         </View>
       </View>
     );
@@ -57,14 +57,14 @@ export default function SupportScreen() {
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <View style={styles.iconContainer}>
-            <FontAwesome name="mobile" size={64} color="#B8E986" />
+      <View style={styles.container} testID="support-web-container">
+        <View style={styles.content} testID="support-web-content">
+          <View style={styles.iconContainer} testID="support-web-icon-container">
+            <FontAwesome name="mobile" size={64} color="#B8E986" testID="support-web-icon" />
           </View>
-          <Text style={styles.title}>Support</Text>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoText}>
+          <Text style={styles.title} testID="support-web-title">Support</Text>
+          <View style={styles.infoCard} testID="support-web-info-card">
+            <Text style={styles.infoText} testID="support-web-info-text">
               Intercom support messenger is available only in the iOS and Android mobile apps.
               {'\n\n'}
               Please download and use the mobile app to contact support.
@@ -76,13 +76,13 @@ export default function SupportScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <FontAwesome name="comments" size={64} color="#B8E986" />
+    <View style={styles.container} testID="support-container">
+      <View style={styles.content} testID="support-content">
+        <View style={styles.iconContainer} testID="support-icon-container">
+          <FontAwesome name="comments" size={64} color="#B8E986" testID="support-icon" />
         </View>
-        <Text style={styles.title}>Support</Text>
-        <Text style={styles.description}>
+        <Text style={styles.title} testID="support-title">Support</Text>
+        <Text style={styles.description} testID="support-description">
           The Intercom messenger should be open now.
           {'\n\n'}
           If you don't see it, please try reopening this screen.

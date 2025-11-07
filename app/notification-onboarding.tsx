@@ -40,43 +40,43 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <FontAwesome name="bell" size={64} color="#FF9500" />
+    <View style={styles.container} testID="notification-onboarding-container">
+      <View style={styles.content} testID="notification-onboarding-content">
+        <View style={styles.iconContainer} testID="notification-icon-container">
+          <FontAwesome name="bell" size={64} color="#FF9500" testID="notification-bell-icon" />
         </View>
 
-        <Text style={styles.title}>Get notified</Text>
+        <Text style={styles.title} testID="notification-title">Get notified</Text>
         
-        <Text style={styles.description}>
+        <Text style={styles.description} testID="notification-description">
           Once every 3 days the app will send you push notifications with tips
         </Text>
 
-        <View style={styles.examplesContainer}>
-          <View style={styles.notificationCard}>
-            <View style={styles.notificationHeader}>
-              <View style={styles.appIconContainer}>
-                <FontAwesome name="briefcase" size={16} color="#8BC34A" />
+        <View style={styles.examplesContainer} testID="examples-container">
+          <View style={styles.notificationCard} testID="notification-card-1">
+            <View style={styles.notificationHeader} testID="notification-header-1">
+              <View style={styles.appIconContainer} testID="app-icon-container-1">
+                <FontAwesome name="briefcase" size={16} color="#8BC34A" testID="app-icon-1" />
               </View>
-              <Text style={styles.appName}>THE BOSS APP</Text>
-              <Text style={styles.timestamp}>now</Text>
+              <Text style={styles.appName} testID="app-name-1">THE BOSS APP</Text>
+              <Text style={styles.timestamp} testID="timestamp-1">now</Text>
             </View>
-            <Text style={styles.notificationTitle}>Time to make yourself visible 👀</Text>
-            <Text style={styles.notificationBody}>
+            <Text style={styles.notificationTitle} testID="notification-title-1">Time to make yourself visible 👀</Text>
+            <Text style={styles.notificationBody} testID="notification-body-1">
               haven't shared an update in a while? drop a quick one-liner in your team channel — a small win or progress note. visibility is also a skill 💪
             </Text>
           </View>
 
-          <View style={styles.notificationCard}>
-            <View style={styles.notificationHeader}>
-              <View style={styles.appIconContainer}>
-                <FontAwesome name="briefcase" size={16} color="#8BC34A" />
+          <View style={styles.notificationCard} testID="notification-card-2">
+            <View style={styles.notificationHeader} testID="notification-header-2">
+              <View style={styles.appIconContainer} testID="app-icon-container-2">
+                <FontAwesome name="briefcase" size={16} color="#8BC34A" testID="app-icon-2" />
               </View>
-              <Text style={styles.appName}>THE BOSS APP</Text>
-              <Text style={styles.timestamp}>3 days ago</Text>
+              <Text style={styles.appName} testID="app-name-2">THE BOSS APP</Text>
+              <Text style={styles.timestamp} testID="timestamp-2">3 days ago</Text>
             </View>
-            <Text style={styles.notificationTitle}>Collect your weekly win 🌱</Text>
-            <Text style={styles.notificationBody}>
+            <Text style={styles.notificationTitle} testID="notification-title-2">Collect your weekly win 🌱</Text>
+            <Text style={styles.notificationBody} testID="notification-body-2">
               what's one thing you're proud of this week? write it down — even small wins compound into big growth
             </Text>
           </View>
@@ -87,11 +87,12 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
         style={styles.continueButton} 
         onPress={handleContinue}
         disabled={isLoading}
+        testID="notification-continue-button"
       >
         {isLoading ? (
-          <ActivityIndicator color="#FFFFFF" />
+          <ActivityIndicator color="#FFFFFF" testID="notification-loading-indicator" />
         ) : (
-          <Text style={styles.continueButtonText}>Continue</Text>
+          <Text style={styles.continueButtonText} testID="notification-continue-text">Continue</Text>
         )}
       </TouchableOpacity>
     </View>

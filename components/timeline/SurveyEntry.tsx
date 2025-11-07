@@ -4,9 +4,10 @@ import { SurveyEntry as SurveyEntryType } from '@/types';
 
 interface SurveyEntryProps {
   entry: SurveyEntryType;
+  testID?: string;
 }
 
-export function SurveyEntry({ entry }: SurveyEntryProps) {
+export function SurveyEntry({ entry, testID }: SurveyEntryProps) {
   const date = new Date(entry.timestamp);
   const formattedDate = date.toLocaleDateString('en-US', {
     month: 'short',
@@ -16,21 +17,21 @@ export function SurveyEntry({ entry }: SurveyEntryProps) {
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>📊</Text>
+    <View style={styles.container} testID={testID ? `${testID}-container` : 'survey-entry-container'}>
+      <View style={styles.header} testID={testID ? `${testID}-header` : 'survey-entry-header'}>
+        <View style={styles.iconContainer} testID={testID ? `${testID}-icon-container` : 'survey-entry-icon-container'}>
+          <Text style={styles.icon} testID={testID ? `${testID}-icon` : 'survey-entry-icon'}>📊</Text>
         </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>{entry.surveyTitle}</Text>
-          <Text style={styles.timestamp}>{formattedDate}</Text>
+        <View style={styles.headerContent} testID={testID ? `${testID}-header-content` : 'survey-entry-header-content'}>
+          <Text style={styles.title} testID={testID ? `${testID}-title` : 'survey-entry-title'}>{entry.surveyTitle}</Text>
+          <Text style={styles.timestamp} testID={testID ? `${testID}-timestamp` : 'survey-entry-timestamp'}>{formattedDate}</Text>
         </View>
       </View>
-      <View style={styles.responses}>
+      <View style={styles.responses} testID={testID ? `${testID}-responses` : 'survey-entry-responses'}>
         {entry.responses.map((response, index) => (
-          <View key={index} style={styles.responseRow}>
-            <Text style={styles.question}>{response.question}</Text>
-            <Text style={styles.answer}>{response.answer}</Text>
+          <View key={index} style={styles.responseRow} testID={testID ? `${testID}-response-${index}` : `survey-entry-response-${index}`}>
+            <Text style={styles.question} testID={testID ? `${testID}-question-${index}` : `survey-entry-question-${index}`}>{response.question}</Text>
+            <Text style={styles.answer} testID={testID ? `${testID}-answer-${index}` : `survey-entry-answer-${index}`}>{response.answer}</Text>
           </View>
         ))}
       </View>

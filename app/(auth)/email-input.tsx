@@ -63,14 +63,14 @@ export default function EmailInputScreen(): React.JSX.Element {
   };
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-        <Ionicons name="close" size={28} color="#000" />
+    <View style={styles.container} testID="email-input-container">
+      <TouchableOpacity style={styles.closeButton} onPress={handleClose} testID="close-button">
+        <Ionicons name="close" size={28} color="#000" testID="close-icon" />
       </TouchableOpacity>
 
-      <View style={styles.content}>
-        <Text style={styles.title}>What's your Email?</Text>
-        <Text style={styles.subtitle}>
+      <View style={styles.content} testID="content">
+        <Text style={styles.title} testID="title">What's your Email?</Text>
+        <Text style={styles.subtitle} testID="subtitle">
           We will send you a magic link{'\n'}to sign in
         </Text>
 
@@ -84,6 +84,7 @@ export default function EmailInputScreen(): React.JSX.Element {
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus
+          testID="email-input"
         />
       </View>
 
@@ -91,8 +92,9 @@ export default function EmailInputScreen(): React.JSX.Element {
         style={[styles.continueButton, (!email || !validateEmail(email) || isLoading) && styles.continueButtonDisabled]}
         onPress={handleContinue}
         disabled={!email || !validateEmail(email) || isLoading}
+        testID="continue-button"
       >
-        <Text style={styles.continueButtonText}>
+        <Text style={styles.continueButtonText} testID="continue-button-text">
           {isLoading ? 'Sending...' : 'Continue'}
         </Text>
       </TouchableOpacity>

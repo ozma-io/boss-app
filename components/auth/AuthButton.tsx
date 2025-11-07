@@ -8,6 +8,7 @@ interface AuthButtonProps {
   type: AuthButtonType;
   onPress: () => void;
   disabled?: boolean;
+  testID?: string;
 }
 
 const buttonConfig: Record<AuthButtonType, { icon: keyof typeof Ionicons.glyphMap; label: string; style: 'primary' | 'secondary' }> = {
@@ -16,7 +17,7 @@ const buttonConfig: Record<AuthButtonType, { icon: keyof typeof Ionicons.glyphMa
   apple: { icon: 'logo-apple', label: 'Continue with Apple', style: 'secondary' },
 };
 
-export function AuthButton({ type, onPress, disabled }: AuthButtonProps): React.JSX.Element {
+export function AuthButton({ type, onPress, disabled, testID }: AuthButtonProps): React.JSX.Element {
   const config = buttonConfig[type];
   const isPrimary = config.style === 'primary';
 
@@ -30,15 +31,17 @@ export function AuthButton({ type, onPress, disabled }: AuthButtonProps): React.
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.8}
+      testID={testID || `auth-button-${type}`}
     >
-      <View style={styles.buttonContent}>
+      <View style={styles.buttonContent} testID={testID ? `${testID}-content` : `auth-button-${type}-content`}>
         <Ionicons
           name={config.icon}
           size={20}
           color={isPrimary ? '#fff' : '#000'}
           style={styles.icon}
+          testID={testID ? `${testID}-icon` : `auth-button-${type}-icon`}
         />
-        <Text style={[styles.buttonText, isPrimary ? styles.primaryText : styles.secondaryText]}>
+        <Text style={[styles.buttonText, isPrimary ? styles.primaryText : styles.secondaryText]} testID={testID ? `${testID}-text` : `auth-button-${type}-text`}>
           {config.label}
         </Text>
       </View>

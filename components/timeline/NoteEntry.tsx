@@ -4,9 +4,10 @@ import { NoteEntry as NoteEntryType } from '@/types';
 
 interface NoteEntryProps {
   entry: NoteEntryType;
+  testID?: string;
 }
 
-export function NoteEntry({ entry }: NoteEntryProps) {
+export function NoteEntry({ entry, testID }: NoteEntryProps) {
   const date = new Date(entry.timestamp);
   const formattedDate = date.toLocaleDateString('en-US', {
     month: 'short',
@@ -16,17 +17,17 @@ export function NoteEntry({ entry }: NoteEntryProps) {
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.icon}>📝</Text>
+    <View style={styles.container} testID={testID ? `${testID}-container` : 'note-entry-container'}>
+      <View style={styles.header} testID={testID ? `${testID}-header` : 'note-entry-header'}>
+        <View style={styles.iconContainer} testID={testID ? `${testID}-icon-container` : 'note-entry-icon-container'}>
+          <Text style={styles.icon} testID={testID ? `${testID}-icon` : 'note-entry-icon'}>📝</Text>
         </View>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>{entry.title || 'Note'}</Text>
-          <Text style={styles.timestamp}>{formattedDate}</Text>
+        <View style={styles.headerContent} testID={testID ? `${testID}-header-content` : 'note-entry-header-content'}>
+          <Text style={styles.title} testID={testID ? `${testID}-title` : 'note-entry-title'}>{entry.title || 'Note'}</Text>
+          <Text style={styles.timestamp} testID={testID ? `${testID}-timestamp` : 'note-entry-timestamp'}>{formattedDate}</Text>
         </View>
       </View>
-      <Text style={styles.content}>{entry.content}</Text>
+      <Text style={styles.content} testID={testID ? `${testID}-content` : 'note-entry-content'}>{entry.content}</Text>
     </View>
   );
 }

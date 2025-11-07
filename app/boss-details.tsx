@@ -20,68 +20,68 @@ export default function BossDetailsScreen() {
           },
         }}
       />
-      <ScrollView style={styles.container}>
-        <View style={styles.content}>
-          <View style={styles.section}>
-            <Text style={styles.label}>Name</Text>
-            <Text style={styles.value}>{mockBoss.name}</Text>
+      <ScrollView style={styles.container} testID="boss-details-scroll">
+        <View style={styles.content} testID="boss-details-content">
+          <View style={styles.section} testID="section-name">
+            <Text style={styles.label} testID="label-name">Name</Text>
+            <Text style={styles.value} testID="value-name">{mockBoss.name}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Position</Text>
-            <Text style={styles.value}>{mockBoss.position}</Text>
+          <View style={styles.section} testID="section-position">
+            <Text style={styles.label} testID="label-position">Position</Text>
+            <Text style={styles.value} testID="value-position">{mockBoss.position}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Department</Text>
-            <Text style={styles.value}>{mockBoss.department}</Text>
+          <View style={styles.section} testID="section-department">
+            <Text style={styles.label} testID="label-department">Department</Text>
+            <Text style={styles.value} testID="value-department">{mockBoss.department}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Started At</Text>
-            <Text style={styles.value}>{mockBoss.startedAt}</Text>
+          <View style={styles.section} testID="section-started-at">
+            <Text style={styles.label} testID="label-started-at">Started At</Text>
+            <Text style={styles.value} testID="value-started-at">{mockBoss.startedAt}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Birthday</Text>
-            <Text style={styles.value}>{mockBoss.birthday}</Text>
+          <View style={styles.section} testID="section-birthday">
+            <Text style={styles.label} testID="label-birthday">Birthday</Text>
+            <Text style={styles.value} testID="value-birthday">{mockBoss.birthday}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Management Style</Text>
-            <Text style={styles.value}>{mockBoss.managementStyle}</Text>
+          <View style={styles.section} testID="section-management-style">
+            <Text style={styles.label} testID="label-management-style">Management Style</Text>
+            <Text style={styles.value} testID="value-management-style">{mockBoss.managementStyle}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Current Mood</Text>
-            <Text style={styles.value}>{mockBoss.currentMood}</Text>
+          <View style={styles.section} testID="section-current-mood">
+            <Text style={styles.label} testID="label-current-mood">Current Mood</Text>
+            <Text style={styles.value} testID="value-current-mood">{mockBoss.currentMood}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Favorite Color</Text>
-            <Text style={styles.value}>{mockBoss.favoriteColor}</Text>
+          <View style={styles.section} testID="section-favorite-color">
+            <Text style={styles.label} testID="label-favorite-color">Favorite Color</Text>
+            <Text style={styles.value} testID="value-favorite-color">{mockBoss.favoriteColor}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Communication Preference</Text>
-            <Text style={styles.value}>{mockBoss.communicationPreference}</Text>
+          <View style={styles.section} testID="section-communication-preference">
+            <Text style={styles.label} testID="label-communication-preference">Communication Preference</Text>
+            <Text style={styles.value} testID="value-communication-preference">{mockBoss.communicationPreference}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Meeting Frequency</Text>
-            <Text style={styles.value}>{mockBoss.meetingFrequency}</Text>
+          <View style={styles.section} testID="section-meeting-frequency">
+            <Text style={styles.label} testID="label-meeting-frequency">Meeting Frequency</Text>
+            <Text style={styles.value} testID="value-meeting-frequency">{mockBoss.meetingFrequency}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Working Hours</Text>
-            <Text style={styles.value}>{mockBoss.workingHours}</Text>
+          <View style={styles.section} testID="section-working-hours">
+            <Text style={styles.label} testID="label-working-hours">Working Hours</Text>
+            <Text style={styles.value} testID="value-working-hours">{mockBoss.workingHours}</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>Key Interests</Text>
+          <View style={styles.section} testID="section-key-interests">
+            <Text style={styles.label} testID="label-key-interests">Key Interests</Text>
             {mockBoss.keyInterests.map((interest, index) => (
-              <View key={index} style={styles.interestTag}>
-                <Text style={styles.interestText}>{interest}</Text>
+              <View key={index} style={styles.interestTag} testID={`interest-tag-${index}`}>
+                <Text style={styles.interestText} testID={`interest-text-${index}`}>{interest}</Text>
               </View>
             ))}
           </View>

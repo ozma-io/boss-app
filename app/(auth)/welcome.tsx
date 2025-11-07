@@ -25,35 +25,36 @@ export default function WelcomeScreen(): React.JSX.Element {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.emojiContainer}>
+    <View style={styles.container} testID="welcome-container">
+      <View style={styles.emojiContainer} testID="emoji-container">
         <Image
           source={require('@/assets/images/emoji-faces.png')}
           style={styles.emojiImage}
           resizeMode="cover"
+          testID="emoji-image"
         />
       </View>
 
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>Microsteps</Text>
-        <Text style={styles.subtitle}>as a Path to Growth</Text>
-        <Text style={styles.description}>
+      <View style={styles.titleContainer} testID="title-container">
+        <Text style={styles.title} testID="title-text">Microsteps</Text>
+        <Text style={styles.subtitle} testID="subtitle-text">as a Path to Growth</Text>
+        <Text style={styles.description} testID="description-text">
           Your AI Assistant tells you exactly{'\n'}what to do next
         </Text>
       </View>
 
-      <View style={styles.buttonContainer}>
-        <AuthButton type="email" onPress={handleEmailSignIn} />
-        <AuthButton type="google" onPress={handleGoogleSignIn} />
-        <AuthButton type="apple" onPress={handleAppleSignIn} />
+      <View style={styles.buttonContainer} testID="button-container">
+        <AuthButton type="email" onPress={handleEmailSignIn} testID="auth-button-email" />
+        <AuthButton type="google" onPress={handleGoogleSignIn} testID="auth-button-google" />
+        <AuthButton type="apple" onPress={handleAppleSignIn} testID="auth-button-apple" />
       </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity onPress={() => Alert.alert('Privacy Policy')}>
-          <Text style={styles.footerLink}>Privacy policy</Text>
+      <View style={styles.footer} testID="welcome-footer">
+        <TouchableOpacity onPress={() => Alert.alert('Privacy Policy')} testID="privacy-policy-button">
+          <Text style={styles.footerLink} testID="privacy-policy-text">Privacy policy</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => Alert.alert('Terms of Service')}>
-          <Text style={styles.footerLink}>Terms of service</Text>
+        <TouchableOpacity onPress={() => Alert.alert('Terms of Service')} testID="terms-of-service-button">
+          <Text style={styles.footerLink} testID="terms-of-service-text">Terms of service</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -18,32 +18,34 @@ export default function BossTimelineScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
+    <View style={styles.container} testID="boss-timeline-container">
+      <View style={styles.headerContainer} testID="header-container">
         <TouchableOpacity
           style={styles.bossHeader}
           onPress={handleBossHeaderPress}
           activeOpacity={0.7}
+          testID="boss-header-button"
         >
-          <View style={styles.bossInfo}>
-            <Text style={styles.bossName}>{mockBoss.name}</Text>
-            <Text style={styles.bossPosition}>
+          <View style={styles.bossInfo} testID="boss-info">
+            <Text style={styles.bossName} testID="boss-name">{mockBoss.name}</Text>
+            <Text style={styles.bossPosition} testID="boss-position">
               {mockBoss.position}, {mockBoss.department}
             </Text>
-            <Text style={styles.bossDetail}>
+            <Text style={styles.bossDetail} testID="boss-detail">
               Meeting: {mockBoss.meetingFrequency}
             </Text>
           </View>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.timeline} contentContainerStyle={styles.timelineContent}>
-        <Text style={styles.timelineTitle}>Timeline</Text>
+      <ScrollView style={styles.timeline} contentContainerStyle={styles.timelineContent} testID="timeline-scroll">
+        <Text style={styles.timelineTitle} testID="timeline-title">Timeline</Text>
         {mockTimelineEntries.map((entry) => (
           <TimelineItem
             key={entry.id}
             entry={entry}
             onPress={handleTimelineEntryPress}
+            testID={`timeline-item-${entry.id}`}
           />
         ))}
       </ScrollView>

@@ -38,7 +38,7 @@ export function CodeInput({ onCodeComplete }: CodeInputProps): React.JSX.Element
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="code-input-container">
       {code.map((digit: string, index: number) => (
         <TextInput
           key={index}
@@ -53,6 +53,7 @@ export function CodeInput({ onCodeComplete }: CodeInputProps): React.JSX.Element
           maxLength={1}
           autoFocus={index === 0}
           selectTextOnFocus
+          testID={`code-input-${index}`}
         />
       ))}
     </View>

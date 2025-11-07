@@ -51,24 +51,25 @@ export default function SubscriptionScreen() {
           styles.planCard,
           isActive && styles.activePlanCard,
         ]}
+        testID={`plan-card-${plan.type}`}
       >
-        <View style={styles.planHeader}>
-          <Text style={styles.planTitle}>{getPlanTitle(plan.type)}</Text>
+        <View style={styles.planHeader} testID={`plan-header-${plan.type}`}>
+          <Text style={styles.planTitle} testID={`plan-title-${plan.type}`}>{getPlanTitle(plan.type)}</Text>
           {isActive && (
-            <View style={styles.activeBadge}>
-              <FontAwesome name="check" size={12} color="#fff" />
-              <Text style={styles.activeBadgeText}>Active</Text>
+            <View style={styles.activeBadge} testID={`plan-active-badge-${plan.type}`}>
+              <FontAwesome name="check" size={12} color="#fff" testID={`plan-active-icon-${plan.type}`} />
+              <Text style={styles.activeBadgeText} testID={`plan-active-text-${plan.type}`}>Active</Text>
             </View>
           )}
         </View>
-        <View style={styles.planPricing}>
-          <Text style={styles.planPrice}>${plan.price}</Text>
-          <Text style={styles.planPeriod}> / {plan.billingPeriod}</Text>
+        <View style={styles.planPricing} testID={`plan-pricing-${plan.type}`}>
+          <Text style={styles.planPrice} testID={`plan-price-${plan.type}`}>${plan.price}</Text>
+          <Text style={styles.planPeriod} testID={`plan-period-${plan.type}`}> / {plan.billingPeriod}</Text>
         </View>
         {plan.hasTrial && (
-          <View style={styles.trialBadge}>
-            <FontAwesome name="gift" size={14} color="#333" />
-            <Text style={styles.trialText}>Free {plan.trialDays} days trail</Text>
+          <View style={styles.trialBadge} testID={`plan-trial-badge-${plan.type}`}>
+            <FontAwesome name="gift" size={14} color="#333" testID={`plan-trial-icon-${plan.type}`} />
+            <Text style={styles.trialText} testID={`plan-trial-text-${plan.type}`}>Free {plan.trialDays} days trail</Text>
           </View>
         )}
       </View>
@@ -76,30 +77,30 @@ export default function SubscriptionScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <View style={[styles.currentPlanCard, styles.activePlanCard]}>
-          <View style={styles.currentPlanHeader}>
-            <Text style={styles.yourPlanLabel}>Your plan</Text>
-            <View style={styles.activeBadge}>
-              <FontAwesome name="check" size={12} color="#fff" />
-              <Text style={styles.activeBadgeText}>Active</Text>
+    <ScrollView style={styles.container} testID="subscription-scroll">
+      <View style={styles.content} testID="subscription-content">
+        <View style={[styles.currentPlanCard, styles.activePlanCard]} testID="current-plan-card">
+          <View style={styles.currentPlanHeader} testID="current-plan-header">
+            <Text style={styles.yourPlanLabel} testID="your-plan-label">Your plan</Text>
+            <View style={styles.activeBadge} testID="current-plan-active-badge">
+              <FontAwesome name="check" size={12} color="#fff" testID="current-plan-active-icon" />
+              <Text style={styles.activeBadgeText} testID="current-plan-active-text">Active</Text>
             </View>
           </View>
-          <Text style={styles.currentPlanTitle}>
+          <Text style={styles.currentPlanTitle} testID="current-plan-title">
             {currentPlan ? currentPlan.type.charAt(0).toUpperCase() + currentPlan.type.slice(1) : 'Quarterly'}
           </Text>
-          <Text style={styles.currentPlanDescription}>
+          <Text style={styles.currentPlanDescription} testID="current-plan-description">
             You pay {mockUserSubscription.price}$ every 3 month. You save {mockUserSubscription.savings}$
           </Text>
-          <Text style={styles.nextPayment}>
+          <Text style={styles.nextPayment} testID="next-payment-text">
             Next payment: {mockUserSubscription.nextPaymentDate}
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>You can change your plan</Text>
+        <Text style={styles.sectionTitle} testID="section-title">You can change your plan</Text>
 
-        <View style={styles.plansContainer}>
+        <View style={styles.plansContainer} testID="plans-container">
           {mockSubscriptionPlans
             .filter((plan) => plan.type !== mockUserSubscription.currentPlan)
             .map((plan) => renderPlanCard(plan, false))}
@@ -111,9 +112,10 @@ export default function SubscriptionScreen() {
             pressed && styles.buttonPressed
           ]}
           onPress={handleChangePlan}
+          testID="change-plan-button"
         >
-          <Text style={styles.changePlanButtonText}>Change plan</Text>
-          <FontAwesome name="arrow-right" size={16} color="#fff" />
+          <Text style={styles.changePlanButtonText} testID="change-plan-button-text">Change plan</Text>
+          <FontAwesome name="arrow-right" size={16} color="#fff" testID="change-plan-arrow-icon" />
         </Pressable>
 
         <Pressable
@@ -122,8 +124,9 @@ export default function SubscriptionScreen() {
             pressed && styles.buttonPressed
           ]}
           onPress={handleCancelSubscription}
+          testID="cancel-subscription-button"
         >
-          <Text style={styles.cancelButtonText}>Cancel Subscription</Text>
+          <Text style={styles.cancelButtonText} testID="cancel-subscription-button-text">Cancel Subscription</Text>
         </Pressable>
       </View>
     </ScrollView>
