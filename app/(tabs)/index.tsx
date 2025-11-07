@@ -1,3 +1,4 @@
+import { ChatIcon } from '@/components/icons/ChatIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/auth.service';
 import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
@@ -217,7 +218,7 @@ export default function MainScreen() {
         activeOpacity={0.8}
         testID="chat-button"
       >
-        <FontAwesome name="comment" size={24} color="#333" testID="chat-icon" />
+        <ChatIcon size={28} color="white" testID="chat-icon" />
       </TouchableOpacity>
     </View>
   );

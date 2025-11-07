@@ -1,0 +1,35 @@
+import * as React from 'react';
+import Svg, { Path } from 'react-native-svg';
+
+interface ChatIconProps {
+  size?: number;
+  color?: string;
+  testID?: string;
+}
+
+export const ChatIcon: React.FC<ChatIconProps> = ({ 
+  size = 28, 
+  color = 'white',
+  testID 
+}) => {
+  return (
+    <Svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 28 28" 
+      fill="none"
+      testID={testID}
+    >
+      <Path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M5.74992 22.2483C9.31543 25.8142 14.5951 26.5846 18.9157 24.5865C19.5535 24.3297 20.0764 24.1222 20.5736 24.1222C21.9583 24.1304 23.6818 25.473 24.5776 24.5783C25.4734 23.6824 24.1297 21.9575 24.1297 20.5645C24.1297 20.0673 24.329 19.5537 24.5858 18.9146C26.5849 14.5947 25.8134 9.3133 22.2479 5.74857C17.6963 1.19533 10.3015 1.19533 5.74992 5.7474C1.19015 10.3077 1.19836 17.6963 5.74992 22.2483Z"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+};
+
