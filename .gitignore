@@ -51,3 +51,4 @@ ui-debug.log
 
 # Firestore migrations
 firestore/migrations/node_modules/
+.vercel

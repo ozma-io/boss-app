@@ -1,0 +1,70 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Expo
+.expo
+web-build
+
+# Native
+ios
+android
+.kotlin
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# Tests
+__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# macOS
+.DS_Store
+*.pem
+
+# Local env files
+.env*.local
+.env
+
+# TypeScript
+*.tsbuildinfo
+
+# Firebase
+.firebase
+functions/lib
+functions/node_modules
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Firestore migrations
+firestore/migrations/node_modules
+
+# Git
+.git
+.github
+
+# Documentation
+docs
+
+# iOS build artifacts
+Pods
+Podfile.lock
+*.xcworkspace
+*.xcodeproj
+build
+
+# Vercel
+.vercel
+

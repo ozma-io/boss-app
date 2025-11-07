@@ -36,6 +36,13 @@ Development workflow for magic link authentication:
 - Manual link paste workflow
 - Production setup with Universal Links
 
+### [Vercel Web Deployment](./vercel-deployment.md)
+Automatic web deployment on Vercel:
+- Auto-deploy from `main` branch
+- Preview URLs for pull requests
+- Environment variables setup
+- Troubleshooting
+
 ---
 
 ## 🚀 Quick Start
@@ -64,7 +71,9 @@ docs/
 ├── firebase-deployment.md       # Firebase deployment guide
 ├── firestore-management.md      # Firestore database management
 ├── authentication.md            # Authentication system
-└── magic-link-development.md    # Magic link development workflow
+├── magic-link-development.md    # Magic link development workflow
+├── vercel-deployment.md         # Vercel web deployment
+└── expo-cloud-setup.md          # Expo cloud build setup (iOS/Android)
 ```
 
 ---
