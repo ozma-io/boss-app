@@ -1,12 +1,16 @@
 import { AppColors } from '@/constants/Colors';
-import { sendEmailVerificationCode } from '@/services/auth.service';
+import { useAuth } from '@/contexts/AuthContext';
+import { sendEmailVerificationCode, signInWithTestEmail } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+const TEST_EMAIL = 'test@test.test';
+
 export default function EmailInputScreen(): React.JSX.Element {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -27,6 +31,16 @@ export default function EmailInputScreen(): React.JSX.Element {
 
     setIsLoading(true);
     try {
+      // Check if this is the test email
+      if (email === TEST_EMAIL) {
+        console.log('[EmailInput] Test email detected, bypassing magic link');
+        const user = await signInWithTestEmail(email);
+        setUser(user);
+        router.replace('/(tabs)');
+        return;
+      }
+
+      // Normal flow: send magic link
       if (Platform.OS === 'web') {
         window.localStorage.setItem('emailForSignIn', email);
       }

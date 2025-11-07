@@ -10,6 +10,38 @@ npm run android # Android emulator (builds Development Build)
 
 **Note:** First iOS/Android build takes ~5-10 minutes. Subsequent JavaScript changes load instantly via hot reload.
 
+## 🚢 Deploy to Firebase
+
+**Initial setup** (creates database, deploys rules & indexes):
+```bash
+./scripts/setup-firestore.sh
+```
+
+**Deploy changes:**
+```bash
+# Deploy Cloud Functions (backend)
+cd functions && npm run build && cd .. && firebase deploy --only functions
+
+# First-time deploy or force cleanup policy setup
+firebase deploy --only functions --force
+
+# Deploy Firestore Rules (security)
+firebase deploy --only firestore:rules
+
+# Deploy Firestore Indexes
+firebase deploy --only firestore:indexes
+
+# Deploy everything
+firebase deploy
+```
+
+**Run Data Migration** (manual, one-time scripts):
+```bash
+cd firestore/migrations && npm run migrate -- YYYY-MM-DD-migration-name
+```
+
+**Note:** `/firestore/schemas/` are TypeScript types only (not deployed).
+
 ---
 
 ## 🧱 Technology Stack
@@ -153,10 +185,12 @@ This project uses **Expo Development Build** for full native module support and 
 - `services/` - Firebase services (auth, firestore, notifications)
 - `types/` - TypeScript type definitions
 - `utils/` - Helper functions
-- `functions/` - Firebase Cloud Functions
-- `firestore/` - Firebase configuration and database migrations stored as code
-  - `migrations/` - Database migration scripts (see `firestore/migrations/README.md`)
-  - `schemas/` - Type definitions for Firestore documents (see `firestore/schemas/README.md`)
+- `functions/` - **Firebase Cloud Functions** (deploy: `firebase deploy --only functions`)
+- `firestore.rules` - **Firestore Security Rules** (deploy: `firebase deploy --only firestore:rules`)
+- `firestore.indexes.json` - **Firestore Indexes** (deploy: `firebase deploy --only firestore:indexes`)
+- `firestore/` - Database tooling (local only)
+  - `migrations/` - Migration scripts (run: `cd firestore/migrations && npm run migrate`)
+  - `schemas/` - TypeScript types (not deployed)
 - `__tests__/` - Unit tests
 
 📖 **For detailed setup instructions, see [SETUP.md](./SETUP.md)**

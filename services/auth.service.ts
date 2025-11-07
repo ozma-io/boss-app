@@ -11,8 +11,10 @@ import {
   onAuthStateChanged as firebaseOnAuthStateChanged,
   sendSignInLinkToEmail,
   signInWithCredential,
+  signInWithCustomToken,
   signInWithEmailLink
 } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -86,6 +88,20 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
 
 export async function verifyEmailCode(email: string, emailLink: string): Promise<User> {
   const userCredential = await signInWithEmailLink(auth, email, emailLink);
+  return mapFirebaseUserToUser(userCredential.user);
+}
+
+export async function signInWithTestEmail(email: string): Promise<User> {
+  const functions = getFunctions();
+  const generateToken = httpsCallable<{ email: string }, { token: string }>(
+    functions,
+    'generateTestUserToken'
+  );
+
+  const result = await generateToken({ email });
+  const customToken = result.data.token;
+
+  const userCredential = await signInWithCustomToken(auth, customToken);
   return mapFirebaseUserToUser(userCredential.user);
 }
 
