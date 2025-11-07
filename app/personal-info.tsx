@@ -17,23 +17,6 @@ export default function PersonalInfoScreen() {
     }
   };
 
-  const handleDeleteAccount = (): void => {
-    Alert.alert(
-      'Delete Account',
-      'Are you sure you want to delete your account? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            console.log('Delete account requested');
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <ScrollView style={styles.container} testID="personal-info-scroll">
       <View style={styles.content} testID="personal-info-content">
@@ -99,17 +82,6 @@ export default function PersonalInfoScreen() {
         >
           <Text style={styles.signOutButtonText} testID="sign-out-button-text">Sign out</Text>
         </Pressable>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.deleteButton,
-            pressed && styles.buttonPressed
-          ]}
-          onPress={handleDeleteAccount}
-          testID="delete-account-button"
-        >
-          <Text style={styles.deleteButtonText} testID="delete-account-button-text">Delete account</Text>
-        </Pressable>
       </View>
     </ScrollView>
   );
@@ -167,18 +139,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   signOutButtonText: {
-    color: '#ff3b30',
-    fontSize: 16,
-  },
-  deleteButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginTop: 12,
-    borderRadius: 12,
-    alignItems: 'flex-start',
-  },
-  deleteButtonText: {
     color: '#ff3b30',
     fontSize: 16,
   },
