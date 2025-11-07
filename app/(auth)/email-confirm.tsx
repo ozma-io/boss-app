@@ -1,10 +1,9 @@
-import { CodeInput } from '@/components/auth/CodeInput';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendEmailVerificationCode, verifyEmailCode } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function EmailConfirmScreen(): React.JSX.Element {
   const router = useRouter();
@@ -13,7 +12,7 @@ export default function EmailConfirmScreen(): React.JSX.Element {
   const email = params.email as string;
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [resendTimer, setResendTimer] = useState<number>(28);
+  const [resendTimer, setResendTimer] = useState<number>(60);
   const [canResend, setCanResend] = useState<boolean>(false);
 
   useEffect(() => {
@@ -27,26 +26,46 @@ export default function EmailConfirmScreen(): React.JSX.Element {
     }
   }, [resendTimer]);
 
+  useEffect(() => {
+    const handleDeepLink = async (event: { url: string }): Promise<void> => {
+      const url = event.url;
+      if (url) {
+        await handleEmailLink(url);
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleEmailLink(url);
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [email]);
+
+  const handleEmailLink = async (url: string): Promise<void> => {
+    setIsLoading(true);
+    try {
+      const user = await verifyEmailCode(email, url);
+      setUser(user);
+      router.replace('/(tabs)');
+    } catch (error) {
+      Alert.alert('Error', 'Invalid or expired link. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleBack = (): void => {
     router.back();
   };
 
   const handleClose = (): void => {
     router.push('/(auth)/welcome');
-  };
-
-  const handleCodeComplete = async (code: string): Promise<void> => {
-    setIsLoading(true);
-    try {
-      const emailLink = `${process.env.EXPO_PUBLIC_APP_URL || 'exp://localhost:8081'}?code=${code}&email=${email}`;
-      const user = await verifyEmailCode(email, emailLink);
-      setUser(user);
-      router.replace('/(tabs)');
-    } catch (error) {
-      Alert.alert('Error', 'Invalid code. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleResend = async (): Promise<void> => {
@@ -56,11 +75,11 @@ export default function EmailConfirmScreen(): React.JSX.Element {
 
     try {
       await sendEmailVerificationCode(email);
-      setResendTimer(28);
+      setResendTimer(60);
       setCanResend(false);
-      Alert.alert('Success', 'Verification code has been resent');
+      Alert.alert('Success', 'Magic link has been resent to your email');
     } catch (error) {
-      Alert.alert('Error', 'Failed to resend code. Please try again.');
+      Alert.alert('Error', 'Failed to resend link. Please try again.');
     }
   };
 
@@ -81,28 +100,33 @@ export default function EmailConfirmScreen(): React.JSX.Element {
       </TouchableOpacity>
 
       <View style={styles.content}>
-        <Text style={styles.title}>Confirm Email</Text>
+        <View style={styles.iconContainer}>
+          <Ionicons name="mail-outline" size={64} color="#000" />
+        </View>
+
+        <Text style={styles.title}>Check your email</Text>
         <Text style={styles.subtitle}>
-          Code has been sent{'\n'}to {email}
+          We sent a magic link to{'\n'}
+          <Text style={styles.emailText}>{email}</Text>
         </Text>
 
-        <CodeInput onCodeComplete={handleCodeComplete} />
+        <Text style={styles.instructionText}>
+          Click the link in the email to sign in.{'\n'}
+          The link will expire in 1 hour.
+        </Text>
 
         <TouchableOpacity onPress={handleResend} disabled={!canResend}>
           <Text style={[styles.resendText, !canResend && styles.resendTextDisabled]}>
-            {canResend ? 'Resend code' : `Resend code in ${formatTimer(resendTimer)}`}
+            {canResend ? 'Resend link' : `Resend link in ${formatTimer(resendTimer)}`}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={[styles.continueButton, isLoading && styles.continueButtonDisabled]}
-        disabled={isLoading}
-      >
-        <Text style={styles.continueButtonText}>
-          {isLoading ? 'Verifying...' : 'Continue'}
-        </Text>
-      </TouchableOpacity>
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Verifying...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -133,11 +157,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 100,
   },
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#F0EDE6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
   },
   subtitle: {
@@ -147,26 +180,39 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 24,
   },
+  emailText: {
+    color: '#000',
+    fontWeight: '600',
+  },
+  instructionText: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
   resendText: {
     fontSize: 14,
     color: '#000',
     textAlign: 'center',
     marginTop: 16,
+    textDecorationLine: 'underline',
   },
   resendTextDisabled: {
     color: '#999',
+    textDecorationLine: 'none',
   },
-  continueButton: {
+  loadingContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 24,
+    right: 24,
     backgroundColor: '#000',
     paddingVertical: 16,
     borderRadius: 28,
     alignItems: 'center',
-    marginTop: 'auto',
   },
-  continueButtonDisabled: {
-    opacity: 0.5,
-  },
-  continueButtonText: {
+  loadingText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

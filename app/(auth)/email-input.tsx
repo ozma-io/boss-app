@@ -32,7 +32,7 @@ export default function EmailInputScreen(): React.JSX.Element {
         params: { email },
       });
     } catch (error) {
-      Alert.alert('Error', 'Failed to send verification code. Please try again.');
+      Alert.alert('Error', 'Failed to send magic link. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +47,7 @@ export default function EmailInputScreen(): React.JSX.Element {
       <View style={styles.content}>
         <Text style={styles.title}>What's your Email?</Text>
         <Text style={styles.subtitle}>
-          We will send you a four-digit{'\n'}code to this email
+          We will send you a magic link{'\n'}to sign in
         </Text>
 
         <TextInput

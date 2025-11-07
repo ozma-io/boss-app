@@ -3,6 +3,7 @@ import { User } from '@/types';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import {
   GoogleAuthProvider,
   OAuthProvider,
@@ -16,8 +17,12 @@ import {
 WebBrowser.maybeCompleteAuthSession();
 
 export async function sendEmailVerificationCode(email: string): Promise<void> {
+  const defaultUrl = Platform.OS === 'web' 
+    ? 'http://localhost:8081' 
+    : 'exp://localhost:8081';
+  
   const actionCodeSettings = {
-    url: `${process.env.EXPO_PUBLIC_APP_URL || 'exp://localhost:8081'}?email=${email}`,
+    url: `${process.env.EXPO_PUBLIC_APP_URL || defaultUrl}?email=${email}`,
     handleCodeInApp: true,
     iOS: {
       bundleId: process.env.EXPO_PUBLIC_IOS_BUNDLE_ID || 'com.anonymous.bossapp',
