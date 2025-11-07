@@ -136,6 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       if (isProcessingEmailLinkRef.current) {
         return;
       }
+      console.log(`🔐 [AuthContext] Auth state changed: ${newUser ? 'authenticated' : 'unauthenticated'} at ${new Date().toISOString()}`);
       setUser(newUser);
       setAuthState(newUser ? 'authenticated' : 'unauthenticated');
     });

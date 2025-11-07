@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { shouldShowNotificationOnboarding } from '@/services/user.service';
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
 interface NotificationOnboardingContextType {
@@ -26,14 +26,17 @@ export function NotificationOnboardingProvider({ children }: NotificationOnboard
       return;
     }
 
-    console.log(`[NotificationOnboarding] Starting onboarding check for user: ${user.id}`);
+    const startTime = Date.now();
+    console.log(`🔔 [NotificationOnboarding] ======== START ======== User: ${user.id} at ${new Date().toISOString()}`);
 
     try {
       const shouldShow = await shouldShowNotificationOnboarding(user.id);
-      console.log(`[NotificationOnboarding] Onboarding check result: ${shouldShow ? 'show' : 'skip'}`);
+      const duration = Date.now() - startTime;
+      console.log(`🔔 [NotificationOnboarding] ======== RESULT: ${shouldShow ? 'SHOW' : 'SKIP'} ======== Duration: ${duration}ms`);
       setShouldShowOnboarding(shouldShow);
     } catch (error) {
-      console.warn('[NotificationOnboarding] Failed to check onboarding status:', error);
+      const duration = Date.now() - startTime;
+      console.warn(`🔔 [NotificationOnboarding] ======== FAILED ======== Duration: ${duration}ms`, error);
       setShouldShowOnboarding(false);
     }
   };
