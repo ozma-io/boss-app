@@ -1,6 +1,7 @@
 import { AuthButton } from '@/components/auth/AuthButton';
 import { AppColors } from '@/constants/Colors';
 import { signInWithApple } from '@/services/auth.service';
+import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -50,10 +51,10 @@ export default function WelcomeScreen(): React.JSX.Element {
       </View>
 
       <View style={styles.footer} testID="welcome-footer">
-        <TouchableOpacity onPress={() => Alert.alert('Privacy Policy')} testID="privacy-policy-button">
+        <TouchableOpacity onPress={openPrivacyPolicy} testID="privacy-policy-button">
           <Text style={styles.footerLink} testID="privacy-policy-text">Privacy policy</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => Alert.alert('Terms of Service')} testID="terms-of-service-button">
+        <TouchableOpacity onPress={openTermsOfService} testID="terms-of-service-button">
           <Text style={styles.footerLink} testID="terms-of-service-text">Terms of service</Text>
         </TouchableOpacity>
       </View>

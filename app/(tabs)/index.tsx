@@ -1,6 +1,7 @@
 import { ChatIcon } from '@/components/icons/ChatIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/auth.service';
+import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router } from 'expo-router';
@@ -203,10 +204,10 @@ export default function MainScreen() {
         </View>
 
         <View style={styles.footer} testID="footer">
-          <Pressable onPress={handleSignOut} testID="footer-privacy-button">
+          <Pressable onPress={openPrivacyPolicy} testID="footer-privacy-button">
             <Text style={styles.footerLink} testID="footer-privacy-text">Privacy policy</Text>
           </Pressable>
-          <Pressable onPress={handleSignOut} testID="footer-terms-button">
+          <Pressable onPress={openTermsOfService} testID="footer-terms-button">
             <Text style={styles.footerLink} testID="footer-terms-text">Terms of service</Text>
           </Pressable>
         </View>
