@@ -2,6 +2,7 @@
   "expo": {
     "name": "Boss Relationship Tracker",
     "slug": "boss-app",
+    "owner": "ozma-io",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,13 +16,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.boss-app"
+      "bundleIdentifier": "com.ozmaio.bossapp"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "package": "com.ozmaio.bossapp",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
@@ -36,6 +38,18 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "updates": {
+      "url": "https://u.expo.dev/747039c7-9e19-4423-92c5-0ee78f36ff36"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "747039c7-9e19-4423-92c5-0ee78f36ff36"
+      }
     }
   }
 }
