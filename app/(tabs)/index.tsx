@@ -4,10 +4,13 @@ import { signOut } from '@/services/auth.service';
 import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function MainScreen() {
   const { user } = useAuth();
+  const [goalDescription, setGoalDescription] = useState(mockUserGoal.description);
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
 
   const handleSignOut = async (): Promise<void> => {
     try {
@@ -19,7 +22,17 @@ export default function MainScreen() {
   };
 
   const handleEditGoal = (): void => {
-    Alert.alert('Edit Goal', 'This feature is not yet implemented.');
+    setIsEditingGoal(true);
+  };
+
+  const handleSaveGoal = (): void => {
+    setIsEditingGoal(false);
+    // TODO: Save goal to backend
+  };
+
+  const handleCancelEditGoal = (): void => {
+    setGoalDescription(mockUserGoal.description);
+    setIsEditingGoal(false);
   };
 
   const handleOpenChat = (): void => {
@@ -67,7 +80,8 @@ export default function MainScreen() {
           <Text style={styles.email}>{user?.email || mockUserProfile.email}</Text>
         </View>
 
-        <TouchableOpacity
+        {/* Temporarily commented out Boss Timeline button */}
+        {/* <TouchableOpacity
           style={styles.bossTimelineButton}
           onPress={handleOpenBossTimeline}
           activeOpacity={0.7}
@@ -75,7 +89,7 @@ export default function MainScreen() {
           <FontAwesome name="briefcase" size={20} color="#333" />
           <Text style={styles.bossTimelineButtonText}>Boss Timeline</Text>
           <FontAwesome name="chevron-right" size={16} color="#666" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         <View style={styles.goalCard}>
           <View style={styles.goalHeader}>
@@ -83,11 +97,34 @@ export default function MainScreen() {
               <FontAwesome name="flag" size={20} color="#333" />
               <Text style={styles.goalTitle}>{mockUserGoal.title}</Text>
             </View>
-            <TouchableOpacity onPress={handleEditGoal} style={styles.editButton}>
-              <FontAwesome name="pencil" size={18} color="#333" />
-            </TouchableOpacity>
+            {!isEditingGoal && (
+              <TouchableOpacity onPress={handleEditGoal} style={styles.editButton}>
+                <FontAwesome name="pencil" size={18} color="#333" />
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={styles.goalDescription}>{mockUserGoal.description}</Text>
+          {isEditingGoal ? (
+            <>
+              <TextInput
+                style={styles.goalInput}
+                value={goalDescription}
+                onChangeText={setGoalDescription}
+                multiline
+                autoFocus
+                placeholder="Enter your goal"
+              />
+              <View style={styles.goalEditButtons}>
+                <TouchableOpacity onPress={handleCancelEditGoal} style={styles.goalCancelButton}>
+                  <Text style={styles.goalCancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSaveGoal} style={styles.goalSaveButton}>
+                  <Text style={styles.goalSaveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.goalDescription}>{goalDescription}</Text>
+          )}
         </View>
 
         <View style={styles.metricsSection}>
@@ -118,41 +155,42 @@ export default function MainScreen() {
           </View>
         </View>
 
-        <View style={styles.settingsSection}>
+        <View style={styles.settingsSectionContainer}>
           <Text style={styles.sectionTitle}>Settings</Text>
+          <View style={styles.settingsSection}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.settingsItem,
+                pressed && styles.settingsItemPressed
+              ]}
+              onPress={handleOpenPersonalInfo}
+            >
+              <Text style={styles.settingsItemText}>Personal information</Text>
+              <FontAwesome name="chevron-right" size={16} color="#666" />
+            </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.settingsItem,
-              pressed && styles.settingsItemPressed
-            ]}
-            onPress={handleOpenPersonalInfo}
-          >
-            <Text style={styles.settingsItemText}>Personal information</Text>
-            <FontAwesome name="chevron-right" size={16} color="#666" />
-          </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.settingsItem,
+                pressed && styles.settingsItemPressed
+              ]}
+              onPress={handleOpenSubscription}
+            >
+              <Text style={styles.settingsItemText}>Subscription</Text>
+              <FontAwesome name="chevron-right" size={16} color="#666" />
+            </Pressable>
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.settingsItem,
-              pressed && styles.settingsItemPressed
-            ]}
-            onPress={handleOpenSubscription}
-          >
-            <Text style={styles.settingsItemText}>Subscription</Text>
-            <FontAwesome name="chevron-right" size={16} color="#666" />
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.settingsItem,
-              pressed && styles.settingsItemPressed
-            ]}
-            onPress={handleOpenSupport}
-          >
-            <Text style={styles.settingsItemText}>Support</Text>
-            <FontAwesome name="chevron-right" size={16} color="#666" />
-          </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.settingsItem,
+                pressed && styles.settingsItemPressed
+              ]}
+              onPress={handleOpenSupport}
+            >
+              <Text style={styles.settingsItemText}>Support</Text>
+              <FontAwesome name="chevron-right" size={16} color="#666" />
+            </Pressable>
+          </View>
         </View>
 
         <View style={styles.footer}>
@@ -286,6 +324,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
+  goalInput: {
+    fontSize: 16,
+    color: '#333',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  goalEditButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  goalCancelButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  goalCancelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  goalSaveButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#333',
+  },
+  goalSaveButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#B8E986',
+  },
   metricsSection: {
     backgroundColor: '#fff',
     marginHorizontal: 16,
@@ -334,10 +409,12 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 4,
   },
-  settingsSection: {
-    backgroundColor: '#fff',
+  settingsSectionContainer: {
     marginHorizontal: 16,
     marginBottom: 24,
+  },
+  settingsSection: {
+    backgroundColor: '#fff',
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
