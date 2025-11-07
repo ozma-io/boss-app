@@ -204,17 +204,6 @@ export default function MainScreen() {
             <Text style={styles.footerLink}>Terms of service</Text>
           </Pressable>
         </View>
-
-        <Pressable
-          style={({ pressed }) => [
-            styles.signOutButton,
-            pressed && styles.signOutButtonPressed
-          ]}
-          onPress={handleSignOut}
-        >
-          <Text style={styles.signOutButtonText}>Sign out</Text>
-          <FontAwesome name="sign-out" size={18} color="#333" />
-        </Pressable>
       </ScrollView>
 
       <TouchableOpacity
@@ -439,29 +428,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 16,
-  },
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  signOutButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginRight: 8,
-  },
-  signOutButtonPressed: {
-    opacity: 0.7,
   },
   chatButton: {
     position: 'absolute',
