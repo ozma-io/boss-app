@@ -112,20 +112,68 @@ firebase init
 npm install
 
 # Start development server
-npm start
+npm run dev
 
 # Run on specific platform
-npm run ios       # iOS simulator
-npm run android   # Android emulator
+npm run ios       # iOS simulator (builds Development Build first time)
+npm run android   # Android emulator (builds Development Build first time)
 npm run web       # Web browser
 
 # Run tests
 npm test
 ```
 
+**First time:** iOS/Android builds take ~5-10 minutes to compile the Development Build.
+
+**After that:** JavaScript changes reload instantly via hot reload (like Expo Go).
+
+## 🔧 Development Build
+
+This project uses **Expo Development Build** instead of Expo Go.
+
+### Why Development Build?
+
+- ✅ **Production-like environment**: No Firestore offline mode issues
+- ✅ **Native WebSocket support**: Firestore works instantly (<1 sec)
+- ✅ **Full native module support**: No limitations
+- ✅ **Hot reload preserved**: JavaScript changes still instant
+
+### Requirements
+
+- **iOS**: Xcode installed (for iOS simulator)
+- **Android**: Android Studio installed (for Android emulator)
+
+### First Build
+
+```bash
+# iOS (first time: ~5-10 minutes)
+npm run ios
+
+# Android (first time: ~5-10 minutes)
+npm run android
+```
+
+This compiles a custom native app with all required modules.
+
+### Daily Development Workflow
+
+1. Start dev server: `npm run dev`
+2. Scan QR code with camera (if using physical device)
+3. Make JavaScript/TypeScript changes → hot reload works!
+4. No rebuild needed for code changes
+
+### When to Rebuild
+
+Only rebuild when you:
+- Add native modules or Expo plugins
+- Change `app.json` or `app.config.js`
+- Update Expo SDK version
+
+Otherwise, Development Build works exactly like Expo Go!
+
 ## 📱 Development Workflow
 
-1. **Local Development**: Use `npm start` and Expo Go app on your phone
+1. **Local Development**: Use `npm run dev` with Development Build
 2. **Testing**: Write tests in `__tests__/` directory
 3. **Firebase Emulators**: Test Cloud Functions locally before deploying
 4. **Type Safety**: Ensure all files use TypeScript with strict types

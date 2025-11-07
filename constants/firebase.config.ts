@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
@@ -16,21 +15,17 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-const isExpoGo = Constants.executionEnvironment === 'storeClient';
-const shouldForceLongPolling = Platform.OS !== 'web' && isExpoGo;
-
+// Development Build works like production - WebSocket is fully supported
+// Only web needs special cache configuration
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: shouldForceLongPolling,
   localCache: Platform.OS === 'web' 
     ? persistentLocalCache({ tabManager: persistentSingleTabManager({}) })
     : undefined,
 });
 
-if (shouldForceLongPolling) {
-  console.log('[Firebase] Firestore initialized with FORCED Long Polling (Expo Go)');
-} else if (Platform.OS === 'web') {
+if (Platform.OS === 'web') {
   console.log('[Firebase] Firestore initialized with WebSocket + Persistent Cache (Web)');
 } else {
-  console.log('[Firebase] Firestore initialized with WebSocket (Production build)');
+  console.log('[Firebase] Firestore initialized with WebSocket (React Native)');
 }
 
