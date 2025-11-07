@@ -114,6 +114,42 @@ function RootLayoutNav() {
           }} 
         />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        <Stack.Screen 
+          name="chat" 
+          options={{ 
+            headerShown: true, 
+            title: '',
+            headerBackTitle: 'Back',
+          }} 
+        />
+        <Stack.Screen 
+          name="personal-info" 
+          options={{ 
+            headerShown: true, 
+            title: 'Personal information',
+          }} 
+        />
+        <Stack.Screen 
+          name="subscription" 
+          options={{ 
+            headerShown: true, 
+            title: 'Subscription',
+          }} 
+        />
+        <Stack.Screen 
+          name="boss-timeline" 
+          options={{ 
+            headerShown: true, 
+            title: 'Boss Timeline',
+          }} 
+        />
+        <Stack.Screen 
+          name="support" 
+          options={{ 
+            headerShown: true, 
+            title: 'Support',
+          }} 
+        />
         <Stack.Screen name="boss-details" options={{ headerShown: true, title: 'Boss Details' }} />
         <Stack.Screen name="entry-details" options={{ headerShown: true, title: 'Entry Details' }} />
       </Stack>

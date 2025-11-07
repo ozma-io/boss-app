@@ -88,3 +88,44 @@ export interface RetryOptions {
   shouldRetry: (error: Error) => boolean;
 }
 
+// User Goal
+export interface UserGoal {
+  id: string;
+  title: string;
+  description: string;
+}
+
+// User Metrics
+export interface UserMetrics {
+  stressLevel: number;
+  bossRelationshipChallenges: number;
+  selfDoubtConfidenceGap: number;
+}
+
+// Chat Message
+export interface ChatMessage {
+  id: string;
+  type: 'user' | 'ai';
+  text: string;
+  timestamp: string;
+}
+
+// Subscription Plan
+export type SubscriptionPlanType = 'monthly' | 'semi-annual' | 'quarterly';
+
+export interface SubscriptionPlan {
+  type: SubscriptionPlanType;
+  price: number;
+  billingPeriod: string;
+  hasTrial?: boolean;
+  trialDays?: number;
+}
+
+export interface UserSubscription {
+  currentPlan: SubscriptionPlanType;
+  status: 'active' | 'inactive' | 'cancelled';
+  nextPaymentDate: string;
+  price: number;
+  savings?: number;
+}
+

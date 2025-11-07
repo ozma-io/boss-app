@@ -1,4 +1,4 @@
-import { Boss, TimelineEntry } from '@/types';
+import { Boss, ChatMessage, SubscriptionPlan, TimelineEntry, UserGoal, UserMetrics, UserSubscription } from '@/types';
 
 // Mock boss data with all attributes
 export const mockBoss: Boss = {
@@ -101,4 +101,105 @@ export const mockTimelineEntries: TimelineEntry[] = [
     topics: ['Bug Fix', 'Timeline'],
   },
 ];
+
+// Mock user profile data
+export const mockUserProfile = {
+  name: 'Mike',
+  username: 'Mike_reex',
+  email: 'mike.vazovski@gmail.com',
+  position: 'Senior Developer',
+  department: 'Engineering',
+  joinedAt: '2025-03-15',
+  avatar: '👤',
+};
+
+// Mock user goal
+export const mockUserGoal: UserGoal = {
+  id: 'goal-1',
+  title: 'Your Goal',
+  description: 'Pass probation period',
+};
+
+// Mock user metrics
+export const mockUserMetrics: UserMetrics = {
+  stressLevel: 0.25,
+  bossRelationshipChallenges: 0.20,
+  selfDoubtConfidenceGap: 0.30,
+};
+
+// Mock chat messages
+export const mockChatMessages: ChatMessage[] = [
+  {
+    id: 'msg-1',
+    type: 'ai',
+    text: 'Want to publicly support a teammate?\nThat builds your team-player image',
+    timestamp: '2025-11-07T09:30:00Z',
+  },
+  {
+    id: 'msg-2',
+    type: 'user',
+    text: 'Hmm, that\'s a good idea.\n\nAny suggestions on what to say?',
+    timestamp: '2025-11-07T09:31:00Z',
+  },
+  {
+    id: 'msg-3',
+    type: 'ai',
+    text: 'Sure! Here are a few quick examples:\n\n• "Big thanks to @Mia for jumping in on the client issue today — super fast and helpful!"\n\n• "Shout-out to the design team for polishing the demo slides — made a huge difference."\n\n• "Couldn\'t have wrapped this sprint without @Alex\'s help on the API fix."',
+    timestamp: '2025-11-07T09:32:00Z',
+  },
+  {
+    id: 'msg-4',
+    type: 'user',
+    text: 'Nice! I\'ll post the first one in Slack now.',
+    timestamp: '2025-11-07T09:33:00Z',
+  },
+  {
+    id: 'msg-5',
+    type: 'ai',
+    text: 'Awesome 🙌 — small moments like that build visibility and strengthen your relationships. Want me to remind you to do this again next week?',
+    timestamp: '2025-11-07T09:34:00Z',
+  },
+  {
+    id: 'msg-6',
+    type: 'user',
+    text: 'Yeah, let\'s do that.\n\nI will wait',
+    timestamp: '2025-11-07T09:35:00Z',
+  },
+  {
+    id: 'msg-7',
+    type: 'ai',
+    text: 'I\'ll check in next Friday! 💪',
+    timestamp: '2025-11-07T09:36:00Z',
+  },
+];
+
+// Mock subscription plans
+export const mockSubscriptionPlans: SubscriptionPlan[] = [
+  {
+    type: 'monthly',
+    price: 19,
+    billingPeriod: 'per month',
+  },
+  {
+    type: 'semi-annual',
+    price: 99,
+    billingPeriod: 'every 6 month',
+    hasTrial: true,
+    trialDays: 7,
+  },
+  {
+    type: 'quarterly',
+    price: 53,
+    billingPeriod: 'every 3 month',
+  },
+];
+
+// Mock user subscription
+export const mockUserSubscription: UserSubscription = {
+  currentPlan: 'quarterly',
+  status: 'active',
+  nextPaymentDate: '20.02.2026',
+  price: 53,
+  savings: 10,
+};
 
