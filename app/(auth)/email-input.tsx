@@ -4,7 +4,7 @@ import { sendEmailVerificationCode, signInWithTestEmail } from '@/services/auth.
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const TEST_EMAIL = 'test@test.test';
 
@@ -63,7 +63,11 @@ export default function EmailInputScreen(): React.JSX.Element {
   };
 
   return (
-    <View style={styles.container} testID="email-input-container">
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      testID="email-input-container"
+    >
       <TouchableOpacity style={styles.closeButton} onPress={handleClose} testID="close-button">
         <Ionicons name="close" size={28} color="#000" testID="close-icon" />
       </TouchableOpacity>
@@ -71,7 +75,7 @@ export default function EmailInputScreen(): React.JSX.Element {
       <View style={styles.content} testID="content">
         <Text style={styles.title} testID="title">What's your Email?</Text>
         <Text style={styles.subtitle} testID="subtitle">
-          We will send you a magic link{'\n'}to sign in
+          We will send you a four-digit{'\n'}code to this email
         </Text>
 
         <TextInput
@@ -98,7 +102,7 @@ export default function EmailInputScreen(): React.JSX.Element {
           {isLoading ? 'Sending...' : 'Continue'}
         </Text>
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -107,12 +111,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FAF8F5',
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 30,
     paddingBottom: 40,
   },
   closeButton: {
     position: 'absolute',
-    top: 60,
+    top: 30,
     right: 24,
     zIndex: 10,
   },

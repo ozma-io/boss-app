@@ -1,16 +1,16 @@
 import { AuthButton } from '@/components/auth/AuthButton';
+import { EmailAuthModal } from '@/components/auth/EmailAuthModal';
 import { AppColors } from '@/constants/Colors';
 import { signInWithApple } from '@/services/auth.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function WelcomeScreen(): React.JSX.Element {
-  const router = useRouter();
+  const [isEmailModalVisible, setIsEmailModalVisible] = useState<boolean>(false);
 
   const handleEmailSignIn = (): void => {
-    router.push('/(auth)/email-input');
+    setIsEmailModalVisible(true);
   };
 
   const handleGoogleSignIn = async (): Promise<void> => {
@@ -58,6 +58,11 @@ export default function WelcomeScreen(): React.JSX.Element {
           <Text style={styles.footerLink} testID="terms-of-service-text">Terms of service</Text>
         </TouchableOpacity>
       </View>
+
+      <EmailAuthModal
+        isVisible={isEmailModalVisible}
+        onClose={() => setIsEmailModalVisible(false)}
+      />
     </View>
   );
 }
