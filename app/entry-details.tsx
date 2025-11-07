@@ -234,11 +234,13 @@ const styles = StyleSheet.create({
     color: '#999',
     letterSpacing: 1,
     marginBottom: 12,
+    fontFamily: 'Manrope-Bold',
   },
   contentText: {
     fontSize: 16,
     color: '#333',
     lineHeight: 24,
+    fontFamily: 'Manrope-Regular',
   },
   tagContainer: {
     flexDirection: 'row',
@@ -255,6 +257,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1976d2',
     fontWeight: '500',
+    fontFamily: 'Manrope-Regular',
   },
   responseItem: {
     marginBottom: 16,
@@ -264,6 +267,7 @@ const styles = StyleSheet.create({
     color: AppColors.textSecondary,
     marginBottom: 8,
     fontWeight: '500',
+    fontFamily: 'Manrope-Regular',
   },
   answerContainer: {
     alignItems: 'flex-start',
@@ -273,6 +277,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#007AFF',
     marginBottom: 4,
+    fontFamily: 'Manrope-Bold',
   },
   ratingBar: {
     flexDirection: 'row',
@@ -299,6 +304,7 @@ const styles = StyleSheet.create({
     color: '#999',
     letterSpacing: 1,
     marginBottom: 12,
+    fontFamily: 'Manrope-Bold',
   },
   moodDisplay: {
     alignItems: 'center',
@@ -312,17 +318,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     textTransform: 'capitalize',
+    fontFamily: 'Manrope-SemiBold',
   },
   durationText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'Manrope-SemiBold',
   },
   participantText: {
     fontSize: 15,
     color: '#333',
     marginBottom: 6,
     lineHeight: 22,
+    fontFamily: 'Manrope-Regular',
   },
 });
 

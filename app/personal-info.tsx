@@ -125,10 +125,12 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     color: '#333',
+    fontFamily: 'Manrope-Regular',
   },
   value: {
     fontSize: 16,
     color: '#999',
+    fontFamily: 'Manrope-Regular',
   },
   signOutButton: {
     backgroundColor: '#fff',
@@ -141,6 +143,7 @@ const styles = StyleSheet.create({
   signOutButtonText: {
     color: '#ff3b30',
     fontSize: 16,
+    fontFamily: 'Manrope-Regular',
   },
   buttonPressed: {
     opacity: 0.7,

@@ -83,15 +83,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
+    fontFamily: 'Manrope-Bold',
   },
   bossPosition: {
     fontSize: 14,
     color: AppColors.textSecondary,
     marginBottom: 2,
+    fontFamily: 'Manrope-Regular',
   },
   bossDetail: {
     fontSize: 12,
     color: '#999',
+    fontFamily: 'Manrope-Regular',
   },
   timeline: {
     flex: 1,
@@ -104,6 +107,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 16,
+    fontFamily: 'Manrope-SemiBold',
   },
 });
 

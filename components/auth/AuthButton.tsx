@@ -79,6 +79,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
   primaryText: {
     color: '#fff',

@@ -120,6 +120,7 @@ const styles = StyleSheet.create({
     color: '#000000',
     marginBottom: 16,
     textAlign: 'center',
+    fontFamily: 'Manrope-Bold',
   },
   description: {
     fontSize: 16,
@@ -127,6 +128,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 32,
     paddingHorizontal: 16,
+    fontFamily: 'Manrope-Regular',
   },
   examplesContainer: {
     width: '100%',
@@ -161,21 +163,25 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666666',
     flex: 1,
+    fontFamily: 'Manrope-SemiBold',
   },
   timestamp: {
     fontSize: 12,
     color: '#999999',
+    fontFamily: 'Manrope-Regular',
   },
   notificationTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: '#000000',
     marginBottom: 4,
+    fontFamily: 'Manrope-SemiBold',
   },
   notificationBody: {
     fontSize: 14,
     color: '#666666',
     lineHeight: 20,
+    fontFamily: 'Manrope-Regular',
   },
   continueButton: {
     backgroundColor: '#000000',
@@ -189,6 +195,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
 });
 

@@ -245,6 +245,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'Manrope-SemiBold',
   },
   profileSection: {
     alignItems: 'center',
@@ -265,10 +266,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
+    fontFamily: 'Manrope-Bold',
   },
   email: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Manrope-Regular',
   },
   bossTimelineButton: {
     flexDirection: 'row',
@@ -291,6 +294,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#333',
     marginLeft: 12,
+    fontFamily: 'Manrope-Regular',
   },
   goalCard: {
     backgroundColor: '#B8E986',
@@ -314,6 +318,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginLeft: 8,
+    fontFamily: 'Manrope-SemiBold',
   },
   editButton: {
     padding: 4,
@@ -321,6 +326,7 @@ const styles = StyleSheet.create({
   goalDescription: {
     fontSize: 16,
     color: '#333',
+    fontFamily: 'Manrope-Regular',
   },
   goalInput: {
     fontSize: 16,
@@ -331,6 +337,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     minHeight: 60,
     textAlignVertical: 'top',
+    fontFamily: 'Manrope-Regular',
   },
   goalEditButtons: {
     flexDirection: 'row',
@@ -347,6 +354,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#666',
+    fontFamily: 'Manrope-SemiBold',
   },
   goalSaveButton: {
     paddingVertical: 8,
@@ -358,6 +366,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#B8E986',
+    fontFamily: 'Manrope-SemiBold',
   },
   metricsSection: {
     backgroundColor: '#fff',
@@ -376,6 +385,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#333',
     marginBottom: 20,
+    fontFamily: 'Manrope-Bold',
   },
   metricItem: {
     marginBottom: 20,
@@ -389,10 +399,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+    fontFamily: 'Manrope-Regular',
   },
   metricValue: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Manrope-Regular',
   },
   progressBarContainer: {
     width: '100%',
@@ -427,6 +439,7 @@ const styles = StyleSheet.create({
   settingsItemText: {
     fontSize: 16,
     color: '#333',
+    fontFamily: 'Manrope-Regular',
   },
   footer: {
     marginHorizontal: 20,
@@ -436,6 +449,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 16,
+    fontFamily: 'Manrope-Regular',
   },
   chatButton: {
     position: 'absolute',

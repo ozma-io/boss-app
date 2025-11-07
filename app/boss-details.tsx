@@ -117,12 +117,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 8,
+    fontFamily: 'Manrope-SemiBold',
   },
   value: {
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
     lineHeight: 22,
+    fontFamily: 'Manrope-Regular',
   },
   interestTag: {
     backgroundColor: '#e3f2fd',
@@ -136,6 +138,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1976d2',
     fontWeight: '500',
+    fontFamily: 'Manrope-Regular',
   },
 });
 

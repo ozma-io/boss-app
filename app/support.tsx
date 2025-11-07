@@ -111,6 +111,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 16,
+    fontFamily: 'Manrope-Bold',
   },
   description: {
     fontSize: 16,
@@ -118,11 +119,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
+    fontFamily: 'Manrope-Regular',
   },
   loadingText: {
     fontSize: 16,
     color: '#666',
     marginTop: 16,
+    fontFamily: 'Manrope-Regular',
   },
   infoCard: {
     backgroundColor: '#fff',
@@ -140,6 +143,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+    fontFamily: 'Manrope-Regular',
   },
 });
 

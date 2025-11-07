@@ -160,6 +160,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     fontWeight: '500',
+    fontFamily: 'Manrope-Regular',
   },
   activeBadge: {
     flexDirection: 'row',
@@ -174,28 +175,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
+    fontFamily: 'Manrope-SemiBold',
   },
   currentPlanTitle: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
+    fontFamily: 'Manrope-Bold',
   },
   currentPlanDescription: {
     fontSize: 16,
     color: '#333',
     marginBottom: 12,
     lineHeight: 22,
+    fontFamily: 'Manrope-Regular',
   },
   nextPayment: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Manrope-Regular',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#333',
     marginBottom: 16,
+    fontFamily: 'Manrope-SemiBold',
   },
   plansContainer: {
     flexDirection: 'row',
@@ -221,6 +227,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'Manrope-SemiBold',
   },
   planPricing: {
     flexDirection: 'row',
@@ -231,10 +238,12 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
+    fontFamily: 'Manrope-Bold',
   },
   planPeriod: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Manrope-Regular',
   },
   trialBadge: {
     flexDirection: 'row',
@@ -249,6 +258,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#333',
     marginLeft: 4,
+    fontFamily: 'Manrope-Regular',
   },
   changePlanButton: {
     backgroundColor: '#333',
@@ -265,6 +275,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
+    fontFamily: 'Manrope-SemiBold',
   },
   cancelButton: {
     paddingVertical: 16,
@@ -274,6 +285,7 @@ const styles = StyleSheet.create({
     color: '#ff3b30',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
   buttonPressed: {
     opacity: 0.7,

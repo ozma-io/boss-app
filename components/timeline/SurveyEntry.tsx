@@ -76,10 +76,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 2,
+    fontFamily: 'Manrope-SemiBold',
   },
   timestamp: {
     fontSize: 12,
     color: '#999',
+    fontFamily: 'Manrope-Regular',
   },
   responses: {
     gap: 8,
@@ -94,12 +96,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
     flex: 1,
+    fontFamily: 'Manrope-Regular',
   },
   answer: {
     fontSize: 14,
     fontWeight: '600',
     color: '#007AFF',
     marginLeft: 8,
+    fontFamily: 'Manrope-SemiBold',
   },
 });
 

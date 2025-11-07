@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
+    fontFamily: 'Manrope-SemiBold',
   },
   messagesContainer: {
     flex: 1,
@@ -113,6 +114,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     lineHeight: 20,
+    fontFamily: 'Manrope-Regular',
   },
   userMessageText: {
     color: '#000',
@@ -137,6 +139,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
     color: '#333',
+    fontFamily: 'Manrope-Regular',
   },
   micButton: {
     marginLeft: 12,

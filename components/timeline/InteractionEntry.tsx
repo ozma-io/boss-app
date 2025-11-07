@@ -81,10 +81,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 2,
+    fontFamily: 'Manrope-SemiBold',
   },
   timestamp: {
     fontSize: 12,
     color: '#999',
+    fontFamily: 'Manrope-Regular',
   },
   moodEmoji: {
     fontSize: 24,
@@ -94,12 +96,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: AppColors.textSecondary,
     lineHeight: 20,
+    fontFamily: 'Manrope-Regular',
   },
   duration: {
     fontSize: 12,
     color: '#999',
     marginTop: 8,
     fontStyle: 'italic',
+    fontFamily: 'Manrope-Regular',
   },
 });
 

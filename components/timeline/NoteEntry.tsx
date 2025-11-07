@@ -69,15 +69,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333',
     marginBottom: 2,
+    fontFamily: 'Manrope-SemiBold',
   },
   timestamp: {
     fontSize: 12,
     color: '#999',
+    fontFamily: 'Manrope-Regular',
   },
   content: {
     fontSize: 14,
     color: AppColors.textSecondary,
     lineHeight: 20,
+    fontFamily: 'Manrope-Regular',
   },
 });
 

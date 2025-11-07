@@ -28,6 +28,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
+    fontFamily: 'Manrope-Bold',
   },
   link: {
     marginTop: 15,
@@ -36,5 +37,6 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 14,
     color: '#2e78b7',
+    fontFamily: 'Manrope-Regular',
   },
 });

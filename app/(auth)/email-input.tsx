@@ -132,6 +132,7 @@ const styles = StyleSheet.create({
     color: '#000',
     marginBottom: 12,
     textAlign: 'center',
+    fontFamily: 'Manrope-Bold',
   },
   subtitle: {
     fontSize: 16,
@@ -139,6 +140,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 48,
+    fontFamily: 'Manrope-Regular',
   },
   input: {
     width: '100%',
@@ -150,6 +152,7 @@ const styles = StyleSheet.create({
     color: '#000',
     borderWidth: 1,
     borderColor: '#e0e0e0',
+    fontFamily: 'Manrope-Regular',
   },
   continueButton: {
     backgroundColor: '#000',
@@ -165,6 +168,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
 });
 

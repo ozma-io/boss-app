@@ -124,6 +124,7 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     color: '#999',
+    fontFamily: 'Manrope-Regular',
   },
 });
 
