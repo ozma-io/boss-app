@@ -2,7 +2,7 @@ import { auth } from '@/constants/firebase.config';
 import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { AuthState, User } from '@/types';
 import { isSignInWithEmailLink } from 'firebase/auth';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 
 interface AuthContextType {
@@ -20,6 +20,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
   const [authState, setAuthState] = useState<AuthState>('loading');
+  const isProcessingEmailLinkRef = useRef<boolean>(false);
 
   useEffect(() => {
     const initAuth = async (): Promise<void> => {
@@ -35,15 +36,18 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           }
           
           if (email) {
+            isProcessingEmailLinkRef.current = true;
             try {
               const signedInUser = await verifyEmailCode(email, url);
               setUser(signedInUser);
               setAuthState('authenticated');
               window.localStorage.removeItem('emailForSignIn');
               window.history.replaceState({}, document.title, window.location.pathname);
+              isProcessingEmailLinkRef.current = false;
               return;
             } catch (error) {
               console.error('Error signing in with email link:', error);
+              isProcessingEmailLinkRef.current = false;
             }
           }
         }
@@ -61,6 +65,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
     initAuth();
 
     const unsubscribe = onAuthStateChanged((newUser: User | null) => {
+      if (isProcessingEmailLinkRef.current) {
+        return;
+      }
       setUser(newUser);
       setAuthState(newUser ? 'authenticated' : 'unauthenticated');
     });

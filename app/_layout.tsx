@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/Colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -5,6 +6,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 export {
@@ -66,6 +68,14 @@ function RootLayoutNav() {
       router.replace('/(tabs)');
     }
   }, [authState, segments]);
+
+  if (authState === 'loading') {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: AppColors.background }}>
+        <ActivityIndicator size="large" color={AppColors.loaderColor} />
+      </View>
+    );
+  }
 
   // Always use light theme for now, ignore system color scheme
   return (
