@@ -1,8 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
-import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "",
@@ -17,17 +16,5 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const functions = getFunctions(app);
 
-// WebSocket is fully supported on all platforms
-// Web needs special cache configuration
-export const db = initializeFirestore(app, {
-  localCache: Platform.OS === 'web' && typeof window !== 'undefined'
-    ? persistentLocalCache({ tabManager: persistentSingleTabManager({}) })
-    : undefined,
-});
-
-if (Platform.OS === 'web') {
-  console.log('[Firebase] Firestore initialized with WebSocket + Persistent Cache (Web)');
-} else {
-  console.log('[Firebase] Firestore initialized with WebSocket (React Native)');
-}
+export const db = getFirestore(app);
 
