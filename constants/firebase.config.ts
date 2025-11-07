@@ -1,6 +1,7 @@
+import Constants from 'expo-constants';
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { enableIndexedDbPersistence, initializeFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
 import { Platform } from 'react-native';
 
 const firebaseConfig = {
@@ -15,25 +16,21 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
+const shouldForceLongPolling = Platform.OS !== 'web' && isExpoGo;
+
 export const db = initializeFirestore(app, {
-  experimentalAutoDetectLongPolling: true,
+  experimentalForceLongPolling: shouldForceLongPolling,
+  localCache: Platform.OS === 'web' 
+    ? persistentLocalCache({ tabManager: persistentSingleTabManager({}) })
+    : undefined,
 });
 
-console.log('[Firebase] Firestore initialized with auto-detect long polling');
-
-if (Platform.OS === 'web') {
-  enableIndexedDbPersistence(db)
-    .then(() => {
-      console.log('[Firebase] Offline persistence enabled successfully');
-    })
-    .catch((error) => {
-      if (error.code === 'failed-precondition') {
-        console.warn('[Firebase] Persistence failed: Multiple tabs open');
-      } else if (error.code === 'unimplemented') {
-        console.warn('[Firebase] Persistence not available in this browser');
-      } else {
-        console.error('[Firebase] Failed to enable persistence:', error);
-      }
-    });
+if (shouldForceLongPolling) {
+  console.log('[Firebase] Firestore initialized with FORCED Long Polling (Expo Go)');
+} else if (Platform.OS === 'web') {
+  console.log('[Firebase] Firestore initialized with WebSocket + Persistent Cache (Web)');
+} else {
+  console.log('[Firebase] Firestore initialized with WebSocket (Production build)');
 }
 
