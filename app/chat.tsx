@@ -1,12 +1,14 @@
+import { SendArrowIcon } from '@/components/icons/SendArrowIcon';
 import { ChatMessage } from '@/types';
 import { mockChatMessages } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Stack } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
+  const [inputText, setInputText] = useState('');
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: false });
@@ -14,6 +16,13 @@ export default function ChatScreen() {
 
   const handleContentSizeChange = () => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
+  };
+
+  const handleSend = () => {
+    if (inputText.trim()) {
+      // TODO: Implement send message logic
+      setInputText('');
+    }
   };
 
   const renderMessage = (message: ChatMessage) => {
@@ -84,11 +93,19 @@ export default function ChatScreen() {
             style={styles.input}
             placeholder="Lorem ipsum"
             placeholderTextColor="#999"
+            value={inputText}
+            onChangeText={setInputText}
             testID="message-input"
           />
-          <TouchableOpacity style={styles.micButton} testID="mic-button">
-            <FontAwesome name="microphone" size={20} color="#666" testID="mic-icon" />
-          </TouchableOpacity>
+          {inputText.trim() ? (
+            <TouchableOpacity style={styles.sendButton} onPress={handleSend} testID="send-button">
+              <SendArrowIcon size={20} color="#FFFFFF" testID="send-icon" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.micButton} testID="mic-button">
+              <FontAwesome name="microphone" size={20} color="#666" testID="mic-icon" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </>
@@ -163,6 +180,15 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButton: {
+    marginLeft: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
   },
