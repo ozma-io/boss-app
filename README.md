@@ -1,4 +1,13 @@
-# 📦 Tech Stack for the MVP Mobile App "Boss Relationship Tracker"
+# 📦 Boss Relationship Tracker
+
+## 🚀 Run Locally
+```bash
+npm start      # Dev server (choose platform)
+npm run web    # Web browser
+npm run ios    # iOS simulator
+```
+
+---
 
 ## 🧱 Technology Stack
 

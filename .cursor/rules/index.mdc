@@ -13,6 +13,11 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 - Expo Router file-based routing
 - User data scoped to `userId` (Firebase rules enforce `request.auth.uid === userId`)
 
+## Run Locally
+- `npm start` — dev server (choose platform)
+- `npm run web` — web browser
+- `npm run ios` — iOS simulator
+
 ## Find Details In
 - **Tech stack & data model**: `README.md`
 - **Setup instructions**: `SETUP.md`
