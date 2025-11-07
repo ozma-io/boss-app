@@ -125,18 +125,18 @@ npm test
 
 **First time:** iOS/Android builds take ~5-10 minutes to compile the Development Build.
 
-**After that:** JavaScript changes reload instantly via hot reload (like Expo Go).
+**After that:** JavaScript changes reload instantly via hot reload.
 
 ## 🔧 Development Build
 
-This project uses **Expo Development Build** instead of Expo Go.
+This project uses **Expo Development Build** for full native module support.
 
-### Why Development Build?
+### Key Benefits
 
-- ✅ **Production-like environment**: No Firestore offline mode issues
+- ✅ **Production-like environment**: Firestore works perfectly
 - ✅ **Native WebSocket support**: Firestore works instantly (<1 sec)
 - ✅ **Full native module support**: No limitations
-- ✅ **Hot reload preserved**: JavaScript changes still instant
+- ✅ **Hot reload**: JavaScript changes reload instantly
 
 ### Requirements
 
@@ -169,7 +169,7 @@ Only rebuild when you:
 - Change `app.json` or `app.config.js`
 - Update Expo SDK version
 
-Otherwise, Development Build works exactly like Expo Go!
+Otherwise, hot reload works for all JavaScript/TypeScript changes!
 
 ## 📱 Development Workflow
 

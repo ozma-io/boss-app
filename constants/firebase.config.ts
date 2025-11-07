@@ -15,8 +15,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Development Build works like production - WebSocket is fully supported
-// Only web needs special cache configuration
+// WebSocket is fully supported on all platforms
+// Web needs special cache configuration
 export const db = initializeFirestore(app, {
   localCache: Platform.OS === 'web' 
     ? persistentLocalCache({ tabManager: persistentSingleTabManager({}) })

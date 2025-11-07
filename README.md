@@ -17,7 +17,7 @@ npm run android # Android emulator (builds Development Build)
 ### Client (Mobile App)
 - **React Native** — cross-platform development (iOS + Android)
 - **Expo** — fast setup, simplified build and deployment
-- **Expo Development Build** — native development environment (replaced Expo Go)
+- **Expo Development Build** — native development environment with full module support
 - **TypeScript** — required; improves type safety and developer experience
 - **Expo Router** — file-based routing and navigation (like Next.js)
 - **Expo Notifications** — receiving push notifications on the device
@@ -128,13 +128,13 @@ npm run web       # Web browser
 
 ### 📱 Development Build
 
-This project uses **Expo Development Build** instead of Expo Go for better native module support and production-like environment.
+This project uses **Expo Development Build** for full native module support and production-like environment.
 
-**Key differences from Expo Go:**
+**Key features:**
 - ✅ Full native module support (Firestore WebSocket works perfectly)
-- ✅ Production-like environment (no Firestore offline mode issues)
+- ✅ Production-like environment
 - ✅ Custom native code and configurations
-- ✅ Hot reload still works for JavaScript changes
+- ✅ Hot reload for JavaScript changes
 
 **When to rebuild:**
 - Adding native modules or Expo plugins
@@ -143,7 +143,7 @@ This project uses **Expo Development Build** instead of Expo Go for better nativ
 
 **Regular development:**
 - JavaScript/TypeScript changes reload instantly (no rebuild needed)
-- Use `npm run dev` and scan QR code (like Expo Go)
+- Use `npm run dev` and scan QR code
 - Web version unchanged
 
 ### Project Structure

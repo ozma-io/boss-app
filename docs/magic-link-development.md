@@ -89,8 +89,8 @@ For production, either remove this or restrict to dev mode:
 **Q: Why not use `bossapp://` immediately?**  
 A: Firebase Auth requires HTTP/HTTPS URLs for magic links. Custom schemes don't work with Firebase email link authentication.
 
-**Q: How was this handled in Expo Go?**  
-A: Expo Go used a special `exp://` scheme with automatic redirects. Development Builds work differently and require manual handling.
+**Q: Why does this require manual handling?**  
+A: Development Builds use standard HTTP URLs that open in the browser by default. Universal Links (production) or manual paste (development) are needed to open links in the app.
 
 **Q: Can this be automated?**  
 A: Yes, by using:

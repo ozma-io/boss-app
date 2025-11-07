@@ -8,7 +8,7 @@ alwaysApply: true
 React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functions)
 
 ## Key Architecture
-- **Expo Development Build** (not Expo Go) - production-like environment with full native module support
+- **Expo Development Build** - production-like environment with full native module support
 - **Expo Router** - file-based navigation
 - **TypeScript strict typing** - required for all code
 - **Functional components** with hooks

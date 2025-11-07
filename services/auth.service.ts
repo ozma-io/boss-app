@@ -18,23 +18,11 @@ import { Platform } from 'react-native';
 WebBrowser.maybeCompleteAuthSession();
 
 function getExpoDevServerUrl(): string | null {
-  // In Expo Go, use http:// (required by Firebase)
-  // The web version will handle redirecting back to Expo Go
-  
-  // Try manifest2 first (newer SDK versions)
+  // Try to detect dev server URL from Expo config
   const manifest2HostUri = Constants.expoConfig?.hostUri;
   if (manifest2HostUri) {
     console.log('[Auth] Found hostUri from expoConfig:', manifest2HostUri);
     return `http://${manifest2HostUri}`;
-  }
-  
-  // Try manifest2 debuggerHost
-  const manifest2DebuggerHost = Constants.manifest2?.extra?.expoGo?.debuggerHost as string | undefined;
-  if (manifest2DebuggerHost) {
-    // debuggerHost format: "192.168.1.74:19000" - need to change port to 8081
-    const host = manifest2DebuggerHost.split(':')[0];
-    console.log('[Auth] Found debuggerHost, using:', `http://${host}:8081`);
-    return `http://${host}:8081`;
   }
   
   console.warn('[Auth] Could not detect dev server URL, falling back to localhost');
@@ -44,24 +32,15 @@ function getExpoDevServerUrl(): string | null {
 export async function sendEmailVerificationCode(email: string): Promise<void> {
   let redirectUrl: string;
   
-  // Check if running in Expo Go or standalone build
-  const isExpoGo = Constants.executionEnvironment === 'storeClient';
-  
   // Debug: log all relevant Constants values
   console.log('[Auth] Debug - Constants info:', {
     executionEnvironment: Constants.executionEnvironment,
     expoConfigHostUri: Constants.expoConfig?.hostUri,
-    manifest2DebuggerHost: Constants.manifest2?.extra?.expoGo?.debuggerHost,
   });
   
   if (Platform.OS === 'web') {
     // Web: use localhost or production URL
     redirectUrl = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081';
-  } else if (isExpoGo) {
-    // Expo Go: automatically detect dev server IP address (prioritize auto-detection over env var for mobile)
-    const devServerUrl = getExpoDevServerUrl();
-    redirectUrl = devServerUrl || process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081';
-    console.log('[Auth] Expo Go detected. Using redirect URL:', redirectUrl);
   } else {
     // For development builds, check if dev server is available
     const devServerUrl = getExpoDevServerUrl();
