@@ -432,13 +432,13 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   footer: {
-    alignItems: 'center',
+    marginHorizontal: 20,
     marginBottom: 24,
   },
   footerLink: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   signOutButton: {
     flexDirection: 'row',
