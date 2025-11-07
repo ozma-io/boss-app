@@ -1,0 +1,20 @@
+{
+  "name": "firestore-migrations",
+  "version": "1.0.0",
+  "description": "Firestore data migration scripts",
+  "private": true,
+  "scripts": {
+    "migrate": "tsx run-migration.ts",
+    "list": "tsx list-migrations.ts"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
+

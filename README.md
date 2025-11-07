@@ -154,6 +154,9 @@ This project uses **Expo Development Build** instead of Expo Go for better nativ
 - `types/` - TypeScript type definitions
 - `utils/` - Helper functions
 - `functions/` - Firebase Cloud Functions
+- `firestore/` - Firebase configuration and database migrations stored as code
+  - `migrations/` - Database migration scripts (see `firestore/migrations/README.md`)
+  - `schemas/` - Type definitions for Firestore documents (see `firestore/schemas/README.md`)
 - `__tests__/` - Unit tests
 
 📖 **For detailed setup instructions, see [SETUP.md](./SETUP.md)**
