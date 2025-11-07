@@ -1,6 +1,7 @@
 # 📦 Boss Relationship Tracker
 
-## 🚀 Run Locally
+## 🚀 Quick Start
+
 ```bash
 npm run dev    # Dev server (choose platform)
 npm run web    # Web browser
@@ -10,37 +11,25 @@ npm run android # Android emulator (builds Development Build)
 
 **Note:** First iOS/Android build takes ~5-10 minutes. Subsequent JavaScript changes load instantly via hot reload.
 
+## 📚 Documentation
+
+**📖 [Complete Documentation Index](./docs/README.md)**
+
+Quick links:
+- **[Setup Instructions](./SETUP.md)** - Initial project setup
+- **[Firebase Deployment](./docs/firebase-deployment.md)** - Deploy Cloud Functions, rules, indexes
+- **[Firestore Management](./docs/firestore-management.md)** - Schemas, migrations, security
+- **[Authentication](./docs/authentication.md)** - Email links, Apple/Google sign-in
+
 ## 🚢 Deploy to Firebase
 
-**Initial setup** (creates database, deploys rules & indexes):
+**Quick deploy:**
 ```bash
-./scripts/setup-firestore.sh
+./scripts/setup-firestore.sh  # Initial setup
+firebase deploy               # Deploy everything
 ```
 
-**Deploy changes:**
-```bash
-# Deploy Cloud Functions (backend)
-cd functions && npm run build && cd .. && firebase deploy --only functions
-
-# First-time deploy or force cleanup policy setup
-firebase deploy --only functions --force
-
-# Deploy Firestore Rules (security)
-firebase deploy --only firestore:rules
-
-# Deploy Firestore Indexes
-firebase deploy --only firestore:indexes
-
-# Deploy everything
-firebase deploy
-```
-
-**Run Data Migration** (manual, one-time scripts):
-```bash
-cd firestore/migrations && npm run migrate -- YYYY-MM-DD-migration-name
-```
-
-**Note:** `/firestore/schemas/` are TypeScript types only (not deployed).
+📖 **For detailed deployment instructions, see [docs/firebase-deployment.md](./docs/firebase-deployment.md)**
 
 ---
 
@@ -72,70 +61,19 @@ cd firestore/migrations && npm run migrate -- YYYY-MM-DD-migration-name
 
 ---
 
-# 🗃️ Firebase Firestore Data Structure
+## 🗃️ Firestore Data Structure
 
-## Collection: Users
-Path: `/users/{userId}`
+```
+/users/{userId}
+  ├── bosses/{bossId}
+  │   └── entries/{entryId}
+```
 
-User document example:
-*JSON:*
-{
-  "email": "user@example.com",
-  "currentBossId": "abc123",
-  "createdAt": "2025-10-19T10:00:00Z"
-}
+**User data scoping:** All paths include `{userId}` - Firebase Security Rules enforce `request.auth.uid === userId`
 
----
+**Entry types:** `note`, `survey`, `interaction` - flexible timeline history
 
-## Subcollection: Bosses
-Path: `/users/{userId}/bosses/{bossId}`
-
-Boss document example:
-*JSON:*
-{
-  "name": "Olga Ivanovna",
-  "position": "CTO",
-  "startedAt": "2025-09-01T00:00:00Z"
-}
-
----
-
-## Subcollection: Entries (Flexible History)
-Path: `/users/{userId}/bosses/{bossId}/entries/{entryId}`
-
-Each entry represents a note, interaction, survey, etc., distinguished by `type`.
-
-### Example entry: Note
-*JSON:*
-{
-  "type": "note",
-  "timestamp": "2025-10-19T11:00:00Z",
-  "content": "Boss seemed tense before the meeting."
-}
-
-### Example entry: Survey
-*JSON:*
-{
-  "type": "survey",
-  "timestamp": "2025-10-17T08:00:00Z",
-  "survey": {
-    "trustLevel": 4,
-    "support": 5
-  }
-}
-
-### Example entry: Interaction
-*JSON:*
-{
-  "type": "interaction",
-  "timestamp": "2025-10-16T15:30:00Z",
-  "mood": "neutral",
-  "notes": "Discussed quarterly goals."
-}
-
----
-
-🔐 **Security**: Firestore Security Rules ensure that `request.auth.uid === userId`. This guarantees that users can only access their own documents.
+📖 **For detailed schemas and examples, see [docs/firestore-management.md](./docs/firestore-management.md)**
 
 ---
 
@@ -180,17 +118,20 @@ This project uses **Expo Development Build** for full native module support and 
 
 ### Project Structure
 
-- `app/` - File-based routing (Expo Router)
-- `components/` - Reusable UI components
-- `services/` - Firebase services (auth, firestore, notifications)
-- `types/` - TypeScript type definitions
-- `utils/` - Helper functions
-- `functions/` - **Firebase Cloud Functions** (deploy: `firebase deploy --only functions`)
-- `firestore.rules` - **Firestore Security Rules** (deploy: `firebase deploy --only firestore:rules`)
-- `firestore.indexes.json` - **Firestore Indexes** (deploy: `firebase deploy --only firestore:indexes`)
-- `firestore/` - Database tooling (local only)
-  - `migrations/` - Migration scripts (run: `cd firestore/migrations && npm run migrate`)
-  - `schemas/` - TypeScript types (not deployed)
-- `__tests__/` - Unit tests
+```
+boss-app/
+├── app/                    # Expo Router screens (file-based routing)
+├── components/             # Reusable UI components
+├── services/               # Firebase services (auth, firestore, notifications)
+├── types/                  # TypeScript type definitions
+├── functions/              # Firebase Cloud Functions
+├── firestore/              # Database tooling
+│   ├── schemas/           # TypeScript schemas (not deployed)
+│   └── migrations/        # Data migration scripts
+├── docs/                   # Documentation
+├── scripts/                # Automation scripts
+├── firestore.rules         # Firestore Security Rules
+└── firestore.indexes.json  # Firestore Indexes
+```
 
-📖 **For detailed setup instructions, see [SETUP.md](./SETUP.md)**
+📖 **For detailed setup, see [SETUP.md](./SETUP.md)**

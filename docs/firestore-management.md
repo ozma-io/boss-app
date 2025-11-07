@@ -1,6 +1,8 @@
 # Firestore Management Guide
 
-Complete guide for managing Firestore database, security rules, migrations, and schemas.
+Complete guide for managing Firestore database schemas, security rules, indexes, and data migrations.
+
+📖 **For Firebase deployment instructions, see [firebase-deployment.md](./firebase-deployment.md)**
 
 ---
 
@@ -60,14 +62,7 @@ npm test
 
 ### Deploying Rules
 
-```bash
-# Deploy rules to production
-firebase deploy --only firestore:rules
-
-# Deploy to specific environment
-firebase use staging
-firebase deploy --only firestore:rules
-```
+📖 **See [firebase-deployment.md](./firebase-deployment.md) for deployment instructions**
 
 ---
 
@@ -227,84 +222,17 @@ Edit `firestore.indexes.json`:
 }
 ```
 
-Then deploy:
-
-```bash
-firebase deploy --only firestore:indexes
-```
-
----
-
-## 🚀 Deployment
-
-### Deploy Everything
-
-```bash
-firebase deploy
-```
-
-### Deploy Specific Resources
-
-```bash
-# Security rules only
-firebase deploy --only firestore:rules
-
-# Indexes only
-firebase deploy --only firestore:indexes
-
-# Both
-firebase deploy --only firestore
-```
-
-### Multi-Environment Setup
-
-```bash
-# Add environments
-firebase use --add
-
-# Switch environment
-firebase use staging
-firebase use production
-
-# Deploy to specific env
-firebase use staging && firebase deploy
-```
+📖 **See [firebase-deployment.md](./firebase-deployment.md) for deployment instructions**
 
 ---
 
 ## 🔧 CLI Commands
 
-### Project Management
+### Testing Locally
 
 ```bash
-# List projects
-firebase projects:list
-
-# Switch project
-firebase use the-boss-app-e42b6
-
-# Current project
-firebase use
-```
-
-### Firestore Operations
-
-```bash
-# Export data
-firebase firestore:export gs://your-bucket/backups/2025-11-07
-
-# Import data
-firebase firestore:import gs://your-bucket/backups/2025-11-07
-
-# Delete all data (DANGEROUS!)
-firebase firestore:delete --all-collections
-```
-
-### Emulator
-
-```bash
-# Start emulator
-firebase emulators:start
+# Start Firestore emulator
+firebase emulators:start --only firestore
 
 # Start with data
 firebase emulators:start --import=./emulator-data
@@ -312,6 +240,18 @@ firebase emulators:start --import=./emulator-data
 # Export data after testing
 firebase emulators:export ./emulator-data
 ```
+
+### Firestore Operations
+
+```bash
+# Export data (backup)
+firebase firestore:export gs://your-bucket/backups/2025-11-07
+
+# Import data (restore)
+firebase firestore:import gs://your-bucket/backups/2025-11-07
+```
+
+📖 **For full deployment and CLI commands, see [firebase-deployment.md](./firebase-deployment.md)**
 
 ---
 
@@ -404,17 +344,17 @@ firebase firestore:databases:create --region=us-central1
 
 ---
 
-## 🎯 Quick Start Checklist
+## 🎯 Quick Start Guide
 
-- [x] Install Firebase CLI
-- [x] Initialize Firestore (`firebase init firestore`)
-- [x] Set up security rules
-- [x] Create schema definitions
-- [x] Set up migration system
-- [ ] Deploy rules: `firebase deploy --only firestore:rules`
-- [ ] Create first migration (if needed)
-- [ ] Set up CI/CD for automatic deployment
-- [ ] Configure staging environment
+**Setup steps:**
+1. Install Firebase CLI
+2. Initialize Firestore
+3. Set up security rules
+4. Create schema definitions
+5. Set up migration system
+6. Deploy Firestore (see [firebase-deployment.md](./firebase-deployment.md))
+7. Create migrations as needed
+8. Set up CI/CD for automatic deployment
 
 Need help? Check the individual READMEs in each directory!
 

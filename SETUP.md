@@ -83,42 +83,27 @@ In `app/` directory:
 - Create `app/boss/[id].tsx` - Boss details (dynamic route)
 - Create `app/boss/add-entry.tsx` - Add entry screen
 
-### 5. Setup Firebase Cloud Functions
+### 5. Setup Firebase
 
+**Initial Firestore setup:**
+```bash
+./scripts/setup-firestore.sh
+```
+
+**Cloud Functions setup:**
 ```bash
 cd functions
 npm install
 npm run build
 ```
 
-**Important:** For Cloud Functions 2nd gen to create custom tokens, grant the service account permission:
+📖 **For detailed Firebase deployment instructions, see [docs/firebase-deployment.md](./docs/firebase-deployment.md)**
 
-```bash
-# First, get your project number
-gcloud projects describe the-boss-app-e42b6 --format="value(projectNumber)"
-
-# Then grant permission (replace PROJECT_NUMBER with the number from above)
-gcloud iam service-accounts add-iam-policy-binding PROJECT_NUMBER-compute@developer.gserviceaccount.com \
-  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
-  --role="roles/iam.serviceAccountTokenCreator" \
-  --project=the-boss-app-e42b6
-```
-
-This is required once per project for the test user authentication feature to work.
-
-### 6. Initialize Firebase Project
-
-```bash
-# Install Firebase CLI globally (if not already installed)
-npm install -g firebase-tools
-
-# Login to Firebase
-firebase login
-
-# Initialize Firebase in your project
-firebase init
-# Select: Functions, Firestore, Hosting (optional)
-```
+This includes:
+- Service account permissions for Cloud Functions
+- Deploying rules and indexes
+- Multi-environment setup
+- Troubleshooting
 
 ## 🏃 Running the App
 
@@ -201,16 +186,19 @@ npx expo start --clear
 
 # Update Expo SDK
 npx expo install --fix
-
-# Deploy Cloud Functions
-cd functions && npm run deploy
-
-# View Cloud Functions logs
-cd functions && npm run logs
 ```
+
+**Firebase commands:** See [docs/firebase-deployment.md](./docs/firebase-deployment.md)
 
 ## 📚 Documentation
 
+### Project Documentation
+- [Firebase Deployment Guide](./docs/firebase-deployment.md) - Deploy Cloud Functions, rules, indexes
+- [Firestore Management](./docs/firestore-management.md) - Schemas, migrations, security rules
+- [Authentication System](./docs/authentication.md) - Email links, Apple/Google sign-in
+- [Magic Link Development](./docs/magic-link-development.md) - Testing auth in development
+
+### External Resources
 - [Expo Router Docs](https://docs.expo.dev/router/introduction/)
 - [Firebase for React Native](https://rnfirebase.io/)
 - [React Native Testing Library](https://callstack.github.io/react-native-testing-library/)

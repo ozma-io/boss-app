@@ -18,8 +18,14 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 - `npm run web` — web browser
 - `npm run ios` — iOS simulator
 
-## Find Details In
-- **Tech stack & data model**: `README.md`
-- **Setup instructions**: `SETUP.md`
-- **Project structure**: See `README.md` or explore `app/`, `components/`, `services/`, `types/`
-- **Firebase paths**: `/users/{userId}/bosses/{bossId}/entries/{entryId}`
+## Documentation
+- **Quick start**: `README.md`
+- **Setup guide**: `SETUP.md`
+- **All docs**: `docs/README.md` (Firebase, Firestore, Auth)
+
+## Project Structure
+- `app/` — Screens (Expo Router)
+- `components/` — Reusable UI
+- `services/` — Firebase services
+- `firestore/` — Schemas & migrations
+- `functions/` — Cloud Functions
