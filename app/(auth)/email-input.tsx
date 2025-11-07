@@ -74,9 +74,9 @@ export default function EmailInputScreen(): React.JSX.Element {
       </View>
 
       <TouchableOpacity
-        style={[styles.continueButton, (!email || isLoading) && styles.continueButtonDisabled]}
+        style={[styles.continueButton, (!email || !validateEmail(email) || isLoading) && styles.continueButtonDisabled]}
         onPress={handleContinue}
-        disabled={!email || isLoading}
+        disabled={!email || !validateEmail(email) || isLoading}
       >
         <Text style={styles.continueButtonText}>
           {isLoading ? 'Sending...' : 'Continue'}
