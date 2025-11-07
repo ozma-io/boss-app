@@ -2,9 +2,20 @@ import { ChatMessage } from '@/types';
 import { mockChatMessages } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Stack } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ChatScreen() {
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: false });
+  }, []);
+
+  const handleContentSizeChange = () => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  };
+
   const renderMessage = (message: ChatMessage) => {
     const isUser = message.type === 'user';
     
@@ -59,8 +70,10 @@ export default function ChatScreen() {
       />
       <View style={styles.container} testID="chat-container">
         <ScrollView
+          ref={scrollViewRef}
           style={styles.messagesContainer}
           contentContainerStyle={styles.messagesContent}
+          onContentSizeChange={handleContentSizeChange}
           testID="messages-scroll"
         >
           {mockChatMessages.map(renderMessage)}
