@@ -26,14 +26,9 @@ export default function MainScreen() {
     setIsEditingGoal(true);
   };
 
-  const handleSaveGoal = (): void => {
+  const handleBlurGoal = (): void => {
     setIsEditingGoal(false);
     // TODO: Save goal to backend
-  };
-
-  const handleCancelEditGoal = (): void => {
-    setGoalDescription(mockUserGoal.description);
-    setIsEditingGoal(false);
   };
 
   const handleOpenChat = (): void => {
@@ -110,25 +105,16 @@ export default function MainScreen() {
             )}
           </View>
           {isEditingGoal ? (
-            <>
               <TextInput
-                style={styles.goalInput}
+              style={[styles.goalInput, { outlineStyle: 'none' } as any]}
                 value={goalDescription}
                 onChangeText={setGoalDescription}
+              onBlur={handleBlurGoal}
                 multiline
                 autoFocus
                 placeholder="Enter your goal"
                 testID="goal-input"
               />
-              <View style={styles.goalEditButtons} testID="goal-edit-buttons">
-                <TouchableOpacity onPress={handleCancelEditGoal} style={styles.goalCancelButton} testID="goal-cancel-button">
-                  <Text style={styles.goalCancelButtonText} testID="goal-cancel-text">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleSaveGoal} style={styles.goalSaveButton} testID="goal-save-button">
-                  <Text style={styles.goalSaveButtonText} testID="goal-save-text">Save</Text>
-                </TouchableOpacity>
-              </View>
-            </>
           ) : (
             <Text style={styles.goalDescription} testID="goal-description">{goalDescription}</Text>
           )}
@@ -331,42 +317,10 @@ const styles = StyleSheet.create({
   goalInput: {
     fontSize: 16,
     color: '#333',
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    minHeight: 60,
-    textAlignVertical: 'top',
     fontFamily: 'Manrope-Regular',
-  },
-  goalEditButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-  },
-  goalCancelButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-  },
-  goalCancelButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
-    fontFamily: 'Manrope-SemiBold',
-  },
-  goalSaveButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#333',
-  },
-  goalSaveButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#B8E986',
-    fontFamily: 'Manrope-SemiBold',
+    padding: 0,
+    margin: 0,
+    borderWidth: 0,
   },
   metricsSection: {
     backgroundColor: '#fff',
