@@ -1,6 +1,7 @@
 import { ChatMessage } from '@/types';
 import { mockChatMessages } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Stack } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ChatScreen() {
@@ -38,31 +39,46 @@ export default function ChatScreen() {
   };
 
   return (
-    <View style={styles.container} testID="chat-container">
-      <View style={styles.header} testID="chat-header">
-        <Text style={styles.headerTitle} testID="chat-header-title">The Boss App</Text>
-      </View>
+    <>
+      <Stack.Screen
+        options={{
+          title: 'The Boss App',
+          headerShown: true,
+          headerBackTitle: '',
+          headerStyle: {
+            backgroundColor: '#F5F1E8',
+          },
+          headerTintColor: '#000',
+          headerTitleStyle: {
+            color: '#333',
+            fontSize: 16,
+            fontWeight: '600',
+            fontFamily: 'Manrope-SemiBold',
+          },
+        }}
+      />
+      <View style={styles.container} testID="chat-container">
+        <ScrollView
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          testID="messages-scroll"
+        >
+          {mockChatMessages.map(renderMessage)}
+        </ScrollView>
 
-      <ScrollView
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        testID="messages-scroll"
-      >
-        {mockChatMessages.map(renderMessage)}
-      </ScrollView>
-
-      <View style={styles.inputContainer} testID="input-container">
-        <TextInput
-          style={styles.input}
-          placeholder="Lorem ipsum"
-          placeholderTextColor="#999"
-          testID="message-input"
-        />
-        <TouchableOpacity style={styles.micButton} testID="mic-button">
-          <FontAwesome name="microphone" size={20} color="#666" testID="mic-icon" />
-        </TouchableOpacity>
+        <View style={styles.inputContainer} testID="input-container">
+          <TextInput
+            style={styles.input}
+            placeholder="Lorem ipsum"
+            placeholderTextColor="#999"
+            testID="message-input"
+          />
+          <TouchableOpacity style={styles.micButton} testID="mic-button">
+            <FontAwesome name="microphone" size={20} color="#666" testID="mic-icon" />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </>
   );
 }
 
@@ -70,19 +86,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F1E8',
-  },
-  header: {
-    backgroundColor: '#F5F1E8',
-    paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    fontFamily: 'Manrope-SemiBold',
   },
   messagesContainer: {
     flex: 1,
