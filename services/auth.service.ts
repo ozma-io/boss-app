@@ -28,12 +28,11 @@ function getExpoDevServerUrl(): string | null {
     return `http://${manifest2HostUri}`;
   }
   
-  // Try manifest (legacy)
-  const manifestHostUri = (Constants.manifest2?.extra?.expoGo?.debuggerHost || 
-                           Constants.manifest?.debuggerHost);
-  if (manifestHostUri) {
+  // Try manifest2 debuggerHost
+  const manifest2DebuggerHost = Constants.manifest2?.extra?.expoGo?.debuggerHost as string | undefined;
+  if (manifest2DebuggerHost) {
     // debuggerHost format: "192.168.1.74:19000" - need to change port to 8081
-    const host = manifestHostUri.split(':')[0];
+    const host = manifest2DebuggerHost.split(':')[0];
     console.log('[Auth] Found debuggerHost, using:', `http://${host}:8081`);
     return `http://${host}:8081`;
   }
@@ -53,7 +52,6 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     executionEnvironment: Constants.executionEnvironment,
     expoConfigHostUri: Constants.expoConfig?.hostUri,
     manifest2DebuggerHost: Constants.manifest2?.extra?.expoGo?.debuggerHost,
-    manifestDebuggerHost: Constants.manifest?.debuggerHost,
   });
   
   if (Platform.OS === 'web') {
@@ -65,10 +63,18 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     redirectUrl = devServerUrl || process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081';
     console.log('[Auth] Expo Go detected. Using redirect URL:', redirectUrl);
   } else {
-    // Standalone build: use custom scheme
-    const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
-    redirectUrl = `${scheme}://`;
-    console.log('[Auth] Standalone build detected. Using redirect URL:', redirectUrl);
+    // For development builds, check if dev server is available
+    const devServerUrl = getExpoDevServerUrl();
+    if (devServerUrl) {
+      // Development mode: use HTTP URL
+      redirectUrl = devServerUrl;
+      console.log('[Auth] Development build detected. Using redirect URL:', redirectUrl);
+    } else {
+      // Production standalone build: use custom scheme
+      const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
+      redirectUrl = `${scheme}://`;
+      console.log('[Auth] Production build detected. Using redirect URL:', redirectUrl);
+    }
   }
   
   const actionCodeSettings = {

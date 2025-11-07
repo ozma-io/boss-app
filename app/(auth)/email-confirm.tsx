@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { isSignInWithEmailLink } from 'firebase/auth';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function EmailConfirmScreen(): React.JSX.Element {
   const router = useRouter();
@@ -17,6 +17,8 @@ export default function EmailConfirmScreen(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [resendTimer, setResendTimer] = useState<number>(60);
   const [canResend, setCanResend] = useState<boolean>(false);
+  const [showDebugInput, setShowDebugInput] = useState<boolean>(false);
+  const [debugLinkInput, setDebugLinkInput] = useState<string>('');
 
   const handleEmailLink = useCallback(async (url: string): Promise<void> => {
     setIsLoading(true);
@@ -137,6 +139,14 @@ export default function EmailConfirmScreen(): React.JSX.Element {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleDebugSubmit = async (): Promise<void> => {
+    if (!debugLinkInput.trim()) {
+      Alert.alert('Error', 'Please paste the magic link');
+      return;
+    }
+    await handleEmailLink(debugLinkInput.trim());
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity style={styles.backButton} onPress={handleBack}>
@@ -168,6 +178,43 @@ export default function EmailConfirmScreen(): React.JSX.Element {
             {canResend ? 'Resend link' : `Resend link in ${formatTimer(resendTimer)}`}
           </Text>
         </TouchableOpacity>
+
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity 
+            style={styles.debugButton}
+            onPress={() => setShowDebugInput(!showDebugInput)}
+          >
+            <Text style={styles.debugButtonText}>
+              {showDebugInput ? 'Hide' : 'Paste link manually'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {showDebugInput && (
+          <View style={styles.debugContainer}>
+            <Text style={styles.debugTitle}>Development Mode</Text>
+            <Text style={styles.debugInstruction}>
+              Paste the magic link from your email:
+            </Text>
+            <TextInput
+              style={styles.debugInput}
+              value={debugLinkInput}
+              onChangeText={setDebugLinkInput}
+              placeholder="http://192.168.1.74:8081/?email=..."
+              placeholderTextColor="#999"
+              autoCapitalize="none"
+              autoCorrect={false}
+              multiline
+            />
+            <TouchableOpacity
+              style={styles.debugSubmitButton}
+              onPress={handleDebugSubmit}
+              disabled={!debugLinkInput.trim()}
+            >
+              <Text style={styles.debugSubmitText}>Verify Link</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       {isLoading && (
@@ -263,6 +310,57 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  debugButton: {
+    marginTop: 32,
+    paddingVertical: 8,
+  },
+  debugButtonText: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  debugContainer: {
+    marginTop: 24,
+    width: '100%',
+    backgroundColor: '#F0EDE6',
+    padding: 16,
+    borderRadius: 12,
+  },
+  debugTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 8,
+  },
+  debugInstruction: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 12,
+  },
+  debugInput: {
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    fontSize: 12,
+    color: '#000',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 12,
+    minHeight: 80,
+  },
+  debugSubmitButton: {
+    backgroundColor: '#000',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  debugSubmitText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
 });
