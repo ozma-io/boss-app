@@ -20,6 +20,7 @@ Quick links:
 - **[Firebase Deployment](./docs/firebase-deployment.md)** - Deploy Cloud Functions, rules, indexes
 - **[Firestore Management](./docs/firestore-management.md)** - Schemas, migrations, security
 - **[Authentication](./docs/authentication.md)** - Email links, Apple/Google sign-in
+- **Pre-auth Permission Flows** - Custom screens + system prompts for notifications and ATT (see `NotificationOnboardingScreen` and `TrackingOnboardingScreen`)
 
 ## 🚢 Deploy to Firebase
 
@@ -105,6 +106,7 @@ This project uses **Expo Development Build** for full native module support and 
 - ✅ Production-like environment
 - ✅ Custom native code and configurations
 - ✅ Hot reload for JavaScript changes
+- ✅ Pre-auth permission flows for notifications and tracking (custom UI + system prompts)
 
 **When to rebuild:**
 - Adding native modules or Expo plugins

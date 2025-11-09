@@ -12,6 +12,7 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 - Functional components with hooks
 - Expo Router file-based routing
 - User data scoped to `userId` (Firebase rules enforce `request.auth.uid === userId`)
+- Two-step permission flows (custom UI + system prompt) for notifications and tracking transparency (pre-auth capable)
 
 ## Run Locally
 - `npm start` — dev server (choose platform)
