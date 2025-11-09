@@ -14,6 +14,28 @@ interface FacebookConversionEventData {
   eventName: string;
   eventTime: number;
   eventId: string;
+  advertiserTrackingEnabled: boolean;
+  applicationTrackingEnabled: boolean;
+  // Extended device info (REQUIRED): 16-element array
+  // [0] extinfo version (REQUIRED: "i2" for iOS, "a2" for Android)
+  // [1] app package name
+  // [2] short version
+  // [3] long version
+  // [4] OS version (REQUIRED)
+  // [5] device model name
+  // [6] locale
+  // [7] timezone abbreviation
+  // [8] carrier
+  // [9] screen width
+  // [10] screen height
+  // [11] screen density
+  // [12] CPU cores
+  // [13] external storage size in GB
+  // [14] free space on external storage in GB
+  // [15] device timezone
+  // Example iOS: ["i2", "com.thebossapp", "1.0", "1.0 long", "17.0.0", "iPhone14,3", "en_US", "PST", "AT&T", "390", "844", "3", "6", "128", "64", "America/New_York"]
+  // Example Android: ["a2", "com.thebossapp", "1.0", "1.0 long", "14", "Pixel 7 Pro", "en_US", "PST", "Verizon", "1080", "2340", "3", "8", "128", "64", "America/New_York"]
+  extinfo: string[];
   fbclid?: string;
   userData?: {
     email?: string;
@@ -73,6 +95,20 @@ export const sendFacebookConversionEvent = onCall(
       );
     }
 
+    if (eventData.advertiserTrackingEnabled === undefined || eventData.applicationTrackingEnabled === undefined) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Missing required fields: advertiserTrackingEnabled and applicationTrackingEnabled'
+      );
+    }
+
+    if (!eventData.extinfo || eventData.extinfo.length !== 16) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Missing required field: extinfo must be an array of 16 strings. See Facebook Conversions API documentation for details. Required: extinfo[0] (version: i2/a2) and extinfo[4] (OS version) cannot be empty!'
+      );
+    }
+
     try {
       // Prepare user data with hashing
       const userData: Record<string, string> = {};
@@ -109,6 +145,11 @@ export const sendFacebookConversionEvent = onCall(
         user_data: userData,
         custom_data: eventData.customData || {},
         action_source: 'app',
+        app_data: {
+          advertiser_tracking_enabled: eventData.advertiserTrackingEnabled ? 1 : 0,
+          application_tracking_enabled: eventData.applicationTrackingEnabled ? 1 : 0,
+          extinfo: eventData.extinfo,
+        },
       };
 
       // Add fbclid if present (for attribution)

@@ -1,12 +1,15 @@
 /**
  * Facebook Configuration Constants for Cloud Functions
  * 
- * Re-exports from the main config to avoid duplication.
- * This ensures version and Pixel ID are always in sync.
+ * Defines constants directly to avoid TypeScript compilation issues.
  */
 
-import { FACEBOOK_API_VERSION, FACEBOOK_PIXEL_ID } from '../../constants/facebook.config';
-
-// Re-export for use in Cloud Functions
-export { FACEBOOK_API_VERSION, FACEBOOK_PIXEL_ID };
+// ============================================================================
+// ⚠️ DUPLICATED in ../../constants/facebook.config.ts - keep both in sync!
+// ============================================================================
+export const FACEBOOK_PIXEL_ID = '1170898585142562';
+export const FACEBOOK_API_VERSION = 'v24.0';
+// ============================================================================
+// End of duplicated section
+// ============================================================================
 

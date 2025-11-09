@@ -18,9 +18,14 @@ export const FACEBOOK_APP_NAME = 'YourFacebookAppName'; // TODO: Replace with yo
 // End of duplicated section
 // ============================================================================
 
-// These are auto-imported by functions/src/constants.ts - single source of truth
-export const FACEBOOK_PIXEL_ID = '1234567890'; // TODO: Replace with your actual Facebook Pixel ID
+// ============================================================================
+// ⚠️ DUPLICATED in functions/src/constants.ts - keep both in sync!
+// ============================================================================
+export const FACEBOOK_PIXEL_ID = '1170898585142562';
 export const FACEBOOK_API_VERSION = 'v24.0';
+// ============================================================================
+// End of duplicated section
+// ============================================================================
 
 // Client-side SDK configuration
 export const FACEBOOK_CONFIG = {
