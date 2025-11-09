@@ -18,6 +18,15 @@ export interface UserSchema {
     action: 'shown' | 'granted' | 'denied';
   }>;
   
+  // App Tracking Transparency (ATT) settings
+  trackingPermissionStatus?: 'authorized' | 'denied' | 'not_determined' | 'restricted';
+  lastTrackingPromptAt?: string | null;
+  trackingPromptHistory?: Array<{
+    timestamp: string;
+    action: 'shown' | 'authorized' | 'denied';
+  }>;
+  trackingPromptCount?: number;
+  
   // Push notification token for FCM
   fcmToken?: string | null;
   
@@ -49,6 +58,10 @@ export const UserDefaults: Partial<UserSchema> = {
   notificationPermissionStatus: 'not_asked',
   lastNotificationPromptAt: null,
   notificationPromptHistory: [],
+  trackingPermissionStatus: 'not_determined',
+  lastTrackingPromptAt: null,
+  trackingPromptHistory: [],
+  trackingPromptCount: 0,
   fcmToken: null,
   attribution: undefined,
 };
@@ -57,5 +70,5 @@ export const UserDefaults: Partial<UserSchema> = {
  * Version tracking
  * Increment this when making breaking schema changes
  */
-export const USER_SCHEMA_VERSION = 1;
+export const USER_SCHEMA_VERSION = 2;
 

@@ -1,6 +1,10 @@
 import { AppColors } from '@/constants/Colors';
+import { functions } from '@/constants/firebase.config';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
+import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
+import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
+import { generateEventId, initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams } from '@/services/facebook.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -8,13 +12,10 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useRef } from 'react';
-import { ActivityIndicator, View, Platform, Linking } from 'react-native';
-import 'react-native-reanimated';
-import { initializeFacebookSdk, parseDeepLinkParams, logAppInstallEvent, generateEventId } from '@/services/facebook.service';
-import { saveAttributionData, isFirstLaunch, markAppAsLaunched, getAttributionEmail } from '@/services/attribution.service';
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/constants/firebase.config';
+import { useEffect, useRef } from 'react';
+import { ActivityIndicator, Linking, Platform, View } from 'react-native';
+import 'react-native-reanimated';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -77,7 +78,11 @@ export default function RootLayout() {
             // Save attribution data to AsyncStorage
             await saveAttributionData(attributionData);
             
+            // We need to defer this call to the context's function until after mounting
+            // The context will be available and we'll check for attribution data then
+            
             // Send AppInstall event to Facebook (client-side)
+            // Only if we're not on web platform
             if (Platform.OS !== 'web') {
               await logAppInstallEvent(attributionData);
             }
@@ -127,16 +132,19 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <NotificationOnboardingProvider>
-        <RootLayoutNav />
-      </NotificationOnboardingProvider>
+      <TrackingOnboardingProvider>
+        <NotificationOnboardingProvider>
+          <RootLayoutNav />
+        </NotificationOnboardingProvider>
+      </TrackingOnboardingProvider>
     </AuthProvider>
   );
 }
 
 function RootLayoutNav() {
   const { authState } = useAuth();
-  const { shouldShowOnboarding, setShouldShowOnboarding } = useNotificationOnboarding();
+  const { shouldShowOnboarding: shouldShowNotificationOnboarding } = useNotificationOnboarding();
+  const { shouldShowOnboarding: shouldShowTrackingOnboarding, checkAttributionAndShowTracking } = useTrackingOnboarding();
   const segments = useSegments();
   const router = useRouter();
   const hasCheckedAttribution = useRef<boolean>(false);
@@ -147,7 +155,8 @@ function RootLayoutNav() {
     }
 
     const inAuthGroup = segments[0] === '(auth)';
-    const inOnboarding = segments[0] === 'notification-onboarding';
+    const inNotificationOnboarding = segments[0] === 'notification-onboarding';
+    const inTrackingOnboarding = segments[0] === 'tracking-onboarding';
 
     // Check for pre-filled email from attribution on first unauthenticated state
     const checkAttributionEmail = async (): Promise<void> => {
@@ -169,6 +178,12 @@ function RootLayoutNav() {
 
     checkAttributionEmail();
 
+    // Show tracking onboarding if needed, regardless of auth state
+    if (shouldShowTrackingOnboarding && !inTrackingOnboarding) {
+      router.replace('/tracking-onboarding');
+      return;
+    }
+    
     if (authState === 'unauthenticated' && !inAuthGroup) {
       // Don't navigate if we're about to navigate to email-input with attribution
       if (!hasCheckedAttribution.current) {
@@ -176,15 +191,15 @@ function RootLayoutNav() {
       }
       router.replace('/(auth)/welcome');
     } else if (authState === 'authenticated' && inAuthGroup) {
-      if (shouldShowOnboarding) {
+      if (shouldShowNotificationOnboarding) {
         router.replace('/notification-onboarding');
       } else {
         router.replace('/(tabs)');
       }
-    } else if (authState === 'authenticated' && shouldShowOnboarding && !inOnboarding) {
+    } else if (authState === 'authenticated' && shouldShowNotificationOnboarding && !inNotificationOnboarding) {
       router.replace('/notification-onboarding');
     }
-  }, [authState, segments, shouldShowOnboarding]);
+  }, [authState, segments, shouldShowNotificationOnboarding, shouldShowTrackingOnboarding]);
 
   if (authState === 'loading') {
     return (
@@ -206,6 +221,14 @@ function RootLayoutNav() {
         />
         <Stack.Screen 
           name="notification-onboarding"
+          options={{
+            headerShown: false,
+            presentation: 'fullScreenModal',
+            gestureEnabled: false,
+          }}
+        />
+        <Stack.Screen 
+          name="tracking-onboarding"
           options={{
             headerShown: false,
             presentation: 'fullScreenModal',

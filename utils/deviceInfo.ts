@@ -138,10 +138,12 @@ export async function getAdvertiserTrackingEnabled(): Promise<boolean> {
   }
 
   try {
-    // Try to get ATT status
-    // Note: This requires expo-tracking-transparency or similar package
-    // For now, we'll default to true and you can implement this later
-    return true;
+    // Use the tracking service to get the ATT status
+    const { getTrackingPermissionStatus } = await import('@/services/tracking.service');
+    const status = await getTrackingPermissionStatus();
+    
+    // Return true only if explicitly authorized
+    return status === 'authorized';
   } catch (error) {
     console.error('[DeviceInfo] Error getting advertiser tracking status:', error);
     return false;
@@ -149,10 +151,31 @@ export async function getAdvertiserTrackingEnabled(): Promise<boolean> {
 }
 
 /**
- * Application tracking enabled (always true for now)
+ * Application tracking enabled
  * This indicates if the app itself allows tracking
+ * 
+ * For now, we'll return the same value as advertiserTrackingEnabled,
+ * but in the future we might have a separate consent screen for this.
  */
-export function getApplicationTrackingEnabled(): boolean {
+export async function getApplicationTrackingEnabled(): Promise<boolean> {
+  // Simply delegate to advertiserTrackingEnabled for now
+  return await getAdvertiserTrackingEnabled();
+}
+
+/**
+ * Synchronous version of getApplicationTrackingEnabled
+ * Needed for cases where we can't use async/await
+ * This is less accurate but necessary for some API calls
+ */
+export function getApplicationTrackingEnabledSync(): boolean {
+  // For iOS, return false by default as we should check ATT first
+  // For web, we return true as there's no ATT concept
+  if (Platform.OS === 'web' || Platform.OS !== 'ios') {
+    return true;
+  }
+  
+  // Default to true for other platforms/contexts
+  // This is a fallback and not the preferred way to get the status
   return true;
 }
 

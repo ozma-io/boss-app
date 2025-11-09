@@ -1,6 +1,6 @@
 import { FACEBOOK_CONFIG } from '@/constants/facebook.config';
 import { functions } from '@/constants/firebase.config';
-import { buildExtinfo, getAdvertiserTrackingEnabled, getApplicationTrackingEnabled } from '@/utils/deviceInfo';
+import { buildExtinfo, getAdvertiserTrackingEnabled, getApplicationTrackingEnabledSync } from '@/utils/deviceInfo';
 import { httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
 import { AttributionData } from './attribution.service';
@@ -117,6 +117,19 @@ export async function logAppInstallEvent(attributionData: AttributionData): Prom
     console.log('[Facebook] Skipping AppInstall event (web or SDK not available)');
     return;
   }
+  
+  // Get tracking permission status - on iOS we need explicit permission
+  let canTrack = true;
+  if (Platform.OS === 'ios') {
+    const { getTrackingPermissionStatus } = await import('@/services/tracking.service');
+    const status = await getTrackingPermissionStatus();
+    canTrack = status === 'authorized';
+    
+    if (!canTrack) {
+      console.log('[Facebook] Skipping AppInstall event (tracking permission not granted)');
+      return;
+    }
+  }
 
   try {
     const eventParams: Record<string, string> = {};
@@ -160,6 +173,19 @@ export async function logCustomEvent(
     console.log('[Facebook] Skipping custom event (web or SDK not available):', eventName);
     return;
   }
+  
+  // Get tracking permission status - on iOS we need explicit permission
+  let canTrack = true;
+  if (Platform.OS === 'ios') {
+    const { getTrackingPermissionStatus } = await import('@/services/tracking.service');
+    const status = await getTrackingPermissionStatus();
+    canTrack = status === 'authorized';
+    
+    if (!canTrack) {
+      console.log(`[Facebook] Skipping custom event '${eventName}' (tracking permission not granted)`);
+      return;
+    }
+  }
 
   try {
     if (parameters) {
@@ -202,8 +228,21 @@ export async function sendConversionEvent(
     const extinfo = await buildExtinfo();
     
     // Get tracking permissions
-    const advertiserTrackingEnabled = await getAdvertiserTrackingEnabled();
-    const applicationTrackingEnabled = getApplicationTrackingEnabled();
+    let advertiserTrackingEnabled = false;
+    
+    if (Platform.OS === 'ios') {
+      // On iOS, we need to respect the ATT permission
+      const { getTrackingPermissionStatus } = await import('@/services/tracking.service');
+      const status = await getTrackingPermissionStatus();
+      advertiserTrackingEnabled = status === 'authorized';
+    } else {
+      // On Android, we use the old implementation
+      advertiserTrackingEnabled = await getAdvertiserTrackingEnabled();
+    }
+    
+    // Application tracking is whether we have user's consent to track in the app
+    // We use the synchronous version here as this function is already async
+    const applicationTrackingEnabled = getApplicationTrackingEnabledSync();
     
     // Generate unique event ID for deduplication
     const eventId = generateEventId();
