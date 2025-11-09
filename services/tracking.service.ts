@@ -1,8 +1,23 @@
 import { db } from '@/constants/firebase.config';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
-import * as TrackingTransparency from 'expo-tracking-transparency';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
+
+// Create mock module for web platforms
+// Real module will be imported only on native platforms
+const TrackingTransparency = Platform.OS === 'web' 
+  ? {
+      // Mock implementation for web
+      getTrackingPermissionsAsync: async () => ({ status: 'granted' }),
+      requestTrackingPermissionsAsync: async () => ({ status: 'granted' })
+    }
+  : Platform.OS === 'android'
+    ? {
+        // Mock implementation for Android (ATT is iOS only)
+        getTrackingPermissionsAsync: async () => ({ status: 'granted' }),
+        requestTrackingPermissionsAsync: async () => ({ status: 'granted' })
+      }
+    : require('expo-tracking-transparency'); // Only import on iOS
 
 // Number of days to wait before showing the tracking prompt again
 const DAYS_BETWEEN_TRACKING_PROMPTS = 14; // 2 weeks
