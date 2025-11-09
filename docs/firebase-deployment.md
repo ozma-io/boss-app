@@ -43,27 +43,26 @@ Run the setup script to create database, deploy rules and indexes:
 
 **Environment Variables:**
 
-Cloud Functions require environment variables for external integrations. A template is provided in `functions/.env.example`:
+Cloud Functions use **Firebase Secret Manager** for production. For detailed setup instructions, see `functions/.env.example`.
 
-```bash
-FACEBOOK_ACCESS_TOKEN=your_facebook_access_token_here
-```
+**Quick Setup:**
 
-**Setup steps:**
-
-1. Copy the example file:
-```bash
-cp functions/.env.example functions/.env
-```
-
-2. Fill in actual values in `functions/.env` (never commit this file!)
-
-3. For production deployment, set secrets using Firebase CLI:
+1. **Production (Required):** Set secrets using Firebase CLI:
 ```bash
 firebase functions:secrets:set FACEBOOK_ACCESS_TOKEN
 ```
 
-**Note:** The `.env` file is used for local emulator testing. Production functions read secrets from Firebase Secrets Manager.
+2. **Local Development (Optional):** For emulator testing only:
+```bash
+cp functions/.env.example functions/.env
+# Uncomment and fill in FACEBOOK_ACCESS_TOKEN in functions/.env
+```
+
+**Important:**
+- Production functions use Secret Manager (configured via `defineSecret` in code)
+- Local `.env` file is only for emulator testing
+- Keep `FACEBOOK_ACCESS_TOKEN` commented in `.env` when deploying to avoid conflicts
+- Never commit `.env` to git
 
 ### Available Functions
 
