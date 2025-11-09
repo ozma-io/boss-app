@@ -178,27 +178,56 @@ function RootLayoutNav() {
 
     checkAttributionEmail();
 
-    // Show tracking onboarding if needed, regardless of auth state
-    if (shouldShowTrackingOnboarding && !inTrackingOnboarding) {
-      router.replace('/tracking-onboarding');
-      return;
-    }
+    // Create navigation function to avoid duplicated router calls
+    const navigateToNextScreen = () => {
+      // First priority: tracking onboarding
+      if (shouldShowTrackingOnboarding && !inTrackingOnboarding) {
+        console.log('[App] Navigating to tracking onboarding');
+        router.replace('/tracking-onboarding');
+        return true;
+      }
+      
+      // Second priority: auth state handling
+      if (authState === 'unauthenticated') {
+        if (!inAuthGroup) {
+          // Don't navigate if we're about to navigate to email-input with attribution
+          if (!hasCheckedAttribution.current) {
+            return false; // Wait for attribution check
+          }
+          console.log('[App] Navigating to welcome screen');
+          router.replace('/(auth)/welcome');
+          return true;
+        }
+      } else if (authState === 'authenticated') {
+        if (inAuthGroup) {
+          if (shouldShowNotificationOnboarding) {
+            console.log('[App] Navigating to notification onboarding from auth group');
+            router.replace('/notification-onboarding');
+            return true;
+          } else {
+            console.log('[App] Navigating to tabs from auth group');
+            router.replace('/(tabs)');
+            return true;
+          }
+        } else if (shouldShowNotificationOnboarding && !inNotificationOnboarding) {
+          console.log('[App] Navigating to notification onboarding');
+          router.replace('/notification-onboarding');
+          return true;
+        }
+      }
+      
+      return false; // No navigation occurred
+    };
     
-    if (authState === 'unauthenticated' && !inAuthGroup) {
-      // Don't navigate if we're about to navigate to email-input with attribution
-      if (!hasCheckedAttribution.current) {
-        return;
-      }
-      router.replace('/(auth)/welcome');
-    } else if (authState === 'authenticated' && inAuthGroup) {
-      if (shouldShowNotificationOnboarding) {
-        router.replace('/notification-onboarding');
-      } else {
-        router.replace('/(tabs)');
-      }
-    } else if (authState === 'authenticated' && shouldShowNotificationOnboarding && !inNotificationOnboarding) {
-      router.replace('/notification-onboarding');
-    }
+    // Run this logic sequentially to avoid race conditions
+    const runNavigationFlow = async () => {
+      // First check for attribution email
+      await checkAttributionEmail();
+      // Then navigate if needed
+      navigateToNextScreen();
+    };
+    
+    runNavigationFlow();
   }, [authState, segments, shouldShowNotificationOnboarding, shouldShowTrackingOnboarding]);
 
   if (authState === 'loading') {
