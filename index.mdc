@@ -48,6 +48,8 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 ## Development Notes
 - JavaScript changes reload instantly via hot reload
 - Rebuild only needed when adding native modules or changing app.json
+- **Rebuild iOS**: `cd ios && pod install && cd .. && npx expo run:ios`
+- **Rebuild Android**: `npx expo run:android`
 - Type all props, state, and function returns
 - Handle authentication state properly
 

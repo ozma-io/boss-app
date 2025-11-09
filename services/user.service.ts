@@ -2,6 +2,7 @@ import { db } from '@/constants/firebase.config';
 import { NotificationPermissionStatus, NotificationPromptHistoryItem, UserNotificationData } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { AttributionData } from './attribution.service';
 
 const DAYS_BETWEEN_PROMPTS = 3;
 
@@ -156,5 +157,22 @@ export async function shouldShowNotificationOnboarding(userId: string): Promise<
   );
   
   return shouldShow;
+}
+
+/**
+ * Update user attribution data in Firestore
+ */
+export async function updateUserAttribution(userId: string, attributionData: AttributionData): Promise<void> {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      attribution: attributionData,
+      updatedAt: new Date().toISOString(),
+    });
+    console.log('[UserService] Attribution data updated for user:', userId);
+  } catch (error) {
+    console.error('[UserService] Error updating user attribution:', error);
+    throw error;
+  }
 }
 

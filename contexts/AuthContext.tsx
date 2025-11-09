@@ -1,6 +1,8 @@
 import { auth } from '@/constants/firebase.config';
 import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { logoutIntercomUser, registerIntercomUser } from '@/services/intercom.service';
+import { getAttributionData, clearAttributionData } from '@/services/attribution.service';
+import { updateUserAttribution } from '@/services/user.service';
 import { AuthState, User } from '@/types';
 import { isSignInWithEmailLink } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
@@ -75,6 +77,23 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       setAuthState(newUser ? 'authenticated' : 'unauthenticated');
       
       if (newUser) {
+        // Link attribution data to user if available
+        getAttributionData()
+          .then(async (attributionData) => {
+            if (attributionData) {
+              console.log('[AuthContext] Linking attribution data to user:', newUser.id);
+              try {
+                await updateUserAttribution(newUser.id, attributionData);
+                // Clear attribution data after successfully linking to user
+                await clearAttributionData();
+                console.log('[AuthContext] Attribution data linked and cleared from storage');
+              } catch (error) {
+                console.error('[AuthContext] Error linking attribution data:', error);
+              }
+            }
+          })
+          .catch(err => console.error('[AuthContext] Error getting attribution data:', err));
+        
         registerIntercomUser(newUser.id, newUser.email, undefined)
           .catch(err => console.error('Intercom registration failed:', err));
       } else {

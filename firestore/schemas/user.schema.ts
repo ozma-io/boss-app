@@ -25,6 +25,19 @@ export interface UserSchema {
   displayName?: string;
   photoURL?: string;
   
+  // Attribution data from Facebook/Meta ads
+  attribution?: {
+    fbclid?: string | null;
+    utm_source?: string | null;
+    utm_medium?: string | null;
+    utm_campaign?: string | null;
+    utm_content?: string | null;
+    utm_term?: string | null;
+    email?: string | null;
+    appUserId?: string | null;
+    installedAt?: string; // ISO 8601 timestamp
+  };
+  
   // Metadata
   updatedAt?: string;
 }
@@ -37,6 +50,7 @@ export const UserDefaults: Partial<UserSchema> = {
   lastNotificationPromptAt: null,
   notificationPromptHistory: [],
   fcmToken: null,
+  attribution: undefined,
 };
 
 /**

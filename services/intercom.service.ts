@@ -5,7 +5,11 @@ import { Platform } from 'react-native';
 let IntercomNative: any = null;
 
 if (Platform.OS !== 'web') {
-  IntercomNative = require('@intercom/intercom-react-native').default;
+  try {
+    IntercomNative = require('@intercom/intercom-react-native').default;
+  } catch (error) {
+    console.warn('[Intercom] @intercom/intercom-react-native not available:', error);
+  }
 }
 
 /**
@@ -15,16 +19,21 @@ if (Platform.OS !== 'web') {
  */
 export async function initializeIntercom(): Promise<void> {
   if (Platform.OS === 'web') {
-    console.log('ℹ️ Intercom is only available on iOS and Android');
+    console.log('[Intercom] Skipping on web');
+    return;
+  }
+
+  if (!IntercomNative) {
+    console.warn('[Intercom] SDK not available, skipping initialization');
     return;
   }
 
   try {
     await IntercomNative.setInAppMessagesVisibility('VISIBLE');
-    console.log('✅ Intercom Native initialized successfully');
+    console.log('[Intercom] Initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize Intercom:', error);
-    throw new Error('Failed to initialize Intercom');
+    console.error('[Intercom] Failed to initialize:', error);
+    // Don't throw - allow app to continue without Intercom
   }
 }
 
@@ -52,8 +61,8 @@ export async function registerIntercomUser(
   email: string,
   name?: string
 ): Promise<void> {
-  if (Platform.OS === 'web') {
-    console.log('ℹ️ Intercom is only available on iOS and Android');
+  if (Platform.OS === 'web' || !IntercomNative) {
+    console.log('[Intercom] Skipping registration (web or SDK not available)');
     return;
   }
 
@@ -72,10 +81,10 @@ export async function registerIntercomUser(
       }
     });
     
-    console.log('✅ User registered in Intercom with JWT authentication');
+    console.log('[Intercom] User registered successfully');
   } catch (error) {
-    console.error('Failed to register user in Intercom:', error);
-    throw new Error('Failed to register user in Intercom');
+    console.error('[Intercom] Failed to register user:', error);
+    // Don't throw - allow app to continue without Intercom
   }
 }
 
@@ -85,17 +94,17 @@ export async function registerIntercomUser(
  * Only works on iOS and Android
  */
 export async function showIntercomMessenger(): Promise<void> {
-  if (Platform.OS === 'web') {
-    console.log('ℹ️ Intercom is only available on iOS and Android');
+  if (Platform.OS === 'web' || !IntercomNative) {
+    console.log('[Intercom] Skipping messenger (web or SDK not available)');
     return;
   }
 
   try {
     await IntercomNative.present();
-    console.log('✅ Intercom messenger opened');
+    console.log('[Intercom] Messenger opened');
   } catch (error) {
-    console.error('Failed to open Intercom messenger:', error);
-    throw new Error('Failed to open Intercom messenger');
+    console.error('[Intercom] Failed to open messenger:', error);
+    // Don't throw - just log the error
   }
 }
 
@@ -105,17 +114,17 @@ export async function showIntercomMessenger(): Promise<void> {
  * Only works on iOS and Android
  */
 export async function logoutIntercomUser(): Promise<void> {
-  if (Platform.OS === 'web') {
-    console.log('ℹ️ Intercom is only available on iOS and Android');
+  if (Platform.OS === 'web' || !IntercomNative) {
+    console.log('[Intercom] Skipping logout (web or SDK not available)');
     return;
   }
 
   try {
     await IntercomNative.logout();
-    console.log('✅ User logged out from Intercom');
+    console.log('[Intercom] User logged out');
   } catch (error) {
-    console.error('Failed to logout from Intercom:', error);
-    throw new Error('Failed to logout from Intercom');
+    console.error('[Intercom] Failed to logout:', error);
+    // Don't throw - allow app to continue
   }
 }
 

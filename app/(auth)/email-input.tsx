@@ -2,8 +2,8 @@ import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendEmailVerificationCode, signInWithTestEmail } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import React, { useState, useEffect } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const TEST_EMAIL = 'test@test.test';
@@ -11,8 +11,17 @@ const TEST_EMAIL = 'test@test.test';
 export default function EmailInputScreen(): React.JSX.Element {
   const router = useRouter();
   const { setUser } = useAuth();
+  const params = useLocalSearchParams<{ email?: string }>();
   const [email, setEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Pre-fill email from route params if provided (from attribution)
+  useEffect(() => {
+    if (params.email && typeof params.email === 'string') {
+      console.log('[EmailInput] Pre-filling email from params:', params.email);
+      setEmail(params.email);
+    }
+  }, [params.email]);
 
   const handleClose = (): void => {
     router.back();

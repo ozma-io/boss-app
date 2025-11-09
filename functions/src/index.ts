@@ -15,6 +15,7 @@ import { onCall } from 'firebase-functions/v2/https';
 
 admin.initializeApp();
 
+export { sendFacebookConversionEvent } from './facebook';
 export { getIntercomJwt } from './intercom';
 
 const TEST_EMAIL = 'test@test.test';

@@ -8,9 +8,13 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { ActivityIndicator, View, Platform, Linking } from 'react-native';
 import 'react-native-reanimated';
+import { initializeFacebookSdk, parseDeepLinkParams, logAppInstallEvent, generateEventId } from '@/services/facebook.service';
+import { saveAttributionData, isFirstLaunch, markAppAsLaunched, getAttributionEmail } from '@/services/attribution.service';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '@/constants/firebase.config';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -46,6 +50,77 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
+  // Initialize Facebook SDK and handle attribution on first launch
+  useEffect(() => {
+    const initializeFacebookAndAttribution = async (): Promise<void> => {
+      try {
+        // Initialize Facebook SDK
+        if (Platform.OS !== 'web') {
+          await initializeFacebookSdk();
+        }
+
+        // Check if this is the first launch
+        const firstLaunch = await isFirstLaunch();
+        
+        if (firstLaunch) {
+          console.log('[App] First launch detected, checking for attribution data');
+          
+          // Get the initial URL (deep link)
+          const initialUrl = await Linking.getInitialURL();
+          
+          if (initialUrl) {
+            console.log('[App] Initial URL detected:', initialUrl);
+            
+            // Parse attribution parameters
+            const attributionData = parseDeepLinkParams(initialUrl);
+            
+            // Save attribution data to AsyncStorage
+            await saveAttributionData(attributionData);
+            
+            // Send AppInstall event to Facebook (client-side)
+            if (Platform.OS !== 'web') {
+              await logAppInstallEvent(attributionData);
+            }
+            
+            // Send AppInstall event to Facebook (server-side via Cloud Function)
+            try {
+              const sendFacebookEvent = httpsCallable(functions, 'sendFacebookConversionEvent');
+              const eventId = generateEventId();
+              
+              await sendFacebookEvent({
+                eventName: 'AppInstall',
+                eventTime: Math.floor(Date.now() / 1000),
+                eventId: eventId,
+                fbclid: attributionData.fbclid,
+                userData: {
+                  email: attributionData.email,
+                },
+                customData: {
+                  utm_source: attributionData.utm_source,
+                  utm_medium: attributionData.utm_medium,
+                  utm_campaign: attributionData.utm_campaign,
+                },
+              });
+              
+              console.log('[App] Server-side AppInstall event sent successfully');
+            } catch (serverError) {
+              console.error('[App] Error sending server-side AppInstall event:', serverError);
+            }
+          }
+          
+          // Mark app as launched
+          await markAppAsLaunched();
+        }
+      } catch (initError) {
+        console.error('[App] Error initializing Facebook SDK or attribution:', initError);
+      }
+    };
+
+    if (loaded) {
+      initializeFacebookAndAttribution();
+    }
+  }, [loaded]);
+
   if (!loaded) {
     return null;
   }
@@ -64,6 +139,7 @@ function RootLayoutNav() {
   const { shouldShowOnboarding, setShouldShowOnboarding } = useNotificationOnboarding();
   const segments = useSegments();
   const router = useRouter();
+  const hasCheckedAttribution = useRef<boolean>(false);
 
   useEffect(() => {
     if (authState === 'loading') {
@@ -73,7 +149,31 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
     const inOnboarding = segments[0] === 'notification-onboarding';
 
+    // Check for pre-filled email from attribution on first unauthenticated state
+    const checkAttributionEmail = async (): Promise<void> => {
+      if (authState === 'unauthenticated' && !hasCheckedAttribution.current) {
+        hasCheckedAttribution.current = true;
+        
+        const attributionEmail = await getAttributionEmail();
+        
+        if (attributionEmail && !inAuthGroup) {
+          console.log('[App] Attribution email found, navigating to email-input with pre-filled email');
+          router.replace({
+            pathname: '/(auth)/email-input',
+            params: { email: attributionEmail },
+          });
+          return;
+        }
+      }
+    };
+
+    checkAttributionEmail();
+
     if (authState === 'unauthenticated' && !inAuthGroup) {
+      // Don't navigate if we're about to navigate to email-input with attribution
+      if (!hasCheckedAttribution.current) {
+        return;
+      }
       router.replace('/(auth)/welcome');
     } else if (authState === 'authenticated' && inAuthGroup) {
       if (shouldShowOnboarding) {
