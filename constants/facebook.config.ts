@@ -9,14 +9,12 @@
 const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET || '';
 const FACEBOOK_ACCESS_TOKEN = process.env.FACEBOOK_ACCESS_TOKEN || '';
 
-// Public constants (not secrets, safe to hardcode)
-export const FACEBOOK_APP_NAME = 'Boss Relationship Tracker';
-
 // ============================================================================
 // ⚠️ DUPLICATED in app.config.ts - keep both in sync!
 // ============================================================================
 export const FACEBOOK_APP_ID = '1234567890'; // TODO: Replace with your actual Facebook App ID
 export const FACEBOOK_CLIENT_TOKEN = 'your_client_token_here'; // TODO: Replace with your actual Client Token
+export const FACEBOOK_APP_NAME = 'YourFacebookAppName'; // TODO: Replace with your Facebook App Display Name
 // ============================================================================
 // End of duplicated section
 // ============================================================================

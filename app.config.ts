@@ -8,14 +8,13 @@ import { ExpoConfig } from 'expo/config';
 // ============================================================================
 const FACEBOOK_APP_ID = '1234567890'; // TODO: Replace with your actual Facebook App ID
 const FACEBOOK_CLIENT_TOKEN = 'your_client_token_here'; // TODO: Replace with your actual Client Token
+const FACEBOOK_APP_NAME = 'YourFacebookAppName'; // TODO: Replace with your Facebook App Display Name
 // ============================================================================
 // End of duplicated section
 // ============================================================================
 
-const FACEBOOK_APP_NAME = 'Boss Relationship Tracker';
-
 const config: ExpoConfig = {
-  name: 'Boss Relationship Tracker',
+  name: 'The Boss App',
   slug: 'boss-app',
   owner: 'ozma-io',
   version: '1.0.0',

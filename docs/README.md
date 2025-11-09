@@ -1,6 +1,6 @@
 # Boss App Documentation
 
-Complete documentation for the Boss Relationship Tracker project.
+Complete documentation for The Boss App project.
 
 ---
 

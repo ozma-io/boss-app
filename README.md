@@ -1,4 +1,4 @@
-# 📦 Boss Relationship Tracker
+# 📦 The Boss App
 
 ## 🚀 Quick Start
 

@@ -1,7 +1,7 @@
 {
   "name": "functions",
   "version": "1.0.0",
-  "description": "Firebase Cloud Functions for Boss Relationship Tracker",
+  "description": "Firebase Cloud Functions for The Boss App",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
