@@ -7,8 +7,12 @@
 
 import * as crypto from 'crypto';
 import * as functions from 'firebase-functions';
+import { defineSecret } from 'firebase-functions/params';
 import { onCall } from 'firebase-functions/v2/https';
 import { FACEBOOK_API_VERSION, FACEBOOK_PIXEL_ID } from './constants';
+
+// Define the secret parameter
+const facebookAccessToken = defineSecret('FACEBOOK_ACCESS_TOKEN');
 
 interface FacebookConversionEventData {
   eventName: string;
@@ -70,13 +74,14 @@ export const sendFacebookConversionEvent = onCall(
   {
     region: 'us-central1',
     invoker: 'public', // Allow unauthenticated access for AppInstall events
+    secrets: [facebookAccessToken], // Declare the secret
   },
   async (request) => {
     const eventData = request.data as FacebookConversionEventData;
 
     // Get configuration (secrets from env, public constants from code)
     const pixelId = FACEBOOK_PIXEL_ID;
-    const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+    const accessToken = facebookAccessToken.value();
     const apiVersion = FACEBOOK_API_VERSION;
 
     if (!pixelId || !accessToken) {
