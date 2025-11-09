@@ -300,13 +300,6 @@ function RootLayoutNav() {
             title: 'Boss Timeline',
           }} 
         />
-        <Stack.Screen 
-          name="support" 
-          options={{ 
-            headerShown: true, 
-            title: 'Support',
-          }} 
-        />
         <Stack.Screen name="boss-details" options={{ headerShown: true, title: 'Boss Details' }} />
         <Stack.Screen name="entry-details" options={{ headerShown: true, title: 'Entry Details' }} />
       </Stack>

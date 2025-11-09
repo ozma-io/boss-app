@@ -1,12 +1,13 @@
 import { ChatIcon } from '@/components/icons/ChatIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/auth.service';
+import { showIntercomMessenger } from '@/services/intercom.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function MainScreen() {
   const { user } = useAuth();
@@ -47,8 +48,36 @@ export default function MainScreen() {
     router.push('/subscription');
   };
 
-  const handleOpenSupport = (): void => {
-    router.push('/support');
+  const handleOpenSupport = async (): Promise<void> => {
+    if (Platform.OS === 'web') {
+      const shouldSendEmail = window.confirm(
+        'Support\n\nFor support, please email us at support@ozma.io\n\nWe read all messages and will get back to you as soon as possible.\n\nWould you like to open your email client now?'
+      );
+      
+      if (shouldSendEmail) {
+        Linking.openURL('mailto:support@ozma.io');
+      }
+    } else {
+      try {
+        await showIntercomMessenger();
+      } catch (error) {
+        console.error('Failed to open Intercom messenger:', error);
+        Alert.alert(
+          'Support Error',
+          'Failed to open support messenger. Please email us at support@ozma.io',
+          [
+            {
+              text: 'Send Email',
+              onPress: () => Linking.openURL('mailto:support@ozma.io'),
+            },
+            {
+              text: 'OK',
+              style: 'cancel',
+            },
+          ]
+        );
+      }
+    }
   };
 
   const renderProgressBar = (value: number, color: string, testId: string) => {
