@@ -2,7 +2,7 @@
 alwaysApply: true
 ---
 
-# Boss Relationship Tracker
+# The Boss App
 
 ## Tech Stack
 React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functions)
