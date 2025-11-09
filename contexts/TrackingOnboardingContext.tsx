@@ -57,12 +57,23 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
       }
       
       hasCheckedFirstLaunchRef.current = true;
-      const shouldShow = await shouldShowFirstLaunchTracking();
-      setIsFirstLaunch(shouldShow);
+      const canShowTracking = await shouldShowFirstLaunchTracking();
+      setIsFirstLaunch(canShowTracking);
       
-      if (shouldShow) {
-        console.log('[TrackingOnboarding] First launch detected, will show tracking onboarding');
-        setShouldShowOnboarding(true);
+      if (canShowTracking) {
+        // For first launch, only show if we have Facebook attribution
+        const { getAttributionData } = await import('@/services/attribution.service');
+        const attributionData = await getAttributionData();
+        
+        const hasFbAttribution = hasFacebookAttribution(attributionData || {});
+        
+        if (hasFbAttribution) {
+          console.log('[TrackingOnboarding] First launch with Facebook attribution detected, will show tracking onboarding');
+          setShouldShowOnboarding(true);
+        } else {
+          console.log('[TrackingOnboarding] First launch but no Facebook attribution, skipping tracking onboarding');
+          setShouldShowOnboarding(false);
+        }
       } else {
         console.log('[TrackingOnboarding] Not first launch or tracking already determined');
         setShouldShowOnboarding(false);

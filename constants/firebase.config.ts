@@ -1,7 +1,9 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
+import { Platform } from 'react-native';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -15,10 +17,23 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth
-// Firebase v12 handles authentication state automatically for both web and React Native
-// Persistence is handled internally by the SDK
-export const auth = getAuth(app);
+// Initialize Auth with proper persistence
+// For React Native, we use AsyncStorage for persistence
+// For web, we use default persistence
+let auth;
+
+if (Platform.OS === 'web') {
+  auth = getAuth(app);
+} else {
+  // Import getReactNativePersistence dynamically to avoid TypeScript issues
+  // @ts-ignore - TypeScript doesn't recognize this export but it exists at runtime
+  const { getReactNativePersistence } = require('firebase/auth');
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage)
+  });
+}
+
+export { auth };
 
 export const functions = getFunctions(app);
 

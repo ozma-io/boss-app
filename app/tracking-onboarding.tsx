@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
@@ -7,7 +8,8 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 
 export default function TrackingOnboardingScreen(): React.JSX.Element {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, authState } = useAuth();
+  const { setShouldShowOnboarding } = useTrackingOnboarding();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleContinue = async (): Promise<void> => {
@@ -27,11 +29,25 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
         await updateTrackingPermissionStatus(user.id, status);
       }
       
-      // Navigate back to app flow
-      router.replace('/(tabs)');
+      // Mark tracking onboarding as completed
+      setShouldShowOnboarding(false);
+      
+      // Navigate to appropriate screen based on auth state
+      if (authState === 'authenticated') {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/(auth)/welcome');
+      }
     } catch (error) {
       console.error('[TrackingOnboarding] Error handling tracking permission:', error);
-      router.replace('/(tabs)');
+      setShouldShowOnboarding(false);
+      
+      // Navigate to appropriate screen even on error
+      if (authState === 'authenticated') {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/(auth)/welcome');
+      }
     } finally {
       setIsLoading(false);
     }
