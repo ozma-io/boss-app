@@ -39,6 +39,43 @@ Run the setup script to create database, deploy rules and indexes:
 
 ## 🔥 Cloud Functions Deployment
 
+### Local Development Setup
+
+**Environment Variables:**
+
+Cloud Functions require environment variables for external integrations. A template is provided in `functions/.env.example`:
+
+```bash
+FACEBOOK_ACCESS_TOKEN=your_facebook_access_token_here
+```
+
+**Setup steps:**
+
+1. Copy the example file:
+```bash
+cp functions/.env.example functions/.env
+```
+
+2. Fill in actual values in `functions/.env` (never commit this file!)
+
+3. For production deployment, set secrets using Firebase CLI:
+```bash
+firebase functions:secrets:set FACEBOOK_ACCESS_TOKEN
+```
+
+**Note:** The `.env` file is used for local emulator testing. Production functions read secrets from Firebase Secrets Manager.
+
+### Available Functions
+
+**Facebook Conversions API (`sendFacebookConversionEvent`):**
+- Sends server-side conversion events to Facebook for tracking
+- Supports various events (AppInstall, Purchase, etc.)
+- Handles PII hashing and deduplication
+- Requires `FACEBOOK_ACCESS_TOKEN` to be configured
+
+**Intercom JWT (`getIntercomJwt`):**
+- Generates secure JWT tokens for Intercom integration
+
 ### Build and Deploy
 
 ```bash

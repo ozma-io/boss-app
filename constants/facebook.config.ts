@@ -2,11 +2,10 @@
  * Facebook SDK Configuration
  * 
  * Public constants are hardcoded here.
- * Secrets (APP_SECRET, ACCESS_TOKEN) must be set in environment variables.
+ * Secret (ACCESS_TOKEN) must be set in environment variables.
  */
 
-// Secrets from environment variables (server-side only)
-const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET || '';
+// Secret from environment variables (server-side only)
 const FACEBOOK_ACCESS_TOKEN = process.env.FACEBOOK_ACCESS_TOKEN || '';
 
 // ============================================================================
@@ -43,8 +42,7 @@ export const FACEBOOK_CONFIG = {
 
 // Server-side configuration (for Cloud Functions)
 export const FACEBOOK_SERVER_CONFIG = {
-  // Secrets from env
-  appSecret: FACEBOOK_APP_SECRET,
+  // Secret from env
   accessToken: FACEBOOK_ACCESS_TOKEN,
   
   // Public constants
