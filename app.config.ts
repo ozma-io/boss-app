@@ -71,6 +71,7 @@ const config: ExpoConfig = {
     'expo-router',
     'expo-dev-client',
     'expo-updates',
+    'expo-localization',
     [
       'react-native-fbsdk-next',
       {

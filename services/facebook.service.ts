@@ -1,6 +1,9 @@
 import { Platform } from 'react-native';
 import { FACEBOOK_CONFIG } from '@/constants/facebook.config';
 import { AttributionData } from './attribution.service';
+import { functions } from '@/constants/firebase.config';
+import { httpsCallable } from 'firebase/functions';
+import { buildExtinfo, getAdvertiserTrackingEnabled, getApplicationTrackingEnabled } from '@/utils/deviceInfo';
 
 // Conditionally import Facebook SDK only on native platforms
 let Settings: any;
@@ -177,5 +180,81 @@ export async function logCustomEvent(
  */
 export function generateEventId(): string {
   return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+}
+
+/**
+ * Send conversion event to Facebook via Cloud Function (Server-Side)
+ * This provides more reliable tracking compared to client-side only
+ */
+export async function sendConversionEvent(
+  eventName: string,
+  userData?: {
+    email?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+  },
+  customData?: Record<string, string | number | boolean>,
+  attributionData?: AttributionData
+): Promise<void> {
+  try {
+    // Build extinfo array with device information
+    const extinfo = await buildExtinfo();
+    
+    // Get tracking permissions
+    const advertiserTrackingEnabled = await getAdvertiserTrackingEnabled();
+    const applicationTrackingEnabled = getApplicationTrackingEnabled();
+    
+    // Generate unique event ID for deduplication
+    const eventId = generateEventId();
+    
+    // Prepare event data
+    const eventData = {
+      eventName,
+      eventTime: Math.floor(Date.now() / 1000),
+      eventId,
+      advertiserTrackingEnabled,
+      applicationTrackingEnabled,
+      extinfo,
+      fbclid: attributionData?.fbclid || undefined,
+      userData,
+      customData,
+    };
+    
+    console.log('[Facebook] Sending conversion event to Cloud Function:', {
+      eventName,
+      eventId,
+      hasUserData: !!userData,
+      hasFbclid: !!attributionData?.fbclid,
+    });
+    
+    // Call Cloud Function
+    const sendEventFunction = httpsCallable(functions, 'sendFacebookConversionEvent');
+    const result = await sendEventFunction(eventData);
+    
+    console.log('[Facebook] Conversion event sent successfully:', result.data);
+  } catch (error) {
+    console.error('[Facebook] Error sending conversion event:', error);
+    throw error;
+  }
+}
+
+/**
+ * Send AppInstall event to Facebook (Server-Side via Cloud Function)
+ * Should be called on first app launch after attribution is collected
+ */
+export async function sendAppInstallEvent(
+  userData?: {
+    email?: string;
+  },
+  attributionData?: AttributionData
+): Promise<void> {
+  try {
+    await sendConversionEvent('AppInstall', userData, undefined, attributionData);
+    console.log('[Facebook] AppInstall event sent successfully');
+  } catch (error) {
+    console.error('[Facebook] Error sending AppInstall event:', error);
+    throw error;
+  }
 }
 
