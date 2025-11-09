@@ -74,23 +74,38 @@ export async function registerIntercomUser(
       platform: Platform.OS
     });
 
+    // CRITICAL: Logout any existing session to prevent JWT identity mismatch
+    // Reference: https://help.intercom.com/en/articles/183-authenticating-users-in-the-messenger-with-json-web-tokens-jwts
+    console.log('[Intercom] Step 0: Logging out any existing session...');
+    try {
+      await IntercomNative.logout();
+      console.log('[Intercom] Step 0: Existing session cleared');
+    } catch (logoutError) {
+      // Ignore logout errors (e.g., if no session exists)
+      console.log('[Intercom] Step 0: No existing session to clear');
+    }
+
     console.log('[Intercom] Step 1: Getting JWT from backend...');
     const jwt = await getJwtFromBackend(userId);
     console.log('[Intercom] Step 1: JWT received, length:', jwt?.length);
+    // TEMPORARY: Log JWT for debugging (REMOVE IN PRODUCTION!)
+    console.log('[Intercom] DEBUG JWT TOKEN:', jwt);
     
     console.log('[Intercom] Step 2: Setting user JWT...');
     await IntercomNative.setUserJwt(jwt);
     console.log('[Intercom] Step 2: JWT set successfully');
     
-    const loginParams = {
+    // Use simple format as per official documentation
+    // https://developers.intercom.com/installing-intercom/react-native/installation
+    const loginParams: any = {
       userId: userId,
       email: email,
-      name: name,
-      customAttributes: {
-        signedUpAt: new Date().toISOString(),
-        platform: Platform.OS,
-      }
     };
+    
+    // Only add name if it's provided (optional field)
+    if (name) {
+      loginParams.name = name;
+    }
     
     console.log('[Intercom] Step 3: Logging in with attributes:', JSON.stringify(loginParams, null, 2));
     await IntercomNative.loginUserWithUserAttributes(loginParams);

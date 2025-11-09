@@ -1,12 +1,61 @@
 import { AppColors } from '@/constants/Colors';
 import { showIntercomMessenger } from '@/services/intercom.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Linking, Platform, StyleSheet, Text, View } from 'react-native';
+
+const SUPPORT_EMAIL = 'support@ozma.io';
 
 export default function SupportScreen() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCopiedToast, setShowCopiedToast] = useState<boolean>(false);
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTranslateY = useRef(new Animated.Value(-100)).current;
+
+  const handleEmailPress = (): void => {
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}`);
+  };
+
+  const handleEmailLongPress = async (): Promise<void> => {
+    await Clipboard.setStringAsync(SUPPORT_EMAIL);
+    
+    // Show toast
+    setShowCopiedToast(true);
+    
+    // Animate in
+    Animated.parallel([
+      Animated.timing(toastOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(toastTranslateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Hide after 3 seconds
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(toastOpacity, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(toastTranslateY, {
+          toValue: -100,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowCopiedToast(false);
+      });
+    }, 3000);
+  };
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -37,9 +86,33 @@ export default function SupportScreen() {
           </View>
           <Text style={styles.title} testID="support-error-title">Support</Text>
           <View style={styles.infoCard} testID="support-error-card">
-            <Text style={styles.infoText} testID="support-error-text">{error}</Text>
+            <Text style={styles.infoText} testID="support-error-text">
+              {error}
+              {'\n\n'}
+              Sorry for the inconvenience. You can reach us at{' '}
+              <Text style={styles.emailLink} onPress={handleEmailPress} onLongPress={handleEmailLongPress} testID="support-error-email">
+                {SUPPORT_EMAIL}
+              </Text>
+              {'\n'}
+              We read all messages.
+            </Text>
           </View>
         </View>
+        {showCopiedToast && (
+          <Animated.View 
+            style={[
+              styles.toast,
+              {
+                opacity: toastOpacity,
+                transform: [{ translateY: toastTranslateY }],
+              },
+            ]}
+            testID="copied-toast"
+          >
+            <FontAwesome name="check-circle" size={20} color="#B8E986" />
+            <Text style={styles.toastText}>Email copied to clipboard</Text>
+          </Animated.View>
+        )}
       </View>
     );
   }
@@ -67,10 +140,30 @@ export default function SupportScreen() {
             <Text style={styles.infoText} testID="support-web-info-text">
               Intercom support messenger is available only in the iOS and Android mobile apps.
               {'\n\n'}
-              Please download and use the mobile app to contact support.
+              Sorry for the inconvenience. You can reach us at{' '}
+              <Text style={styles.emailLink} onPress={handleEmailPress} onLongPress={handleEmailLongPress} testID="support-web-email">
+                {SUPPORT_EMAIL}
+              </Text>
+              {'\n'}
+              We read all messages.
             </Text>
           </View>
         </View>
+        {showCopiedToast && (
+          <Animated.View 
+            style={[
+              styles.toast,
+              {
+                opacity: toastOpacity,
+                transform: [{ translateY: toastTranslateY }],
+              },
+            ]}
+            testID="copied-toast"
+          >
+            <FontAwesome name="check-circle" size={20} color="#B8E986" />
+            <Text style={styles.toastText}>Email copied to clipboard</Text>
+          </Animated.View>
+        )}
       </View>
     );
   }
@@ -144,6 +237,36 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
     fontFamily: 'Manrope-Regular',
+  },
+  emailLink: {
+    color: '#007AFF',
+    textDecorationLine: 'underline',
+    fontFamily: 'Manrope-SemiBold',
+  },
+  toast: {
+    position: 'absolute',
+    top: 60,
+    left: 24,
+    right: 24,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#B8E986',
+  },
+  toastText: {
+    fontSize: 15,
+    color: '#333',
+    fontFamily: 'Manrope-SemiBold',
+    flex: 1,
   },
 });
 
