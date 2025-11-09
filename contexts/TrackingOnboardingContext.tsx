@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { AttributionData } from '@/services/attribution.service';
-import { hasFacebookAttribution, shouldShowFirstLaunchTracking, shouldShowTrackingOnboarding } from '@/services/tracking.service';
+import { hasFacebookAttribution, shouldShowFirstLaunchTracking, shouldShowTrackingOnboarding, syncTrackingStatusIfNeeded } from '@/services/tracking.service';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
@@ -107,6 +107,9 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
   // When auth state changes, check if we should show onboarding for logged in user
   useEffect(() => {
     if (authState === 'authenticated' && user && !hasCheckedOnboarding) {
+      // Sync tracking status with system first
+      syncTrackingStatusIfNeeded(user.id);
+      // Then check if we should show onboarding
       checkShouldShowOnboarding();
       setHasCheckedOnboarding(true);
     } else if (authState === 'unauthenticated') {
@@ -121,6 +124,9 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         if (authState === 'authenticated' && user) {
+          // Sync tracking status with system in case user changed it in Settings
+          syncTrackingStatusIfNeeded(user.id);
+          // Then check if we should show onboarding
           checkShouldShowOnboarding();
         }
         // Don't check first launch on app resume - only on initial mount

@@ -170,6 +170,34 @@ export async function recordTrackingPromptShown(userId: string): Promise<void> {
 }
 
 /**
+ * Sync system tracking status with Firestore if they differ
+ * This ensures Firestore always has the current system state
+ */
+async function syncTrackingStatusWithFirestore(
+  userId: string,
+  systemStatus: TrackingPermissionStatus,
+  firestoreData: UserTrackingData | null
+): Promise<void> {
+  // If Firestore already has the correct status, no need to sync
+  if (firestoreData?.trackingPermissionStatus === systemStatus) {
+    console.log(`📊 [TrackingService] Firestore already in sync with system status: ${systemStatus}`);
+    return;
+  }
+  
+  console.log(
+    `📊 [TrackingService] Syncing status - System: ${systemStatus}, ` +
+    `Firestore: ${firestoreData?.trackingPermissionStatus || 'null'}`
+  );
+  
+  try {
+    await updateTrackingPermissionStatus(userId, systemStatus);
+    console.log(`📊 [TrackingService] Successfully synced tracking status to Firestore`);
+  } catch (error) {
+    console.error('[TrackingService] Failed to sync tracking status to Firestore:', error);
+  }
+}
+
+/**
  * Check if the tracking onboarding should be shown to the user
  * This checks permission status and time since last prompt
  */
@@ -184,26 +212,39 @@ export async function shouldShowTrackingOnboarding(userId: string): Promise<bool
     return false;
   }
   
+  // Check current system status first
+  const systemStatus = await getTrackingPermissionStatus();
+  console.log(`📊 [TrackingService] Current system tracking status: ${systemStatus}`);
+  
+  // Get Firestore data
   const trackingData = await getUserTrackingData(userId);
   
+  // If system has already determined status (granted or denied), sync with Firestore and don't show onboarding
+  if (systemStatus === 'authorized' || systemStatus === 'denied') {
+    await syncTrackingStatusWithFirestore(userId, systemStatus, trackingData);
+    const duration = Date.now() - startTime;
+    console.log(
+      `📊 [TrackingService] <<< System status already determined (${systemStatus}), ` +
+      `skipping onboarding (${duration}ms)`
+    );
+    return false;
+  }
+  
+  // If no tracking data in Firestore, show onboarding
   if (!trackingData) {
     const duration = Date.now() - startTime;
     console.log(`📊 [TrackingService] <<< No tracking data found, will show onboarding (${duration}ms)`);
     return true;
   }
   
-  if (trackingData.trackingPermissionStatus === 'authorized') {
-    const duration = Date.now() - startTime;
-    console.log(`📊 [TrackingService] <<< Permission already granted, skipping onboarding (${duration}ms)`);
-    return false;
-  }
-  
+  // If never prompted before, show onboarding
   if (!trackingData.lastTrackingPromptAt) {
     const duration = Date.now() - startTime;
     console.log(`📊 [TrackingService] <<< Never prompted before, will show onboarding (${duration}ms)`);
     return true;
   }
   
+  // Check if enough time has passed since last prompt
   const lastPromptDate = new Date(trackingData.lastTrackingPromptAt);
   const daysSinceLastPrompt = (Date.now() - lastPromptDate.getTime()) / (1000 * 60 * 60 * 24);
   const shouldShow = daysSinceLastPrompt >= DAYS_BETWEEN_TRACKING_PROMPTS;
@@ -294,6 +335,29 @@ export async function getTrackingPermissionStatus(): Promise<TrackingPermissionS
   } catch (error) {
     console.error('[TrackingService] Error getting tracking permission status:', error);
     return 'not_determined';
+  }
+}
+
+/**
+ * Sync the current system tracking status with Firestore
+ * Call this when app comes to foreground to ensure data is up-to-date
+ */
+export async function syncTrackingStatusIfNeeded(userId: string): Promise<void> {
+  try {
+    console.log(`📊 [TrackingService] >>> Syncing tracking status for user: ${userId}`);
+    
+    if (Platform.OS !== 'ios') {
+      console.log(`📊 [TrackingService] <<< Not iOS platform, no sync needed`);
+      return;
+    }
+    
+    const systemStatus = await getTrackingPermissionStatus();
+    const trackingData = await getUserTrackingData(userId);
+    
+    await syncTrackingStatusWithFirestore(userId, systemStatus, trackingData);
+    console.log(`📊 [TrackingService] <<< Sync completed`);
+  } catch (error) {
+    console.error('[TrackingService] Error syncing tracking status:', error);
   }
 }
 
