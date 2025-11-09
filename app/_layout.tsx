@@ -13,7 +13,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { httpsCallable } from 'firebase/functions';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
@@ -144,11 +144,34 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const { authState } = useAuth();
   const { shouldShowOnboarding: shouldShowNotificationOnboarding } = useNotificationOnboarding();
-  const { shouldShowOnboarding: shouldShowTrackingOnboarding, checkAttributionAndShowTracking } = useTrackingOnboarding();
+  const { shouldShowOnboarding: shouldShowTrackingOnboarding } = useTrackingOnboarding();
   const segments = useSegments();
   const router = useRouter();
   const hasCheckedAttribution = useRef<boolean>(false);
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
 
+  // Check for attribution email (only once when unauthenticated)
+  useEffect(() => {
+    if (authState === 'unauthenticated' && !hasCheckedAttribution.current) {
+      const checkAttributionEmail = async () => {
+        hasCheckedAttribution.current = true;
+        
+        try {
+          const attributionEmail = await getAttributionEmail();
+          if (attributionEmail) {
+            console.log('[App] Attribution email found, setting redirect to email-input');
+            setRedirectPath(`/(auth)/email-input?email=${encodeURIComponent(attributionEmail)}`);
+          }
+        } catch (error) {
+          console.error('[App] Error checking attribution email:', error);
+        }
+      };
+      
+      checkAttributionEmail();
+    }
+  }, [authState]);
+
+  // Handle routing logic based on auth state and required onboarding steps
   useEffect(() => {
     if (authState === 'loading') {
       return;
@@ -157,78 +180,42 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
     const inNotificationOnboarding = segments[0] === 'notification-onboarding';
     const inTrackingOnboarding = segments[0] === 'tracking-onboarding';
-
-    // Check for pre-filled email from attribution on first unauthenticated state
-    const checkAttributionEmail = async (): Promise<void> => {
-      if (authState === 'unauthenticated' && !hasCheckedAttribution.current) {
-        hasCheckedAttribution.current = true;
-        
-        const attributionEmail = await getAttributionEmail();
-        
-        if (attributionEmail && !inAuthGroup) {
-          console.log('[App] Attribution email found, navigating to email-input with pre-filled email');
-          router.replace({
-            pathname: '/(auth)/email-input',
-            params: { email: attributionEmail },
-          });
-          return;
-        }
-      }
-    };
-
-    checkAttributionEmail();
-
-    // Create navigation function to avoid duplicated router calls
-    const navigateToNextScreen = () => {
-      // First priority: tracking onboarding
-      if (shouldShowTrackingOnboarding && !inTrackingOnboarding) {
-        console.log('[App] Navigating to tracking onboarding');
-        router.replace('/tracking-onboarding');
-        return true;
-      }
-      
-      // Second priority: auth state handling
-      if (authState === 'unauthenticated') {
-        if (!inAuthGroup) {
-          // Don't navigate if we're about to navigate to email-input with attribution
-          if (!hasCheckedAttribution.current) {
-            return false; // Wait for attribution check
-          }
-          console.log('[App] Navigating to welcome screen');
-          router.replace('/(auth)/welcome');
-          return true;
-        }
-      } else if (authState === 'authenticated') {
-        if (inAuthGroup) {
-          if (shouldShowNotificationOnboarding) {
-            console.log('[App] Navigating to notification onboarding from auth group');
-            router.replace('/notification-onboarding');
-            return true;
-          } else {
-            console.log('[App] Navigating to tabs from auth group');
-            router.replace('/(tabs)');
-            return true;
-          }
-        } else if (shouldShowNotificationOnboarding && !inNotificationOnboarding) {
-          console.log('[App] Navigating to notification onboarding');
-          router.replace('/notification-onboarding');
-          return true;
-        }
-      }
-      
-      return false; // No navigation occurred
-    };
     
-    // Run this logic sequentially to avoid race conditions
-    const runNavigationFlow = async () => {
-      // First check for attribution email
-      await checkAttributionEmail();
-      // Then navigate if needed
-      navigateToNextScreen();
-    };
+    // Determine where the user should be
+    let targetPath: string | null = null;
     
-    runNavigationFlow();
-  }, [authState, segments, shouldShowNotificationOnboarding, shouldShowTrackingOnboarding]);
+    // First priority: tracking onboarding (for any auth state)
+    if (shouldShowTrackingOnboarding && !inTrackingOnboarding) {
+      targetPath = '/tracking-onboarding';
+    }
+    // Second priority: authenticated user flow
+    else if (authState === 'authenticated') {
+      if (shouldShowNotificationOnboarding && !inNotificationOnboarding) {
+        targetPath = '/notification-onboarding';
+      } else if (inAuthGroup) {
+        targetPath = '/(tabs)';
+      }
+    }
+    // Third priority: unauthenticated user flow
+    else if (authState === 'unauthenticated') {
+      // Attribution email redirect takes precedence if set
+      if (redirectPath) {
+        targetPath = redirectPath;
+        // Clear redirect after use
+        setRedirectPath(null);
+      }
+      // Otherwise go to welcome page
+      else if (!inAuthGroup) {
+        targetPath = '/(auth)/welcome';
+      }
+    }
+    
+    // Navigate if needed and not already on target path
+    if (targetPath) {
+      console.log(`[App] Routing to: ${targetPath}`);
+      router.replace(targetPath as any);
+    }
+  }, [authState, segments, shouldShowNotificationOnboarding, shouldShowTrackingOnboarding, redirectPath]);
 
   if (authState === 'loading') {
     return (

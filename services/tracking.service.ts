@@ -305,6 +305,7 @@ export async function getTrackingPermissionStatus(): Promise<TrackingPermissionS
 export async function shouldShowFirstLaunchTracking(): Promise<boolean> {
   // On non-iOS platforms, we don't show the ATT prompt
   if (Platform.OS !== 'ios') {
+    console.log('[TrackingService] Not iOS platform, no need to show first launch tracking');
     return false;
   }
   
@@ -313,8 +314,10 @@ export async function shouldShowFirstLaunchTracking(): Promise<boolean> {
   
   // If user has already made a choice, don't show again
   if (currentStatus.status === 'granted' || currentStatus.status === 'denied') {
+    console.log('[TrackingService] User has already made tracking choice:', currentStatus.status);
     return false;
   }
   
+  console.log('[TrackingService] First launch tracking should be shown');
   return true;
 }

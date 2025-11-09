@@ -48,12 +48,20 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
   // Check if this is first launch and we should show tracking permission
   const checkFirstLaunch = async (): Promise<void> => {
     try {
+      // Prevent multiple calls in development
+      if (isFirstLaunch) {
+        console.log('[TrackingOnboarding] Already checked first launch, skipping');
+        return;
+      }
+      
       const shouldShow = await shouldShowFirstLaunchTracking();
       setIsFirstLaunch(shouldShow);
       
       if (shouldShow) {
         console.log('[TrackingOnboarding] First launch detected, will show tracking onboarding');
         setShouldShowOnboarding(true);
+      } else {
+        console.log('[TrackingOnboarding] Not first launch or tracking already determined');
       }
     } catch (error) {
       console.error('[TrackingOnboarding] Error checking first launch:', error);
