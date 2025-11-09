@@ -185,6 +185,7 @@ function RootLayoutNav() {
     const inNotificationOnboarding = segments[0] === 'notification-onboarding';
     const inTrackingOnboarding = segments[0] === 'tracking-onboarding';
     const inTabs = segments[0] === '(tabs)';
+    const inRootScreen = ['personal-info', 'subscription', 'support', 'chat', 'boss-timeline', 'boss-details', 'entry-details'].includes(segments[0] as string);
     
     // Determine where the user should be
     let targetPath: string | null = null;
@@ -202,8 +203,8 @@ function RootLayoutNav() {
         if (!inNotificationOnboarding) {
           targetPath = '/notification-onboarding';
         }
-      } else if (!inTabs && !inNotificationOnboarding) {
-        // Only redirect to tabs if not already there or in notification onboarding
+      } else if (!inTabs && !inNotificationOnboarding && !inRootScreen) {
+        // Only redirect to tabs if not already there, in notification onboarding, or in a root screen
         targetPath = '/(tabs)';
       }
     }
