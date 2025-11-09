@@ -1,9 +1,9 @@
-import { Platform } from 'react-native';
 import { FACEBOOK_CONFIG } from '@/constants/facebook.config';
-import { AttributionData } from './attribution.service';
 import { functions } from '@/constants/firebase.config';
-import { httpsCallable } from 'firebase/functions';
 import { buildExtinfo, getAdvertiserTrackingEnabled, getApplicationTrackingEnabled } from '@/utils/deviceInfo';
+import { httpsCallable } from 'firebase/functions';
+import { Platform } from 'react-native';
+import { AttributionData } from './attribution.service';
 
 // Conditionally import Facebook SDK only on native platforms
 let Settings: any;
