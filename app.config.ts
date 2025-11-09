@@ -37,6 +37,7 @@ const config: ExpoConfig = {
       FacebookAppID: FACEBOOK_APP_ID,
       FacebookDisplayName: FACEBOOK_APP_NAME,
       LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api'],
+      NSUserTrackingUsageDescription: 'This identifier will be used to deliver personalized ads to you.',
     },
   },
   android: {
