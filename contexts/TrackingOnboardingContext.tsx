@@ -46,14 +46,17 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
   };
 
   // Check if this is first launch and we should show tracking permission
+  const hasCheckedFirstLaunchRef = useRef(false);
+  
   const checkFirstLaunch = async (): Promise<void> => {
     try {
-      // Prevent multiple calls in development
-      if (isFirstLaunch) {
+      // Prevent multiple calls
+      if (hasCheckedFirstLaunchRef.current) {
         console.log('[TrackingOnboarding] Already checked first launch, skipping');
         return;
       }
       
+      hasCheckedFirstLaunchRef.current = true;
       const shouldShow = await shouldShowFirstLaunchTracking();
       setIsFirstLaunch(shouldShow);
       
@@ -62,9 +65,11 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
         setShouldShowOnboarding(true);
       } else {
         console.log('[TrackingOnboarding] Not first launch or tracking already determined');
+        setShouldShowOnboarding(false);
       }
     } catch (error) {
       console.error('[TrackingOnboarding] Error checking first launch:', error);
+      setShouldShowOnboarding(false);
     }
   };
 
@@ -79,8 +84,13 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
   };
 
   // On mount, check if we should show the onboarding
+  const hasInitializedRef = useRef(false);
+  
   useEffect(() => {
-    checkFirstLaunch();
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      checkFirstLaunch();
+    }
   }, []);
 
   // When auth state changes, check if we should show onboarding for logged in user
@@ -101,9 +111,8 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         if (authState === 'authenticated' && user) {
           checkShouldShowOnboarding();
-        } else {
-          checkFirstLaunch();
         }
+        // Don't check first launch on app resume - only on initial mount
       }
       appState.current = nextAppState;
     });

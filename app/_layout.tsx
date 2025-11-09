@@ -180,19 +180,26 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
     const inNotificationOnboarding = segments[0] === 'notification-onboarding';
     const inTrackingOnboarding = segments[0] === 'tracking-onboarding';
+    const inTabs = segments[0] === '(tabs)';
     
     // Determine where the user should be
     let targetPath: string | null = null;
     
     // First priority: tracking onboarding (for any auth state)
-    if (shouldShowTrackingOnboarding && !inTrackingOnboarding) {
-      targetPath = '/tracking-onboarding';
+    if (shouldShowTrackingOnboarding) {
+      if (!inTrackingOnboarding) {
+        targetPath = '/tracking-onboarding';
+      }
+      // If already in tracking onboarding, do nothing
     }
     // Second priority: authenticated user flow
     else if (authState === 'authenticated') {
-      if (shouldShowNotificationOnboarding && !inNotificationOnboarding) {
-        targetPath = '/notification-onboarding';
-      } else if (inAuthGroup) {
+      if (shouldShowNotificationOnboarding) {
+        if (!inNotificationOnboarding) {
+          targetPath = '/notification-onboarding';
+        }
+      } else if (!inTabs && !inNotificationOnboarding) {
+        // Only redirect to tabs if not already there or in notification onboarding
         targetPath = '/(tabs)';
       }
     }
@@ -204,15 +211,15 @@ function RootLayoutNav() {
         // Clear redirect after use
         setRedirectPath(null);
       }
-      // Otherwise go to welcome page
-      else if (!inAuthGroup) {
+      // Otherwise go to welcome page if not already in auth flow
+      else if (!inAuthGroup && !inTrackingOnboarding) {
         targetPath = '/(auth)/welcome';
       }
     }
     
-    // Navigate if needed and not already on target path
+    // Navigate only if we have a target and it's different from where we are
     if (targetPath) {
-      console.log(`[App] Routing to: ${targetPath}`);
+      console.log(`[App] Routing to: ${targetPath} from ${segments[0] || 'root'}`);
       router.replace(targetPath as any);
     }
   }, [authState, segments, shouldShowNotificationOnboarding, shouldShowTrackingOnboarding, redirectPath]);
