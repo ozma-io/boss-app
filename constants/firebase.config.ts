@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
-import { getAuth, initializeAuth } from 'firebase/auth';
+import { browserLocalPersistence, getAuth, initializeAuth, setPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
 import { Platform } from 'react-native';
@@ -17,27 +16,26 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || ""
 };
 
+
 const app = initializeApp(firebaseConfig);
 
-// Initialize Auth with platform-specific persistence
-// For Web we use default persistence, for React Native we use AsyncStorage
-export const auth = Platform.OS === 'web'
-  ? getAuth(app) // Use standard auth for web
-  : (() => {
-      // For React Native, we use a direct import instead of the dynamic import above
-      // This ensures that auth is initialized properly at module load time
-      try {
-        // We need to import this here again to ensure it's available during initialization
-        const { getReactNativePersistence } = require('firebase/auth/react-native');
-        return initializeAuth(app, {
-          persistence: getReactNativePersistence(AsyncStorage)
-        });
-      } catch (error) {
-        console.error("Error initializing Firebase Auth for native:", error);
-        // Fallback to standard auth if React Native persistence isn't available
-        return getAuth(app);
-      }
-    })();
+// Initialize Auth with persistence for React Native
+// In Firebase v12+, we need to use browser persistence options 
+let auth;
+
+if (Platform.OS === 'web') {
+  auth = getAuth(app);
+} else {
+  // For React Native, initialize with custom persistence
+  auth = initializeAuth(app);
+  // Set persistence to local (stored in IndexedDB in React Native)
+  setPersistence(auth, browserLocalPersistence)
+    .catch((error) => {
+      console.error('Error setting auth persistence:', error);
+    });
+}
+
+export { auth };
 
 export const functions = getFunctions(app);
 
