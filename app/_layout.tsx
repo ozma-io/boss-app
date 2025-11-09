@@ -5,6 +5,7 @@ import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/con
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
 import { generateEventId, initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams } from '@/services/facebook.service';
+import { initializeIntercom } from '@/services/intercom.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -51,7 +52,7 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // Initialize Facebook SDK and handle attribution on first launch
+  // Initialize Facebook SDK, Intercom and handle attribution on first launch
   useEffect(() => {
     const initializeFacebookAndAttribution = async (): Promise<void> => {
       try {
@@ -59,6 +60,9 @@ export default function RootLayout() {
         if (Platform.OS !== 'web') {
           await initializeFacebookSdk();
         }
+
+        // Initialize Intercom SDK
+        await initializeIntercom();
 
         // Check if this is the first launch
         const firstLaunch = await isFirstLaunch();

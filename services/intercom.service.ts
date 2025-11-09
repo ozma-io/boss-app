@@ -16,6 +16,9 @@ if (Platform.OS !== 'web') {
  * Initialize Intercom SDK
  * Should be called once at app startup
  * Only works on iOS and Android
+ * 
+ * Note: With Expo config plugin, Intercom is initialized automatically by native code.
+ * This function is here for future customization if needed.
  */
 export async function initializeIntercom(): Promise<void> {
   if (Platform.OS === 'web') {
@@ -28,13 +31,7 @@ export async function initializeIntercom(): Promise<void> {
     return;
   }
 
-  try {
-    await IntercomNative.setInAppMessagesVisibility('VISIBLE');
-    console.log('[Intercom] Initialized successfully');
-  } catch (error) {
-    console.error('[Intercom] Failed to initialize:', error);
-    // Don't throw - allow app to continue without Intercom
-  }
+  console.log('[Intercom] SDK is initialized via Expo config plugin');
 }
 
 /**
@@ -42,11 +39,14 @@ export async function initializeIntercom(): Promise<void> {
  */
 async function getJwtFromBackend(userId: string): Promise<string> {
   try {
+    console.log('[Intercom] Calling getIntercomJwt for userId:', userId);
     const getIntercomJwt = httpsCallable<void, { token: string }>(functions, 'getIntercomJwt');
     const result = await getIntercomJwt();
+    console.log('[Intercom] Got response from backend, token exists:', !!result.data?.token);
     return result.data.token;
   } catch (error) {
-    console.error('Failed to get Intercom JWT from backend:', error);
+    console.error('[Intercom] Failed to get JWT from backend:', error);
+    console.error('[Intercom] Backend error details:', JSON.stringify(error, null, 2));
     throw new Error('Failed to get Intercom JWT');
   }
 }
@@ -67,11 +67,22 @@ export async function registerIntercomUser(
   }
 
   try {
+    console.log('[Intercom] Starting user registration with params:', {
+      userId,
+      email,
+      name,
+      platform: Platform.OS
+    });
+
+    console.log('[Intercom] Step 1: Getting JWT from backend...');
     const jwt = await getJwtFromBackend(userId);
+    console.log('[Intercom] Step 1: JWT received, length:', jwt?.length);
     
+    console.log('[Intercom] Step 2: Setting user JWT...');
     await IntercomNative.setUserJwt(jwt);
+    console.log('[Intercom] Step 2: JWT set successfully');
     
-    await IntercomNative.loginUserWithUserAttributes({
+    const loginParams = {
       userId: userId,
       email: email,
       name: name,
@@ -79,11 +90,60 @@ export async function registerIntercomUser(
         signedUpAt: new Date().toISOString(),
         platform: Platform.OS,
       }
-    });
+    };
+    
+    console.log('[Intercom] Step 3: Logging in with attributes:', JSON.stringify(loginParams, null, 2));
+    await IntercomNative.loginUserWithUserAttributes(loginParams);
+    console.log('[Intercom] Step 3: Login successful');
     
     console.log('[Intercom] User registered successfully');
   } catch (error) {
     console.error('[Intercom] Failed to register user:', error);
+    console.error('[Intercom] Error details:', JSON.stringify(error, null, 2));
+    if (error && typeof error === 'object') {
+      console.error('[Intercom] Error keys:', Object.keys(error));
+      console.error('[Intercom] Error message:', (error as any).message);
+      console.error('[Intercom] Error code:', (error as any).code);
+      console.error('[Intercom] Error domain:', (error as any).domain);
+      
+      // Log userInfo details which often contain the actual error description
+      if ((error as any).userInfo) {
+        console.error('[Intercom] Error userInfo (full):', JSON.stringify((error as any).userInfo, null, 2));
+        
+        // Standard iOS NSError keys
+        if ((error as any).userInfo.NSLocalizedDescription) {
+          console.error('[Intercom] NSLocalizedDescription:', (error as any).userInfo.NSLocalizedDescription);
+        }
+        if ((error as any).userInfo.NSLocalizedRecoverySuggestion) {
+          console.error('[Intercom] NSLocalizedRecoverySuggestion:', (error as any).userInfo.NSLocalizedRecoverySuggestion);
+        }
+        if ((error as any).userInfo.NSLocalizedFailureReason) {
+          console.error('[Intercom] NSLocalizedFailureReason:', (error as any).userInfo.NSLocalizedFailureReason);
+        }
+        if ((error as any).userInfo.NSDebugDescription) {
+          console.error('[Intercom] NSDebugDescription:', (error as any).userInfo.NSDebugDescription);
+        }
+        
+        // Underlying error (often contains the real cause)
+        if ((error as any).userInfo.NSUnderlyingError) {
+          console.error('[Intercom] NSUnderlyingError:', JSON.stringify((error as any).userInfo.NSUnderlyingError, null, 2));
+        }
+        
+        // HTTP response related
+        if ((error as any).userInfo.statusCode) {
+          console.error('[Intercom] HTTP Status Code:', (error as any).userInfo.statusCode);
+        }
+        if ((error as any).userInfo.responseBody) {
+          console.error('[Intercom] Response Body:', (error as any).userInfo.responseBody);
+        }
+        if ((error as any).userInfo.body) {
+          console.error('[Intercom] Body:', (error as any).userInfo.body);
+        }
+        
+        // Log all keys to see what's available
+        console.error('[Intercom] All userInfo keys:', Object.keys((error as any).userInfo));
+      }
+    }
     // Don't throw - allow app to continue without Intercom
   }
 }

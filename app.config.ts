@@ -86,6 +86,16 @@ const config: ExpoConfig = {
         iosUserTrackingPermission: 'This app uses data for delivering personalized ads to you.',
       },
     ],
+    [
+      '@intercom/intercom-react-native',
+      {
+        appId: 'xpq2wx7a',
+        // These keys are public and safe to commit - they identify the app to Intercom
+        // The secret key (INTERCOM_SECRET_KEY) for JWT signing is kept in Firebase Secret Manager
+        androidApiKey: 'android_sdk-b92af611f1c5b8a3fffab010503c048b8736c26e',
+        iosApiKey: 'ios_sdk-b5e22560fe55000d92cb6eeb3590bef7dae364ed',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
