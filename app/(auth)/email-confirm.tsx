@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF8F5',
     paddingHorizontal: 24,
     paddingTop: 30,
-    paddingBottom: 40,
+    paddingBottom: 0,
   },
   backButton: {
     position: 'absolute',

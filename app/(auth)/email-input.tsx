@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAF8F5',
     paddingHorizontal: 24,
     paddingTop: 30,
-    paddingBottom: 40,
+    paddingBottom: 0,
   },
   closeButton: {
     position: 'absolute',
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     marginTop: 'auto',
+    marginBottom: 35,
   },
   continueButtonDisabled: {
     opacity: 0.5,

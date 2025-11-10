@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   modalContent: {
-    height: '95%',
+    height: '90%',
     backgroundColor: '#FAF8F5',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingTop: 30,
-    paddingBottom: 40,
+    paddingBottom: 0,
   },
   closeButton: {
     position: 'absolute',
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -417,6 +417,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     marginTop: 'auto',
+    marginBottom: 30,
   },
   continueButtonDisabled: {
     opacity: 0.5,
