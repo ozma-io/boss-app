@@ -35,6 +35,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Publish update
-        run: eas update --auto --non-interactive
+      - name: Publish update to preview
+        run: eas update --branch preview --message "Update from main branch" --non-interactive
+
+      - name: Publish update to production
+        run: eas update --branch production --message "Update from main branch" --non-interactive
 
