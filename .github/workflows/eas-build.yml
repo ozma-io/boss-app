@@ -35,8 +35,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build production for iOS
-        run: eas build --platform ios --profile production --non-interactive --no-wait
+      # TODO: Change to production profile after setting up iOS credentials
+      # Run locally once: eas build --platform ios --profile production
+      # This will set up Distribution Certificate and Provisioning Profile on Expo servers
+      - name: Build preview for iOS
+        run: eas build --platform ios --profile preview --non-interactive --no-wait
 
       - name: Build production for Android
         run: eas build --platform android --profile production --non-interactive --no-wait
