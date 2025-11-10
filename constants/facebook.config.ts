@@ -11,9 +11,9 @@ const FACEBOOK_ACCESS_TOKEN = process.env.FACEBOOK_ACCESS_TOKEN || '';
 // ============================================================================
 // ⚠️ DUPLICATED in app.config.ts - keep both in sync!
 // ============================================================================
-export const FACEBOOK_APP_ID = '1234567890'; // TODO: Replace with your actual Facebook App ID
-export const FACEBOOK_CLIENT_TOKEN = 'your_client_token_here'; // TODO: Replace with your actual Client Token
-export const FACEBOOK_APP_NAME = 'YourFacebookAppName'; // TODO: Replace with your Facebook App Display Name
+export const FACEBOOK_APP_ID = '853405190716887';
+export const FACEBOOK_CLIENT_TOKEN = '39f2bc67668285fbd6990e16805565cb';
+export const FACEBOOK_APP_NAME = 'The Boss App';
 // ============================================================================
 // End of duplicated section
 // ============================================================================

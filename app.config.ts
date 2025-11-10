@@ -6,9 +6,9 @@ import { ExpoConfig } from 'expo/config';
 // ============================================================================
 // ⚠️ DUPLICATED in constants/facebook.config.ts - keep both in sync!
 // ============================================================================
-const FACEBOOK_APP_ID = '1234567890'; // TODO: Replace with your actual Facebook App ID
-const FACEBOOK_CLIENT_TOKEN = 'your_client_token_here'; // TODO: Replace with your actual Client Token
-const FACEBOOK_APP_NAME = 'YourFacebookAppName'; // TODO: Replace with your Facebook App Display Name
+const FACEBOOK_APP_ID = '853405190716887';
+const FACEBOOK_CLIENT_TOKEN = '39f2bc67668285fbd6990e16805565cb';
+const FACEBOOK_APP_NAME = 'The Boss App';
 // ============================================================================
 // End of duplicated section
 // ============================================================================
