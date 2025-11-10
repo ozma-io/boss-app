@@ -58,6 +58,7 @@ User installs app
 **Status:** ✅ **Ready** (Screen implemented, Facebook App ID & Client Token configured)
 
 **TODO:**
+- Add app logo/icon before publication
 - After app publication, visit [Facebook Advanced Settings](https://developers.facebook.com/apps/853405190716887/settings/advanced/?business_id=2178506568838763) and configure all required IDs for both iOS and Android devices to ensure proper attribution tracking
 
 **Next:** → Welcome Screen
