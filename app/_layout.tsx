@@ -5,7 +5,7 @@ import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/Tr
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
 import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
-import { hasFacebookAttribution } from '@/services/tracking.service';
+import { hasFacebookAttribution, requestTrackingPermission } from '@/services/tracking.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -88,7 +88,15 @@ export default function RootLayout() {
             const hasFbAttribution = hasFacebookAttribution(attributionData);
             
             if (hasFbAttribution) {
-              console.log('[App] Facebook attribution detected, sending AppInstall events');
+              console.log('[App] Facebook attribution detected, will request tracking permission and send AppInstall events');
+              
+              // On iOS, request tracking permission first before sending events
+              if (Platform.OS === 'ios') {
+                console.log('[App] iOS: Requesting tracking permission before sending events');
+                const trackingStatus = await requestTrackingPermission();
+                console.log('[App] iOS: Tracking permission status:', trackingStatus);
+              }
+              // On Android, no need to request permission (always allowed)
               
               // Send AppInstall event to Facebook (client-side)
               // Only if we're not on web platform
