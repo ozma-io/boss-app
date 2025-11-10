@@ -38,6 +38,15 @@ Facebook integration for attribution tracking and analytics:
 - Conversions API usage examples
 - Testing and troubleshooting
 
+### [Tracking & Attribution Flow](./tracking-and-attribution-flow.md)
+Complete flow documentation for tracking permissions and attribution:
+- iOS App Tracking Transparency (ATT) flow
+- Android attribution flow
+- First launch scenarios with/without Facebook attribution
+- Re-prompt logic after 2 weeks
+- Technical implementation details
+- Testing and troubleshooting
+
 ### [Magic Link Development](./magic-link-development.md)
 Development workflow for magic link authentication:
 - Testing magic links in iOS Simulator
@@ -75,14 +84,15 @@ Automatic web deployment on Vercel:
 
 ```
 docs/
-├── README.md                    # This file - documentation index
-├── firebase-deployment.md       # Firebase deployment guide
-├── firestore-management.md      # Firestore database management
-├── authentication.md            # Authentication system
-├── facebook-integration.md      # Facebook Attribution & Conversions API
-├── magic-link-development.md    # Magic link development workflow
-├── vercel-deployment.md         # Vercel web deployment
-└── expo-cloud-setup.md          # Expo cloud build setup (iOS/Android)
+├── README.md                       # This file - documentation index
+├── firebase-deployment.md          # Firebase deployment guide
+├── firestore-management.md         # Firestore database management
+├── authentication.md               # Authentication system
+├── facebook-integration.md         # Facebook Attribution & Conversions API
+├── tracking-and-attribution-flow.md # Tracking & Attribution flow scenarios
+├── magic-link-development.md       # Magic link development workflow
+├── vercel-deployment.md            # Vercel web deployment
+└── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)
 ```
 
 ---
