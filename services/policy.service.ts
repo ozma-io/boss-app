@@ -1,8 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 
-// TODO: Replace with actual privacy policy and terms of service URLs
-const PRIVACY_POLICY_URL = 'https://example.com/privacy';
-const TERMS_OF_SERVICE_URL = 'https://example.com/terms';
+const PRIVACY_POLICY_URL = 'https://www.iubenda.com/privacy-policy/44080391';
+const TERMS_OF_SERVICE_URL = 'https://www.iubenda.com/terms-and-conditions/44080391';
 
 export async function openPrivacyPolicy(): Promise<void> {
   try {
