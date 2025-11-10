@@ -73,6 +73,7 @@ const config: ExpoConfig = {
     'expo-dev-client',
     'expo-updates',
     'expo-localization',
+    'expo-web-browser',
     [
       'react-native-fbsdk-next',
       {
