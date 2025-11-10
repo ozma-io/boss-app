@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { AttributionData } from '@/services/attribution.service';
-import { hasFacebookAttribution, shouldShowFirstLaunchTracking, shouldShowTrackingOnboarding, syncTrackingStatusIfNeeded } from '@/services/tracking.service';
+import { shouldShowTrackingOnboarding, syncTrackingStatusIfNeeded } from '@/services/tracking.service';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
@@ -20,7 +20,6 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
   const { user, authState } = useAuth();
   const [shouldShowOnboarding, setShouldShowOnboarding] = useState(false);
   const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
-  const [isFirstLaunch, setIsFirstLaunch] = useState(false);
   const appState = useRef(AppState.currentState);
 
   // Check if we should show tracking onboarding for registered users
@@ -45,64 +44,15 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
     }
   };
 
-  // Check if this is first launch and we should show tracking permission
-  const hasCheckedFirstLaunchRef = useRef(false);
+  // NOTE: First launch tracking is now handled directly in _layout.tsx
+  // This context only handles tracking onboarding for authenticated users (e.g., re-prompt after 2 weeks)
   
-  const checkFirstLaunch = async (): Promise<void> => {
-    try {
-      // Prevent multiple calls
-      if (hasCheckedFirstLaunchRef.current) {
-        console.log('[TrackingOnboarding] Already checked first launch, skipping');
-        return;
-      }
-      
-      hasCheckedFirstLaunchRef.current = true;
-      const canShowTracking = await shouldShowFirstLaunchTracking();
-      setIsFirstLaunch(canShowTracking);
-      
-      if (canShowTracking) {
-        // For first launch, only show if we have Facebook attribution
-        const { getAttributionData } = await import('@/services/attribution.service');
-        const attributionData = await getAttributionData();
-        
-        const hasFbAttribution = hasFacebookAttribution(attributionData || {});
-        
-        if (hasFbAttribution) {
-          console.log('[TrackingOnboarding] First launch with Facebook attribution detected, will show tracking onboarding');
-          setShouldShowOnboarding(true);
-        } else {
-          console.log('[TrackingOnboarding] First launch but no Facebook attribution, skipping tracking onboarding');
-          setShouldShowOnboarding(false);
-        }
-      } else {
-        console.log('[TrackingOnboarding] Not first launch or tracking already determined');
-        setShouldShowOnboarding(false);
-      }
-    } catch (error) {
-      console.error('[TrackingOnboarding] Error checking first launch:', error);
-      setShouldShowOnboarding(false);
-    }
-  };
-
   // Function to check if we have attribution data and should show ATT
+  // (kept for compatibility, but not used for first launch anymore)
   const checkAttributionAndShowTracking = (attributionData: AttributionData): void => {
-    const hasFbAttribution = hasFacebookAttribution(attributionData);
-    
-    if (hasFbAttribution && isFirstLaunch) {
-      console.log('[TrackingOnboarding] Facebook attribution detected, showing tracking onboarding');
-      setShouldShowOnboarding(true);
-    }
+    // No-op: First launch tracking is now handled in _layout.tsx
+    console.log('[TrackingOnboarding] checkAttributionAndShowTracking called, but first launch is handled in _layout.tsx');
   };
-
-  // On mount, check if we should show the onboarding
-  const hasInitializedRef = useRef(false);
-  
-  useEffect(() => {
-    if (!hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-      checkFirstLaunch();
-    }
-  }, []);
 
   // When auth state changes, check if we should show onboarding for logged in user
   useEffect(() => {
