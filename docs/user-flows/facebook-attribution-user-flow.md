@@ -101,7 +101,7 @@ User installs app
 
 **What user sees:**
 - **Title:** "What's your Email?"
-- **Subtitle:** "We will send you a four-digit code to this email"
+- **Subtitle:** "We'll email you a link to sign in. No password needed."
 - **Email input field** (automatically pre-filled if `email` was in deep link)
 - **Button:** "Continue" (enabled when email is valid)
 

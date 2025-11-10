@@ -84,7 +84,7 @@ export default function EmailInputScreen(): React.JSX.Element {
       <View style={styles.content} testID="content">
         <Text style={styles.title} testID="title">What's your Email?</Text>
         <Text style={styles.subtitle} testID="subtitle">
-          We will send you a four-digit{'\n'}code to this email
+          We'll email you a link to sign in.{'\n'}No password needed.
         </Text>
 
         <TextInput

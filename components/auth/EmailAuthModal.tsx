@@ -1,8 +1,9 @@
 import { AppColors } from '@/constants/Colors';
+import { auth } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendEmailVerificationCode, signInWithTestEmail, verifyEmailCode } from '@/services/auth.service';
-import { auth } from '@/constants/firebase.config';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { isSignInWithEmailLink } from 'firebase/auth';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -17,7 +18,6 @@ import {
   View,
 } from 'react-native';
 import Modal from 'react-native-modal';
-import { useRouter } from 'expo-router';
 
 const TEST_EMAIL = 'test@test.test';
 
@@ -235,7 +235,7 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
             <View style={styles.content}>
               <Text style={styles.title}>What's your Email?</Text>
               <Text style={styles.subtitle}>
-                We will send you a four-digit{'\n'}code to this email
+                We'll email you a link to sign in.{'\n'}No password needed.
               </Text>
 
               <TextInput
