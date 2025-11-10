@@ -50,11 +50,15 @@ https://discovery.ozma.io/go-app/the-boss?fbclid=xxx&utm_source=facebook&utm_med
 - **Subtitle:** "Your AI Assistant tells you exactly what to do next"
 - **Sign-in options:**
   - 📧 Continue with Email
-  - 🔴 Continue with Google (Coming Soon)
+  - 🔴 Continue with Google
   - 🍎 Continue with Apple
 - **Footer:** Privacy policy | Terms of service
 
 **User action:** Taps "Continue with Email"
+
+**TODO:**
+- Configure Apple Sign-In in Firebase Console when Apple Developer account is ready (requires Services ID, Team ID, Private Key, Key ID)
+- Add SHA-1 fingerprints (debug + production release signing key) to Firebase for Android Google Sign-In
 
 **Next:** → Email Input Screen
 

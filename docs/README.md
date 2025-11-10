@@ -26,7 +26,7 @@ Managing Firestore database:
 Complete authentication documentation:
 - Email link (passwordless) authentication
 - Apple Sign-In integration
-- Google Sign-In (coming soon)
+- Google Sign-In integration
 - Auth state management
 - Security and data scoping
 

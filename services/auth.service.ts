@@ -1,6 +1,8 @@
 import { auth } from '@/constants/firebase.config';
+import { GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
 import { User } from '@/types';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
@@ -109,6 +111,36 @@ export async function signInWithGoogleCredential(idToken: string): Promise<User>
   const credential = GoogleAuthProvider.credential(idToken);
   const userCredential = await signInWithCredential(auth, credential);
   return mapFirebaseUserToUser(userCredential.user);
+}
+
+export async function signInWithGoogle(): Promise<User> {
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp',
+  });
+
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+    client_id: GOOGLE_WEB_CLIENT_ID,
+    redirect_uri: redirectUri,
+    response_type: 'id_token',
+    scope: 'openid profile email',
+    nonce: Math.random().toString(36).substring(7),
+  }).toString()}`;
+
+  const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+  if (result.type !== 'success') {
+    throw new Error('Google Sign-In was cancelled or failed');
+  }
+
+  const url = result.url;
+  const params = new URLSearchParams(url.split('#')[1]);
+  const idToken = params.get('id_token');
+
+  if (!idToken) {
+    throw new Error('No ID token received from Google');
+  }
+
+  return signInWithGoogleCredential(idToken);
 }
 
 export async function signInWithApple(): Promise<User> {

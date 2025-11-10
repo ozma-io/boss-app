@@ -1,7 +1,7 @@
 import { AuthButton } from '@/components/auth/AuthButton';
 import { EmailAuthModal } from '@/components/auth/EmailAuthModal';
 import { AppColors } from '@/constants/Colors';
-import { signInWithApple } from '@/services/auth.service';
+import { signInWithApple, signInWithGoogle } from '@/services/auth.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import React, { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -14,7 +14,11 @@ export default function WelcomeScreen(): React.JSX.Element {
   };
 
   const handleGoogleSignIn = async (): Promise<void> => {
-    Alert.alert('Coming Soon', 'Google Sign-In will be implemented in the next iteration');
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      Alert.alert('Error', 'Google Sign-In failed. Please try again.');
+    }
   };
 
   const handleAppleSignIn = async (): Promise<void> => {

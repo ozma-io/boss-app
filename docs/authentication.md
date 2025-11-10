@@ -52,8 +52,9 @@ Boss App uses Firebase Authentication with email link sign-in (passwordless) as 
 ### Google Sign-In
 
 1. User taps "Continue with Google" button on `welcome` screen
-2. Currently shows "Coming Soon" alert (requires additional OAuth configuration)
-3. Will use `auth.service.signInWithGoogle()` when configured
+2. App calls `auth.service.signInWithGoogle()`
+3. Google OAuth dialog opens in browser
+4. On success, user is authenticated and redirected to main app
 
 ## State Management
 
@@ -122,9 +123,9 @@ type AuthState = 'loading' | 'authenticated' | 'unauthenticated';
 ### Authentication Methods
 
 Enable in Firebase Console → Authentication → Sign-in methods:
-1. Email/Password (with passwordless email link enabled)
-2. Apple (for iOS)
-3. Google (optional)
+1. **Email/Password** - Enable with passwordless email link option
+2. **Apple** - Configure with Services ID, Team ID, Private Key, and Key ID from Apple Developer
+3. **Google** - Enable and use the Web Client ID in `constants/google.config.ts`
 
 ### Firestore Database
 
