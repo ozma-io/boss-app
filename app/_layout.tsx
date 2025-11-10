@@ -5,6 +5,7 @@ import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/Tr
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
 import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
+import { hasFacebookAttribution } from '@/services/tracking.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -83,20 +84,29 @@ export default function RootLayout() {
             // We need to defer this call to the context's function until after mounting
             // The context will be available and we'll check for attribution data then
             
-            // Send AppInstall event to Facebook (client-side)
-            // Only if we're not on web platform
-            if (Platform.OS !== 'web') {
-              await logAppInstallEvent(attributionData);
-            }
+            // Only send Facebook events if we have Facebook attribution data
+            const hasFbAttribution = hasFacebookAttribution(attributionData);
             
-            // Send AppInstall event to Facebook (server-side via Cloud Function)
-            try {
-              await sendAppInstallEvent(
-                attributionData.email ? { email: attributionData.email } : undefined,
-                attributionData
-              );
-            } catch (serverError) {
-              console.error('[App] Error sending server-side AppInstall event:', serverError);
+            if (hasFbAttribution) {
+              console.log('[App] Facebook attribution detected, sending AppInstall events');
+              
+              // Send AppInstall event to Facebook (client-side)
+              // Only if we're not on web platform
+              if (Platform.OS !== 'web') {
+                await logAppInstallEvent(attributionData);
+              }
+              
+              // Send AppInstall event to Facebook (server-side via Cloud Function)
+              try {
+                await sendAppInstallEvent(
+                  attributionData.email ? { email: attributionData.email } : undefined,
+                  attributionData
+                );
+              } catch (serverError) {
+                console.error('[App] Error sending server-side AppInstall event:', serverError);
+              }
+            } else {
+              console.log('[App] No Facebook attribution detected, skipping AppInstall events');
             }
           }
           
