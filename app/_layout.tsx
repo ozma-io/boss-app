@@ -1,10 +1,9 @@
 import { AppColors } from '@/constants/Colors';
-import { functions } from '@/constants/firebase.config';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
-import { generateEventId, initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams } from '@/services/facebook.service';
+import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
@@ -13,7 +12,6 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { httpsCallable } from 'firebase/functions';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, View } from 'react-native';
 import 'react-native-reanimated';
@@ -93,25 +91,10 @@ export default function RootLayout() {
             
             // Send AppInstall event to Facebook (server-side via Cloud Function)
             try {
-              const sendFacebookEvent = httpsCallable(functions, 'sendFacebookConversionEvent');
-              const eventId = generateEventId();
-              
-              await sendFacebookEvent({
-                eventName: 'AppInstall',
-                eventTime: Math.floor(Date.now() / 1000),
-                eventId: eventId,
-                fbclid: attributionData.fbclid,
-                userData: {
-                  email: attributionData.email,
-                },
-                customData: {
-                  utm_source: attributionData.utm_source,
-                  utm_medium: attributionData.utm_medium,
-                  utm_campaign: attributionData.utm_campaign,
-                },
-              });
-              
-              console.log('[App] Server-side AppInstall event sent successfully');
+              await sendAppInstallEvent(
+                attributionData.email ? { email: attributionData.email } : undefined,
+                attributionData
+              );
             } catch (serverError) {
               console.error('[App] Error sending server-side AppInstall event:', serverError);
             }
