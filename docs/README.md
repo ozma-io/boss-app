@@ -80,6 +80,14 @@ Automatic web deployment on Vercel:
 
 ---
 
+## 👤 User Flows
+
+End-to-end user experience flows:
+
+- **[Facebook Attribution User Flow](./user-flows/facebook-attribution-user-flow.md)** - Complete flow for users installing from Facebook ads (iOS/Android differences, tracking permissions, attribution data lifecycle)
+
+---
+
 ## 🎯 Documentation Structure
 
 ```
@@ -92,7 +100,9 @@ docs/
 ├── tracking-and-attribution-flow.md # Tracking & Attribution flow scenarios
 ├── magic-link-development.md       # Magic link development workflow
 ├── vercel-deployment.md            # Vercel web deployment
-└── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)
+├── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)
+└── user-flows/                     # User journey documentation
+    └── facebook-attribution-user-flow.md
 ```
 
 ---
