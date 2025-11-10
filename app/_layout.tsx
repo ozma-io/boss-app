@@ -5,7 +5,7 @@ import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/Tr
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
 import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
-import { hasFacebookAttribution, requestTrackingPermission } from '@/services/tracking.service';
+import { hasFacebookAttribution } from '@/services/tracking.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -81,40 +81,35 @@ export default function RootLayout() {
             // Save attribution data to AsyncStorage
             await saveAttributionData(attributionData);
             
-            // We need to defer this call to the context's function until after mounting
-            // The context will be available and we'll check for attribution data then
-            
-            // Only send Facebook events if we have Facebook attribution data
+            // Check if we have Facebook attribution
             const hasFbAttribution = hasFacebookAttribution(attributionData);
             
             if (hasFbAttribution) {
-              console.log('[App] Facebook attribution detected, will request tracking permission and send AppInstall events');
-              
-              // On iOS, request tracking permission first before sending events
+              // On iOS: tracking onboarding will handle permission request and event sending
               if (Platform.OS === 'ios') {
-                console.log('[App] iOS: Requesting tracking permission before sending events');
-                const trackingStatus = await requestTrackingPermission();
-                console.log('[App] iOS: Tracking permission status:', trackingStatus);
-              }
-              // On Android, no need to request permission (always allowed)
-              
-              // Send AppInstall event to Facebook (client-side)
-              // Only if we're not on web platform
-              if (Platform.OS !== 'web') {
-                await logAppInstallEvent(attributionData);
-              }
-              
-              // Send AppInstall event to Facebook (server-side via Cloud Function)
-              try {
-                await sendAppInstallEvent(
-                  attributionData.email ? { email: attributionData.email } : undefined,
-                  attributionData
-                );
-              } catch (serverError) {
-                console.error('[App] Error sending server-side AppInstall event:', serverError);
+                console.log('[App] iOS: Attribution data saved, tracking onboarding will handle permission and events');
+              } 
+              // On Android: send events immediately (no ATT permission needed)
+              else if (Platform.OS === 'android') {
+                console.log('[App] Android: Sending AppInstall events immediately');
+                
+                try {
+                  // Send AppInstall event to Facebook (client-side)
+                  await logAppInstallEvent(attributionData);
+                  
+                  // Send AppInstall event to Facebook (server-side via Cloud Function)
+                  await sendAppInstallEvent(
+                    attributionData.email ? { email: attributionData.email } : undefined,
+                    attributionData
+                  );
+                  
+                  console.log('[App] Android: AppInstall events sent successfully');
+                } catch (fbError) {
+                  console.error('[App] Android: Error sending AppInstall events:', fbError);
+                }
               }
             } else {
-              console.log('[App] No Facebook attribution detected, skipping AppInstall events');
+              console.log('[App] No Facebook attribution detected');
             }
           }
           

@@ -1,10 +1,12 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
+import { getAttributionData, isFirstLaunch } from '@/services/attribution.service';
+import { logAppInstallEvent, sendAppInstallEvent } from '@/services/facebook.service';
 import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TrackingOnboardingScreen(): React.JSX.Element {
   const router = useRouter();
@@ -23,10 +25,44 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
       
       // Request system ATT permission
       const status = await requestTrackingPermission();
+      console.log('[TrackingOnboarding] ATT permission status:', status);
       
       // If user is logged in, update their tracking permission status
       if (user) {
         await updateTrackingPermissionStatus(user.id, status);
+      }
+      
+      // Check if this is first launch - if yes, send AppInstall events to Facebook
+      const firstLaunch = await isFirstLaunch();
+      if (firstLaunch) {
+        console.log('[TrackingOnboarding] First launch detected, sending AppInstall events to Facebook');
+        
+        try {
+          const attributionData = await getAttributionData();
+          
+          if (attributionData) {
+            // Send AppInstall event to Facebook (client-side)
+            // Only if we're not on web platform
+            if (Platform.OS !== 'web') {
+              await logAppInstallEvent(attributionData);
+            }
+            
+            // Send AppInstall event to Facebook (server-side via Cloud Function)
+            await sendAppInstallEvent(
+              attributionData.email ? { email: attributionData.email } : undefined,
+              attributionData
+            );
+            
+            console.log('[TrackingOnboarding] AppInstall events sent successfully');
+          } else {
+            console.log('[TrackingOnboarding] No attribution data found, skipping AppInstall events');
+          }
+        } catch (fbError) {
+          console.error('[TrackingOnboarding] Error sending AppInstall events to Facebook:', fbError);
+          // Don't block user flow on FB error
+        }
+      } else {
+        console.log('[TrackingOnboarding] Not first launch, skipping AppInstall events');
       }
       
       // Mark tracking onboarding as completed
