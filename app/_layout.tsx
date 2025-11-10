@@ -18,8 +18,8 @@ import { ActivityIndicator, Linking, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary
+    // Catch any errors thrown by the Layout component.
+    ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -150,9 +150,9 @@ function RootLayoutNav() {
   const hasCheckedAttribution = useRef<boolean>(false);
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
 
-  // Check for attribution email (only once when unauthenticated)
+  // Check for attribution email (only once when unauthenticated and not showing tracking onboarding)
   useEffect(() => {
-    if (authState === 'unauthenticated' && !hasCheckedAttribution.current) {
+    if (authState === 'unauthenticated' && !hasCheckedAttribution.current && !shouldShowTrackingOnboarding) {
       const checkAttributionEmail = async () => {
         hasCheckedAttribution.current = true;
         
@@ -169,7 +169,7 @@ function RootLayoutNav() {
       
       checkAttributionEmail();
     }
-  }, [authState]);
+  }, [authState, shouldShowTrackingOnboarding]);
 
   // Handle routing logic based on auth state and required onboarding steps
   useEffect(() => {
@@ -186,7 +186,7 @@ function RootLayoutNav() {
     // Determine where the user should be
     let targetPath: string | null = null;
     
-    // First priority: tracking onboarding (for any auth state)
+    // First priority: tracking onboarding (iOS + Facebook attribution)
     if (shouldShowTrackingOnboarding) {
       if (!inTrackingOnboarding) {
         targetPath = '/tracking-onboarding';
@@ -206,7 +206,7 @@ function RootLayoutNav() {
     }
     // Third priority: unauthenticated user flow
     else if (authState === 'unauthenticated') {
-      // Attribution email redirect takes precedence if set
+      // Attribution email redirect takes precedence over welcome screen
       if (redirectPath) {
         targetPath = redirectPath;
         // Clear redirect after use

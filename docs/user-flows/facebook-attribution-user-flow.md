@@ -8,6 +8,25 @@ This document describes the screen-by-screen user experience when a user install
 https://discovery.ozma.io/go-app/the-boss?fbclid=xxx&utm_source=facebook&utm_medium=cpc&utm_campaign=install&email=user@example.com
 ```
 
+## Flow Decision Tree
+
+```
+User installs app
+     |
+     ├─ Has email in deep link?
+     |  |
+     |  ├─ YES + iOS + Facebook attribution
+     |  |  └─> Tracking Onboarding → Email Input (pre-filled)
+     |  |
+     |  ├─ YES + Android (or no Facebook)
+     |  |  └─> Email Input (pre-filled) immediately
+     |  |
+     |  └─ NO
+     |     └─> Welcome → Email Input (empty)
+     |
+     └─ All flows converge at Email Confirmation → Main App
+```
+
 ---
 
 ## iOS User Flow
@@ -42,7 +61,11 @@ https://discovery.ozma.io/go-app/the-boss?fbclid=xxx&utm_source=facebook&utm_med
 
 ---
 
-### Screen 2: Welcome
+### Screen 2: Welcome (Conditional)
+
+**When shown:**
+- ❌ **SKIPPED** if user has email in deep link
+- ✅ Shown only if no email in attribution data
 
 **What user sees:**
 - 🎭 Emoji faces image
@@ -52,7 +75,7 @@ https://discovery.ozma.io/go-app/the-boss?fbclid=xxx&utm_source=facebook&utm_med
   - 📧 Continue with Email
   - 🔴 Continue with Google
   - 🍎 Continue with Apple
-- **Footer:** Privacy policy | Terms of service
+- **Footer:** Privacy policy | Terms of service (links to Iubenda)
 
 **User action:** Taps "Continue with Email"
 
@@ -60,19 +83,27 @@ https://discovery.ozma.io/go-app/the-boss?fbclid=xxx&utm_source=facebook&utm_med
 - Configure Apple Sign-In in Firebase Console when Apple Developer account is ready (requires Services ID, Team ID, Private Key, Key ID)
 - Add SHA-1 fingerprints (debug + production release signing key) to Firebase for Android Google Sign-In
 
-**Next:** → Email Input Screen
+**Next:** 
+- If email in attribution → **SKIP** to Email Input Screen (pre-filled)
+- Otherwise → Email Input Screen (empty)
 
 ---
 
 ### Screen 3: Email Input
 
+**When shown:**
+- Always after Tracking Onboarding (iOS + Facebook) OR directly after app launch (Android/no Facebook)
+- **Aggressively pre-filled** if email was in deep link
+
 **What user sees:**
 - **Title:** "What's your Email?"
 - **Subtitle:** "We will send you a four-digit code to this email"
-- **Email input field** (pre-filled if `email` was in deep link)
+- **Email input field** (automatically pre-filled if `email` was in deep link)
 - **Button:** "Continue" (enabled when email is valid)
 
-**User action:** Enters email (or uses pre-filled) and taps "Continue"
+**User action:** 
+- If email pre-filled: just taps "Continue"
+- If empty: enters email and taps "Continue"
 
 **What happens:**
 - Magic link sent to email
@@ -84,19 +115,23 @@ https://discovery.ozma.io/go-app/the-boss?fbclid=xxx&utm_source=facebook&utm_med
 
 ## Android User Flow
 
-### Screen 1: Welcome
+### Direct to Email Input (if email in deep link)
 
 **Difference from iOS:**
 - ❌ Tracking Onboarding screen is NOT shown
+- ❌ Welcome screen is SKIPPED if email present
 - ✅ AppInstall events sent immediately on app initialization (no ATT required)
-- User goes directly to Welcome screen
+- ✅ User goes **directly to Email Input** screen with pre-filled email
 
 **What happens behind the scenes:**
 - Deep link parameters parsed
 - Attribution data saved
 - Facebook events sent automatically with `advertiserTrackingEnabled: true`
+- Email extracted and passed to Email Input screen
 
-**Flow continues:** Same as iOS from Welcome → Email Input → etc.
+**Flow:**
+- With email: App Launch → Email Input (pre-filled) → Email Confirm → Main App
+- Without email: App Launch → Welcome → Email Input → Email Confirm → Main App
 
 ---
 
