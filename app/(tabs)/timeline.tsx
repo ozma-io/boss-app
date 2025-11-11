@@ -28,7 +28,7 @@ export default function TimelineScreen() {
   return (
     <View style={styles.container} testID="timeline-container">
       <ScrollView style={styles.timeline} contentContainerStyle={styles.timelineContent} testID="timeline-scroll">
-        <Text style={styles.timelineTitle} testID="timeline-title">Timeline</Text>
+        <Text style={styles.timelineTitle} testID="timeline-title">The Boss App</Text>
         {timelineGroups.map((group, groupIndex) => (
           <View key={group.title} style={styles.timelineGroup}>
             <Text style={styles.groupTitle} testID={`group-title-${groupIndex}`}>
@@ -65,11 +65,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   timelineTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 16,
+    marginBottom: 24,
     fontFamily: 'Manrope-SemiBold',
+    textAlign: 'center',
   },
   timelineGroup: {
     marginBottom: 24,

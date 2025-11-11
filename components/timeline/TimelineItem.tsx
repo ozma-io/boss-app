@@ -1,9 +1,9 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { TimelineEntry } from '@/types';
 import { formatTimelineDate } from '@/utils/timelineHelpers';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { InteractionEntry } from './InteractionEntry';
 import { NoteEntry } from './NoteEntry';
 import { SurveyEntry } from './SurveyEntry';
-import { InteractionEntry } from './InteractionEntry';
 
 interface TimelineItemProps {
   entry: TimelineEntry;
@@ -20,15 +20,16 @@ export function TimelineItem({ entry, onPress, testID, isLastInGroup }: Timeline
   };
 
   const renderEntry = () => {
+    const timestamp = formatTimelineDate(entry.timestamp);
     switch (entry.type) {
       case 'note':
-        return <NoteEntry entry={entry} testID={testID} />;
+        return <NoteEntry entry={entry} testID={testID} timestamp={timestamp} />;
       case 'survey':
-        return <SurveyEntry entry={entry} testID={testID} />;
+        return <SurveyEntry entry={entry} testID={testID} timestamp={timestamp} />;
       case 'interaction':
-        return <InteractionEntry entry={entry} testID={testID} />;
+        return <InteractionEntry entry={entry} testID={testID} timestamp={timestamp} />;
       default:
-        return <NoteEntry entry={entry as any} testID={testID} />;
+        return <NoteEntry entry={entry as any} testID={testID} timestamp={timestamp} />;
     }
   };
 
@@ -39,7 +40,6 @@ export function TimelineItem({ entry, onPress, testID, isLastInGroup }: Timeline
         {!isLastInGroup && <View style={styles.line} />}
       </View>
       <View style={styles.content}>
-        <Text style={styles.timestamp}>{formatTimelineDate(entry.timestamp)}</Text>
         {renderEntry()}
       </View>
     </View>
@@ -62,40 +62,34 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   timelineIndicator: {
     width: 24,
     alignItems: 'center',
     position: 'relative',
+    justifyContent: 'center',
   },
   dot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#fff',
+    backgroundColor: '#E1DFD8',
     zIndex: 1,
   },
   line: {
     position: 'absolute',
-    top: 10,
-    bottom: -12,
+    top: '50%',
+    bottom: -16,
     width: 2,
     backgroundColor: '#D1D5DB',
     left: '50%',
     marginLeft: -1,
+    marginTop: 5,
   },
   content: {
     flex: 1,
     marginLeft: 8,
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
-    fontFamily: 'Manrope-Regular',
   },
 });
 
