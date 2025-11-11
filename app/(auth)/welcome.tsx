@@ -1,13 +1,21 @@
 import { AuthButton } from '@/components/auth/AuthButton';
 import { EmailAuthModal } from '@/components/auth/EmailAuthModal';
 import { AppColors } from '@/constants/Colors';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signInWithApple, signInWithGoogle } from '@/services/auth.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
-import React, { useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function WelcomeScreen(): React.JSX.Element {
   const [isEmailModalVisible, setIsEmailModalVisible] = useState<boolean>(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('welcome_screen_viewed');
+    }, [])
+  );
 
   const handleEmailSignIn = (): void => {
     setIsEmailModalVisible(true);

@@ -1,14 +1,21 @@
 import { SendArrowIcon } from '@/components/icons/SendArrowIcon';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { ChatMessage } from '@/types';
 import { mockChatMessages } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Stack } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { Stack, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const [inputText, setInputText] = useState('');
+
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('chat_screen_viewed');
+    }, [])
+  );
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: false });

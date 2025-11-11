@@ -1,18 +1,25 @@
 import { ChatIcon } from '@/components/icons/ChatIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/auth.service';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { showIntercomMessenger } from '@/services/intercom.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function MainScreen() {
   const { user } = useAuth();
   const [goalDescription, setGoalDescription] = useState(mockUserGoal.description);
   const [isEditingGoal, setIsEditingGoal] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('home_screen_viewed');
+    }, [])
+  );
 
   const handleSignOut = async (): Promise<void> => {
     try {

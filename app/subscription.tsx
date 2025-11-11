@@ -1,10 +1,19 @@
 import { AppColors } from '@/constants/Colors';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { SubscriptionPlan } from '@/types';
 import { mockSubscriptionPlans, mockUserSubscription } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function SubscriptionScreen() {
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('subscription_screen_viewed');
+    }, [])
+  );
+
   const currentPlan = mockSubscriptionPlans.find(
     (p) => p.type === mockUserSubscription.currentPlan
   );

@@ -1,10 +1,11 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { requestNotificationPermissions } from '@/services/notification.service';
 import { recordNotificationPromptShown, updateNotificationPermissionStatus } from '@/services/user.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function NotificationOnboardingScreen(): React.JSX.Element {
@@ -12,6 +13,12 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
   const { user } = useAuth();
   const { setShouldShowOnboarding } = useNotificationOnboarding();
   const [isLoading, setIsLoading] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('notification_onboarding_screen_viewed');
+    }, [])
+  );
 
   const handleContinue = async (): Promise<void> => {
     if (!user) {

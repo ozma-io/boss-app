@@ -107,8 +107,23 @@ Keep the number of events minimal. Better to have 10 well-thought-out events tha
 "onboarding_completed"      // + property: step_count, duration_seconds
 ```
 
-### Navigation (manual tracking for control)
+### Navigation & Screen Views
 ```typescript
+// Specific screen view events (preferred for small number of screens)
+"welcome_screen_viewed"
+"email_input_screen_viewed"
+"email_confirm_screen_viewed"
+"home_screen_viewed"
+"boss_details_screen_viewed"
+"boss_timeline_screen_viewed"
+"chat_screen_viewed"
+"entry_details_screen_viewed"
+"notification_onboarding_screen_viewed"
+"personal_info_screen_viewed"
+"subscription_screen_viewed"
+"tracking_onboarding_screen_viewed"
+
+// Alternative: generic screen view event (use when you have many screens)
 "screen_viewed"             // + property: screen_name, source
 "tab_switched"              // + property: tab_name, previous_tab
 "modal_opened"              // + property: modal_name, trigger

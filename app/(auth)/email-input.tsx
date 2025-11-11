@@ -1,9 +1,10 @@
 import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { sendEmailVerificationCode, signInWithTestEmail } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const TEST_EMAIL = 'test@test.test';
@@ -14,6 +15,12 @@ export default function EmailInputScreen(): React.JSX.Element {
   const params = useLocalSearchParams<{ email?: string }>();
   const [email, setEmail] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('email_input_screen_viewed');
+    }, [])
+  );
 
   // Pre-fill email from route params if provided (from attribution)
   useEffect(() => {

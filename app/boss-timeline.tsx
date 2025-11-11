@@ -1,11 +1,19 @@
 import { TimelineItem } from '@/components/timeline/TimelineItem';
 import { AppColors } from '@/constants/Colors';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { TimelineEntry } from '@/types';
 import { mockBoss, mockTimelineEntries } from '@/utils/mockData';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function BossTimelineScreen() {
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('boss_timeline_screen_viewed');
+    }, [])
+  );
+
   const handleBossHeaderPress = (): void => {
     router.push('/boss-details');
   };

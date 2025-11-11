@@ -1,9 +1,17 @@
 import { AppColors } from '@/constants/Colors';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { mockBoss } from '@/utils/mockData';
-import { Stack } from 'expo-router';
+import { Stack, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 export default function BossDetailsScreen() {
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('boss_details_screen_viewed');
+    }, [])
+  );
+
   return (
     <>
       <Stack.Screen

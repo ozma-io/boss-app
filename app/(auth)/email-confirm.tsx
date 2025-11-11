@@ -1,9 +1,10 @@
 import { AppColors } from '@/constants/Colors';
 import { auth } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { sendEmailVerificationCode, verifyEmailCode } from '@/services/auth.service';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { isSignInWithEmailLink } from 'firebase/auth';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -13,6 +14,12 @@ export default function EmailConfirmScreen(): React.JSX.Element {
   const params = useLocalSearchParams();
   const { setUser } = useAuth();
   const email = params.email as string;
+
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('email_confirm_screen_viewed');
+    }, [])
+  );
   
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [resendTimer, setResendTimer] = useState<number>(60);

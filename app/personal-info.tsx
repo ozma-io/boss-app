@@ -1,9 +1,11 @@
 import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 export default function PersonalInfoScreen() {
@@ -14,6 +16,12 @@ export default function PersonalInfoScreen() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingPosition, setIsEditingPosition] = useState(false);
   const [isEditingDepartment, setIsEditingDepartment] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('personal_info_screen_viewed');
+    }, [])
+  );
 
   const handleSignOut = async (): Promise<void> => {
     try {

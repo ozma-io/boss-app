@@ -1,11 +1,12 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { getAttributionData, isFirstLaunch } from '@/services/attribution.service';
 import { logAppInstallEvent, sendAppInstallEvent } from '@/services/facebook.service';
 import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TrackingOnboardingScreen(): React.JSX.Element {
@@ -13,6 +14,12 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
   const { user, authState } = useAuth();
   const { setShouldShowOnboarding } = useTrackingOnboarding();
   const [isLoading, setIsLoading] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('tracking_onboarding_screen_viewed');
+    }, [])
+  );
 
   const handleContinue = async (): Promise<void> => {
     try {
