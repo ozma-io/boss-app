@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: 'row',
+    marginBottom: 16,
   },
   timelineIndicator: {
     width: 24,
@@ -90,7 +91,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     marginLeft: 8,
-    marginBottom: 16,
   },
 });
 

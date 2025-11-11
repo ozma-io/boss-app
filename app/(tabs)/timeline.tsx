@@ -77,12 +77,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   groupTitle: {
-    fontSize: 14,
-    fontWeight: '400',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#999',
+    opacity: 0.8,
     marginBottom: 16,
-    marginLeft: 4,
-    fontFamily: 'Manrope-Regular',
+    marginLeft: 32,
+    fontFamily: 'Manrope-SemiBold',
   },
   timelineItemContainer: {
     position: 'relative',
