@@ -3,11 +3,15 @@ import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { mockBoss } from '@/utils/mockData';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const IOS_MIN_TOP_INSET = 47;
 
 export default function BossScreen() {
+  const insets = useSafeAreaInsets();
+  const topInset = insets.top > 0 ? insets.top : (Platform.OS === 'ios' ? IOS_MIN_TOP_INSET : 0);
+
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('boss_screen_viewed');
@@ -15,9 +19,9 @@ export default function BossScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <View style={styles.container}>
       <ScrollView style={styles.scrollView} testID="boss-scroll">
-        <View style={styles.content} testID="boss-content">
+        <View style={[styles.content, { paddingTop: topInset + 16 }]} testID="boss-content">
         <View style={styles.section} testID="section-name">
           <Text style={styles.label} testID="label-name">Name</Text>
           <Text style={styles.value} testID="value-name">{mockBoss.name}</Text>
@@ -85,7 +89,7 @@ export default function BossScreen() {
       </ScrollView>
 
       <FloatingChatButton />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -99,7 +103,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 16,
   },
   section: {
     backgroundColor: '#fff',
