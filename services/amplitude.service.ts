@@ -94,8 +94,11 @@ export async function initializeAmplitude(): Promise<void> {
 
       console.log('[Amplitude] Initializing Native SDK with Session Replay...');
       
-      // Initialize Amplitude with API key (no serverZone for US - it's default)
-      await amplitude.init(AMPLITUDE_API_KEY).promise;
+      // Initialize Amplitude with API key and storage config for React Native
+      await amplitude.init(AMPLITUDE_API_KEY, {
+        // Disable cookie storage (not available in React Native)
+        disableCookies: true,
+      }).promise;
       
       // Add Session Replay plugin
       await amplitude.add(new SessionReplayPlugin()).promise;
