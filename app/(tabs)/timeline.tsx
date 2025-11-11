@@ -74,6 +74,7 @@ const styles = StyleSheet.create({
   },
   timelineGroup: {
     marginBottom: 24,
+    overflow: 'hidden',
   },
   groupTitle: {
     fontSize: 14,

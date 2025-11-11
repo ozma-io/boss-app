@@ -62,13 +62,13 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: 'row',
-    marginBottom: 16,
   },
   timelineIndicator: {
     width: 24,
     alignItems: 'center',
-    position: 'relative',
     justifyContent: 'center',
+    position: 'relative',
+    alignSelf: 'stretch',
   },
   dot: {
     width: 10,
@@ -80,16 +80,17 @@ const styles = StyleSheet.create({
   line: {
     position: 'absolute',
     top: '50%',
-    bottom: -16,
+    marginTop: 5,
+    height: 1000,
     width: 2,
     backgroundColor: '#D1D5DB',
     left: '50%',
     marginLeft: -1,
-    marginTop: 5,
   },
   content: {
     flex: 1,
     marginLeft: 8,
+    marginBottom: 16,
   },
 });
 
