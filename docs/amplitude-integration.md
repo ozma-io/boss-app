@@ -83,6 +83,33 @@ The SDK is automatically initialized when the app starts in `app/_layout.tsx`:
 - On **iOS/Android**: initialized via React Native SDK
 - On **Web**: uses global `window.amplitude` object loaded via CDN
 
+### Event Queue Before Initialization
+
+The service includes automatic event queuing to prevent data loss during app startup:
+
+- **Before SDK initialization**: all tracked events, user ID settings, and user properties are queued in memory
+- **After SDK initialization**: the queue is automatically flushed and all queued items are sent to Amplitude
+- **Works on all platforms**: iOS, Android, and Web
+
+This ensures that events triggered during app startup (e.g., `welcome_screen_viewed`) are not lost, even if they are tracked before the SDK finishes initializing.
+
+**Console output example:**
+```
+[Amplitude] SDK not initialized, queuing event: welcome_screen_viewed
+[Amplitude] Initializing Web SDK with Session Replay...
+[Amplitude] Web SDK initialized successfully with Session Replay
+[Amplitude] Flushing 1 queued items...
+[Amplitude] Event tracked (web): welcome_screen_viewed
+[Amplitude] Queue flushed successfully
+```
+
+**What gets queued:**
+- `trackAmplitudeEvent()` calls
+- `setAmplitudeUserId()` calls
+- `setAmplitudeUserProperties()` calls
+
+**Note:** You don't need to check if the SDK is initialized before tracking events - the service handles this automatically.
+
 ## Integration with Authentication
 
 Amplitude is **automatically integrated** with the authentication system in `contexts/AuthContext.tsx`:

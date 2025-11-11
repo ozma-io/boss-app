@@ -6,6 +6,22 @@ let SessionReplayPlugin: any = null;
 let webAmplitude: any = null;
 let isInitialized = false;
 
+// Event queue for events tracked before SDK initialization
+type QueuedEvent = {
+  type: 'event';
+  eventName: string;
+  eventProperties?: Record<string, any>;
+} | {
+  type: 'setUserId';
+  userId: string;
+  email: string;
+} | {
+  type: 'setUserProperties';
+  properties: Record<string, any>;
+};
+
+let eventQueue: QueuedEvent[] = [];
+
 // For native platforms (iOS/Android)
 if (Platform.OS !== 'web') {
   try {
@@ -87,6 +103,25 @@ export async function initializeAmplitude(): Promise<void> {
       isInitialized = true;
       console.log('[Amplitude] Native SDK initialized successfully with Session Replay');
     }
+
+    // Flush queued events after successful initialization
+    if (isInitialized && eventQueue.length > 0) {
+      console.log(`[Amplitude] Flushing ${eventQueue.length} queued items...`);
+      const queueToFlush = [...eventQueue];
+      eventQueue = []; // Clear queue immediately to prevent infinite loops
+      
+      for (const item of queueToFlush) {
+        if (item.type === 'setUserId') {
+          await setAmplitudeUserId(item.userId, item.email);
+        } else if (item.type === 'setUserProperties') {
+          await setAmplitudeUserProperties(item.properties);
+        } else if (item.type === 'event') {
+          trackAmplitudeEvent(item.eventName, item.eventProperties);
+        }
+      }
+      
+      console.log('[Amplitude] Queue flushed successfully');
+    }
   } catch (error) {
     console.error('[Amplitude] Failed to initialize:', error);
     // Don't throw - allow app to continue without Amplitude
@@ -102,7 +137,8 @@ export async function initializeAmplitude(): Promise<void> {
  */
 export async function setAmplitudeUserId(userId: string, email: string): Promise<void> {
   if (!isInitialized) {
-    console.warn('[Amplitude] SDK not initialized, cannot set user ID');
+    console.log('[Amplitude] SDK not initialized, queuing setUserId');
+    eventQueue.push({ type: 'setUserId', userId, email });
     return;
   }
 
@@ -143,7 +179,8 @@ export async function setAmplitudeUserProperties(
   properties: Record<string, any>
 ): Promise<void> {
   if (!isInitialized) {
-    console.warn('[Amplitude] SDK not initialized, cannot set user properties');
+    console.log('[Amplitude] SDK not initialized, queuing setUserProperties');
+    eventQueue.push({ type: 'setUserProperties', properties });
     return;
   }
 
@@ -183,7 +220,8 @@ export function trackAmplitudeEvent(
   eventProperties?: Record<string, any>
 ): void {
   if (!isInitialized) {
-    console.warn('[Amplitude] SDK not initialized, cannot track event');
+    console.log('[Amplitude] SDK not initialized, queuing event:', eventName);
+    eventQueue.push({ type: 'event', eventName, eventProperties });
     return;
   }
 
