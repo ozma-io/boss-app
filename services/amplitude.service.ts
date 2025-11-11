@@ -97,10 +97,10 @@ export async function initializeAmplitude(): Promise<void> {
       // Initialize Amplitude with API key (userId is undefined, config is 3rd param)
       await amplitude.init(AMPLITUDE_API_KEY, undefined, {
         disableCookies: true,
-      }).promise;
+      });
       
       // Add Session Replay plugin
-      await amplitude.add(new SessionReplayPlugin()).promise;
+      await amplitude.add(new SessionReplayPlugin());
       
       isInitialized = true;
       console.log('[Amplitude] Native SDK initialized successfully with Session Replay');
@@ -158,11 +158,11 @@ export async function setAmplitudeUserId(userId: string, email: string): Promise
       }
     } else {
       if (amplitude) {
-        await amplitude.setUserId(userId).promise;
+        await amplitude.setUserId(userId);
         
         const identifyObj = new amplitude.Identify();
         identifyObj.set('email', emailValue);
-        await amplitude.identify(identifyObj).promise;
+        await amplitude.identify(identifyObj);
         console.log('[Amplitude] User ID and email set (native):', userId, emailValue);
       }
     }
@@ -202,7 +202,7 @@ export async function setAmplitudeUserProperties(
         Object.entries(properties).forEach(([key, value]) => {
           identifyObj.set(key, value);
         });
-        await amplitude.identify(identifyObj).promise;
+        await amplitude.identify(identifyObj);
         console.log('[Amplitude] User properties set (native):', properties);
       }
     }
@@ -261,7 +261,7 @@ export async function resetAmplitudeUser(): Promise<void> {
       }
     } else {
       if (amplitude) {
-        await amplitude.reset().promise;
+        await amplitude.reset();
         console.log('[Amplitude] User session reset (native)');
       }
     }
