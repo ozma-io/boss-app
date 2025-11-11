@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flexDirection: 'row',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   timelineIndicator: {
     width: 24,

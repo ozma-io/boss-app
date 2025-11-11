@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#999',
     opacity: 0.8,
-    marginBottom: 16,
+    marginBottom: 8,
     marginLeft: 46,
     fontFamily: 'Manrope-SemiBold',
   },
