@@ -170,8 +170,10 @@ export async function recordTrackingPromptShown(userId: string): Promise<void> {
 }
 
 /**
- * Sync system tracking status with Firestore if they differ
- * This ensures Firestore always has the current system state
+ * Sync tracking permission status from iOS/Android system to Firestore
+ * 
+ * IMPORTANT: The system permission status (iOS/Android) is the source of truth.
+ * Firestore is only used for analytics, history, and re-prompt logic.
  */
 async function syncTrackingStatusWithFirestore(
   userId: string,

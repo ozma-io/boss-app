@@ -122,30 +122,74 @@ export async function recordNotificationPromptShown(userId: string): Promise<voi
   }
 }
 
+/**
+ * Sync notification permission status from iOS/Android system to Firestore
+ * 
+ * IMPORTANT: The system permission status (iOS/Android) is the source of truth.
+ * Firestore is only used for analytics, history, and re-prompt logic.
+ */
+async function syncNotificationStatusWithFirestore(
+  userId: string,
+  systemStatus: NotificationPermissionStatus,
+  firestoreData: UserNotificationData | null
+): Promise<void> {
+  // If Firestore already has the correct status, no need to sync
+  if (firestoreData?.notificationPermissionStatus === systemStatus) {
+    console.log(`📊 [UserService] Firestore already in sync with system status: ${systemStatus}`);
+    return;
+  }
+  
+  console.log(
+    `📊 [UserService] Syncing notification status - System: ${systemStatus}, ` +
+    `Firestore: ${firestoreData?.notificationPermissionStatus || 'null'}`
+  );
+  
+  try {
+    await updateNotificationPermissionStatus(userId, systemStatus);
+    console.log(`📊 [UserService] Successfully synced notification status to Firestore`);
+  } catch (error) {
+    console.error('[UserService] Failed to sync notification status to Firestore:', error);
+  }
+}
+
 export async function shouldShowNotificationOnboarding(userId: string): Promise<boolean> {
   const startTime = Date.now();
   console.log(`📊 [UserService] >>> Checking if should show notification onboarding for user: ${userId}`);
   
+  // Check current system status first
+  const { getNotificationPermissionStatus } = await import('@/services/notification.service');
+  const systemStatus = await getNotificationPermissionStatus();
+  console.log(`📊 [UserService] Current system notification status: ${systemStatus}`);
+  
+  // Get Firestore data
   const notificationData = await getUserNotificationData(userId);
   
+  // If system status is 'granted', sync with Firestore and don't show onboarding
+  if (systemStatus === 'granted') {
+    await syncNotificationStatusWithFirestore(userId, systemStatus, notificationData);
+    const duration = Date.now() - startTime;
+    console.log(
+      `📊 [UserService] <<< System status is granted, ` +
+      `skipping onboarding (${duration}ms)`
+    );
+    return false;
+  }
+  
+  // If no notification data in Firestore, show onboarding
   if (!notificationData) {
     const duration = Date.now() - startTime;
     console.log(`📊 [UserService] <<< No notification data found, will show onboarding (${duration}ms)`);
     return true;
   }
   
-  if (notificationData.notificationPermissionStatus === 'granted') {
-    const duration = Date.now() - startTime;
-    console.log(`📊 [UserService] <<< Permission already granted, skipping onboarding (${duration}ms)`);
-    return false;
-  }
-  
+  // If never prompted before, show onboarding
   if (!notificationData.lastNotificationPromptAt) {
     const duration = Date.now() - startTime;
     console.log(`📊 [UserService] <<< Never prompted before, will show onboarding (${duration}ms)`);
     return true;
   }
   
+  // Check if enough time has passed since last prompt
   const lastPromptDate = new Date(notificationData.lastNotificationPromptAt);
   const daysSinceLastPrompt = (Date.now() - lastPromptDate.getTime()) / (1000 * 60 * 60 * 24);
   const shouldShow = daysSinceLastPrompt >= DAYS_BETWEEN_PROMPTS;
