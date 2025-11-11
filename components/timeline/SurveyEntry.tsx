@@ -28,8 +28,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 0,
-    boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
-    elevation: 1,
     flexDirection: 'row',
     alignItems: 'center',
   },

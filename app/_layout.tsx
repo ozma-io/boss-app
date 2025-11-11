@@ -185,7 +185,7 @@ function RootLayoutNav() {
     const inNotificationOnboarding = segments[0] === 'notification-onboarding';
     const inTrackingOnboarding = segments[0] === 'tracking-onboarding';
     const inTabs = segments[0] === '(tabs)';
-    const inRootScreen = ['personal-info', 'subscription', 'support', 'chat', 'boss-timeline', 'boss-details', 'entry-details'].includes(segments[0] as string);
+    const inRootScreen = ['personal-info', 'subscription', 'support', 'chat', 'boss-details', 'entry-details'].includes(segments[0] as string);
     
     // Determine where the user should be
     let targetPath: string | null = null;
@@ -291,13 +291,6 @@ function RootLayoutNav() {
           options={{ 
             headerShown: true, 
             title: 'Subscription',
-          }} 
-        />
-        <Stack.Screen 
-          name="boss-timeline" 
-          options={{ 
-            headerShown: true, 
-            title: 'Boss Timeline',
           }} 
         />
         <Stack.Screen name="boss-details" options={{ headerShown: true, title: 'Boss Details' }} />

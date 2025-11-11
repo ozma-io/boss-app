@@ -1,6 +1,5 @@
 import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { TimelineItem } from '@/components/timeline/TimelineItem';
-import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { TimelineEntry } from '@/types';
 import { mockTimelineEntries } from '@/utils/mockData';
@@ -56,7 +55,7 @@ export default function TimelineScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: '#FAF8F0',
   },
   timeline: {
     flex: 1,

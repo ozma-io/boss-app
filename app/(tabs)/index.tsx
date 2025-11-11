@@ -48,10 +48,6 @@ export default function MainScreen() {
     router.push('/chat');
   };
 
-  const handleOpenBossTimeline = (): void => {
-    router.push('/boss-timeline');
-  };
-
   const handleOpenPersonalInfo = (): void => {
     router.push('/personal-info');
   };
@@ -121,17 +117,6 @@ export default function MainScreen() {
           <Text style={styles.username} testID="username-text">{mockUserProfile.username}</Text>
           <Text style={styles.email} testID="email-text">{user?.email || mockUserProfile.email}</Text>
         </View>
-
-        {/* Temporarily commented out Boss Timeline button */}
-        {/* <TouchableOpacity
-          style={styles.bossTimelineButton}
-          onPress={handleOpenBossTimeline}
-          activeOpacity={0.7}
-        >
-          <FontAwesome name="briefcase" size={20} color="#333" />
-          <Text style={styles.bossTimelineButtonText}>Boss Timeline</Text>
-          <FontAwesome name="chevron-right" size={16} color="#666" />
-        </TouchableOpacity> */}
 
         <View style={styles.goalCard} testID="goal-card">
           <View style={styles.goalHeader} testID="goal-header">
@@ -298,26 +283,6 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 14,
     color: '#666',
-    fontFamily: 'Manrope-Regular',
-  },
-  bossTimelineButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
-    elevation: 3,
-  },
-  bossTimelineButtonText: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginLeft: 12,
     fontFamily: 'Manrope-Regular',
   },
   goalCard: {
