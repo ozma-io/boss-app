@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   },
   timelineContent: {
     padding: 16,
-    paddingTop: 48,
+    paddingTop: 64,
   },
   timelineTitle: {
     fontSize: 16,
