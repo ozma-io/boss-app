@@ -17,10 +17,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, View } from 'react-native';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export {
-    // Catch any errors thrown by the Layout component.
-    ErrorBoundary
+  // Catch any errors thrown by the Layout component.
+  ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -135,13 +136,15 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <TrackingOnboardingProvider>
-        <NotificationOnboardingProvider>
-          <RootLayoutNav />
-        </NotificationOnboardingProvider>
-      </TrackingOnboardingProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <TrackingOnboardingProvider>
+          <NotificationOnboardingProvider>
+            <RootLayoutNav />
+          </NotificationOnboardingProvider>
+        </TrackingOnboardingProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

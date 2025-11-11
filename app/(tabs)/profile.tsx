@@ -9,8 +9,10 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const [goalDescription, setGoalDescription] = useState(mockUserGoal.description);
   const [isEditingGoal, setIsEditingGoal] = useState(false);
@@ -96,7 +98,7 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container} testID="profile-container">
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="profile-scroll-view">
-        <View style={styles.header} testID="profile-header">
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]} testID="profile-header">
           <Text style={styles.headerTitle} testID="header-title">The Boss App</Text>
         </View>
 
@@ -237,7 +239,6 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    paddingTop: 64,
     paddingBottom: 16,
     alignItems: 'center',
   },

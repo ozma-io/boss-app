@@ -4,9 +4,12 @@ import { mockBoss } from '@/utils/mockData';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 export default function BossScreen() {
+  const insets = useSafeAreaInsets();
+
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('boss_screen_viewed');
@@ -16,7 +19,7 @@ export default function BossScreen() {
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} testID="boss-scroll">
-        <View style={styles.content} testID="boss-content">
+        <View style={[styles.content, { paddingTop: insets.top + 16 }]} testID="boss-content">
         <View style={styles.section} testID="section-name">
           <Text style={styles.label} testID="label-name">Name</Text>
           <Text style={styles.value} testID="value-name">{mockBoss.name}</Text>
@@ -98,7 +101,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingTop: 64,
   },
   section: {
     backgroundColor: '#fff',
