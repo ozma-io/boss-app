@@ -45,6 +45,10 @@ export default function EmailInputScreen(): React.JSX.Element {
       return;
     }
 
+    trackAmplitudeEvent('auth_email_submitted', {
+      email: email,
+    });
+
     setIsLoading(true);
     try {
       // Check if this is the test email
@@ -62,6 +66,11 @@ export default function EmailInputScreen(): React.JSX.Element {
       }
       
       await sendEmailVerificationCode(email);
+      
+      trackAmplitudeEvent('auth_magic_link_sent', {
+        email: email,
+      });
+      
       router.push({
         pathname: '/(auth)/email-confirm',
         params: { email },
@@ -69,6 +78,13 @@ export default function EmailInputScreen(): React.JSX.Element {
     } catch (error) {
       console.error('[EmailInput] Error sending magic link:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      trackAmplitudeEvent('auth_signin_failed', {
+        method: 'email',
+        error_type: errorMessage,
+        email: email,
+      });
+      
       Alert.alert(
         'Error', 
         `Failed to send magic link.\n\nDetails: ${errorMessage}\n\nPlease try again.`

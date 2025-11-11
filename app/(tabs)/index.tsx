@@ -22,6 +22,11 @@ export default function MainScreen() {
   );
 
   const handleSignOut = async (): Promise<void> => {
+    trackAmplitudeEvent('auth_signout_clicked', {
+      email: user?.email || '[no_email]',
+      screen: 'home',
+    });
+    
     try {
       await signOut();
     } catch (error) {

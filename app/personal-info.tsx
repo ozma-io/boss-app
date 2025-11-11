@@ -24,6 +24,11 @@ export default function PersonalInfoScreen() {
   );
 
   const handleSignOut = async (): Promise<void> => {
+    trackAmplitudeEvent('auth_signout_clicked', {
+      email: user?.email || '[no_email]',
+      screen: 'personal_info',
+    });
+    
     try {
       await signOut();
     } catch (error) {

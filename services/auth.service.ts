@@ -90,15 +90,29 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
 }
 
 export async function verifyEmailCode(email: string, emailLink: string): Promise<User> {
-  const userCredential = await signInWithEmailLink(auth, email, emailLink);
-  const user = mapFirebaseUserToUser(userCredential.user);
-  
-  trackAmplitudeEvent('auth_signin_completed', {
-    method: 'email',
-    email: email,
-  });
-  
-  return user;
+  try {
+    trackAmplitudeEvent('auth_magic_link_clicked', {
+      email: email,
+      source: Platform.OS === 'web' ? 'browser' : 'email_client',
+    });
+    
+    const userCredential = await signInWithEmailLink(auth, email, emailLink);
+    const user = mapFirebaseUserToUser(userCredential.user);
+    
+    trackAmplitudeEvent('auth_signin_completed', {
+      method: 'email',
+      email: email,
+    });
+    
+    return user;
+  } catch (error) {
+    trackAmplitudeEvent('auth_signin_failed', {
+      method: 'email',
+      error_type: error instanceof Error ? error.message : 'unknown',
+      email: email,
+    });
+    throw error;
+  }
 }
 
 export async function signInWithTestEmail(email: string): Promise<User> {
@@ -130,70 +144,86 @@ export async function signInWithGoogleCredential(idToken: string): Promise<User>
 }
 
 export async function signInWithGoogle(): Promise<User> {
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp',
-  });
+  try {
+    const redirectUri = AuthSession.makeRedirectUri({
+      scheme: process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp',
+    });
 
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
-    client_id: GOOGLE_WEB_CLIENT_ID,
-    redirect_uri: redirectUri,
-    response_type: 'id_token',
-    scope: 'openid profile email',
-    nonce: Math.random().toString(36).substring(7),
-  }).toString()}`;
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+      client_id: GOOGLE_WEB_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: 'id_token',
+      scope: 'openid profile email',
+      nonce: Math.random().toString(36).substring(7),
+    }).toString()}`;
 
-  const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
-  if (result.type !== 'success') {
-    throw new Error('Google Sign-In was cancelled or failed');
+    if (result.type !== 'success') {
+      throw new Error('Google Sign-In was cancelled or failed');
+    }
+
+    const url = result.url;
+    const params = new URLSearchParams(url.split('#')[1]);
+    const idToken = params.get('id_token');
+
+    if (!idToken) {
+      throw new Error('No ID token received from Google');
+    }
+
+    const user = await signInWithGoogleCredential(idToken);
+    
+    trackAmplitudeEvent('auth_signin_completed', {
+      method: 'google',
+      email: user.email,
+    });
+    
+    return user;
+  } catch (error) {
+    trackAmplitudeEvent('auth_signin_failed', {
+      method: 'google',
+      error_type: error instanceof Error ? error.message : 'unknown',
+    });
+    throw error;
   }
-
-  const url = result.url;
-  const params = new URLSearchParams(url.split('#')[1]);
-  const idToken = params.get('id_token');
-
-  if (!idToken) {
-    throw new Error('No ID token received from Google');
-  }
-
-  const user = await signInWithGoogleCredential(idToken);
-  
-  trackAmplitudeEvent('auth_signin_completed', {
-    method: 'google',
-    email: user.email,
-  });
-  
-  return user;
 }
 
 export async function signInWithApple(): Promise<User> {
-  const nonce = await Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    Math.random().toString()
-  );
+  try {
+    const nonce = await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      Math.random().toString()
+    );
 
-  const appleCredential = await AppleAuthentication.signInAsync({
-    requestedScopes: [
-      AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-      AppleAuthentication.AppleAuthenticationScope.EMAIL,
-    ],
-  });
+    const appleCredential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
 
-  const provider = new OAuthProvider('apple.com');
-  const credential = provider.credential({
-    idToken: appleCredential.identityToken || '',
-    rawNonce: nonce,
-  });
+    const provider = new OAuthProvider('apple.com');
+    const credential = provider.credential({
+      idToken: appleCredential.identityToken || '',
+      rawNonce: nonce,
+    });
 
-  const userCredential = await signInWithCredential(auth, credential);
-  const user = mapFirebaseUserToUser(userCredential.user);
-  
-  trackAmplitudeEvent('auth_signin_completed', {
-    method: 'apple',
-    email: user.email,
-  });
-  
-  return user;
+    const userCredential = await signInWithCredential(auth, credential);
+    const user = mapFirebaseUserToUser(userCredential.user);
+    
+    trackAmplitudeEvent('auth_signin_completed', {
+      method: 'apple',
+      email: user.email,
+    });
+    
+    return user;
+  } catch (error) {
+    trackAmplitudeEvent('auth_signin_failed', {
+      method: 'apple',
+      error_type: error instanceof Error ? error.message : 'unknown',
+    });
+    throw error;
+  }
 }
 
 export async function signOut(): Promise<void> {

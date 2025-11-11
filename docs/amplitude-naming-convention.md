@@ -98,14 +98,16 @@ trackAmplitudeEvent("welcome_screen_apple_signin_button_clicked");
 
 Keep the number of events minimal. Better to have 10 well-thought-out events than 100 similar ones.
 
-### Auth & Onboarding
+### Auth
 ```typescript
 "auth_signin_clicked"       // + property: method (email/google/apple), screen
 "auth_signin_completed"     // + property: method (email/google/apple), email
-"auth_email_submitted"      // user entered email
-"auth_magic_link_opened"    // user clicked magic link
+"auth_signin_failed"        // + property: method, error_type, email (optional)
+"auth_email_submitted"      // + property: email
+"auth_magic_link_sent"      // + property: email
+"auth_magic_link_clicked"   // + property: email, source (email_client/browser)
+"auth_signout_clicked"      // + property: email, screen
 "auth_signout_completed"    // + property: email
-"onboarding_completed"      // + property: step_count, duration_seconds
 ```
 
 ### Permissions

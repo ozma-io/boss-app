@@ -18,21 +18,43 @@ export default function WelcomeScreen(): React.JSX.Element {
   );
 
   const handleEmailSignIn = (): void => {
+    trackAmplitudeEvent('auth_signin_clicked', {
+      method: 'email',
+      screen: 'welcome',
+    });
     setIsEmailModalVisible(true);
   };
 
   const handleGoogleSignIn = async (): Promise<void> => {
+    trackAmplitudeEvent('auth_signin_clicked', {
+      method: 'google',
+      screen: 'welcome',
+    });
+    
     try {
       await signInWithGoogle();
     } catch (error) {
+      trackAmplitudeEvent('auth_signin_failed', {
+        method: 'google',
+        error_type: error instanceof Error ? error.message : 'unknown',
+      });
       Alert.alert('Error', 'Google Sign-In failed. Please try again.');
     }
   };
 
   const handleAppleSignIn = async (): Promise<void> => {
+    trackAmplitudeEvent('auth_signin_clicked', {
+      method: 'apple',
+      screen: 'welcome',
+    });
+    
     try {
       await signInWithApple();
     } catch (error) {
+      trackAmplitudeEvent('auth_signin_failed', {
+        method: 'apple',
+        error_type: error instanceof Error ? error.message : 'unknown',
+      });
       Alert.alert('Error', 'Apple Sign-In failed. Please try again.');
     }
   };
