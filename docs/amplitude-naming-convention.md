@@ -155,43 +155,67 @@ Keep the number of events minimal. Better to have 10 well-thought-out events tha
 
 ## Usage Examples
 
+Real examples from our app:
+
 ```typescript
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 
-// ✅ Auth flow - specific action, method as property
-trackAmplitudeEvent("auth_signin_clicked", {
-  method: "email",
-  screen: "welcome"
+// ✅ Screen view tracking with useFocusEffect
+export default function WelcomeScreen() {
+  useFocusEffect(
+    useCallback(() => {
+      trackAmplitudeEvent('welcome_screen_viewed');
+    }, [])
+  );
+  // ... rest of component
+}
+
+// ✅ Auth - Sign in button click
+const handleEmailSignIn = (): void => {
+  trackAmplitudeEvent('auth_signin_clicked', {
+    method: 'email',
+    screen: 'welcome',
+  });
+  setIsEmailModalVisible(true);
+};
+
+// ✅ Auth - Email submitted
+const handleContinue = async (): Promise<void> => {
+  trackAmplitudeEvent('auth_email_submitted', {
+    email: email,
+  });
+  await sendEmailVerificationCode(email);
+  // ... navigation
+};
+
+// ✅ Auth - Sign in completed (in auth.service.ts)
+const user = mapFirebaseUserToUser(userCredential.user);
+trackAmplitudeEvent('auth_signin_completed', {
+  method: 'email',
+  email: email,
 });
 
-// ✅ Screen view - manual tracking for full control
-trackAmplitudeEvent("screen_viewed", {
-  screen_name: "welcome",
-  source: "deep_link"  // or "navigation", "push_notification"
-});
+// ✅ Auth - Sign in failed with error handling
+try {
+  await signInWithGoogle();
+} catch (error) {
+  trackAmplitudeEvent('auth_signin_failed', {
+    method: 'google',
+    error_type: error instanceof Error ? error.message : 'unknown',
+  });
+  Alert.alert('Error', 'Google Sign-In failed. Please try again.');
+}
 
-// ✅ Content creation - grouped by feature
-trackAmplitudeEvent("entry_created", {
-  entry_type: "note",
-  has_photo: false,
-  boss_id: "boss123",
-  character_count: 150
-});
-
-// ✅ Content interaction - specific but not too detailed
-trackAmplitudeEvent("timeline_entry_clicked", {
-  entry_type: "survey",
-  entry_id: "entry123",
-  position: 3  // position in list
-});
-
-// ✅ Conversion event
-trackAmplitudeEvent("subscription_started", {
-  plan_type: "premium",
-  price: 9.99,
-  currency: "USD",
-  trial_eligible: true
-});
+// ✅ Auth - Sign out
+const handleSignOut = async (): Promise<void> => {
+  trackAmplitudeEvent('auth_signout_clicked', {
+    email: user?.email || '[no_email]',
+    screen: 'home',
+  });
+  await signOut();
+};
 ```
 
 ## User Properties
