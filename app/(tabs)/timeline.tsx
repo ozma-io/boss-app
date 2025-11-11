@@ -7,11 +7,9 @@ import { groupTimelineEntries } from '@/utils/timelineHelpers';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TimelineScreen() {
-  const insets = useSafeAreaInsets();
-
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('timeline_screen_viewed');
@@ -28,8 +26,8 @@ export default function TimelineScreen() {
   };
 
   return (
-    <View style={styles.container} testID="timeline-container">
-      <ScrollView style={styles.timeline} contentContainerStyle={[styles.timelineContent, { paddingTop: insets.top + 16 }]} testID="timeline-scroll">
+    <SafeAreaView style={styles.container} edges={['top']} testID="timeline-container">
+      <ScrollView style={styles.timeline} contentContainerStyle={styles.timelineContent} testID="timeline-scroll">
         <Text style={styles.timelineTitle} testID="timeline-title">The Boss App</Text>
         {timelineGroups.map((group, groupIndex) => (
           <View key={group.title} style={styles.timelineGroup}>
@@ -51,7 +49,7 @@ export default function TimelineScreen() {
       </ScrollView>
 
       <FloatingChatButton />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -65,6 +63,7 @@ const styles = StyleSheet.create({
   },
   timelineContent: {
     padding: 16,
+    paddingTop: 16,
   },
   timelineTitle: {
     fontSize: 16,
