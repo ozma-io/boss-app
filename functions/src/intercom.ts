@@ -61,15 +61,10 @@ export const getIntercomJwt = onCall(
     });
     console.log('[getIntercomJwt] JWT generated successfully, length:', token.length);
     
-    // Verify the JWT by decoding it (without verification to see the payload)
-    const decoded = jwt.decode(token, { complete: true });
-    console.log('[getIntercomJwt] Decoded JWT header:', decoded?.header);
-    console.log('[getIntercomJwt] Decoded JWT payload:', decoded?.payload);
-    
     // Verify the JWT with the secret to ensure it's valid
     try {
-      const verified = jwt.verify(token, secretValue, { algorithms: ['HS256'] });
-      console.log('[getIntercomJwt] JWT verification successful:', verified);
+      jwt.verify(token, secretValue, { algorithms: ['HS256'] });
+      console.log('[getIntercomJwt] JWT verification successful');
     } catch (verifyError) {
       console.error('[getIntercomJwt] JWT verification FAILED:', verifyError);
       throw new HttpsError('internal', 'Failed to verify generated JWT');

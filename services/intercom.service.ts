@@ -88,8 +88,6 @@ export async function registerIntercomUser(
     console.log('[Intercom] Step 1: Getting JWT from backend...');
     const jwt = await getJwtFromBackend(userId);
     console.log('[Intercom] Step 1: JWT received, length:', jwt?.length);
-    // TEMPORARY: Log JWT for debugging (REMOVE IN PRODUCTION!)
-    console.log('[Intercom] DEBUG JWT TOKEN:', jwt);
     
     console.log('[Intercom] Step 2: Setting user JWT...');
     await IntercomNative.setUserJwt(jwt);
