@@ -1,5 +1,6 @@
 import { auth } from '@/constants/firebase.config';
 import { GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { User } from '@/types';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
@@ -90,7 +91,14 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
 
 export async function verifyEmailCode(email: string, emailLink: string): Promise<User> {
   const userCredential = await signInWithEmailLink(auth, email, emailLink);
-  return mapFirebaseUserToUser(userCredential.user);
+  const user = mapFirebaseUserToUser(userCredential.user);
+  
+  trackAmplitudeEvent('auth_signin_completed', {
+    method: 'email',
+    email: email,
+  });
+  
+  return user;
 }
 
 export async function signInWithTestEmail(email: string): Promise<User> {
@@ -104,7 +112,15 @@ export async function signInWithTestEmail(email: string): Promise<User> {
   const customToken = result.data.token;
 
   const userCredential = await signInWithCustomToken(auth, customToken);
-  return mapFirebaseUserToUser(userCredential.user);
+  const user = mapFirebaseUserToUser(userCredential.user);
+  
+  trackAmplitudeEvent('auth_signin_completed', {
+    method: 'email',
+    email: email,
+    is_test: true,
+  });
+  
+  return user;
 }
 
 export async function signInWithGoogleCredential(idToken: string): Promise<User> {
@@ -140,7 +156,14 @@ export async function signInWithGoogle(): Promise<User> {
     throw new Error('No ID token received from Google');
   }
 
-  return signInWithGoogleCredential(idToken);
+  const user = await signInWithGoogleCredential(idToken);
+  
+  trackAmplitudeEvent('auth_signin_completed', {
+    method: 'google',
+    email: user.email,
+  });
+  
+  return user;
 }
 
 export async function signInWithApple(): Promise<User> {
@@ -163,10 +186,23 @@ export async function signInWithApple(): Promise<User> {
   });
 
   const userCredential = await signInWithCredential(auth, credential);
-  return mapFirebaseUserToUser(userCredential.user);
+  const user = mapFirebaseUserToUser(userCredential.user);
+  
+  trackAmplitudeEvent('auth_signin_completed', {
+    method: 'apple',
+    email: user.email,
+  });
+  
+  return user;
 }
 
 export async function signOut(): Promise<void> {
+  const currentUser = getCurrentUser();
+  
+  trackAmplitudeEvent('auth_signout_completed', {
+    email: currentUser?.email || '[no_email]',
+  });
+  
   await auth.signOut();
 }
 

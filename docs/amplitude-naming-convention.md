@@ -101,9 +101,10 @@ Keep the number of events minimal. Better to have 10 well-thought-out events tha
 ### Auth & Onboarding
 ```typescript
 "auth_signin_clicked"       // + property: method (email/google/apple), screen
+"auth_signin_completed"     // + property: method (email/google/apple), email
 "auth_email_submitted"      // user entered email
 "auth_magic_link_opened"    // user clicked magic link
-"auth_signout_clicked"
+"auth_signout_completed"    // + property: email
 "onboarding_completed"      // + property: step_count, duration_seconds
 ```
 
