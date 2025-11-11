@@ -36,12 +36,8 @@ export async function initializeAmplitude(): Promise<void> {
       if (typeof window !== 'undefined' && (window as any).amplitude) {
         webAmplitude = (window as any).amplitude;
         
-        // Add session replay plugin
-        if ((window as any).sessionReplay) {
-          webAmplitude.add((window as any).sessionReplay.plugin({ sampleRate: 1 }));
-        }
-        
         // Initialize with full config
+        // Session Replay is already included in the CDN script
         webAmplitude.init('2ec3617e5449dbc96f374776115b3594', {
           fetchRemoteConfig: true,
           serverZone: 'EU',
