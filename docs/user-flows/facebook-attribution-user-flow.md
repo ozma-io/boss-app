@@ -113,10 +113,7 @@ User installs app
 - Magic link sent to email
 - Email saved to localStorage (web) or passed as parameter
 
-**🚀 START HERE (Next Session):**
-- Configure Firebase to send magic-link emails from custom domain instead of Firebase default domain with proper email settings
-
-**Next:** → Email Confirmation Screen (code input)
+**Next:** → Email Confirmation Screen (waiting for magic link)
 
 ---
 
