@@ -1,5 +1,4 @@
 import { FloatingChatButton } from '@/components/FloatingChatButton';
-import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { mockBoss } from '@/utils/mockData';
 import { useFocusEffect } from 'expo-router';
@@ -99,6 +98,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingTop: 48,
   },
   section: {
     backgroundColor: '#fff',
