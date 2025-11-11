@@ -53,6 +53,11 @@ const styles = StyleSheet.create({
   iconContainer: {
     marginLeft: 12,
     justifyContent: 'center',
+    alignItems: 'center',
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    backgroundColor: '#FAF8F0',
   },
   title: {
     fontSize: 16,
@@ -61,7 +66,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-SemiBold',
   },
   moodEmoji: {
-    fontSize: 32,
+    fontSize: 24,
   },
 });
 
