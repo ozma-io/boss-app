@@ -1,7 +1,8 @@
 import { auth } from '@/constants/firebase.config';
+import { resetAmplitudeUser, setAmplitudeUserId } from '@/services/amplitude.service';
+import { clearAttributionData, getAttributionData } from '@/services/attribution.service';
 import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { logoutIntercomUser, registerIntercomUser } from '@/services/intercom.service';
-import { getAttributionData, clearAttributionData } from '@/services/attribution.service';
 import { updateUserAttribution } from '@/services/user.service';
 import { AuthState, User } from '@/types';
 import { isSignInWithEmailLink } from 'firebase/auth';
@@ -94,9 +95,17 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           })
           .catch(err => console.error('[AuthContext] Error getting attribution data:', err));
         
+        // Set Amplitude user ID
+        setAmplitudeUserId(newUser.id)
+          .catch(err => console.error('Amplitude setUserId failed:', err));
+        
         registerIntercomUser(newUser.id, newUser.email, undefined)
           .catch(err => console.error('Intercom registration failed:', err));
       } else {
+        // Reset Amplitude user on logout
+        resetAmplitudeUser()
+          .catch(err => console.error('Amplitude reset failed:', err));
+        
         logoutIntercomUser()
           .catch(err => console.error('Intercom logout failed:', err));
       }

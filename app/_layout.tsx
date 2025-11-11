@@ -2,6 +2,7 @@ import { AppColors } from '@/constants/Colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
+import { initializeAmplitude } from '@/services/amplitude.service';
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
 import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
@@ -51,7 +52,7 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // Initialize Facebook SDK, Intercom and handle attribution on first launch
+  // Initialize Facebook SDK, Intercom, Amplitude and handle attribution on first launch
   useEffect(() => {
     const initializeFacebookAndAttribution = async (): Promise<void> => {
       try {
@@ -62,6 +63,9 @@ export default function RootLayout() {
 
         // Initialize Intercom SDK
         await initializeIntercom();
+
+        // Initialize Amplitude SDK (works on all platforms)
+        await initializeAmplitude();
 
         // Check if this is the first launch
         const firstLaunch = await isFirstLaunch();

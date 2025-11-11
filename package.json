@@ -12,6 +12,8 @@
     "test": "jest"
   },
   "dependencies": {
+    "@amplitude/analytics-react-native": "^1.5.16",
+    "@amplitude/plugin-session-replay-react-native": "^0.4.3",
     "@expo-google-fonts/lobster": "^0.4.1",
     "@expo-google-fonts/manrope": "^0.4.2",
     "@expo/vector-icons": "^15.0.2",
