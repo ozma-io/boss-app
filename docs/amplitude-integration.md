@@ -2,21 +2,21 @@
 
 ## Overview
 
-Amplitude SDK с Session Replay интегрирован для всех платформ:
-- **iOS/Android**: использует `@amplitude/analytics-react-native`
-- **Web**: использует браузерный SDK через CDN
+Amplitude SDK with Session Replay is integrated for all platforms:
+- **iOS/Android**: uses `@amplitude/analytics-react-native`
+- **Web**: uses Browser SDK via CDN
 
-Все события и методы работают одинаково на всех платформах через единый API.
+All events and methods work identically across all platforms through a unified API.
 
-## Конфигурация
+## Configuration
 
 - **API Key**: `2ec3617e5449dbc96f374776115b3594`
 - **Server Zone**: EU
-- **Session Replay**: включен на всех платформах
-- **Sample Rate**: 100% (все сессии записываются)
+- **Session Replay**: enabled on all platforms
+- **Sample Rate**: 100% (all sessions are recorded)
 
-### Web дополнительно
-- **Autocapture**: включен для всех типов событий
+### Web Additional Features
+- **Autocapture**: enabled for all event types
   - Attribution
   - File Downloads
   - Form Interactions
@@ -27,17 +27,17 @@ Amplitude SDK с Session Replay интегрирован для всех пла�
   - Web Vitals
   - Frustration Interactions
 
-## Использование
+## Usage
 
-### Отслеживание событий
+### Tracking Events
 
 ```typescript
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 
-// Простое событие
+// Simple event
 trackAmplitudeEvent("Button Clicked");
 
-// Событие с параметрами
+// Event with properties
 trackAmplitudeEvent("Button Clicked", { 
   buttonColor: 'primary',
   screenName: 'Home',
@@ -45,96 +45,96 @@ trackAmplitudeEvent("Button Clicked", {
 });
 ```
 
-### Установка User ID и Email
+### Setting User ID and Email
 
 ```typescript
 import { setAmplitudeUserId } from '@/services/amplitude.service';
 
-// После аутентификации пользователя
+// After user authentication
 await setAmplitudeUserId(userId, userEmail);
 
-// Примечание: если email - пустая строка, в Amplitude будет установлен '[no_email]'
-// (это может произойти при OAuth авторизации, когда пользователь скрывает email)
-// Это позволяет отслеживать в аналитике пользователей без email
+// Note: if email is an empty string, '[no_email]' will be set in Amplitude
+// (this can happen during OAuth authentication when the user hides their email)
+// This allows tracking users without email in analytics
 ```
 
-### Сброс пользователя
+### Resetting User
 
 ```typescript
 import { resetAmplitudeUser } from '@/services/amplitude.service';
 
-// При выходе пользователя
+// On user logout
 await resetAmplitudeUser();
 ```
 
-## Инициализация
+## Initialization
 
-SDK автоматически инициализируется при запуске приложения в `app/_layout.tsx`:
+The SDK is automatically initialized when the app starts in `app/_layout.tsx`:
 
-- На **iOS/Android**: инициализируется через React Native SDK
-- На **Web**: использует глобальный объект `window.amplitude` загруженный через CDN
+- On **iOS/Android**: initialized via React Native SDK
+- On **Web**: uses global `window.amplitude` object loaded via CDN
 
-## Интеграция с авторизацией
+## Integration with Authentication
 
-Amplitude **автоматически интегрирован** с системой авторизации в `contexts/AuthContext.tsx`:
+Amplitude is **automatically integrated** with the authentication system in `contexts/AuthContext.tsx`:
 
-### При входе пользователя:
-- Автоматически вызывается `setAmplitudeUserId(userId, email)`
-- User ID и email устанавливаются сразу после успешной авторизации
-- Все последующие события будут привязаны к этому пользователю
+### On User Login:
+- Automatically calls `setAmplitudeUserId(userId, email)`
+- User ID and email are set immediately after successful authentication
+- All subsequent events will be linked to this user
 
-### При выходе пользователя:
-- Автоматически вызывается `resetAmplitudeUser()`
-- User ID сбрасывается
-- Сессия очищается
-- **Важно**: Это предотвращает "склеивание" разных пользователей на одном устройстве
+### On User Logout:
+- Automatically calls `resetAmplitudeUser()`
+- User ID is reset
+- Session is cleared
+- **Important**: This prevents "merging" of different users on the same device
 
-### Сценарий: 2 пользователя на одном устройстве
+### Scenario: 2 Users on the Same Device
 
 ```
-Пользователь A авторизуется
+User A logs in
   ↓
   setAmplitudeUserId("user-A-id")
   ↓
-События трекаются как user-A ✅
+Events tracked as user-A ✅
   ↓
-Пользователь A выходит
+User A logs out
   ↓
-  resetAmplitudeUser() → сброс userId и сессии
+  resetAmplitudeUser() → reset userId and session
   ↓
-Пользователь B авторизуется
+User B logs in
   ↓
   setAmplitudeUserId("user-B-id")
   ↓
-События трекаются как user-B ✅
+Events tracked as user-B ✅
 ```
 
-**Без reset()** данные разных пользователей могли бы смешаться через device ID.  
-**С reset()** каждый пользователь трекается отдельно.
+**Without reset()** data from different users could be mixed via device ID.  
+**With reset()** each user is tracked separately.
 
-## Файлы
+## Files
 
-- **Сервис**: `services/amplitude.service.ts`
-- **Web HTML**: `app/+html.tsx` (содержит script tag для CDN)
-- **Инициализация**: `app/_layout.tsx`
-- **Авторизация**: `contexts/AuthContext.tsx` (автоматическая установка/сброс userId)
+- **Service**: `services/amplitude.service.ts`
+- **Web HTML**: `app/+html.tsx` (contains script tag for CDN)
+- **Initialization**: `app/_layout.tsx`
+- **Authentication**: `contexts/AuthContext.tsx` (automatic userId set/reset)
 
-## Проверка работы
+## Verification
 
-1. Запустите приложение
-2. В консоли должно появиться:
+1. Run the application
+2. The console should display:
    - iOS/Android: `[Amplitude] Native SDK initialized successfully with Session Replay`
    - Web: `[Amplitude] Web SDK initialized successfully with Session Replay`
-3. При отправке событий в консоли будет:
+3. When events are sent, the console will show:
    - `[Amplitude] Event tracked (web/native): EventName {...}`
 
-## Платформы
+## Platforms
 
-| Платформа | SDK | Session Replay | Autocapture |
-|-----------|-----|----------------|-------------|
+| Platform | SDK | Session Replay | Autocapture |
+|----------|-----|----------------|-------------|
 | iOS | React Native | ✅ | ❌ |
 | Android | React Native | ✅ | ❌ |
 | Web | Browser SDK | ✅ | ✅ |
 
-Autocapture на Web автоматически отслеживает клики, формы, навигацию и другие взаимодействия пользователя без ручного кода.
+Autocapture on Web automatically tracks clicks, forms, navigation, and other user interactions without manual code.
 
