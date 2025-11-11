@@ -37,8 +37,7 @@ export async function initializeAmplitude(): Promise<void> {
         webAmplitude = (window as any).amplitude;
         
         // Initialize with full config
-        // Session Replay is already included in the CDN script
-        webAmplitude.init('2ec3617e5449dbc96f374776115b3594', {
+        await webAmplitude.init('2ec3617e5449dbc96f374776115b3594', {
           fetchRemoteConfig: true,
           serverZone: 'EU',
           autocapture: {
@@ -52,7 +51,18 @@ export async function initializeAmplitude(): Promise<void> {
             webVitals: true,
             frustrationInteractions: true
           }
-        });
+        }).promise;
+        
+        // Add Session Replay plugin
+        if ((window as any).sessionReplay && (window as any).sessionReplay.plugin) {
+          const sessionReplayPlugin = (window as any).sessionReplay.plugin({
+            sampleRate: 1.0 // Record 100% of sessions
+          });
+          webAmplitude.add(sessionReplayPlugin);
+          console.log('[Amplitude] Session Replay plugin added for web');
+        } else {
+          console.warn('[Amplitude] Session Replay plugin not found in window object');
+        }
         
         isInitialized = true;
         console.log('[Amplitude] Web SDK initialized successfully with Session Replay');

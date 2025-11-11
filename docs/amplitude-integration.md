@@ -15,6 +15,14 @@ All events and methods work identically across all platforms through a unified A
 - **Session Replay**: enabled on all platforms
 - **Sample Rate**: 100% (all sessions are recorded)
 
+### Web Session Replay Setup
+
+For web platform, Session Replay requires:
+1. Main Amplitude Browser SDK script (`script/[API_KEY].js`)
+2. Session Replay plugin script (`plugin-session-replay-browser-1-latest.umd.js`)
+
+Both scripts are loaded via CDN in `app/+html.tsx` and the plugin is initialized automatically during SDK setup.
+
 ### Web Additional Features
 - **Autocapture**: enabled for all event types
   - Attribution
