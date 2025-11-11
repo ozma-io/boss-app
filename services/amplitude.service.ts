@@ -1,3 +1,4 @@
+import { AMPLITUDE_API_KEY } from '@/constants/amplitude.config';
 import { Platform } from 'react-native';
 
 let amplitude: any = null;
@@ -36,10 +37,20 @@ export async function initializeAmplitude(): Promise<void> {
       if (typeof window !== 'undefined' && (window as any).amplitude) {
         webAmplitude = (window as any).amplitude;
         
-        // Initialize with full config
-        await webAmplitude.init('2ec3617e5449dbc96f374776115b3594', {
+        // Add Session Replay plugin BEFORE init (as per official docs)
+        if ((window as any).sessionReplay && (window as any).sessionReplay.plugin) {
+          const sessionReplayPlugin = (window as any).sessionReplay.plugin({
+            sampleRate: 1 // Record 100% of sessions
+          });
+          webAmplitude.add(sessionReplayPlugin);
+          console.log('[Amplitude] Session Replay plugin added for web');
+        } else {
+          console.warn('[Amplitude] Session Replay plugin not found in window object');
+        }
+        
+        // Initialize with full config (no serverZone for US - it's default)
+        webAmplitude.init(AMPLITUDE_API_KEY, {
           fetchRemoteConfig: true,
-          serverZone: 'EU',
           autocapture: {
             attribution: true,
             fileDownloads: true,
@@ -51,18 +62,7 @@ export async function initializeAmplitude(): Promise<void> {
             webVitals: true,
             frustrationInteractions: true
           }
-        }).promise;
-        
-        // Add Session Replay plugin
-        if ((window as any).sessionReplay && (window as any).sessionReplay.plugin) {
-          const sessionReplayPlugin = (window as any).sessionReplay.plugin({
-            sampleRate: 1.0 // Record 100% of sessions
-          });
-          webAmplitude.add(sessionReplayPlugin);
-          console.log('[Amplitude] Session Replay plugin added for web');
-        } else {
-          console.warn('[Amplitude] Session Replay plugin not found in window object');
-        }
+        });
         
         isInitialized = true;
         console.log('[Amplitude] Web SDK initialized successfully with Session Replay');
@@ -78,12 +78,8 @@ export async function initializeAmplitude(): Promise<void> {
 
       console.log('[Amplitude] Initializing Native SDK with Session Replay...');
       
-      // Initialize Amplitude with API key and server zone
-      await amplitude.init(
-        '2ec3617e5449dbc96f374776115b3594',
-        undefined,
-        { serverZone: 'EU' }
-      ).promise;
+      // Initialize Amplitude with API key (no serverZone for US - it's default)
+      await amplitude.init(AMPLITUDE_API_KEY).promise;
       
       // Add Session Replay plugin
       await amplitude.add(new SessionReplayPlugin()).promise;

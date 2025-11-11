@@ -10,8 +10,9 @@ All events and methods work identically across all platforms through a unified A
 
 ## Configuration
 
-- **API Key**: `2ec3617e5449dbc96f374776115b3594`
-- **Server Zone**: EU
+Configuration is centralized in `constants/amplitude.config.ts`:
+- **API Key**: configured in `AMPLITUDE_API_KEY`
+- **Server Zone**: US (default, no parameter needed)
 - **Session Replay**: enabled on all platforms
 - **Sample Rate**: 100% (all sessions are recorded)
 
@@ -122,6 +123,7 @@ Events tracked as user-B ✅
 
 ## Files
 
+- **Configuration**: `constants/amplitude.config.ts` (API key and server zone)
 - **Service**: `services/amplitude.service.ts`
 - **Web HTML**: `app/+html.tsx` (contains script tag for CDN)
 - **Initialization**: `app/_layout.tsx`
