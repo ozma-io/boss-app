@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     color: '#999',
     opacity: 0.8,
     marginBottom: 16,
-    marginLeft: 32,
+    marginLeft: 46,
     fontFamily: 'Manrope-SemiBold',
   },
   timelineItemContainer: {
