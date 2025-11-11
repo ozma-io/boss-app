@@ -1,4 +1,4 @@
-import { ChatIcon } from '@/components/icons/ChatIcon';
+import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
@@ -41,10 +41,6 @@ export default function ProfileScreen() {
 
   const handleBlurGoal = (): void => {
     setIsEditingGoal(false);
-  };
-
-  const handleOpenChat = (): void => {
-    router.push('/chat');
   };
 
   const handleOpenPersonalInfo = (): void => {
@@ -224,14 +220,7 @@ export default function ProfileScreen() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.chatButton}
-        onPress={handleOpenChat}
-        activeOpacity={0.8}
-        testID="chat-button"
-      >
-        <ChatIcon size={28} color="white" testID="chat-icon" />
-      </TouchableOpacity>
+      <FloatingChatButton />
     </View>
   );
 }
@@ -403,19 +392,6 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 16,
     fontFamily: 'Manrope-Regular',
-  },
-  chatButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 30,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#B8E986',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
-    elevation: 5,
   },
 });
 

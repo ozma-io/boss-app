@@ -1,3 +1,4 @@
+import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { TimelineItem } from '@/components/timeline/TimelineItem';
 import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
@@ -57,6 +58,8 @@ export default function TimelineScreen() {
           />
         ))}
       </ScrollView>
+
+      <FloatingChatButton />
     </View>
   );
 }

@@ -1,3 +1,4 @@
+import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { mockBoss } from '@/utils/mockData';
@@ -13,8 +14,9 @@ export default function AboutBossScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} testID="about-boss-scroll">
-      <View style={styles.content} testID="about-boss-content">
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollView} testID="about-boss-scroll">
+        <View style={styles.content} testID="about-boss-content">
         <View style={styles.section} testID="section-name">
           <Text style={styles.label} testID="label-name">Name</Text>
           <Text style={styles.value} testID="value-name">{mockBoss.name}</Text>
@@ -79,7 +81,10 @@ export default function AboutBossScreen() {
           ))}
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+
+      <FloatingChatButton />
+    </View>
   );
 }
 
@@ -87,6 +92,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: AppColors.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 16,
