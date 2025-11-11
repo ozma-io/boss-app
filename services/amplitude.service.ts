@@ -90,23 +90,36 @@ export async function initializeAmplitude(): Promise<void> {
 /**
  * Set user ID for Amplitude tracking
  * Call this after user authentication
+ * 
+ * @param userId - User ID to set
+ * @param email - User email to set as user property (sets '[no_email]' placeholder if empty)
  */
-export async function setAmplitudeUserId(userId: string): Promise<void> {
+export async function setAmplitudeUserId(userId: string, email: string): Promise<void> {
   if (!isInitialized) {
     console.warn('[Amplitude] SDK not initialized, cannot set user ID');
     return;
   }
 
   try {
+    const emailValue = email && email.trim() !== '' ? email : '[no_email]';
+    
     if (Platform.OS === 'web') {
       if (webAmplitude) {
         webAmplitude.setUserId(userId);
-        console.log('[Amplitude] User ID set (web):', userId);
+        
+        const identifyObj = new webAmplitude.Identify();
+        identifyObj.set('email', emailValue);
+        webAmplitude.identify(identifyObj);
+        console.log('[Amplitude] User ID and email set (web):', userId, emailValue);
       }
     } else {
       if (amplitude) {
         await amplitude.setUserId(userId).promise;
-        console.log('[Amplitude] User ID set (native):', userId);
+        
+        const identifyObj = new amplitude.Identify();
+        identifyObj.set('email', emailValue);
+        await amplitude.identify(identifyObj).promise;
+        console.log('[Amplitude] User ID and email set (native):', userId, emailValue);
       }
     }
   } catch (error) {

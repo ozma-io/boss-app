@@ -95,8 +95,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           })
           .catch(err => console.error('[AuthContext] Error getting attribution data:', err));
         
-        // Set Amplitude user ID
-        setAmplitudeUserId(newUser.id)
+        // Set Amplitude user ID and email
+        setAmplitudeUserId(newUser.id, newUser.email)
           .catch(err => console.error('Amplitude setUserId failed:', err));
         
         registerIntercomUser(newUser.id, newUser.email, undefined)
