@@ -1,7 +1,7 @@
 import { ChatIcon } from '@/components/icons/ChatIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { signOut } from '@/services/auth.service';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { signOut } from '@/services/auth.service';
 import { showIntercomMessenger } from '@/services/intercom.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
@@ -309,10 +309,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
   bossTimelineButtonText: {
@@ -369,10 +366,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     padding: 20,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
   sectionTitle: {
@@ -456,10 +450,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#B8E986',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.2)',
     elevation: 5,
   },
 });

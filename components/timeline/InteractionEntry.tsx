@@ -1,6 +1,6 @@
 import { AppColors } from '@/constants/Colors';
-import { StyleSheet, Text, View } from 'react-native';
 import { InteractionEntry as InteractionEntryType } from '@/types';
+import { StyleSheet, Text, View } from 'react-native';
 
 interface InteractionEntryProps {
   entry: InteractionEntryType;
@@ -50,10 +50,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
     elevation: 3,
   },
   header: {
