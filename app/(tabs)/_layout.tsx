@@ -17,7 +17,7 @@ export default function TabsLayout() {
         tabBarIconStyle: styles.tabBarIconStyle,
       }}>
       <Tabs.Screen
-        name="about-boss"
+        name="boss"
         options={{
           tabBarIcon: ({ focused }) => (
             <View style={styles.tabItem}>

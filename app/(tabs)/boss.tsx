@@ -6,17 +6,18 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-export default function AboutBossScreen() {
+
+export default function BossScreen() {
   useFocusEffect(
     useCallback(() => {
-      trackAmplitudeEvent('about_boss_screen_viewed');
+      trackAmplitudeEvent('boss_screen_viewed');
     }, [])
   );
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} testID="about-boss-scroll">
-        <View style={styles.content} testID="about-boss-content">
+      <ScrollView style={styles.scrollView} testID="boss-scroll">
+        <View style={styles.content} testID="boss-content">
         <View style={styles.section} testID="section-name">
           <Text style={styles.label} testID="label-name">Name</Text>
           <Text style={styles.value} testID="value-name">{mockBoss.name}</Text>
