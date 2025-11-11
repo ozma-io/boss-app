@@ -8,24 +8,13 @@ interface SurveyEntryProps {
 }
 
 export function SurveyEntry({ entry, testID }: SurveyEntryProps) {
-  const date = new Date(entry.timestamp);
-  const formattedDate = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
   return (
     <View style={styles.container} testID={testID ? `${testID}-container` : 'survey-entry-container'}>
       <View style={styles.header} testID={testID ? `${testID}-header` : 'survey-entry-header'}>
         <View style={styles.iconContainer} testID={testID ? `${testID}-icon-container` : 'survey-entry-icon-container'}>
           <Text style={styles.icon} testID={testID ? `${testID}-icon` : 'survey-entry-icon'}>📊</Text>
         </View>
-        <View style={styles.headerContent} testID={testID ? `${testID}-header-content` : 'survey-entry-header-content'}>
-          <Text style={styles.title} testID={testID ? `${testID}-title` : 'survey-entry-title'}>{entry.surveyTitle}</Text>
-          <Text style={styles.timestamp} testID={testID ? `${testID}-timestamp` : 'survey-entry-timestamp'}>{formattedDate}</Text>
-        </View>
+        <Text style={styles.title} testID={testID ? `${testID}-title` : 'survey-entry-title'}>{entry.surveyTitle}</Text>
       </View>
       <View style={styles.responses} testID={testID ? `${testID}-responses` : 'survey-entry-responses'}>
         {entry.responses.map((response, index) => (
@@ -65,20 +54,12 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 20,
   },
-  headerContent: {
-    flex: 1,
-  },
   title: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 2,
+    flex: 1,
     fontFamily: 'Manrope-SemiBold',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-    fontFamily: 'Manrope-Regular',
   },
   responses: {
     gap: 8,

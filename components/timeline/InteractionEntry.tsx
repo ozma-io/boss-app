@@ -14,14 +14,6 @@ const moodEmojis: Record<string, string> = {
 };
 
 export function InteractionEntry({ entry, testID }: InteractionEntryProps) {
-  const date = new Date(entry.timestamp);
-  const formattedDate = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
   const moodEmoji = moodEmojis[entry.mood] || '😐';
 
   return (
@@ -30,10 +22,7 @@ export function InteractionEntry({ entry, testID }: InteractionEntryProps) {
         <View style={styles.iconContainer} testID={testID ? `${testID}-icon-container` : 'interaction-entry-icon-container'}>
           <Text style={styles.icon} testID={testID ? `${testID}-icon` : 'interaction-entry-icon'}>💬</Text>
         </View>
-        <View style={styles.headerContent} testID={testID ? `${testID}-header-content` : 'interaction-entry-header-content'}>
-          <Text style={styles.title} testID={testID ? `${testID}-title` : 'interaction-entry-title'}>{entry.interactionType}</Text>
-          <Text style={styles.timestamp} testID={testID ? `${testID}-timestamp` : 'interaction-entry-timestamp'}>{formattedDate}</Text>
-        </View>
+        <Text style={styles.title} testID={testID ? `${testID}-title` : 'interaction-entry-title'}>{entry.interactionType}</Text>
         <Text style={styles.moodEmoji} testID={testID ? `${testID}-mood-emoji` : 'interaction-entry-mood-emoji'}>{moodEmoji}</Text>
       </View>
       <Text style={styles.notes} testID={testID ? `${testID}-notes` : 'interaction-entry-notes'}>{entry.notes}</Text>
@@ -70,20 +59,12 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 20,
   },
-  headerContent: {
-    flex: 1,
-  },
   title: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 2,
+    flex: 1,
     fontFamily: 'Manrope-SemiBold',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-    fontFamily: 'Manrope-Regular',
   },
   moodEmoji: {
     fontSize: 24,

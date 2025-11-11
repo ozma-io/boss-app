@@ -4,6 +4,7 @@ import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { TimelineEntry } from '@/types';
 import { mockBoss, mockTimelineEntries } from '@/utils/mockData';
+import { groupTimelineEntries } from '@/utils/timelineHelpers';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -14,6 +15,8 @@ export default function TimelineScreen() {
       trackAmplitudeEvent('timeline_screen_viewed');
     }, [])
   );
+
+  const timelineGroups = groupTimelineEntries(mockTimelineEntries);
 
   const handleBossHeaderPress = (): void => {
     router.push('/boss-details');
@@ -49,13 +52,22 @@ export default function TimelineScreen() {
 
       <ScrollView style={styles.timeline} contentContainerStyle={styles.timelineContent} testID="timeline-scroll">
         <Text style={styles.timelineTitle} testID="timeline-title">Timeline</Text>
-        {mockTimelineEntries.map((entry) => (
-          <TimelineItem
-            key={entry.id}
-            entry={entry}
-            onPress={handleTimelineEntryPress}
-            testID={`timeline-item-${entry.id}`}
-          />
+        {timelineGroups.map((group, groupIndex) => (
+          <View key={group.title} style={styles.timelineGroup}>
+            <Text style={styles.groupTitle} testID={`group-title-${groupIndex}`}>
+              {group.title}
+            </Text>
+            {group.entries.map((entry, entryIndex) => (
+              <View key={entry.id} style={styles.timelineItemContainer}>
+                <TimelineItem
+                  entry={entry}
+                  onPress={handleTimelineEntryPress}
+                  testID={`timeline-item-${entry.id}`}
+                  isLastInGroup={entryIndex === group.entries.length - 1}
+                />
+              </View>
+            ))}
+          </View>
         ))}
       </ScrollView>
 
@@ -116,6 +128,20 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 16,
     fontFamily: 'Manrope-SemiBold',
+  },
+  timelineGroup: {
+    marginBottom: 24,
+  },
+  groupTitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#999',
+    marginBottom: 16,
+    marginLeft: 4,
+    fontFamily: 'Manrope-Regular',
+  },
+  timelineItemContainer: {
+    position: 'relative',
   },
 });
 

@@ -8,24 +8,13 @@ interface NoteEntryProps {
 }
 
 export function NoteEntry({ entry, testID }: NoteEntryProps) {
-  const date = new Date(entry.timestamp);
-  const formattedDate = date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
   return (
     <View style={styles.container} testID={testID ? `${testID}-container` : 'note-entry-container'}>
       <View style={styles.header} testID={testID ? `${testID}-header` : 'note-entry-header'}>
         <View style={styles.iconContainer} testID={testID ? `${testID}-icon-container` : 'note-entry-icon-container'}>
           <Text style={styles.icon} testID={testID ? `${testID}-icon` : 'note-entry-icon'}>📝</Text>
         </View>
-        <View style={styles.headerContent} testID={testID ? `${testID}-header-content` : 'note-entry-header-content'}>
-          <Text style={styles.title} testID={testID ? `${testID}-title` : 'note-entry-title'}>{entry.title || 'Note'}</Text>
-          <Text style={styles.timestamp} testID={testID ? `${testID}-timestamp` : 'note-entry-timestamp'}>{formattedDate}</Text>
-        </View>
+        <Text style={styles.title} testID={testID ? `${testID}-title` : 'note-entry-title'}>{entry.title || 'Note'}</Text>
       </View>
       <Text style={styles.content} testID={testID ? `${testID}-content` : 'note-entry-content'}>{entry.content}</Text>
     </View>
@@ -58,20 +47,12 @@ const styles = StyleSheet.create({
   icon: {
     fontSize: 20,
   },
-  headerContent: {
-    flex: 1,
-  },
   title: {
     fontSize: 16,
     fontWeight: '600',
     color: '#333',
-    marginBottom: 2,
+    flex: 1,
     fontFamily: 'Manrope-SemiBold',
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#999',
-    fontFamily: 'Manrope-Regular',
   },
   content: {
     fontSize: 14,
