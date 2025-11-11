@@ -16,15 +16,15 @@ User installs app
      ├─ Has email in deep link?
      |  |
      |  ├─ YES + iOS + Facebook attribution
-     |  |  └─> Tracking Onboarding → Email Input (pre-filled)
+     |  |  └─> Tracking Onboarding → Email Input (pre-filled) → Email Confirmation → Main App
      |  |
      |  ├─ YES + Android (or no Facebook)
-     |  |  └─> Email Input (pre-filled) immediately
+     |  |  └─> Email Input (pre-filled) → Email Confirmation → Main App
      |  |
      |  └─ NO
-     |     └─> Welcome → Email Input (empty)
+     |     └─> Welcome → Email Input (empty) → Email Confirmation → Main App
      |
-     └─ All flows converge at Email Confirmation → Main App
+     └─ All flows converge at Main App (authenticated)
 ```
 
 ---
@@ -147,7 +147,59 @@ User installs app
 
 **Status:** ✅ **Ready** (Implemented in `app/(auth)/email-confirm.tsx` and `EmailAuthModal.tsx`)
 
-**Next:** → Main App (Tabs)
+**Next:** → Main App (Home Screen)
+
+---
+
+### Screen 5: Main App (Home Screen)
+
+**What happens:**
+- User is fully authenticated
+- Attribution data (if any) permanently linked to user profile in Firestore
+- User profile created/updated with email and metadata
+- App navigates to `/(tabs)` route
+
+**What user sees:**
+- **Header:** "The Boss App" title centered at top
+- **Profile Section:**
+  - Avatar image (120x120px, rounded)
+  - Username (mock data: "John Doe")
+  - User's email address
+- **Goal Card** (green background `#B8E986`):
+  - 🚩 Flag icon + "My Goal" title
+  - ✏️ Edit button (top-right)
+  - Goal description text (editable on tap)
+- **"Where You Now" Metrics Section:**
+  - **Your stress level** - Progress bar with percentage
+  - **Boss relationship challenges** - Progress bar with percentage (red)
+  - **Self-doubt / confidence gap** - Progress bar with percentage
+- **Settings Section:**
+  - Personal information →
+  - Subscription →
+  - Support →
+- **Footer:**
+  - Privacy policy | Terms of service (links)
+- **Floating Chat Button** (bottom-right):
+  - Black circular button with chat icon
+  - Always visible, opens AI assistant chat
+
+**User actions available:**
+- Edit goal description
+- Open chat with AI assistant
+- Navigate to settings pages
+- View metrics (currently mock data)
+
+**Background color:** Warm beige `#F5F1E8`
+
+**Status:** ✅ **Ready** (Implemented in `app/(tabs)/index.tsx`)
+
+**Technical notes:**
+- Uses mock data for profile, goal, and metrics
+- Amplitude event: `home_screen_viewed` tracked on focus
+- Chat button navigates to `/chat` route
+- Settings items navigate to respective screens
+
+**Next:** User can start chatting with AI assistant or explore settings
 
 ---
 
@@ -183,7 +235,7 @@ User installs app
 - ❌ No Facebook events sent
 - ✅ User goes directly to Welcome screen
 
-**Flow:** Welcome → Email Input → etc.
+**Flow:** Welcome → Email Input → Email Confirm → Main App
 
 ---
 
