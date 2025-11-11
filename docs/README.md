@@ -47,6 +47,13 @@ Complete flow documentation for tracking permissions and attribution:
 - Technical implementation details
 - Testing and troubleshooting
 
+### [Amplitude Events Naming Convention](./amplitude-naming-convention.md)
+Simple naming rules for custom Amplitude events:
+- Event naming format and structure
+- Best practices and examples
+- Event categories and properties usage
+- When and what to track
+
 ### [Magic Link Development](./magic-link-development.md)
 Development workflow for magic link authentication:
 - Testing magic links in iOS Simulator
@@ -98,6 +105,8 @@ docs/
 ├── authentication.md               # Authentication system
 ├── facebook-integration.md         # Facebook Attribution & Conversions API
 ├── tracking-and-attribution-flow.md # Tracking & Attribution flow scenarios
+├── amplitude-integration.md        # Amplitude Analytics integration guide
+├── amplitude-naming-convention.md  # Amplitude events naming convention
 ├── magic-link-development.md       # Magic link development workflow
 ├── vercel-deployment.md            # Vercel web deployment
 ├── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)

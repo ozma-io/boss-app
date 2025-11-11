@@ -19,6 +19,7 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
   - Make names descriptive and self-explanatory
   - Include context when helpful: `"main-profile-section"`, `"auth-email-input"`
   - In browser DevTools, testID appears as `data-testid` attribute
+- **Amplitude events** - all custom events MUST follow naming convention rules in `docs/amplitude-naming-convention.md` (snake_case, feature prefixes, specific names)
 
 ## Project Structure
 - `app/` - routing and screens
