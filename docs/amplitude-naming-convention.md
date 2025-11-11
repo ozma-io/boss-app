@@ -108,6 +108,12 @@ Keep the number of events minimal. Better to have 10 well-thought-out events tha
 "onboarding_completed"      // + property: step_count, duration_seconds
 ```
 
+### Permissions
+```typescript
+"tracking_permission_responded"      // + property: status (authorized/denied), platform
+"notification_permission_responded"  // + property: status (granted/denied), platform
+```
+
 ### Navigation & Screen Views
 ```typescript
 // Specific screen view events (preferred for small number of screens)
@@ -183,6 +189,31 @@ trackAmplitudeEvent("subscription_started", {
   price: 9.99,
   currency: "USD",
   trial_eligible: true
+});
+```
+
+## User Properties
+
+User properties are attributes set on the user profile that persist across sessions. They help segment and analyze users.
+
+### Standard User Properties
+```typescript
+// Set automatically on user identification
+email: string                           // User's email address or '[no_email]'
+
+// Set when user responds to permissions
+tracking_permission_status: string      // 'authorized', 'denied', 'not_determined', 'restricted'
+notification_permission_status: string  // 'granted', 'denied', 'not_asked'
+```
+
+### Setting User Properties
+```typescript
+import { setAmplitudeUserProperties } from '@/services/amplitude.service';
+
+// Set user properties
+await setAmplitudeUserProperties({
+  tracking_permission_status: 'authorized',
+  notification_permission_status: 'granted',
 });
 ```
 

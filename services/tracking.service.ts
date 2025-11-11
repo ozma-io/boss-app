@@ -1,4 +1,5 @@
 import { db } from '@/constants/firebase.config';
+import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
@@ -127,6 +128,19 @@ export async function updateTrackingPermissionStatus(
         trackingPromptCount: 1
       });
     }
+    
+    // Track event in Amplitude
+    trackAmplitudeEvent('tracking_permission_responded', {
+      status: status,
+      platform: Platform.OS,
+    });
+    
+    // Set user property in Amplitude
+    await setAmplitudeUserProperties({
+      tracking_permission_status: status,
+    });
+    
+    console.log('[TrackingService] Tracking permission status updated and tracked in Amplitude:', status);
   } catch (error) {
     console.error('[TrackingService] Error updating tracking permission status:', error);
     throw error;

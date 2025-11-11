@@ -134,6 +134,45 @@ export async function setAmplitudeUserId(userId: string, email: string): Promise
 }
 
 /**
+ * Set user properties in Amplitude
+ * Call this to update user attributes for analytics
+ * 
+ * @param properties - Key-value pairs of user properties to set
+ */
+export async function setAmplitudeUserProperties(
+  properties: Record<string, any>
+): Promise<void> {
+  if (!isInitialized) {
+    console.warn('[Amplitude] SDK not initialized, cannot set user properties');
+    return;
+  }
+
+  try {
+    if (Platform.OS === 'web') {
+      if (webAmplitude) {
+        const identifyObj = new webAmplitude.Identify();
+        Object.entries(properties).forEach(([key, value]) => {
+          identifyObj.set(key, value);
+        });
+        webAmplitude.identify(identifyObj);
+        console.log('[Amplitude] User properties set (web):', properties);
+      }
+    } else {
+      if (amplitude) {
+        const identifyObj = new amplitude.Identify();
+        Object.entries(properties).forEach(([key, value]) => {
+          identifyObj.set(key, value);
+        });
+        await amplitude.identify(identifyObj).promise;
+        console.log('[Amplitude] User properties set (native):', properties);
+      }
+    }
+  } catch (error) {
+    console.error('[Amplitude] Failed to set user properties:', error);
+  }
+}
+
+/**
  * Track an event with optional properties
  * 
  * @param eventName - Name of the event to track
