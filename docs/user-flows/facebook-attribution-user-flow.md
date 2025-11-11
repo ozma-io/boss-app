@@ -117,6 +117,40 @@ User installs app
 
 ---
 
+### Screen 4: Email Confirmation
+
+**What user sees:**
+- ✉️ Mail icon in a circular container
+- **Title:** "Check your email"
+- **Message:** "We sent a magic link to [user@example.com]"
+- **Instructions:** "Click the link in the email to sign in. The link will expire in 1 hour."
+- **Resend link button** (with 60-second countdown timer)
+- **"Paste link manually" button** (mobile only, for development/testing)
+
+**User action:**
+1. Opens email app
+2. Finds email from Firebase (or custom domain)
+3. Clicks the magic link in email
+
+**What happens behind the scenes:**
+- App listens for deep link events (`Linking.addEventListener`)
+- When magic link clicked, app receives deep link with Firebase auth token
+- `verifyEmailCode(email, emailLink)` validates the link
+- User authenticated and profile created/updated in Firestore
+- Attribution data (if exists) linked to user profile
+- AsyncStorage attribution data cleared
+
+**Mobile-specific behavior:**
+- On iOS/Android: Magic link opens the app directly via deep linking
+- If app is closed: Opens app → Email Confirmation screen → auto-verifies
+- Development mode: "Paste link manually" allows testing without email client
+
+**Status:** ✅ **Ready** (Implemented in `app/(auth)/email-confirm.tsx` and `EmailAuthModal.tsx`)
+
+**Next:** → Main App (Tabs)
+
+---
+
 ## Android User Flow
 
 ### Direct to Email Input (if email in deep link)
