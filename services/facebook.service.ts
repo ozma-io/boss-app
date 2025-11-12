@@ -171,7 +171,7 @@ export async function logCustomEvent(
 ): Promise<void> {
   // Skip on web or if SDK not available
   if (Platform.OS === 'web' || !AppEventsLogger) {
-    console.log('[Facebook] Skipping custom event (web or SDK not available):', eventName);
+    logger.info('Skipping custom event (web or SDK not available)', { feature: 'Facebook', eventName });
     return;
   }
   
@@ -183,7 +183,7 @@ export async function logCustomEvent(
     canTrack = status === 'authorized';
     
     if (!canTrack) {
-      console.log(`[Facebook] Skipping custom event '${eventName}' (tracking permission not granted)`);
+      logger.info('Skipping custom event (tracking permission not granted)', { feature: 'Facebook', eventName });
       return;
     }
   }
@@ -195,9 +195,9 @@ export async function logCustomEvent(
       AppEventsLogger.logEvent(eventName);
     }
     
-    console.log('[Facebook] Custom event logged:', eventName, parameters);
+    logger.info('Custom event logged', { feature: 'Facebook', eventName, parameters });
   } catch (error) {
-    console.error('[Facebook] Error logging custom event:', error);
+    logger.error('Error logging custom event', { feature: 'Facebook', error });
     throw error;
   }
 }
@@ -261,7 +261,8 @@ export async function sendConversionEvent(
       customData,
     };
     
-    console.log('[Facebook] Sending conversion event to Cloud Function:', {
+    logger.info('Sending conversion event to Cloud Function', {
+      feature: 'Facebook',
       eventName,
       eventId,
       hasUserData: !!userData,
@@ -272,9 +273,9 @@ export async function sendConversionEvent(
     const sendEventFunction = httpsCallable(functions, 'sendFacebookConversionEvent');
     const result = await sendEventFunction(eventData);
     
-    console.log('[Facebook] Conversion event sent successfully:', result.data);
+    logger.info('Conversion event sent successfully', { feature: 'Facebook', result: result.data });
   } catch (error) {
-    console.error('[Facebook] Error sending conversion event:', error);
+    logger.error('Error sending conversion event', { feature: 'Facebook', error });
     throw error;
   }
 }
@@ -291,9 +292,9 @@ export async function sendAppInstallEvent(
 ): Promise<void> {
   try {
     await sendConversionEvent('AppInstall', userData, undefined, attributionData);
-    console.log('[Facebook] AppInstall event sent successfully');
+    logger.info('AppInstall event sent successfully', { feature: 'Facebook' });
   } catch (error) {
-    console.error('[Facebook] Error sending AppInstall event:', error);
+    logger.error('Error sending AppInstall event', { feature: 'Facebook', error });
     throw error;
   }
 }

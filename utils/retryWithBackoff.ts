@@ -1,4 +1,5 @@
 import { RetryOptions } from '@/types';
+import { logger } from '@/services/logger.service';
 
 interface RetryResult<T> {
   success: boolean;
@@ -30,14 +31,14 @@ export async function retryWithBackoff<T>(
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const attemptStart = Date.now();
-      console.log(`🔄 [Retry] >>> Attempt ${attempt}/${maxRetries} started at ${new Date().toISOString()}`);
+      logger.debug('Retry attempt started', { feature: 'Retry', attempt, maxRetries });
       const result = await operation();
       const attemptDuration = Date.now() - attemptStart;
       
       if (attempt > 1) {
-        console.log(`🔄 [Retry] <<< Success on attempt ${attempt} (took ${attemptDuration}ms)`);
+        logger.info('Success on retry attempt', { feature: 'Retry', attempt, duration: attemptDuration });
       } else {
-        console.log(`🔄 [Retry] <<< Success on first attempt (took ${attemptDuration}ms)`);
+        logger.debug('Success on first attempt', { feature: 'Retry', duration: attemptDuration });
       }
       
       return result;
@@ -46,14 +47,18 @@ export async function retryWithBackoff<T>(
       const isOffline = isFirebaseOfflineError(lastError);
       const attemptDuration = Date.now() - startTime;
       
-      console.log(
-        `🔄 [Retry] !!! Attempt ${attempt}/${maxRetries} failed after ${attemptDuration}ms: ${lastError.message}`,
-        isOffline ? '(offline)' : ''
-      );
+      logger.debug('Retry attempt failed', {
+        feature: 'Retry',
+        attempt,
+        maxRetries,
+        duration: attemptDuration,
+        isOffline,
+        errorMessage: lastError.message,
+      });
       
       if (attempt < maxRetries) {
         const delayMs = initialDelayMs * Math.pow(2, attempt - 1);
-        console.log(`🔄 [Retry] ⏱️  Waiting ${delayMs}ms before next attempt...`);
+        logger.debug('Waiting before next retry attempt', { feature: 'Retry', delayMs });
         await delay(delayMs);
       }
     }
@@ -62,10 +67,13 @@ export async function retryWithBackoff<T>(
   if (lastError) {
     const isOffline = isFirebaseOfflineError(lastError);
     const totalDuration = Date.now() - startTime;
-    console.warn(
-      `🔄 [Retry] ❌ All ${maxRetries} attempts failed after ${totalDuration}ms.`,
-      isOffline ? 'Client is offline.' : `Error: ${lastError.message}`
-    );
+    logger.warn('All retry attempts failed', {
+      feature: 'Retry',
+      maxRetries,
+      totalDuration,
+      isOffline,
+      errorMessage: lastError.message,
+    });
     throw lastError;
   }
   
@@ -85,13 +93,17 @@ export async function retryWithBackoffGraceful<T>(
     const isOffline = isFirebaseOfflineError(err);
     
     if (isOffline) {
-      console.warn(
-        `[Retry] Gracefully handling offline error after ${maxRetries} retries. Returning default value.`
-      );
+      logger.warn('Gracefully handling offline error, returning default value', {
+        feature: 'Retry',
+        maxRetries,
+        errorMessage: err.message,
+      });
     } else {
-      console.error(
-        `[Retry] Operation failed after ${maxRetries} retries: ${err.message}`
-      );
+      logger.error('Operation failed after retries', {
+        feature: 'Retry',
+        maxRetries,
+        error: err,
+      });
     }
     
     return defaultValue;

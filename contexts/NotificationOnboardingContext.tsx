@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { shouldShowNotificationOnboarding } from '@/services/user.service';
+import { logger } from '@/services/logger.service';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
@@ -26,17 +27,15 @@ export function NotificationOnboardingProvider({ children }: NotificationOnboard
       return;
     }
 
-    const startTime = Date.now();
-    console.log(`🔔 [NotificationOnboarding] ======== START ======== User: ${user.id} at ${new Date().toISOString()}`);
+    logger.time('NotificationOnboarding-check');
 
     try {
       const shouldShow = await shouldShowNotificationOnboarding(user.id);
-      const duration = Date.now() - startTime;
-      console.log(`🔔 [NotificationOnboarding] ======== RESULT: ${shouldShow ? 'SHOW' : 'SKIP'} ======== Duration: ${duration}ms`);
+      logger.timeEnd('NotificationOnboarding-check', { feature: 'NotificationOnboarding', userId: user.id, shouldShow });
       setShouldShowOnboarding(shouldShow);
     } catch (error) {
-      const duration = Date.now() - startTime;
-      console.warn(`🔔 [NotificationOnboarding] ======== FAILED ======== Duration: ${duration}ms`, error);
+      logger.timeEnd('NotificationOnboarding-check', { feature: 'NotificationOnboarding', userId: user.id });
+      logger.warn('Failed to check notification onboarding', { feature: 'NotificationOnboarding', error });
       setShouldShowOnboarding(false);
     }
   };

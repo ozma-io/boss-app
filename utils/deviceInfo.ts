@@ -7,6 +7,7 @@
 import * as Localization from 'expo-localization';
 import { Platform } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import { logger } from '@/services/logger.service';
 
 /**
  * Build extinfo array for Facebook Conversions API
@@ -85,10 +86,10 @@ export async function buildExtinfo(): Promise<string[]> {
       deviceTimezone,  // [15]
     ];
 
-    console.log('[DeviceInfo] Built extinfo array:', extinfo);
+    logger.debug('Built extinfo array', { feature: 'DeviceInfo', extinfo });
     return extinfo;
   } catch (error) {
-    console.error('[DeviceInfo] Error building extinfo:', error);
+    logger.error('Error building extinfo', { feature: 'DeviceInfo', error });
     
     // Return minimal valid extinfo with placeholders if error occurs
     return [
@@ -122,7 +123,7 @@ function getTimezoneAbbreviation(): string {
     const match = tzString.match(/\b([A-Z]{3,5})\b/);
     return match ? match[1] : 'GMT';
   } catch (error) {
-    console.error('[DeviceInfo] Error getting timezone abbreviation:', error);
+    logger.error('Error getting timezone abbreviation', { feature: 'DeviceInfo', error });
     return 'GMT';
   }
 }
@@ -145,7 +146,7 @@ export async function getAdvertiserTrackingEnabled(): Promise<boolean> {
     // Return true only if explicitly authorized
     return status === 'authorized';
   } catch (error) {
-    console.error('[DeviceInfo] Error getting advertiser tracking status:', error);
+    logger.error('Error getting advertiser tracking status', { feature: 'DeviceInfo', error });
     return false;
   }
 }

@@ -1,6 +1,7 @@
 import { NotificationPermissionStatus } from '@/types';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { logger } from '@/services/logger.service';
 
 export async function requestNotificationPermissions(): Promise<NotificationPermissionStatus> {
   if (Platform.OS === 'ios') {
@@ -28,7 +29,7 @@ export async function requestNotificationPermissions(): Promise<NotificationPerm
   } else if (Platform.OS === 'android') {
     // TODO: Android implementation
     // For now, return placeholder
-    console.log('[Android] Notification permissions - placeholder implementation');
+    logger.info('Android notification permissions - placeholder implementation', { feature: 'Notification' });
     return 'not_asked';
   }
 
@@ -48,7 +49,7 @@ export async function getNotificationPermissionStatus(): Promise<NotificationPer
     }
   } else if (Platform.OS === 'android') {
     // TODO: Android implementation
-    console.log('[Android] Get notification permission status - placeholder implementation');
+    logger.info('Android get notification permission status - placeholder implementation', { feature: 'Notification' });
     return 'not_asked';
   }
 
