@@ -20,6 +20,10 @@ export default function ProfileScreen() {
   const { user } = useAuth();
   const [goalDescription, setGoalDescription] = useState(mockUserGoal.description);
   const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [position, setPosition] = useState(mockUserProfile.position);
+  const [isEditingPosition, setIsEditingPosition] = useState(false);
+  const [department, setDepartment] = useState(mockUserProfile.department);
+  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -47,6 +51,22 @@ export default function ProfileScreen() {
 
   const handleBlurGoal = (): void => {
     setIsEditingGoal(false);
+  };
+
+  const handleEditPosition = (): void => {
+    setIsEditingPosition(true);
+  };
+
+  const handleBlurPosition = (): void => {
+    setIsEditingPosition(false);
+  };
+
+  const handleEditDepartment = (): void => {
+    setIsEditingDepartment(true);
+  };
+
+  const handleBlurDepartment = (): void => {
+    setIsEditingDepartment(false);
   };
 
   const handleOpenPersonalInfo = (): void => {
@@ -144,6 +164,60 @@ export default function ProfileScreen() {
               />
           ) : (
             <Text style={styles.goalDescription} testID="goal-description">{goalDescription}</Text>
+          )}
+        </View>
+
+        <View style={styles.infoCard} testID="position-card">
+          <View style={styles.infoHeader} testID="position-header">
+            <View style={styles.infoTitleContainer} testID="position-title-container">
+              <FontAwesome name="briefcase" size={20} color="#333" testID="position-briefcase-icon" />
+              <Text style={styles.infoTitle} testID="position-title">Position</Text>
+            </View>
+            {!isEditingPosition && (
+              <TouchableOpacity onPress={handleEditPosition} style={styles.editButton} testID="position-edit-button">
+                <FontAwesome name="pencil" size={18} color="#333" testID="position-edit-icon" />
+              </TouchableOpacity>
+            )}
+          </View>
+          {isEditingPosition ? (
+            <TextInput
+              style={[styles.infoInput, { outlineStyle: 'none' } as any]}
+              value={position}
+              onChangeText={setPosition}
+              onBlur={handleBlurPosition}
+              autoFocus
+              placeholder="Enter your position"
+              testID="position-input"
+            />
+          ) : (
+            <Text style={styles.infoDescription} testID="position-description">{position}</Text>
+          )}
+        </View>
+
+        <View style={styles.infoCard} testID="department-card">
+          <View style={styles.infoHeader} testID="department-header">
+            <View style={styles.infoTitleContainer} testID="department-title-container">
+              <FontAwesome name="building" size={20} color="#333" testID="department-building-icon" />
+              <Text style={styles.infoTitle} testID="department-title">Department</Text>
+            </View>
+            {!isEditingDepartment && (
+              <TouchableOpacity onPress={handleEditDepartment} style={styles.editButton} testID="department-edit-button">
+                <FontAwesome name="pencil" size={18} color="#333" testID="department-edit-icon" />
+              </TouchableOpacity>
+            )}
+          </View>
+          {isEditingDepartment ? (
+            <TextInput
+              style={[styles.infoInput, { outlineStyle: 'none' } as any]}
+              value={department}
+              onChangeText={setDepartment}
+              onBlur={handleBlurDepartment}
+              autoFocus
+              placeholder="Enter your department"
+              testID="department-input"
+            />
+          ) : (
+            <Text style={styles.infoDescription} testID="department-description">{department}</Text>
           )}
         </View>
 
@@ -311,6 +385,43 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Regular',
   },
   goalInput: {
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'Manrope-Regular',
+    padding: 0,
+    margin: 0,
+    borderWidth: 0,
+  },
+  infoCard: {
+    backgroundColor: '#fff',
+    marginHorizontal: 12,
+    marginBottom: 16,
+    padding: 20,
+    borderRadius: 16,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  infoTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 8,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  infoDescription: {
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'Manrope-Regular',
+  },
+  infoInput: {
     fontSize: 16,
     color: '#333',
     fontFamily: 'Manrope-Regular',

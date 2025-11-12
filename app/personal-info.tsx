@@ -11,11 +11,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 export default function PersonalInfoScreen() {
   const { user } = useAuth();
   const [name, setName] = useState(mockUserProfile.name);
-  const [position, setPosition] = useState(mockUserProfile.position);
-  const [department, setDepartment] = useState(mockUserProfile.department);
   const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingPosition, setIsEditingPosition] = useState(false);
-  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -42,28 +38,18 @@ export default function PersonalInfoScreen() {
     // TODO: Save name to backend
   };
 
-  const handleBlurPosition = (): void => {
-    setIsEditingPosition(false);
-    // TODO: Save position to backend
-  };
-
-  const handleBlurDepartment = (): void => {
-    setIsEditingDepartment(false);
-    // TODO: Save department to backend
-  };
-
   const saveAllFields = (): void => {
     // TODO: Save all fields to backend
-    console.log('Saving fields:', { name, position, department });
+    console.log('Saving fields:', { name });
   };
 
   useEffect(() => {
     return () => {
-      if (isEditingName || isEditingPosition || isEditingDepartment) {
+      if (isEditingName) {
         saveAllFields();
       }
     };
-  }, [isEditingName, isEditingPosition, isEditingDepartment, name, position, department]);
+  }, [isEditingName, name]);
 
   return (
     <ScrollView style={styles.container} testID="personal-info-scroll">
@@ -103,56 +89,6 @@ export default function PersonalInfoScreen() {
               <Text style={styles.value} testID="value-email">{user?.email || mockUserProfile.email}</Text>
             </View>
           </View>
-
-          <Pressable
-            style={styles.infoItem}
-            onPress={() => setIsEditingPosition(true)}
-            testID="info-item-position"
-          >
-            <View style={styles.iconContainer} testID="icon-container-position">
-              <FontAwesome name="briefcase" size={20} color="#666" testID="icon-position" />
-            </View>
-            <View style={styles.infoContent} testID="info-content-position">
-              <Text style={styles.label} testID="label-position">Position</Text>
-              {isEditingPosition ? (
-                <TextInput
-                  style={[styles.valueInput, { outlineStyle: 'none' } as any]}
-                  value={position}
-                  onChangeText={setPosition}
-                  onBlur={handleBlurPosition}
-                  autoFocus
-                  testID="input-position"
-                />
-              ) : (
-                <Text style={styles.value} testID="value-position">{position}</Text>
-              )}
-            </View>
-          </Pressable>
-
-          <Pressable
-            style={styles.infoItem}
-            onPress={() => setIsEditingDepartment(true)}
-            testID="info-item-department"
-          >
-            <View style={styles.iconContainer} testID="icon-container-department">
-              <FontAwesome name="building" size={20} color="#666" testID="icon-department" />
-            </View>
-            <View style={styles.infoContent} testID="info-content-department">
-              <Text style={styles.label} testID="label-department">Department</Text>
-              {isEditingDepartment ? (
-                <TextInput
-                  style={[styles.valueInput, { outlineStyle: 'none' } as any]}
-                  value={department}
-                  onChangeText={setDepartment}
-                  onBlur={handleBlurDepartment}
-                  autoFocus
-                  testID="input-department"
-                />
-              ) : (
-                <Text style={styles.value} testID="value-department">{department}</Text>
-              )}
-            </View>
-          </Pressable>
 
           <View style={[styles.infoItem, styles.lastInfoItem]} testID="info-item-joined">
             <View style={styles.iconContainer} testID="icon-container-joined">
