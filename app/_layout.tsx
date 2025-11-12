@@ -1,3 +1,4 @@
+import { BackArrowIcon } from '@/components/icons/BackArrowIcon';
 import { AppColors } from '@/constants/Colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
@@ -15,7 +16,7 @@ import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -31,6 +32,20 @@ export const unstable_settings = {
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+function HeaderBackButton(): React.JSX.Element {
+  const router = useRouter();
+  
+  return (
+    <TouchableOpacity 
+      style={headerStyles.backButton}
+      onPress={() => router.back()}
+      testID="header-back-button"
+    >
+      <BackArrowIcon size={24} color="#161616" opacity={1} />
+    </TouchableOpacity>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -280,16 +295,18 @@ function RootLayoutNav() {
             headerShown: true, 
             title: 'The Boss App',
             headerBackTitle: '',
+            headerShadowVisible: false,
+            headerTitleAlign: 'center',
             headerStyle: {
               backgroundColor: '#F5F1E8',
             },
             headerTintColor: '#000',
             headerTitleStyle: {
-              color: '#333',
+              color: '#000',
               fontSize: 16,
-              fontWeight: '600',
-              fontFamily: 'Manrope-SemiBold',
+              fontFamily: 'Manrope-Regular',
             },
+            headerLeft: () => <HeaderBackButton />,
           }} 
         />
         <Stack.Screen 
@@ -298,16 +315,18 @@ function RootLayoutNav() {
             headerShown: true, 
             title: 'Personal information',
             headerBackTitle: '',
+            headerShadowVisible: false,
+            headerTitleAlign: 'center',
             headerStyle: {
               backgroundColor: '#F5F1E8',
             },
             headerTintColor: '#000',
             headerTitleStyle: {
-              color: '#333',
+              color: '#000',
               fontSize: 16,
-              fontWeight: '600',
-              fontFamily: 'Manrope-SemiBold',
+              fontFamily: 'Manrope-Regular',
             },
+            headerLeft: () => <HeaderBackButton />,
           }} 
         />
         <Stack.Screen 
@@ -316,16 +335,18 @@ function RootLayoutNav() {
             headerShown: true, 
             title: 'Subscription',
             headerBackTitle: '',
+            headerShadowVisible: false,
+            headerTitleAlign: 'center',
             headerStyle: {
               backgroundColor: '#F5F1E8',
             },
             headerTintColor: '#000',
             headerTitleStyle: {
-              color: '#333',
+              color: '#000',
               fontSize: 16,
-              fontWeight: '600',
-              fontFamily: 'Manrope-SemiBold',
+              fontFamily: 'Manrope-Regular',
             },
+            headerLeft: () => <HeaderBackButton />,
           }} 
         />
         <Stack.Screen 
@@ -334,19 +355,33 @@ function RootLayoutNav() {
             headerShown: true, 
             title: 'Entry Details',
             headerBackTitle: '',
+            headerShadowVisible: false,
+            headerTitleAlign: 'center',
             headerStyle: {
               backgroundColor: '#FAF8F0',
             },
             headerTintColor: '#000',
             headerTitleStyle: {
-              color: '#333',
+              color: '#000',
               fontSize: 16,
-              fontWeight: '600',
-              fontFamily: 'Manrope-SemiBold',
+              fontFamily: 'Manrope-Regular',
             },
+            headerLeft: () => <HeaderBackButton />,
           }} 
         />
       </Stack>
     </ThemeProvider>
   );
 }
+
+const headerStyles = StyleSheet.create({
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 16,
+  },
+});
