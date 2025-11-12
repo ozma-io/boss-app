@@ -7,7 +7,7 @@
  * Benefits:
  * - Structured logs with automatic context
  * - Environment-aware log level filtering
- * - Easy integration with monitoring tools (Sentry, Crashlytics)
+ * - Sentry integration with graceful fallback
  * - Performance measurement utilities
  * - User context tracking
  * 
@@ -23,6 +23,15 @@
  * logger.timeEnd('fetchData'); // Logs: "fetchData completed in 123ms"
  * ```
  */
+
+// Sentry import with try-catch protection
+let Sentry: any = null;
+try {
+  Sentry = require('@sentry/react-native');
+} catch (error) {
+  // Sentry not available, will fall back to console logging only
+  console.error('Sentry SDK not available, using console logging only');
+}
 
 /**
  * Log levels in order of severity
@@ -63,13 +72,14 @@ class LoggerService {
   private globalContext: LogContext = {};
   private timers: Map<string, Timer> = new Map();
   private isInitialized = false;
+  private isSentryAvailable = false;
 
   constructor() {
     this.minLogLevel = __DEV__ ? LogLevel.DEBUG : LogLevel.INFO;
   }
 
   /**
-   * Initialize logger (for future Sentry/Crashlytics setup)
+   * Initialize logger with Sentry integration
    */
   init(options?: { minLevel?: LogLevel }): void {
     if (this.isInitialized) {
@@ -80,14 +90,25 @@ class LoggerService {
       this.minLogLevel = options.minLevel;
     }
 
-    // TODO: Initialize Sentry/Crashlytics here
-    // Sentry.init({
-    //   dsn: 'YOUR_DSN',
-    //   environment: __DEV__ ? 'development' : 'production',
-    // });
+    // Initialize Sentry with graceful fallback
+    if (Sentry) {
+      try {
+        const { getSentryOptions } = require('@/constants/sentry.config');
+        const sentryOptions = getSentryOptions(__DEV__);
+        Sentry.init(sentryOptions);
+        this.isSentryAvailable = true;
+        console.log('Sentry initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize Sentry, falling back to console logging:', error);
+        this.isSentryAvailable = false;
+      }
+    }
 
     this.isInitialized = true;
-    this.log(LogLevel.INFO, 'Logger initialized', { minLevel: LogLevel[this.minLogLevel] });
+    this.log(LogLevel.INFO, 'Logger initialized', { 
+      minLevel: LogLevel[this.minLogLevel],
+      sentryEnabled: this.isSentryAvailable 
+    });
   }
 
   /**
@@ -110,8 +131,14 @@ class LoggerService {
   setUserContext(userId: string, email?: string): void {
     this.setContext({ userId, userEmail: email });
     
-    // TODO: Set in Sentry/Crashlytics
-    // Sentry.setUser({ id: userId, email });
+    // Set user context in Sentry with graceful fallback
+    if (this.isSentryAvailable && Sentry) {
+      try {
+        Sentry.setUser({ id: userId, email });
+      } catch (error) {
+        console.error('Failed to set Sentry user context:', error);
+      }
+    }
   }
 
   /**
@@ -121,8 +148,14 @@ class LoggerService {
     const { userId, userEmail, ...rest } = this.globalContext;
     this.globalContext = rest;
     
-    // TODO: Clear in Sentry/Crashlytics
-    // Sentry.setUser(null);
+    // Clear user context in Sentry with graceful fallback
+    if (this.isSentryAvailable && Sentry) {
+      try {
+        Sentry.setUser(null);
+      } catch (error) {
+        console.error('Failed to clear Sentry user context:', error);
+      }
+    }
   }
 
   /**
@@ -182,14 +215,22 @@ class LoggerService {
     const errorContext = this.enrichErrorContext(context?.error, context);
     this.log(LogLevel.ERROR, message, errorContext);
 
-    // TODO: Send to Sentry/Crashlytics
-    // if (context?.error instanceof Error) {
-    //   Sentry.captureException(context.error, {
-    //     level: 'error',
-    //     tags: { feature: context?.feature },
-    //     extra: errorContext,
-    //   });
-    // }
+    // Send to Sentry with graceful fallback
+    if (this.isSentryAvailable && Sentry && context?.error) {
+      try {
+        const errorToCapture = context.error instanceof Error 
+          ? context.error 
+          : new Error(String(context.error));
+        
+        Sentry.captureException(errorToCapture, {
+          level: 'error',
+          tags: { feature: context?.feature || 'unknown' },
+          extra: errorContext,
+        });
+      } catch (sentryError) {
+        console.error('Failed to send error to Sentry:', sentryError);
+      }
+    }
   }
 
   /**
@@ -202,14 +243,25 @@ class LoggerService {
     const errorContext = this.enrichErrorContext(context?.error, context);
     this.log(LogLevel.FATAL, message, errorContext);
 
-    // TODO: Send to Sentry/Crashlytics with high priority
-    // if (context?.error instanceof Error) {
-    //   Sentry.captureException(context.error, {
-    //     level: 'fatal',
-    //     tags: { feature: context?.feature },
-    //     extra: errorContext,
-    //   });
-    // }
+    // Send to Sentry with high priority and graceful fallback
+    if (this.isSentryAvailable && Sentry && context?.error) {
+      try {
+        const errorToCapture = context.error instanceof Error 
+          ? context.error 
+          : new Error(String(context.error));
+        
+        Sentry.captureException(errorToCapture, {
+          level: 'fatal',
+          tags: { 
+            feature: context?.feature || 'unknown',
+            severity: 'critical' 
+          },
+          extra: errorContext,
+        });
+      } catch (sentryError) {
+        console.error('Failed to send fatal error to Sentry:', sentryError);
+      }
+    }
   }
 
   /**

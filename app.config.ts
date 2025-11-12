@@ -75,6 +75,13 @@ const config: ExpoConfig = {
     'expo-localization',
     'expo-web-browser',
     [
+      '@sentry/react-native/expo',
+      {
+        organization: 'ozma-inc',
+        project: 'the-boss-app',
+      },
+    ],
+    [
       'react-native-fbsdk-next',
       {
         appID: FACEBOOK_APP_ID,

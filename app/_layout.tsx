@@ -7,8 +7,8 @@ import { initializeAmplitude } from '@/services/amplitude.service';
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
 import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
-import { hasFacebookAttribution } from '@/services/tracking.service';
 import { logger } from '@/services/logger.service';
+import { hasFacebookAttribution } from '@/services/tracking.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -22,8 +22,8 @@ import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary
+    // Catch any errors thrown by the Layout component.
+    ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -69,10 +69,15 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // Initialize Facebook SDK, Intercom, Amplitude and handle attribution on first launch
+  // Initialize Sentry, Facebook SDK, Intercom, Amplitude and handle attribution on first launch
   useEffect(() => {
     const initializeFacebookAndAttribution = async (): Promise<void> => {
       try {
+        // Initialize Sentry first (before other SDKs so it can catch their errors)
+        // The logger.init() already initializes Sentry with graceful fallback
+        // This is just to ensure it's initialized early in the app lifecycle
+        logger.info('App initialization started', { feature: 'App' });
+
         // Initialize Facebook SDK
         if (Platform.OS !== 'web') {
           await initializeFacebookSdk();
@@ -165,13 +170,22 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const { authState } = useAuth();
+  const { authState, user } = useAuth();
   const { shouldShowOnboarding: shouldShowNotificationOnboarding } = useNotificationOnboarding();
   const { shouldShowOnboarding: shouldShowTrackingOnboarding } = useTrackingOnboarding();
   const segments = useSegments();
   const router = useRouter();
   const hasCheckedAttribution = useRef<boolean>(false);
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
+
+  // Set or clear user context in Sentry when auth state changes
+  useEffect(() => {
+    if (authState === 'authenticated' && user) {
+      logger.setUserContext(user.id, user.email || undefined);
+    } else if (authState === 'unauthenticated') {
+      logger.clearUserContext();
+    }
+  }, [authState, user]);
 
   // Check for attribution email (only once when unauthenticated and not showing tracking onboarding)
   useEffect(() => {
