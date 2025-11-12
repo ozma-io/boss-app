@@ -1,6 +1,7 @@
 import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { useBoss } from '@/hooks/useBoss';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { logger } from '@/services/logger.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -66,7 +67,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        console.error('Failed to update working hours:', err);
+        logger.error('Failed to update working hours', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
       }
     }
   };
@@ -86,7 +87,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        console.error('Failed to update birthday:', err);
+        logger.error('Failed to update birthday', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
       }
     }
   };
@@ -106,7 +107,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        console.error('Failed to update position:', err);
+        logger.error('Failed to update position', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
       }
     }
   };
@@ -126,7 +127,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        console.error('Failed to update started at:', err);
+        logger.error('Failed to update started at', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
       }
     }
   };
@@ -146,7 +147,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        console.error('Failed to update management style:', err);
+        logger.error('Failed to update management style', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
       }
     }
   };
@@ -166,7 +167,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        console.error('Failed to update favorite color:', err);
+        logger.error('Failed to update favorite color', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
       }
     }
   };
@@ -186,7 +187,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        console.error('Failed to update communication preference:', err);
+        logger.error('Failed to update communication preference', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
       }
     }
   };
@@ -206,7 +207,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        console.error('Failed to update department:', err);
+        logger.error('Failed to update department', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
       }
     }
   };

@@ -2,6 +2,7 @@ import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { sendEmailVerificationCode, signInWithTestEmail } from '@/services/auth.service';
+import { logger } from '@/services/logger.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -25,7 +26,7 @@ export default function EmailInputScreen(): React.JSX.Element {
   // Pre-fill email from route params if provided (from attribution)
   useEffect(() => {
     if (params.email && typeof params.email === 'string') {
-      console.log('[EmailInput] Pre-filling email from params:', params.email);
+      logger.info('Pre-filling email from params', { feature: 'EmailInput', email: params.email });
       setEmail(params.email);
     }
   }, [params.email]);
@@ -53,7 +54,7 @@ export default function EmailInputScreen(): React.JSX.Element {
     try {
       // Check if this is the test email
       if (email === TEST_EMAIL) {
-        console.log('[EmailInput] Test email detected, bypassing magic link');
+        logger.info('Test email detected, bypassing magic link', { feature: 'EmailInput' });
         const user = await signInWithTestEmail(email);
         setUser(user);
         router.replace('/(tabs)');
@@ -76,7 +77,7 @@ export default function EmailInputScreen(): React.JSX.Element {
         params: { email },
       });
     } catch (error) {
-      console.error('[EmailInput] Error sending magic link:', error);
+      logger.error('Failed to send magic link', error instanceof Error ? error : new Error(String(error)), { feature: 'EmailInput', email });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       trackAmplitudeEvent('auth_signin_failed', {

@@ -5,6 +5,7 @@ import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import { AttributionData } from './attribution.service';
+import { logger } from './logger.service';
 
 const DAYS_BETWEEN_PROMPTS = 3;
 
@@ -17,8 +18,8 @@ function isFirebaseOfflineError(error: Error): boolean {
 }
 
 export async function getUserNotificationData(userId: string): Promise<UserNotificationData | null> {
-  const startTime = Date.now();
-  console.log(`📊 [UserService] >>> Getting notification data for user: ${userId} at ${new Date().toISOString()}`);
+  logger.time('getUserNotificationData');
+  logger.debug('Getting notification data for user', { feature: 'UserService', userId });
   
   try {
     const result = await retryWithBackoff(async () => {
@@ -26,7 +27,7 @@ export async function getUserNotificationData(userId: string): Promise<UserNotif
       const userDoc = await getDoc(userDocRef);
       
       if (!userDoc.exists()) {
-        console.log(`📊 [UserService] User document does not exist: ${userId}`);
+        logger.debug('User document does not exist', { feature: 'UserService', userId });
         return null;
       }
       
@@ -39,23 +40,20 @@ export async function getUserNotificationData(userId: string): Promise<UserNotif
       };
     }, 3, 500);
     
-    const duration = Date.now() - startTime;
-    console.log(`📊 [UserService] <<< Successfully retrieved notification data in ${duration}ms`);
+    logger.timeEnd('getUserNotificationData', { feature: 'UserService', userId });
     return result;
   } catch (error) {
     const err = error as Error;
     const isOffline = isFirebaseOfflineError(err);
-    const duration = Date.now() - startTime;
     
     if (isOffline) {
-      console.warn(
-        `📊 [UserService] Failed to get user data after 3 retries (offline) in ${duration}ms. User: ${userId}. Defaulting to null.`
-      );
+      logger.warn('Failed to get user data (offline), defaulting to null', {
+        feature: 'UserService',
+        userId,
+        retries: 3,
+      });
     } else {
-      console.error(
-        `📊 [UserService] Error getting user notification data for ${userId} after ${duration}ms:`,
-        err.message
-      );
+      logger.error('Error getting user notification data', err, { feature: 'UserService', userId });
     }
     
     return null;
@@ -101,9 +99,9 @@ export async function updateNotificationPermissionStatus(
       notification_permission_status: status,
     });
     
-    console.log('[UserService] Notification permission status updated and tracked in Amplitude:', status);
+    logger.info('Notification permission status updated and tracked', { feature: 'UserService', status });
   } catch (error) {
-    console.error('Error updating notification permission status:', error);
+    logger.error('Error updating notification permission status', error, { feature: 'UserService' });
     throw error;
   }
 }
@@ -132,7 +130,7 @@ export async function recordNotificationPromptShown(userId: string): Promise<voi
       });
     }
   } catch (error) {
-    console.error('Error recording notification prompt shown:', error);
+    logger.error('Error recording notification prompt shown', error, { feature: 'UserService' });
     throw error;
   }
 }
@@ -150,31 +148,32 @@ async function syncNotificationStatusWithFirestore(
 ): Promise<void> {
   // If Firestore already has the correct status, no need to sync
   if (firestoreData?.notificationPermissionStatus === systemStatus) {
-    console.log(`📊 [UserService] Firestore already in sync with system status: ${systemStatus}`);
+    logger.debug('Firestore already in sync with system status', { feature: 'UserService', systemStatus });
     return;
   }
   
-  console.log(
-    `📊 [UserService] Syncing notification status - System: ${systemStatus}, ` +
-    `Firestore: ${firestoreData?.notificationPermissionStatus || 'null'}`
-  );
+  logger.info('Syncing notification status', {
+    feature: 'UserService',
+    systemStatus,
+    firestoreStatus: firestoreData?.notificationPermissionStatus || 'null',
+  });
   
   try {
     await updateNotificationPermissionStatus(userId, systemStatus);
-    console.log(`📊 [UserService] Successfully synced notification status to Firestore`);
+    logger.info('Successfully synced notification status to Firestore', { feature: 'UserService' });
   } catch (error) {
-    console.error('[UserService] Failed to sync notification status to Firestore:', error);
+    logger.error('Failed to sync notification status to Firestore', error, { feature: 'UserService' });
   }
 }
 
 export async function shouldShowNotificationOnboarding(userId: string): Promise<boolean> {
-  const startTime = Date.now();
-  console.log(`📊 [UserService] >>> Checking if should show notification onboarding for user: ${userId}`);
+  logger.time('shouldShowNotificationOnboarding');
+  logger.debug('Checking if should show notification onboarding', { feature: 'UserService', userId });
   
   // Check current system status first
   const { getNotificationPermissionStatus } = await import('@/services/notification.service');
   const systemStatus = await getNotificationPermissionStatus();
-  console.log(`📊 [UserService] Current system notification status: ${systemStatus}`);
+  logger.debug('Current system notification status', { feature: 'UserService', systemStatus });
   
   // Get Firestore data
   const notificationData = await getUserNotificationData(userId);
@@ -182,25 +181,19 @@ export async function shouldShowNotificationOnboarding(userId: string): Promise<
   // If system status is 'granted', sync with Firestore and don't show onboarding
   if (systemStatus === 'granted') {
     await syncNotificationStatusWithFirestore(userId, systemStatus, notificationData);
-    const duration = Date.now() - startTime;
-    console.log(
-      `📊 [UserService] <<< System status is granted, ` +
-      `skipping onboarding (${duration}ms)`
-    );
+    logger.timeEnd('shouldShowNotificationOnboarding', { feature: 'UserService', result: false, reason: 'granted' });
     return false;
   }
   
   // If no notification data in Firestore, show onboarding
   if (!notificationData) {
-    const duration = Date.now() - startTime;
-    console.log(`📊 [UserService] <<< No notification data found, will show onboarding (${duration}ms)`);
+    logger.timeEnd('shouldShowNotificationOnboarding', { feature: 'UserService', result: true, reason: 'no_data' });
     return true;
   }
   
   // If never prompted before, show onboarding
   if (!notificationData.lastNotificationPromptAt) {
-    const duration = Date.now() - startTime;
-    console.log(`📊 [UserService] <<< Never prompted before, will show onboarding (${duration}ms)`);
+    logger.timeEnd('shouldShowNotificationOnboarding', { feature: 'UserService', result: true, reason: 'never_prompted' });
     return true;
   }
   
@@ -208,12 +201,12 @@ export async function shouldShowNotificationOnboarding(userId: string): Promise<
   const lastPromptDate = new Date(notificationData.lastNotificationPromptAt);
   const daysSinceLastPrompt = (Date.now() - lastPromptDate.getTime()) / (1000 * 60 * 60 * 24);
   const shouldShow = daysSinceLastPrompt >= DAYS_BETWEEN_PROMPTS;
-  const duration = Date.now() - startTime;
   
-  console.log(
-    `📊 [UserService] <<< Last prompted ${daysSinceLastPrompt.toFixed(1)} days ago, ` +
-    `${shouldShow ? 'will show' : 'will skip'} onboarding (${duration}ms)`
-  );
+  logger.timeEnd('shouldShowNotificationOnboarding', {
+    feature: 'UserService',
+    result: shouldShow,
+    daysSinceLastPrompt: daysSinceLastPrompt.toFixed(1),
+  });
   
   return shouldShow;
 }
@@ -228,9 +221,9 @@ export async function updateUserAttribution(userId: string, attributionData: Att
       attribution: attributionData,
       updatedAt: new Date().toISOString(),
     });
-    console.log('[UserService] Attribution data updated for user:', userId);
+    logger.info('Attribution data updated for user', { feature: 'UserService', userId });
   } catch (error) {
-    console.error('[UserService] Error updating user attribution:', error);
+    logger.error('Error updating user attribution', error, { feature: 'UserService', userId });
     throw error;
   }
 }
@@ -242,8 +235,8 @@ export async function updateUserAttribution(userId: string, attributionData: Att
  * @returns User profile or null if not found
  */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  const startTime = Date.now();
-  console.log(`📊 [UserService] >>> Getting profile for user: ${userId} at ${new Date().toISOString()}`);
+  logger.time('getUserProfile');
+  logger.debug('Getting profile for user', { feature: 'UserService', userId });
   
   try {
     const result = await retryWithBackoff(async () => {
@@ -251,30 +244,27 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
       const userDoc = await getDoc(userDocRef);
       
       if (!userDoc.exists()) {
-        console.log(`📊 [UserService] User profile does not exist: ${userId}`);
+        logger.debug('User profile does not exist', { feature: 'UserService', userId });
         return null;
       }
       
       return userDoc.data() as UserProfile;
     }, 3, 500);
     
-    const duration = Date.now() - startTime;
-    console.log(`📊 [UserService] <<< Successfully retrieved profile in ${duration}ms`);
+    logger.timeEnd('getUserProfile', { feature: 'UserService', userId, found: result !== null });
     return result;
   } catch (error) {
     const err = error as Error;
     const isOffline = isFirebaseOfflineError(err);
-    const duration = Date.now() - startTime;
     
     if (isOffline) {
-      console.warn(
-        `📊 [UserService] Failed to get user profile after 3 retries (offline) in ${duration}ms. User: ${userId}. Returning null.`
-      );
+      logger.warn('Failed to get user profile (offline), returning null', {
+        feature: 'UserService',
+        userId,
+        retries: 3,
+      });
     } else {
-      console.error(
-        `📊 [UserService] Error getting user profile for ${userId} after ${duration}ms:`,
-        err.message
-      );
+      logger.error('Error getting user profile', err, { feature: 'UserService', userId });
     }
     
     return null;
@@ -292,7 +282,7 @@ export function subscribeToUserProfile(
   userId: string,
   callback: (profile: UserProfile | null) => void
 ): Unsubscribe {
-  console.log(`📊 [UserService] >>> Subscribing to profile for user: ${userId}`);
+  logger.debug('Subscribing to profile for user', { feature: 'UserService', userId });
   
   const userDocRef = doc(db, 'users', userId);
   
@@ -301,15 +291,15 @@ export function subscribeToUserProfile(
     (docSnapshot) => {
       if (docSnapshot.exists()) {
         const profile = docSnapshot.data() as UserProfile;
-        console.log(`📊 [UserService] User profile updated for ${userId}`);
+        logger.debug('User profile updated', { feature: 'UserService', userId });
         callback(profile);
       } else {
-        console.log(`📊 [UserService] User profile does not exist for ${userId}`);
+        logger.debug('User profile does not exist', { feature: 'UserService', userId });
         callback(null);
       }
     },
     (error) => {
-      console.error(`📊 [UserService] Error in user profile subscription for ${userId}:`, error);
+      logger.error('Error in user profile subscription', error, { feature: 'UserService', userId });
       callback(null);
     }
   );
@@ -329,7 +319,7 @@ export async function updateUserProfile(
   data: Partial<UserProfile>
 ): Promise<void> {
   try {
-    console.log(`📊 [UserService] >>> Updating profile for user: ${userId}`);
+    logger.debug('Updating profile for user', { feature: 'UserService', userId });
     
     const userDocRef = doc(db, 'users', userId);
     
@@ -338,10 +328,10 @@ export async function updateUserProfile(
       updatedAt: new Date().toISOString(),
     });
     
-    console.log(`📊 [UserService] <<< Successfully updated profile for ${userId}`);
+    logger.info('Successfully updated profile', { feature: 'UserService', userId });
   } catch (error) {
     const err = error as Error;
-    console.error(`📊 [UserService] Error updating user profile for ${userId}:`, err.message);
+    logger.error('Error updating user profile', err, { feature: 'UserService', userId });
     throw error;
   }
 }

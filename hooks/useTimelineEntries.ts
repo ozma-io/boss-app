@@ -1,6 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { subscribeToTimelineEntries } from '@/services/timeline.service';
 import { TimelineEntry } from '@/types';
+import { logger } from '@/services/logger.service';
 import { useEffect, useState } from 'react';
 
 /**
@@ -63,7 +64,7 @@ export function useTimelineEntries(bossId: string | undefined) {
         // No explicit error set here as subscribeToTimelineEntries
         // already handles errors by returning empty array
         if (updatedEntries.length === 0) {
-          console.log('[useTimelineEntries] No entries found or error occurred');
+          logger.info('No timeline entries found', { feature: 'useTimelineEntries', userId: user.id, bossId });
         }
       }
     );

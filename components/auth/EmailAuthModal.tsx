@@ -2,6 +2,7 @@ import { AppColors } from '@/constants/Colors';
 import { auth } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendEmailVerificationCode, signInWithTestEmail, verifyEmailCode } from '@/services/auth.service';
+import { logger } from '@/services/logger.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { isSignInWithEmailLink } from 'firebase/auth';
@@ -48,14 +49,14 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
     async (url: string): Promise<void> => {
       setIsLoading(true);
       try {
-        console.log('[EmailAuthModal] Attempting to verify email with link');
+        logger.info('Attempting to verify email with link', { feature: 'EmailAuthModal', email });
         const user = await verifyEmailCode(email, url);
-        console.log('[EmailAuthModal] Email verified successfully');
+        logger.info('Email verified successfully', { feature: 'EmailAuthModal', email });
         setUser(user);
         onClose();
         router.replace('/(tabs)');
       } catch (error) {
-        console.error('[EmailAuthModal] Error verifying email link:', error);
+        logger.error('Failed to verify email link', error instanceof Error ? error : new Error(String(error)), { feature: 'EmailAuthModal', email });
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         Alert.alert('Error', `Invalid or expired link.\n\nDetails: ${errorMessage}\n\nPlease try again.`);
       } finally {
@@ -83,7 +84,7 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
 
     const handleDeepLink = async (event: { url: string }): Promise<void> => {
       const url = event.url;
-      console.log('[EmailAuthModal] Received deep link:', url);
+      logger.info('Received deep link', { feature: 'EmailAuthModal', url });
 
       const magicLinkMatch = url.match(/[?&]magicLink=([^&]+)/);
       if (magicLinkMatch) {
@@ -91,13 +92,13 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
         const ampIndex = fullUrl.indexOf('&email=');
         const extractedMagicLink = ampIndex > 0 ? fullUrl.substring(0, ampIndex) : fullUrl;
         const decodedMagicLink = decodeURIComponent(extractedMagicLink);
-        console.log('[EmailAuthModal] Extracted magic link from deep link:', decodedMagicLink);
+        logger.info('Extracted magic link from deep link', { feature: 'EmailAuthModal' });
         await handleEmailLink(decodedMagicLink);
         return;
       }
 
       if (url && isSignInWithEmailLink(auth, url)) {
-        console.log('[EmailAuthModal] Valid Firebase magic link detected');
+        logger.info('Valid Firebase magic link detected', { feature: 'EmailAuthModal' });
         await handleEmailLink(url);
       }
     };
@@ -106,7 +107,7 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
 
     Linking.getInitialURL().then((url) => {
       if (url) {
-        console.log('[EmailAuthModal] Initial URL:', url);
+        logger.info('Initial URL detected', { feature: 'EmailAuthModal', url });
 
         const magicLinkMatch = url.match(/[?&]magicLink=([^&]+)/);
         if (magicLinkMatch) {
@@ -114,13 +115,13 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
           const ampIndex = fullUrl.indexOf('&email=');
           const extractedMagicLink = ampIndex > 0 ? fullUrl.substring(0, ampIndex) : fullUrl;
           const decodedMagicLink = decodeURIComponent(extractedMagicLink);
-          console.log('[EmailAuthModal] Extracted magic link from initial URL:', decodedMagicLink);
+          logger.info('Extracted magic link from initial URL', { feature: 'EmailAuthModal' });
           handleEmailLink(decodedMagicLink);
           return;
         }
 
         if (isSignInWithEmailLink(auth, url)) {
-          console.log('[EmailAuthModal] Initial URL is a valid Firebase magic link');
+          logger.info('Initial URL is a valid Firebase magic link', { feature: 'EmailAuthModal' });
           handleEmailLink(url);
         }
       }
@@ -140,7 +141,7 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
     setIsLoading(true);
     try {
       if (email === TEST_EMAIL) {
-        console.log('[EmailAuthModal] Test email detected, bypassing magic link');
+        logger.info('Test email detected, bypassing magic link', { feature: 'EmailAuthModal' });
         const user = await signInWithTestEmail(email);
         setUser(user);
         onClose();
@@ -157,7 +158,7 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
       setResendTimer(60);
       setCanResend(false);
     } catch (error) {
-      console.error('[EmailAuthModal] Error sending magic link:', error);
+      logger.error('Failed to send magic link', error instanceof Error ? error : new Error(String(error)), { feature: 'EmailAuthModal', email });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       Alert.alert('Error', `Failed to send magic link.\n\nDetails: ${errorMessage}\n\nPlease try again.`);
     } finally {

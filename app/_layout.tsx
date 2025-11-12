@@ -8,6 +8,7 @@ import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionD
 import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
+import { logger } from '@/services/logger.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -87,13 +88,13 @@ export default function RootLayout() {
         const firstLaunch = await isFirstLaunch();
         
         if (firstLaunch) {
-          console.log('[App] First launch detected, checking for attribution data');
+          logger.info('First launch detected, checking for attribution data', { feature: 'App' });
           
           // Get the initial URL (deep link)
           const initialUrl = await Linking.getInitialURL();
           
           if (initialUrl) {
-            console.log('[App] Initial URL detected:', initialUrl);
+            logger.info('Initial URL detected on first launch', { feature: 'App', initialUrl });
             
             // Parse attribution parameters
             const attributionData = parseDeepLinkParams(initialUrl);
@@ -107,11 +108,11 @@ export default function RootLayout() {
             if (hasFbAttribution) {
               // On iOS: tracking onboarding will handle permission request and event sending
               if (Platform.OS === 'ios') {
-                console.log('[App] iOS: Attribution data saved, tracking onboarding will handle permission and events');
+                logger.info('iOS: Attribution data saved, tracking onboarding will handle permission and events', { feature: 'App' });
               } 
               // On Android: send events immediately (no ATT permission needed)
               else if (Platform.OS === 'android') {
-                console.log('[App] Android: Sending AppInstall events immediately');
+                logger.info('Android: Sending AppInstall events immediately', { feature: 'App' });
                 
                 try {
                   // Send AppInstall event to Facebook (client-side)
@@ -123,13 +124,13 @@ export default function RootLayout() {
                     attributionData
                   );
                   
-                  console.log('[App] Android: AppInstall events sent successfully');
+                  logger.info('Android: AppInstall events sent successfully', { feature: 'App' });
                 } catch (fbError) {
-                  console.error('[App] Android: Error sending AppInstall events:', fbError);
+                  logger.error('Android: Failed to send AppInstall events', fbError instanceof Error ? fbError : new Error(String(fbError)), { feature: 'App' });
                 }
               }
             } else {
-              console.log('[App] No Facebook attribution detected');
+              logger.info('No Facebook attribution detected', { feature: 'App' });
             }
           }
           
@@ -137,7 +138,7 @@ export default function RootLayout() {
           await markAppAsLaunched();
         }
       } catch (initError) {
-        console.error('[App] Error initializing Facebook SDK or attribution:', initError);
+        logger.error('Failed to initialize Facebook SDK or attribution', initError instanceof Error ? initError : new Error(String(initError)), { feature: 'App' });
       }
     };
 
@@ -181,11 +182,11 @@ function RootLayoutNav() {
         try {
           const attributionEmail = await getAttributionEmail();
           if (attributionEmail) {
-            console.log('[App] Attribution email found, setting redirect to email-input');
+            logger.info('Attribution email found, setting redirect to email-input', { feature: 'App', attributionEmail });
             setRedirectPath(`/(auth)/email-input?email=${encodeURIComponent(attributionEmail)}`);
           }
         } catch (error) {
-          console.error('[App] Error checking attribution email:', error);
+          logger.error('Failed to check attribution email', error instanceof Error ? error : new Error(String(error)), { feature: 'App' });
         }
       };
       
@@ -242,7 +243,7 @@ function RootLayoutNav() {
     
     // Navigate only if we have a target and it's different from where we are
     if (targetPath) {
-      console.log(`[App] Routing to: ${targetPath} from ${segments[0] || 'root'}`);
+      logger.info('Routing to new screen', { feature: 'App', targetPath, from: segments[0] || 'root' });
       router.replace(targetPath as any);
     }
   }, [authState, segments, shouldShowNotificationOnboarding, shouldShowTrackingOnboarding, redirectPath]);

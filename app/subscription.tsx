@@ -8,6 +8,7 @@ import {
   getSubscriptionDisplayInfo,
 } from '@/services/subscription.service';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { logger } from '@/services/logger.service';
 import { SubscriptionPlanConfig } from '@/types';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
@@ -49,7 +50,7 @@ export default function SubscriptionScreen() {
       setPlans(basicPlans);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[SubscriptionScreen] Failed to load plans:', errorMessage);
+      logger.error('Failed to load subscription plans', error instanceof Error ? error : new Error(errorMessage), { feature: 'SubscriptionScreen' });
       
       // Track error in Amplitude
       trackAmplitudeEvent('subscription_plans_load_failed', {
@@ -91,7 +92,7 @@ export default function SubscriptionScreen() {
           style: 'destructive',
           onPress: () => {
             // TODO: Implement cancellation logic
-            console.log('Subscription cancellation requested');
+            logger.info('Subscription cancellation requested', { feature: 'SubscriptionScreen' });
             trackAmplitudeEvent('subscription_cancel_clicked');
           },
         },

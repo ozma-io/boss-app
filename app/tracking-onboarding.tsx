@@ -4,6 +4,7 @@ import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { getAttributionData, isFirstLaunch } from '@/services/attribution.service';
 import { logAppInstallEvent, sendAppInstallEvent } from '@/services/facebook.service';
 import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
+import { logger } from '@/services/logger.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -32,7 +33,7 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
       
       // Request system ATT permission
       const status = await requestTrackingPermission();
-      console.log('[TrackingOnboarding] ATT permission status:', status);
+      logger.info('ATT permission status received', { feature: 'TrackingOnboarding', status });
       
       // If user is logged in, update their tracking permission status
       if (user) {
@@ -42,7 +43,7 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
       // Check if this is first launch - if yes, send AppInstall events to Facebook
       const firstLaunch = await isFirstLaunch();
       if (firstLaunch) {
-        console.log('[TrackingOnboarding] First launch detected, sending AppInstall events to Facebook');
+        logger.info('First launch detected, sending AppInstall events to Facebook', { feature: 'TrackingOnboarding' });
         
         try {
           const attributionData = await getAttributionData();
@@ -60,16 +61,16 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
               attributionData
             );
             
-            console.log('[TrackingOnboarding] AppInstall events sent successfully');
+            logger.info('AppInstall events sent successfully', { feature: 'TrackingOnboarding' });
           } else {
-            console.log('[TrackingOnboarding] No attribution data found, skipping AppInstall events');
+            logger.info('No attribution data found, skipping AppInstall events', { feature: 'TrackingOnboarding' });
           }
         } catch (fbError) {
-          console.error('[TrackingOnboarding] Error sending AppInstall events to Facebook:', fbError);
+          logger.error('Failed to send AppInstall events to Facebook', fbError instanceof Error ? fbError : new Error(String(fbError)), { feature: 'TrackingOnboarding' });
           // Don't block user flow on FB error
         }
       } else {
-        console.log('[TrackingOnboarding] Not first launch, skipping AppInstall events');
+        logger.info('Not first launch, skipping AppInstall events', { feature: 'TrackingOnboarding' });
       }
       
       // Mark tracking onboarding as completed
@@ -82,7 +83,7 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
         router.replace('/(auth)/welcome');
       }
     } catch (error) {
-      console.error('[TrackingOnboarding] Error handling tracking permission:', error);
+      logger.error('Failed to handle tracking permission', error instanceof Error ? error : new Error(String(error)), { feature: 'TrackingOnboarding' });
       setShouldShowOnboarding(false);
       
       // Navigate to appropriate screen even on error

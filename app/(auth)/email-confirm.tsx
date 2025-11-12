@@ -3,6 +3,7 @@ import { auth } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { sendEmailVerificationCode, verifyEmailCode } from '@/services/auth.service';
+import { logger } from '@/services/logger.service';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { isSignInWithEmailLink } from 'firebase/auth';
@@ -30,13 +31,13 @@ export default function EmailConfirmScreen(): React.JSX.Element {
   const handleEmailLink = useCallback(async (url: string): Promise<void> => {
     setIsLoading(true);
     try {
-      console.log('[EmailConfirm] Attempting to verify email with link');
+      logger.info('Attempting to verify email with link', { feature: 'EmailConfirm', email });
       const user = await verifyEmailCode(email, url);
-      console.log('[EmailConfirm] Email verified successfully');
+      logger.info('Email verified successfully', { feature: 'EmailConfirm', email });
       setUser(user);
       router.replace('/(tabs)');
     } catch (error) {
-      console.error('[EmailConfirm] Error verifying email link:', error);
+      logger.error('Failed to verify email link', error instanceof Error ? error : new Error(String(error)), { feature: 'EmailConfirm', email });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       Alert.alert('Error', `Invalid or expired link.\n\nDetails: ${errorMessage}\n\nPlease try again.`);
     } finally {
@@ -58,7 +59,7 @@ export default function EmailConfirmScreen(): React.JSX.Element {
   useEffect(() => {
     const handleDeepLink = async (event: { url: string }): Promise<void> => {
       const url = event.url;
-      console.log('[EmailConfirm] Received deep link:', url);
+      logger.info('Received deep link', { feature: 'EmailConfirm', url });
       
       // Check if this is a deep link with magicLink parameter (from mobile browser redirect)
       const magicLinkMatch = url.match(/[?&]magicLink=([^&]+)/);
@@ -69,17 +70,17 @@ export default function EmailConfirmScreen(): React.JSX.Element {
         const ampIndex = fullUrl.indexOf('&email=');
         const extractedMagicLink = ampIndex > 0 ? fullUrl.substring(0, ampIndex) : fullUrl;
         const decodedMagicLink = decodeURIComponent(extractedMagicLink);
-        console.log('[EmailConfirm] Extracted magic link from deep link:', decodedMagicLink);
+        logger.info('Extracted magic link from deep link', { feature: 'EmailConfirm' });
         await handleEmailLink(decodedMagicLink);
         return;
       }
       
       // Only process if it's a valid Firebase magic link
       if (url && isSignInWithEmailLink(auth, url)) {
-        console.log('[EmailConfirm] Valid Firebase magic link detected');
+        logger.info('Valid Firebase magic link detected', { feature: 'EmailConfirm' });
         await handleEmailLink(url);
       } else {
-        console.log('[EmailConfirm] Not a valid Firebase magic link, ignoring');
+        logger.info('Not a valid Firebase magic link, ignoring', { feature: 'EmailConfirm' });
       }
     };
 
@@ -88,7 +89,7 @@ export default function EmailConfirmScreen(): React.JSX.Element {
     // Check if app was opened with a magic link
     Linking.getInitialURL().then((url) => {
       if (url) {
-        console.log('[EmailConfirm] Initial URL:', url);
+        logger.info('Initial URL detected', { feature: 'EmailConfirm', url });
         
         // Check if this is a deep link with magicLink parameter (from mobile browser redirect)
         const magicLinkMatch = url.match(/[?&]magicLink=([^&]+)/);
@@ -97,17 +98,17 @@ export default function EmailConfirmScreen(): React.JSX.Element {
           const ampIndex = fullUrl.indexOf('&email=');
           const extractedMagicLink = ampIndex > 0 ? fullUrl.substring(0, ampIndex) : fullUrl;
           const decodedMagicLink = decodeURIComponent(extractedMagicLink);
-          console.log('[EmailConfirm] Extracted magic link from initial URL:', decodedMagicLink);
+          logger.info('Extracted magic link from initial URL', { feature: 'EmailConfirm' });
           handleEmailLink(decodedMagicLink);
           return;
         }
         
         // Only process if it's a valid Firebase magic link
         if (isSignInWithEmailLink(auth, url)) {
-          console.log('[EmailConfirm] Initial URL is a valid Firebase magic link');
+          logger.info('Initial URL is a valid Firebase magic link', { feature: 'EmailConfirm' });
           handleEmailLink(url);
         } else {
-          console.log('[EmailConfirm] Initial URL is not a Firebase magic link');
+          logger.info('Initial URL is not a Firebase magic link', { feature: 'EmailConfirm' });
         }
       }
     });

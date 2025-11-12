@@ -12,6 +12,7 @@ import {
     query,
     updateDoc,
 } from 'firebase/firestore';
+import { logger } from './logger.service';
 
 /**
  * Check if error is related to offline state
@@ -31,8 +32,8 @@ function isFirebaseOfflineError(error: Error): boolean {
  * @returns Array of bosses ordered by createdAt (oldest first)
  */
 export async function getBosses(userId: string): Promise<Boss[]> {
-  const startTime = Date.now();
-  console.log(`📊 [BossService] >>> Getting bosses for user: ${userId} at ${new Date().toISOString()}`);
+  logger.time('getBosses');
+  logger.debug('Getting bosses for user', { feature: 'BossService', userId });
   
   try {
     const result = await retryWithBackoff(async () => {
@@ -51,23 +52,20 @@ export async function getBosses(userId: string): Promise<Boss[]> {
       return bosses;
     }, 3, 500);
     
-    const duration = Date.now() - startTime;
-    console.log(`📊 [BossService] <<< Successfully retrieved ${result.length} boss(es) in ${duration}ms`);
+    logger.timeEnd('getBosses', { feature: 'BossService', userId, count: result.length });
     return result;
   } catch (error) {
     const err = error as Error;
     const isOffline = isFirebaseOfflineError(err);
-    const duration = Date.now() - startTime;
     
     if (isOffline) {
-      console.warn(
-        `📊 [BossService] Failed to get bosses after 3 retries (offline) in ${duration}ms. User: ${userId}. Returning empty array.`
-      );
+      logger.warn('Failed to get bosses (offline), returning empty array', {
+        feature: 'BossService',
+        userId,
+        retries: 3,
+      });
     } else {
-      console.error(
-        `📊 [BossService] Error getting bosses for ${userId} after ${duration}ms:`,
-        err.message
-      );
+      logger.error('Error getting bosses', err, { feature: 'BossService', userId });
     }
     
     return [];
@@ -81,8 +79,8 @@ export async function getBosses(userId: string): Promise<Boss[]> {
  * @returns First boss or null if no bosses found
  */
 export async function getFirstBoss(userId: string): Promise<Boss | null> {
-  const startTime = Date.now();
-  console.log(`📊 [BossService] >>> Getting first boss for user: ${userId} at ${new Date().toISOString()}`);
+  logger.time('getFirstBoss');
+  logger.debug('Getting first boss for user', { feature: 'BossService', userId });
   
   try {
     const result = await retryWithBackoff(async () => {
@@ -91,7 +89,7 @@ export async function getFirstBoss(userId: string): Promise<Boss | null> {
       const snapshot = await getDocs(q);
       
       if (snapshot.empty) {
-        console.log(`📊 [BossService] No bosses found for user: ${userId}`);
+        logger.debug('No bosses found for user', { feature: 'BossService', userId });
         return null;
       }
       
@@ -102,23 +100,20 @@ export async function getFirstBoss(userId: string): Promise<Boss | null> {
       } as Boss;
     }, 3, 500);
     
-    const duration = Date.now() - startTime;
-    console.log(`📊 [BossService] <<< Successfully retrieved first boss in ${duration}ms`);
+    logger.timeEnd('getFirstBoss', { feature: 'BossService', userId, found: result !== null });
     return result;
   } catch (error) {
     const err = error as Error;
     const isOffline = isFirebaseOfflineError(err);
-    const duration = Date.now() - startTime;
     
     if (isOffline) {
-      console.warn(
-        `📊 [BossService] Failed to get first boss after 3 retries (offline) in ${duration}ms. User: ${userId}. Returning null.`
-      );
+      logger.warn('Failed to get first boss (offline), returning null', {
+        feature: 'BossService',
+        userId,
+        retries: 3,
+      });
     } else {
-      console.error(
-        `📊 [BossService] Error getting first boss for ${userId} after ${duration}ms:`,
-        err.message
-      );
+      logger.error('Error getting first boss', err, { feature: 'BossService', userId });
     }
     
     return null;
@@ -133,8 +128,8 @@ export async function getFirstBoss(userId: string): Promise<Boss | null> {
  * @returns Boss data or null if not found
  */
 export async function getBoss(userId: string, bossId: string): Promise<Boss | null> {
-  const startTime = Date.now();
-  console.log(`📊 [BossService] >>> Getting boss ${bossId} for user: ${userId} at ${new Date().toISOString()}`);
+  logger.time('getBoss');
+  logger.debug('Getting boss', { feature: 'BossService', userId, bossId });
   
   try {
     const result = await retryWithBackoff(async () => {
@@ -142,7 +137,7 @@ export async function getBoss(userId: string, bossId: string): Promise<Boss | nu
       const bossDoc = await getDoc(bossRef);
       
       if (!bossDoc.exists()) {
-        console.log(`📊 [BossService] Boss ${bossId} does not exist for user: ${userId}`);
+        logger.debug('Boss does not exist', { feature: 'BossService', userId, bossId });
         return null;
       }
       
@@ -152,23 +147,21 @@ export async function getBoss(userId: string, bossId: string): Promise<Boss | nu
       } as Boss;
     }, 3, 500);
     
-    const duration = Date.now() - startTime;
-    console.log(`📊 [BossService] <<< Successfully retrieved boss in ${duration}ms`);
+    logger.timeEnd('getBoss', { feature: 'BossService', userId, bossId, found: result !== null });
     return result;
   } catch (error) {
     const err = error as Error;
     const isOffline = isFirebaseOfflineError(err);
-    const duration = Date.now() - startTime;
     
     if (isOffline) {
-      console.warn(
-        `📊 [BossService] Failed to get boss after 3 retries (offline) in ${duration}ms. User: ${userId}, Boss: ${bossId}. Returning null.`
-      );
+      logger.warn('Failed to get boss (offline), returning null', {
+        feature: 'BossService',
+        userId,
+        bossId,
+        retries: 3,
+      });
     } else {
-      console.error(
-        `📊 [BossService] Error getting boss ${bossId} for ${userId} after ${duration}ms:`,
-        err.message
-      );
+      logger.error('Error getting boss', err, { feature: 'BossService', userId, bossId });
     }
     
     return null;
@@ -188,7 +181,7 @@ export function subscribeToBoss(
   bossId: string,
   callback: (boss: Boss | null) => void
 ): Unsubscribe {
-  console.log(`📊 [BossService] >>> Subscribing to boss ${bossId} for user: ${userId}`);
+  logger.debug('Subscribing to boss', { feature: 'BossService', userId, bossId });
   
   const bossRef = doc(db, 'users', userId, 'bosses', bossId);
   
@@ -200,15 +193,15 @@ export function subscribeToBoss(
           id: docSnapshot.id,
           ...docSnapshot.data(),
         } as Boss;
-        console.log(`📊 [BossService] Boss data updated for ${bossId}`);
+        logger.debug('Boss data updated', { feature: 'BossService', bossId });
         callback(boss);
       } else {
-        console.log(`📊 [BossService] Boss ${bossId} does not exist`);
+        logger.debug('Boss does not exist', { feature: 'BossService', bossId });
         callback(null);
       }
     },
     (error) => {
-      console.error(`📊 [BossService] Error in boss subscription for ${bossId}:`, error);
+      logger.error('Error in boss subscription', error, { feature: 'BossService', bossId });
       callback(null);
     }
   );
@@ -222,7 +215,7 @@ export function subscribeToBoss(
  */
 export async function createBoss(userId: string): Promise<string> {
   try {
-    console.log(`📊 [BossService] >>> Creating new boss for user: ${userId}`);
+    logger.info('Creating new boss', { feature: 'BossService', userId });
     
     const bossesRef = collection(db, 'users', userId, 'bosses');
     const now = new Date().toISOString();
@@ -239,11 +232,11 @@ export async function createBoss(userId: string): Promise<string> {
     
     const docRef = await addDoc(bossesRef, newBoss);
     
-    console.log(`📊 [BossService] <<< Successfully created boss: ${docRef.id}`);
+    logger.info('Successfully created boss', { feature: 'BossService', userId, bossId: docRef.id });
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    console.error(`📊 [BossService] Error creating boss:`, err.message);
+    logger.error('Error creating boss', err, { feature: 'BossService', userId });
     throw error;
   }
 }
@@ -261,7 +254,7 @@ export async function updateBoss(
   data: Partial<Boss>
 ): Promise<void> {
   try {
-    console.log(`📊 [BossService] >>> Updating boss ${bossId} for user: ${userId}`);
+    logger.debug('Updating boss', { feature: 'BossService', userId, bossId });
     
     const bossRef = doc(db, 'users', userId, 'bosses', bossId);
     
@@ -273,10 +266,10 @@ export async function updateBoss(
       updatedAt: new Date().toISOString(),
     });
     
-    console.log(`📊 [BossService] <<< Successfully updated boss ${bossId}`);
+    logger.info('Successfully updated boss', { feature: 'BossService', userId, bossId });
   } catch (error) {
     const err = error as Error;
-    console.error(`📊 [BossService] Error updating boss ${bossId}:`, err.message);
+    logger.error('Error updating boss', err, { feature: 'BossService', userId, bossId });
     throw error;
   }
 }

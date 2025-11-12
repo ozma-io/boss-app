@@ -3,6 +3,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
+import { logger } from '@/services/logger.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -39,7 +40,7 @@ export default function PersonalInfoScreen() {
       await signOut();
     } catch (error) {
       Alert.alert('Error', 'Failed to sign out. Please try again.');
-      console.error('Sign out error:', error);
+      logger.error('Failed to sign out', error instanceof Error ? error : new Error(String(error)), { feature: 'PersonalInfoScreen' });
     }
   };
 
@@ -52,7 +53,7 @@ export default function PersonalInfoScreen() {
           field: 'displayName',
         });
       } catch (err) {
-        console.error('Failed to update name:', err);
+        logger.error('Failed to update name', err instanceof Error ? err : new Error(String(err)), { feature: 'PersonalInfoScreen' });
         Alert.alert('Error', 'Failed to save name. Please try again.');
       }
     }
@@ -63,7 +64,7 @@ export default function PersonalInfoScreen() {
       try {
         await updateProfile({ displayName: name });
       } catch (err) {
-        console.error('Failed to save fields:', err);
+        logger.error('Failed to save fields', err instanceof Error ? err : new Error(String(err)), { feature: 'PersonalInfoScreen' });
       }
     }
   };

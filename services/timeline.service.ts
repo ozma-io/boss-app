@@ -13,6 +13,7 @@ import {
     orderBy,
     query,
 } from 'firebase/firestore';
+import { logger } from './logger.service';
 
 /**
  * Subscribe to real-time updates for timeline entries
@@ -31,7 +32,7 @@ export function subscribeToTimelineEntries(
   bossId: string,
   callback: (entries: TimelineEntry[]) => void
 ): Unsubscribe {
-  console.log(`📊 [TimelineService] >>> Subscribing to timeline entries for boss ${bossId}, user: ${userId}`);
+  logger.debug('Subscribing to timeline entries', { feature: 'TimelineService', userId, bossId });
   
   const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
   const q = query(entriesRef, orderBy('timestamp', 'desc'));
@@ -47,11 +48,11 @@ export function subscribeToTimelineEntries(
         } as TimelineEntry);
       });
       
-      console.log(`📊 [TimelineService] Timeline entries updated: ${entries.length} entries`);
+      logger.debug('Timeline entries updated', { feature: 'TimelineService', bossId, count: entries.length });
       callback(entries);
     },
     (error) => {
-      console.error(`📊 [TimelineService] Error in timeline subscription:`, error);
+      logger.error('Error in timeline subscription', error, { feature: 'TimelineService', bossId });
       callback([]);
     }
   );
@@ -71,7 +72,7 @@ export async function createNoteEntry(
   data: Omit<NoteEntry, 'id'>
 ): Promise<string> {
   try {
-    console.log(`📊 [TimelineService] >>> Creating note entry for boss ${bossId}`);
+    logger.debug('Creating note entry', { feature: 'TimelineService', userId, bossId });
     
     const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
     
@@ -84,11 +85,11 @@ export async function createNoteEntry(
     
     const docRef = await addDoc(entriesRef, entryData);
     
-    console.log(`📊 [TimelineService] <<< Successfully created note entry: ${docRef.id}`);
+    logger.info('Successfully created note entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id });
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    console.error(`📊 [TimelineService] Error creating note entry:`, err.message);
+    logger.error('Error creating note entry', err, { feature: 'TimelineService', userId, bossId });
     throw error;
   }
 }
@@ -107,7 +108,7 @@ export async function createInteractionEntry(
   data: Omit<InteractionEntry, 'id'>
 ): Promise<string> {
   try {
-    console.log(`📊 [TimelineService] >>> Creating interaction entry for boss ${bossId}`);
+    logger.debug('Creating interaction entry', { feature: 'TimelineService', userId, bossId });
     
     const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
     
@@ -120,11 +121,11 @@ export async function createInteractionEntry(
     
     const docRef = await addDoc(entriesRef, entryData);
     
-    console.log(`📊 [TimelineService] <<< Successfully created interaction entry: ${docRef.id}`);
+    logger.info('Successfully created interaction entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id });
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    console.error(`📊 [TimelineService] Error creating interaction entry:`, err.message);
+    logger.error('Error creating interaction entry', err, { feature: 'TimelineService', userId, bossId });
     throw error;
   }
 }
@@ -143,7 +144,7 @@ export async function createSurveyEntry(
   data: Omit<SurveyEntry, 'id'>
 ): Promise<string> {
   try {
-    console.log(`📊 [TimelineService] >>> Creating survey entry for boss ${bossId}`);
+    logger.debug('Creating survey entry', { feature: 'TimelineService', userId, bossId });
     
     const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
     
@@ -156,11 +157,11 @@ export async function createSurveyEntry(
     
     const docRef = await addDoc(entriesRef, entryData);
     
-    console.log(`📊 [TimelineService] <<< Successfully created survey entry: ${docRef.id}`);
+    logger.info('Successfully created survey entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id });
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    console.error(`📊 [TimelineService] Error creating survey entry:`, err.message);
+    logger.error('Error creating survey entry', err, { feature: 'TimelineService', userId, bossId });
     throw error;
   }
 }

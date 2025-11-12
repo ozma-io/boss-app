@@ -3,6 +3,7 @@ import { useNotificationOnboarding } from '@/contexts/NotificationOnboardingCont
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { requestNotificationPermissions } from '@/services/notification.service';
 import { recordNotificationPromptShown, updateNotificationPermissionStatus } from '@/services/user.service';
+import { logger } from '@/services/logger.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -38,7 +39,7 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
       
       router.replace('/(tabs)');
     } catch (error) {
-      console.error('Error handling notification permission:', error);
+      logger.error('Failed to handle notification permission', error instanceof Error ? error : new Error(String(error)), { feature: 'NotificationOnboarding' });
       setShouldShowOnboarding(false);
       router.replace('/(tabs)');
     } finally {

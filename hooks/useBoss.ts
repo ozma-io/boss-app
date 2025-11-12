@@ -1,6 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { createBoss, getFirstBoss, subscribeToBoss, updateBoss as updateBossService } from '@/services/boss.service';
 import { Boss } from '@/types';
+import { logger } from '@/services/logger.service';
 import { useCallback, useEffect, useState } from 'react';
 
 /**
@@ -55,7 +56,7 @@ export function useBoss() {
 
         // If no boss exists, create one automatically
         if (!firstBoss) {
-          console.log('[useBoss] No boss found, creating new boss automatically');
+          logger.info('No boss found, creating new boss automatically', { feature: 'useBoss', userId: user.id });
           const newBossId = await createBoss(user.id);
           
           // Wait a bit for Firestore to sync
@@ -85,7 +86,7 @@ export function useBoss() {
           setLoading(false);
         });
       } catch (err) {
-        console.error('[useBoss] Error loading boss:', err);
+        logger.error('Failed to load boss', err instanceof Error ? err : new Error(String(err)), { feature: 'useBoss', userId: user.id });
         setError('Failed to load boss data');
         setLoading(false);
       }

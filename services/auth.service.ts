@@ -19,6 +19,7 @@ import {
 } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
+import { logger } from './logger.service';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -26,19 +27,19 @@ function getExpoDevServerUrl(): string | null {
   // Try to detect dev server URL from Expo config
   const manifest2HostUri = Constants.expoConfig?.hostUri;
   if (manifest2HostUri) {
-    console.log('[Auth] Found hostUri from expoConfig:', manifest2HostUri);
+    logger.debug('Found hostUri from expoConfig', { feature: 'AuthService', hostUri: manifest2HostUri });
     return `http://${manifest2HostUri}`;
   }
   
-  console.warn('[Auth] Could not detect dev server URL, falling back to localhost');
+  logger.warn('Could not detect dev server URL, falling back to localhost', { feature: 'AuthService' });
   return null;
 }
 
 export async function sendEmailVerificationCode(email: string): Promise<void> {
   let redirectUrl: string;
   
-  // Debug: log all relevant Constants values
-  console.log('[Auth] Debug - Constants info:', {
+  logger.debug('Debug - Constants info', {
+    feature: 'AuthService',
     executionEnvironment: Constants.executionEnvironment,
     expoConfigHostUri: Constants.expoConfig?.hostUri,
   });
@@ -52,12 +53,12 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     if (devServerUrl) {
       // Development mode: use HTTP URL
       redirectUrl = devServerUrl;
-      console.log('[Auth] Development build detected. Using redirect URL:', redirectUrl);
+      logger.debug('Development build detected', { feature: 'AuthService', redirectUrl });
     } else {
       // Production standalone build: use custom scheme
       const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
       redirectUrl = `${scheme}://`;
-      console.log('[Auth] Production build detected. Using redirect URL:', redirectUrl);
+      logger.debug('Production build detected', { feature: 'AuthService', redirectUrl });
     }
   }
   
@@ -73,18 +74,18 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     },
   };
 
-  console.log('[Auth] Sending sign-in link with settings:', {
+  logger.info('Sending sign-in link', {
+    feature: 'AuthService',
+    email,
     url: actionCodeSettings.url,
     handleCodeInApp: actionCodeSettings.handleCodeInApp,
-    iOS: actionCodeSettings.iOS,
-    android: actionCodeSettings.android,
   });
 
   try {
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-    console.log('[Auth] Sign-in link sent successfully to:', email);
+    logger.info('Sign-in link sent successfully', { feature: 'AuthService', email });
   } catch (error) {
-    console.error('[Auth] Failed to send sign-in link:', error);
+    logger.error('Failed to send sign-in link', error, { feature: 'AuthService', email });
     throw error;
   }
 }

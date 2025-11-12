@@ -1,6 +1,7 @@
 import { app } from '@/constants/firebase.config';
 import { SubscriptionPlanConfig } from '@/types';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
+import { logger } from './logger.service';
 
 const remoteConfig = getRemoteConfig(app);
 
@@ -15,9 +16,9 @@ remoteConfig.settings.minimumFetchIntervalMillis = __DEV__
 export async function initRemoteConfig(): Promise<void> {
   try {
     await fetchAndActivate(remoteConfig);
-    console.log('[RemoteConfig] Successfully fetched and activated');
+    logger.info('Successfully fetched and activated', { feature: 'RemoteConfig' });
   } catch (error) {
-    console.error('[RemoteConfig] Failed to fetch and activate:', error);
+    logger.error('Failed to fetch and activate', error, { feature: 'RemoteConfig' });
     throw error;
   }
 }
@@ -37,7 +38,7 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     
     if (!plansJson) {
       const error = new Error('No subscription_plans parameter found in Remote Config');
-      console.error('[RemoteConfig]', error.message);
+      logger.error('No subscription_plans parameter found', error, { feature: 'RemoteConfig' });
       throw error;
     }
     
@@ -47,14 +48,14 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     // Validate structure
     if (!plansObject || typeof plansObject !== 'object') {
       const error = new Error('Invalid subscription plans structure in Remote Config');
-      console.error('[RemoteConfig]', error.message);
+      logger.error('Invalid subscription plans structure', error, { feature: 'RemoteConfig' });
       throw error;
     }
     
-    console.log('[RemoteConfig] Successfully loaded subscription plans from Remote Config');
+    logger.info('Successfully loaded subscription plans from Remote Config', { feature: 'RemoteConfig' });
     return flattenPlans(plansObject);
   } catch (error) {
-    console.error('[RemoteConfig] Error fetching subscription plans:', error);
+    logger.error('Error fetching subscription plans', error, { feature: 'RemoteConfig' });
     throw error;
   }
 }

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '@/constants/firebase.config';
 import { doc, updateDoc } from 'firebase/firestore';
+import { logger } from './logger.service';
 
 const ATTRIBUTION_STORAGE_KEY = '@boss_app_attribution_data';
 const FIRST_LAUNCH_KEY = '@boss_app_first_launch';
@@ -27,9 +28,9 @@ export async function saveAttributionData(data: AttributionData): Promise<void> 
       installedAt: data.installedAt || new Date().toISOString(),
     };
     await AsyncStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(attributionData));
-    console.log('[Attribution] Attribution data saved to AsyncStorage:', attributionData);
+    logger.info('Attribution data saved to AsyncStorage', { feature: 'AttributionService', attributionData });
   } catch (error) {
-    console.error('[Attribution] Error saving attribution data:', error);
+    logger.error('Error saving attribution data', error, { feature: 'AttributionService' });
     throw error;
   }
 }
@@ -41,14 +42,14 @@ export async function getAttributionData(): Promise<AttributionData | null> {
   try {
     const data = await AsyncStorage.getItem(ATTRIBUTION_STORAGE_KEY);
     if (!data) {
-      console.log('[Attribution] No attribution data found in AsyncStorage');
+      logger.debug('No attribution data found in AsyncStorage', { feature: 'AttributionService' });
       return null;
     }
     const parsedData = JSON.parse(data) as AttributionData;
-    console.log('[Attribution] Attribution data retrieved from AsyncStorage:', parsedData);
+    logger.debug('Attribution data retrieved from AsyncStorage', { feature: 'AttributionService', attributionData: parsedData });
     return parsedData;
   } catch (error) {
-    console.error('[Attribution] Error getting attribution data:', error);
+    logger.error('Error getting attribution data', error, { feature: 'AttributionService' });
     return null;
   }
 }
@@ -59,9 +60,9 @@ export async function getAttributionData(): Promise<AttributionData | null> {
 export async function clearAttributionData(): Promise<void> {
   try {
     await AsyncStorage.removeItem(ATTRIBUTION_STORAGE_KEY);
-    console.log('[Attribution] Attribution data cleared from AsyncStorage');
+    logger.info('Attribution data cleared from AsyncStorage', { feature: 'AttributionService' });
   } catch (error) {
-    console.error('[Attribution] Error clearing attribution data:', error);
+    logger.error('Error clearing attribution data', error, { feature: 'AttributionService' });
     throw error;
   }
 }
@@ -76,9 +77,9 @@ export async function linkAttributionToUser(userId: string, attributionData: Att
       attribution: attributionData,
       updatedAt: new Date().toISOString(),
     });
-    console.log('[Attribution] Attribution data linked to user:', userId, attributionData);
+    logger.info('Attribution data linked to user', { feature: 'AttributionService', userId, attributionData });
   } catch (error) {
-    console.error('[Attribution] Error linking attribution to user:', error);
+    logger.error('Error linking attribution to user', error, { feature: 'AttributionService', userId });
     throw error;
   }
 }
@@ -91,7 +92,7 @@ export async function isFirstLaunch(): Promise<boolean> {
     const value = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
     return value === null;
   } catch (error) {
-    console.error('[Attribution] Error checking first launch:', error);
+    logger.error('Error checking first launch', error, { feature: 'AttributionService' });
     return false;
   }
 }
@@ -102,9 +103,9 @@ export async function isFirstLaunch(): Promise<boolean> {
 export async function markAppAsLaunched(): Promise<void> {
   try {
     await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
-    console.log('[Attribution] App marked as launched');
+    logger.info('App marked as launched', { feature: 'AttributionService' });
   } catch (error) {
-    console.error('[Attribution] Error marking app as launched:', error);
+    logger.error('Error marking app as launched', error, { feature: 'AttributionService' });
     throw error;
   }
 }
@@ -117,7 +118,7 @@ export async function getAttributionEmail(): Promise<string | null> {
     const attributionData = await getAttributionData();
     return attributionData?.email || null;
   } catch (error) {
-    console.error('[Attribution] Error getting attribution email:', error);
+    logger.error('Error getting attribution email', error, { feature: 'AttributionService' });
     return null;
   }
 }
