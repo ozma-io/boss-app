@@ -7,26 +7,63 @@ alwaysApply: true
 ## Tech Stack
 React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functions)
 
-## Key Rules
-- TypeScript strict typing required
-- Functional components with hooks
-- Expo Router file-based routing
-- User data scoped to `userId` (Firebase rules enforce `request.auth.uid === userId`)
-- Two-step permission flows (custom UI + system prompt) for notifications and tracking transparency (pre-auth capable)
+## Key Architecture
+- **Expo Development Build** - production-like environment with full native module support
+- **Expo Router** - file-based navigation
+- **TypeScript strict typing** - required for all code
+- **Functional components** with hooks
 
-## Run Locally
-- `npm start` — dev server (choose platform)
-- `npm run web` — web browser
-- `npm run ios` — iOS simulator
-
-## Documentation
-- **Quick start**: `README.md`
-- **Setup guide**: `SETUP.md`
-- **All docs**: `docs/README.md` (Firebase, Firestore, Auth)
+## Code Style
+- **testID attributes** - all UI elements must have testID attributes for easier debugging in browser DevTools
+  - Use kebab-case naming: `"profile-section"`, `"sign-out-button"`, `"avatar-image"`
+  - Make names descriptive and self-explanatory
+  - Include context when helpful: `"main-profile-section"`, `"auth-email-input"`
+  - In browser DevTools, testID appears as `data-testid` attribute
+- **Amplitude events** - all custom events MUST follow naming convention rules in `docs/amplitude-naming-convention.md` (snake_case, feature prefixes, specific names)
+- **Logging** - use `services/logger.service.ts` instead of console.log/error/warn/etc. But not in cloud functions because it will be running in the cloud.
 
 ## Project Structure
-- `app/` — Screens (Expo Router)
-- `components/` — Reusable UI
-- `services/` — Firebase services
-- `firestore/` — Schemas & migrations
-- `functions/` — Cloud Functions
+- `app/` - routing and screens
+- `components/` - reusable UI components
+- `services/` - Firebase services (auth, firestore, notifications)
+- `types/` - TypeScript type definitions
+- `utils/` - helper functions
+- `functions/` - Firebase Cloud Functions
+- `firestore/` - Firebase config, database migrations (run from root: `npx tsx firestore/migrations/run-migration.ts <name> --yes`)
+
+## Firebase Data Model
+- Users: `/users/{userId}`
+- Bosses: `/users/{userId}/bosses/{bossId}`
+- Entries: `/users/{userId}/bosses/{bossId}/entries/{entryId}`
+- Entry types: `note`, `survey`, `interaction`, `fact`
+
+### Data Organization Principle
+**Timeline (Entries)** — frequently changing data (daily/weekly assessments):
+- Current mood, stress level today, confidence this week
+- Use `FactEntry` type for trackable metrics that change over time
+
+**User/Boss Documents** — stable characteristics (rarely change):
+- Position, department, goal, communication preferences, working hours
+- Store as fields directly in User or Boss documents
+
+## Security
+- User data scoped to `userId` (Firebase rules enforce `request.auth.uid === userId`)
+- Never expose other users' data
+
+## Run Locally
+- `npm run dev` — dev server (choose platform)
+- `npm run web` — web browser
+- `npm run ios` — iOS simulator (builds Development Build first time, ~5-10 min)
+- `npm run android` — Android emulator (builds Development Build first time, ~5-10 min)
+
+## Development Notes
+- JavaScript changes reload instantly via hot reload
+- Rebuild only needed when adding native modules or changing app.json
+- **Rebuild iOS**: `cd ios && pod install && cd .. && npx expo run:ios`
+- **Rebuild Android**: `npx expo run:android`
+- Type all props, state, and function returns
+- Handle authentication state properly
+
+## Find Details In
+- **Tech stack & data model**: `README.md`
+- **Setup instructions**: `SETUP.md`
