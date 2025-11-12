@@ -70,11 +70,17 @@ export default function SubscriptionScreen() {
         onPress={() => setSelectedPlan(selectedPlan === plan.type ? null : plan.type)}
         testID={`plan-card-${plan.type}`}
       >
-        {isSelected && (
-          <View style={styles.checkmarkContainer} testID={`plan-checkmark-${plan.type}`}>
+        <View 
+          style={[
+            styles.checkmarkContainer,
+            !isSelected && styles.checkmarkContainerUnselected
+          ]} 
+          testID={`plan-checkmark-${plan.type}`}
+        >
+          {isSelected && (
             <FontAwesome name="check" size={12} color="#fff" testID={`plan-checkmark-icon-${plan.type}`} />
-          </View>
-        )}
+          )}
+        </View>
         <View style={styles.planHeader} testID={`plan-header-${plan.type}`}>
           <Text style={styles.planTitle} testID={`plan-title-${plan.type}`}>{getPlanTitle(plan.type)}</Text>
         </View>
@@ -334,6 +340,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
+  },
+  checkmarkContainerUnselected: {
+    backgroundColor: '#F5F1E8',
   },
 });
 
