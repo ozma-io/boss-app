@@ -13,6 +13,18 @@ const FACEBOOK_APP_NAME = 'The Boss App';
 // End of duplicated section
 // ============================================================================
 
+// Sentry constants (must be defined here for Expo config)
+// Expo CLI can't import from app code at build time
+
+// ============================================================================
+// ⚠️ DUPLICATED in constants/sentry.config.ts - keep both in sync!
+// ============================================================================
+const SENTRY_ORG = 'ozma-inc';
+const SENTRY_PROJECT = 'the-boss-app';
+// ============================================================================
+// End of duplicated section
+// ============================================================================
+
 const config: ExpoConfig = {
   name: 'The Boss App',
   slug: 'boss-app',
@@ -77,8 +89,8 @@ const config: ExpoConfig = {
     [
       '@sentry/react-native/expo',
       {
-        organization: 'ozma-inc',
-        project: 'the-boss-app',
+        organization: SENTRY_ORG,
+        project: SENTRY_PROJECT,
       },
     ],
     [
