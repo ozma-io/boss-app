@@ -34,7 +34,16 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 - Users: `/users/{userId}`
 - Bosses: `/users/{userId}/bosses/{bossId}`
 - Entries: `/users/{userId}/bosses/{bossId}/entries/{entryId}`
-- Entry types: `note`, `survey`, `interaction`
+- Entry types: `note`, `survey`, `interaction`, `fact`
+
+### Data Organization Principle
+**Timeline (Entries)** — frequently changing data (daily/weekly assessments):
+- Current mood, stress level today, confidence this week
+- Use `FactEntry` type for trackable metrics that change over time
+
+**User/Boss Documents** — stable characteristics (rarely change):
+- Position, department, goal, communication preferences, working hours
+- Store as fields directly in User or Boss documents
 
 ## Security
 - User data scoped to `userId` (Firebase rules enforce `request.auth.uid === userId`)

@@ -72,7 +72,19 @@ firebase deploy               # Deploy everything
 
 **User data scoping:** All paths include `{userId}` - Firebase Security Rules enforce `request.auth.uid === userId`
 
-**Entry types:** `note`, `survey`, `interaction` - flexible timeline history
+**Entry types:** `note`, `survey`, `interaction`, `fact` - flexible timeline history
+
+### Data Organization Principle
+
+**Timeline (Entries)** — frequently changing data (daily/weekly assessments):
+- Current mood, stress level today, confidence this week
+- Use `FactEntry` type for trackable metrics that change over time
+- Examples: daily stress assessment, weekly confidence check-in
+
+**User/Boss Documents** — stable characteristics (rarely change):
+- Position, department, goal, communication preferences, working hours
+- Store as fields directly in User or Boss documents
+- Examples: job title, team, career goal, boss's management style
 
 📖 **For detailed schemas and examples, see [docs/firestore-management.md](./docs/firestore-management.md)**
 
