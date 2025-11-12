@@ -10,16 +10,72 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+    
+    // Validation functions for required fields
+    
+    /**
+     * Check if User document has all required fields
+     * Required: email, createdAt
+     */
+    function hasRequiredUserFields(data) {
+      return data.keys().hasAll(['email', 'createdAt']);
+    }
+    
+    /**
+     * Check if Boss document has all required fields
+     * Required: name, position, department, startedAt, createdAt, updatedAt
+     */
+    function hasRequiredBossFields(data) {
+      return data.keys().hasAll([
+        'name',
+        'position',
+        'department',
+        'startedAt',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+    
+    /**
+     * Ensure required fields are not deleted during update
+     * Checks that all required fields still exist in the updated document
+     */
+    function requiredFieldsNotDeleted(requiredFields, afterData) {
+      return afterData.keys().hasAll(requiredFields);
+    }
 
     // Users collection - users can only access their own data
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      // Create: must have required fields
+      allow create: if isOwner(userId) && hasRequiredUserFields(request.resource.data);
+      
+      // Update: required fields must not be deleted
+      allow update: if isOwner(userId) 
+                    && requiredFieldsNotDeleted(['email', 'createdAt'], request.resource.data);
+      
+      // Read and delete: owner only
+      allow read, delete: if isOwner(userId);
       
       // Bosses subcollection
       match /bosses/{bossId} {
-        allow read, write: if isOwner(userId);
+        // Create: must have required fields
+        allow create: if isOwner(userId) && hasRequiredBossFields(request.resource.data);
         
-        // Entries subcollection (notes, surveys, interactions)
+        // Update: required fields must not be deleted
+        allow update: if isOwner(userId) 
+                      && requiredFieldsNotDeleted([
+                        'name',
+                        'position',
+                        'department',
+                        'startedAt',
+                        'createdAt',
+                        'updatedAt'
+                      ], request.resource.data);
+        
+        // Read and delete: owner only
+        allow read, delete: if isOwner(userId);
+        
+        // Entries subcollection (notes, surveys, interactions, facts)
         match /entries/{entryId} {
           allow read, write: if isOwner(userId);
         }

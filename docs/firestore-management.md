@@ -104,7 +104,9 @@ await setDoc(doc(db, 'users', userId, 'bosses', bossId), newBoss);
 Each schema has a version number:
 
 ```typescript
-export const BOSS_SCHEMA_VERSION = 1;
+export const USER_SCHEMA_VERSION = 3;
+export const BOSS_SCHEMA_VERSION = 2;
+export const ENTRY_SCHEMA_VERSION = 2;
 ```
 
 Increment this when making breaking changes. Optionally store version in documents:
@@ -113,6 +115,205 @@ Increment this when making breaking changes. Optionally store version in documen
 {
   ...bossData,
   _schemaVersion: BOSS_SCHEMA_VERSION
+}
+```
+
+---
+
+## 🎯 Dynamic Custom Fields
+
+The Boss App uses a **minimal core + dynamic custom fields** architecture.
+
+📖 **For complete documentation, see [dynamic-fields-system.md](./dynamic-fields-system.md)**
+
+### Core Concept
+
+**Three types of fields:**
+
+1. **Core Fields** - Cannot be deleted (email, name, createdAt, etc.)
+2. **Technical Fields** - System-managed (fcmToken, attribution, etc.)
+3. **Custom Fields** - User-deletable business data (all with `custom_` prefix)
+
+### Custom Fields Pattern
+
+All business data uses the `custom_` prefix:
+
+```typescript
+{
+  // Core fields
+  name: "Sarah Johnson",
+  position: "CTO",
+  createdAt: "2025-01-15T10:00:00Z",
+  
+  // Custom fields (deletable)
+  custom_age: "35-44",
+  custom_oneOnOne: "Every 2 weeks",
+  custom_availability: "Sometimes available",
+  
+  // Field metadata
+  _fieldsMeta: {
+    custom_age: {
+      label: "Boss Age",
+      type: "select",
+      category: "Demographics",
+      source: "onboarding_funnel",
+      createdAt: "2025-01-15T10:00:00Z",
+      options: ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
+    },
+    custom_oneOnOne: {
+      label: "One-on-One Meetings",
+      type: "select",
+      category: "Communication",
+      source: "onboarding_funnel",
+      createdAt: "2025-01-15T10:00:00Z"
+    }
+  }
+}
+```
+
+### Required Fields
+
+**User:** `email`, `createdAt`  
+**Boss:** `name`, `position`, `department`, `startedAt`, `createdAt`, `updatedAt`
+
+Protected by Firestore security rules.
+
+### Adding Custom Fields
+
+```typescript
+import { updateDoc, doc } from 'firebase/firestore';
+
+await updateDoc(bossRef, {
+  custom_petName: "Max",
+  [`_fieldsMeta.custom_petName`]: {
+    label: "Pet Name",
+    type: "text",
+    category: "Personal",
+    source: "user_added",
+    createdAt: new Date().toISOString()
+  },
+  updatedAt: new Date().toISOString()
+});
+```
+
+### Removing Custom Fields
+
+```typescript
+import { updateDoc, deleteField } from 'firebase/firestore';
+
+await updateDoc(bossRef, {
+  custom_petName: deleteField(),
+  [`_fieldsMeta.custom_petName`]: deleteField(),
+  updatedAt: new Date().toISOString()
+});
+```
+
+### Field Presets
+
+Pre-configured fields for web funnel integration:
+
+```typescript
+import { BOSS_FUNNEL_FIELD_PRESETS } from '@/firestore/schemas/field-presets';
+
+// Get preset configuration
+const preset = BOSS_FUNNEL_FIELD_PRESETS.custom_oneOnOne;
+// { label: "One-on-One Meetings", type: "select", category: "Communication", options: [...] }
+```
+
+---
+
+## 📈 FactEntry Pattern
+
+**FactEntry** is a new entry type for tracking single assessments that change over time.
+
+### When to Use FactEntry
+
+Use FactEntry for:
+- Frequently changing states (stress level, mood)
+- Time-series assessments (weekly confidence check-ins)
+- Historical tracking (how workload changed over time)
+
+Don't use for:
+- Stable characteristics (store in User/Boss document)
+- One-time events (use Note or Interaction entry)
+
+### FactEntry Schema
+
+```typescript
+{
+  type: 'fact',
+  timestamp: string,           // When recorded
+  factKey: string,             // e.g., "custom_stressLevel"
+  factLabel: string,           // e.g., "Stress Level"
+  value: string | number | string[],
+  category?: string,           // e.g., "Emotions"
+  source?: string,             // e.g., "onboarding_funnel", "weekly_survey"
+  createdAt?: string,
+  updatedAt?: string
+}
+```
+
+### Example: Recording Stress Level
+
+```typescript
+import { addDoc, collection } from 'firebase/firestore';
+
+const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
+
+await addDoc(entriesRef, {
+  type: 'fact',
+  timestamp: new Date().toISOString(),
+  factKey: 'custom_stressLevel',
+  factLabel: 'Stress Level',
+  value: 'Quite stressful',
+  category: 'Emotions',
+  source: 'weekly_survey',
+  createdAt: new Date().toISOString()
+});
+```
+
+### Querying Facts
+
+```typescript
+import { query, collection, where, orderBy, getDocs } from 'firebase/firestore';
+
+// Get all stress level assessments, most recent first
+const q = query(
+  collection(db, 'users', userId, 'bosses', bossId, 'entries'),
+  where('type', '==', 'fact'),
+  where('factKey', '==', 'custom_stressLevel'),
+  orderBy('timestamp', 'desc')
+);
+
+const snapshot = await getDocs(q);
+snapshot.forEach(doc => {
+  const fact = doc.data();
+  console.log(`${fact.timestamp}: ${fact.value}`);
+});
+```
+
+### Web Funnel Integration
+
+When user completes funnel, create separate FactEntry for each assessment:
+
+```typescript
+const timelineFacts = [
+  { key: 'custom_stressLevel', label: 'Stress Level', value: 'Quite stressful', category: 'Emotions' },
+  { key: 'custom_confidenceLevel', label: 'Confidence Level', value: 'Often doubt myself', category: 'Emotions' },
+  { key: 'custom_workload', label: 'Workload', value: 'Sometimes overloaded', category: 'Workload' },
+];
+
+for (const fact of timelineFacts) {
+  await addDoc(entriesRef, {
+    type: 'fact',
+    timestamp: new Date().toISOString(),
+    factKey: fact.key,
+    factLabel: fact.label,
+    value: fact.value,
+    category: fact.category,
+    source: 'onboarding_funnel',
+    createdAt: new Date().toISOString()
+  });
 }
 ```
 

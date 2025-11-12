@@ -28,7 +28,7 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 - `types/` - TypeScript type definitions
 - `utils/` - helper functions
 - `functions/` - Firebase Cloud Functions
-- `firestore/` - Firebase config, database migrations stored as code (see `firestore/migrations/README.md`)
+- `firestore/` - Firebase config, database migrations (run from root: `npx tsx firestore/migrations/run-migration.ts <name> --yes`)
 
 ## Firebase Data Model
 - Users: `/users/{userId}`

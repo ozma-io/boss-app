@@ -5,16 +5,17 @@
  * These types define the structure of documents stored in Firestore.
  */
 
-export * from './user.schema';
 export * from './boss.schema';
 export * from './entry.schema';
+export * from './field-presets';
+export * from './user.schema';
 
 /**
  * Schema versions - increment when making breaking changes
  */
 export const SCHEMA_VERSIONS = {
-  user: 1,
-  boss: 1,
-  entry: 1,
+  user: 3,
+  boss: 2,
+  entry: 2,
 } as const;
 

@@ -16,17 +16,10 @@ Migration scripts for transforming existing Firestore data.
 
 ## Running Migrations
 
+**Run from project root** (where `.env` file is located):
+
 ```bash
-cd firestore/migrations
-
-# Install dependencies (first time only)
-npm install
-
-# Run migration
-npm run migrate -- YYYY-MM-DD-migration-name
-
-# Dry run (no changes)
-npm run migrate -- YYYY-MM-DD-migration-name --dry-run
+npx tsx firestore/migrations/run-migration.ts YYYY-MM-DD-migration-name --yes
 ```
 
 ## Creating Migrations
