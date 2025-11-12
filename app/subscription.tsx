@@ -65,12 +65,16 @@ export default function SubscriptionScreen() {
         style={({ pressed }) => [
           styles.planCard,
           isActive && styles.activePlanCard,
-          isSelected && styles.planCardSelected,
           pressed && styles.buttonPressed,
         ]}
         onPress={() => setSelectedPlan(selectedPlan === plan.type ? null : plan.type)}
         testID={`plan-card-${plan.type}`}
       >
+        {isSelected && (
+          <View style={styles.checkmarkContainer} testID={`plan-checkmark-${plan.type}`}>
+            <FontAwesome name="check" size={12} color="#fff" testID={`plan-checkmark-icon-${plan.type}`} />
+          </View>
+        )}
         <View style={styles.planHeader} testID={`plan-header-${plan.type}`}>
           <Text style={styles.planTitle} testID={`plan-title-${plan.type}`}>{getPlanTitle(plan.type)}</Text>
         </View>
@@ -227,18 +231,16 @@ const styles = StyleSheet.create({
   },
   plansContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     gap: 12,
   },
   planCard: {
-    flex: 1,
+    width: 170,
+    height: 160,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-  },
-  planCardSelected: {
-    borderWidth: 2,
-    borderColor: '#333',
+    position: 'relative',
   },
   planHeader: {
     flexDirection: 'row',
@@ -320,6 +322,18 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.7,
+  },
+  checkmarkContainer: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
 });
 
