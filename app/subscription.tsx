@@ -4,12 +4,13 @@ import { SubscriptionPlan } from '@/types';
 import { mockSubscriptionPlans, mockUserSubscription } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -56,23 +57,22 @@ export default function SubscriptionScreen() {
       }
     };
 
+    const isSelected = selectedPlan === plan.type;
+
     return (
-      <View
+      <Pressable
         key={plan.type}
-        style={[
+        style={({ pressed }) => [
           styles.planCard,
           isActive && styles.activePlanCard,
+          isSelected && styles.planCardSelected,
+          pressed && styles.buttonPressed,
         ]}
+        onPress={() => setSelectedPlan(selectedPlan === plan.type ? null : plan.type)}
         testID={`plan-card-${plan.type}`}
       >
         <View style={styles.planHeader} testID={`plan-header-${plan.type}`}>
           <Text style={styles.planTitle} testID={`plan-title-${plan.type}`}>{getPlanTitle(plan.type)}</Text>
-          {isActive && (
-            <View style={styles.activeBadge} testID={`plan-active-badge-${plan.type}`}>
-              <FontAwesome name="check" size={12} color="#333" testID={`plan-active-icon-${plan.type}`} />
-              <Text style={styles.activeBadgeText} testID={`plan-active-text-${plan.type}`}>Active</Text>
-            </View>
-          )}
         </View>
         <View style={styles.planPricing} testID={`plan-pricing-${plan.type}`}>
           <Text style={styles.planPrice} testID={`plan-price-${plan.type}`}>${plan.price}</Text>
@@ -84,7 +84,7 @@ export default function SubscriptionScreen() {
             <Text style={styles.trialText} testID={`plan-trial-text-${plan.type}`}>Free {plan.trialDays} days trail</Text>
           </View>
         )}
-      </View>
+      </Pressable>
     );
   };
 
@@ -125,9 +125,11 @@ export default function SubscriptionScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.changePlanButton,
-            pressed && styles.buttonPressed
+            !selectedPlan && styles.changePlanButtonDisabled,
+            pressed && selectedPlan && styles.buttonPressed
           ]}
-          onPress={handleChangePlan}
+          onPress={selectedPlan ? handleChangePlan : undefined}
+          disabled={!selectedPlan}
           testID="change-plan-button"
         >
           <Text style={styles.changePlanButtonText} testID="change-plan-button-text">Change plan</Text>
@@ -234,6 +236,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
+  planCardSelected: {
+    borderWidth: 2,
+    borderColor: '#333',
+  },
   planHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -291,6 +297,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
+  },
+  changePlanButtonDisabled: {
+    opacity: 0.7,
   },
   changePlanButtonText: {
     color: '#fff',
