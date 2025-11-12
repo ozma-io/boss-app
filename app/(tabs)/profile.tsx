@@ -3,7 +3,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { showIntercomMessenger } from '@/services/intercom.service';
-import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
@@ -297,15 +296,6 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
         </View>
-
-        <View style={styles.footer} testID="footer">
-          <Pressable onPress={openPrivacyPolicy} testID="footer-privacy-button">
-            <Text style={styles.footerLink} testID="footer-privacy-text">Privacy policy</Text>
-          </Pressable>
-          <Pressable onPress={openTermsOfService} testID="footer-terms-button">
-            <Text style={styles.footerLink} testID="footer-terms-text">Terms of service</Text>
-          </Pressable>
-        </View>
       </ScrollView>
 
       <FloatingChatButton />
@@ -485,16 +475,6 @@ const styles = StyleSheet.create({
   settingsItemText: {
     fontSize: 16,
     color: '#333',
-    fontFamily: 'Manrope-Regular',
-  },
-  footer: {
-    marginHorizontal: 20,
-    marginBottom: 24,
-  },
-  footerLink: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
     fontFamily: 'Manrope-Regular',
   },
 });

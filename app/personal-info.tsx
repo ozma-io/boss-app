@@ -2,14 +2,17 @@ import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
+import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PersonalInfoScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(mockUserProfile.name);
   const [isEditingName, setIsEditingName] = useState(false);
 
@@ -52,67 +55,78 @@ export default function PersonalInfoScreen() {
   }, [isEditingName, name]);
 
   return (
-    <ScrollView style={styles.container} testID="personal-info-scroll">
-      <View style={styles.content} testID="personal-info-content">
-        <View style={styles.infoBlock}>
+    <View style={styles.container} testID="personal-info-container">
+      <ScrollView style={styles.scrollView} testID="personal-info-scroll">
+        <View style={styles.content} testID="personal-info-content">
+          <View style={styles.infoBlock}>
+            <Pressable
+              style={styles.infoItem}
+              onPress={() => setIsEditingName(true)}
+              testID="info-item-name"
+            >
+              <View style={styles.iconContainer} testID="icon-container-name">
+                <FontAwesome name="user" size={20} color="#666" testID="icon-name" />
+              </View>
+              <View style={styles.infoContent} testID="info-content-name">
+                <Text style={styles.label} testID="label-name">Name</Text>
+                {isEditingName ? (
+                  <TextInput
+                    style={[styles.valueInput, { outlineStyle: 'none' } as any]}
+                    value={name}
+                    onChangeText={setName}
+                    onBlur={handleBlurName}
+                    autoFocus
+                    testID="input-name"
+                  />
+                ) : (
+                  <Text style={styles.value} testID="value-name">{name}</Text>
+                )}
+              </View>
+            </Pressable>
+
+            <View style={styles.infoItem} testID="info-item-email">
+              <View style={styles.iconContainer} testID="icon-container-email">
+                <FontAwesome name="envelope" size={20} color="#666" testID="icon-email" />
+              </View>
+              <View style={styles.infoContent} testID="info-content-email">
+                <Text style={styles.label} testID="label-email">Email</Text>
+                <Text style={styles.value} testID="value-email">{user?.email || mockUserProfile.email}</Text>
+              </View>
+            </View>
+
+            <View style={[styles.infoItem, styles.lastInfoItem]} testID="info-item-joined">
+              <View style={styles.iconContainer} testID="icon-container-joined">
+                <FontAwesome name="calendar" size={20} color="#666" testID="icon-joined" />
+              </View>
+              <View style={styles.infoContent} testID="info-content-joined">
+                <Text style={styles.label} testID="label-joined">Joined at</Text>
+                <Text style={styles.value} testID="value-joined">{mockUserProfile.joinedAt}</Text>
+              </View>
+            </View>
+          </View>
+
           <Pressable
-            style={styles.infoItem}
-            onPress={() => setIsEditingName(true)}
-            testID="info-item-name"
+            style={({ pressed }) => [
+              styles.signOutButton,
+              pressed && styles.buttonPressed
+            ]}
+            onPress={handleSignOut}
+            testID="sign-out-button"
           >
-            <View style={styles.iconContainer} testID="icon-container-name">
-              <FontAwesome name="user" size={20} color="#666" testID="icon-name" />
-            </View>
-            <View style={styles.infoContent} testID="info-content-name">
-              <Text style={styles.label} testID="label-name">Name</Text>
-              {isEditingName ? (
-                <TextInput
-                  style={[styles.valueInput, { outlineStyle: 'none' } as any]}
-                  value={name}
-                  onChangeText={setName}
-                  onBlur={handleBlurName}
-                  autoFocus
-                  testID="input-name"
-                />
-              ) : (
-                <Text style={styles.value} testID="value-name">{name}</Text>
-              )}
-            </View>
+            <Text style={styles.signOutButtonText} testID="sign-out-button-text">Sign out</Text>
           </Pressable>
-
-          <View style={styles.infoItem} testID="info-item-email">
-            <View style={styles.iconContainer} testID="icon-container-email">
-              <FontAwesome name="envelope" size={20} color="#666" testID="icon-email" />
-            </View>
-            <View style={styles.infoContent} testID="info-content-email">
-              <Text style={styles.label} testID="label-email">Email</Text>
-              <Text style={styles.value} testID="value-email">{user?.email || mockUserProfile.email}</Text>
-            </View>
-          </View>
-
-          <View style={[styles.infoItem, styles.lastInfoItem]} testID="info-item-joined">
-            <View style={styles.iconContainer} testID="icon-container-joined">
-              <FontAwesome name="calendar" size={20} color="#666" testID="icon-joined" />
-            </View>
-            <View style={styles.infoContent} testID="info-content-joined">
-              <Text style={styles.label} testID="label-joined">Joined at</Text>
-              <Text style={styles.value} testID="value-joined">{mockUserProfile.joinedAt}</Text>
-            </View>
-          </View>
         </View>
+      </ScrollView>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.signOutButton,
-            pressed && styles.buttonPressed
-          ]}
-          onPress={handleSignOut}
-          testID="sign-out-button"
-        >
-          <Text style={styles.signOutButtonText} testID="sign-out-button-text">Sign out</Text>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 40) }]} testID="footer">
+        <Pressable onPress={openPrivacyPolicy} testID="footer-privacy-button">
+          <Text style={styles.footerLink} testID="footer-privacy-text">Privacy policy</Text>
+        </Pressable>
+        <Pressable onPress={openTermsOfService} testID="footer-terms-button">
+          <Text style={styles.footerLink} testID="footer-terms-text">Terms of service</Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -120,6 +134,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: AppColors.background,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 16,
@@ -185,6 +202,18 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.7,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: AppColors.background,
+  },
+  footerLink: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'Manrope-Regular',
   },
 });
 
