@@ -105,6 +105,9 @@ export interface UserProfile {
   createdAt: string;
   updatedAt?: string;
   
+  // Subscription data
+  subscription?: UserSubscription;
+  
   // Custom fields for profile data
   custom_position?: string;
   custom_department?: string;
@@ -175,22 +178,65 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-// Subscription Plan
-export type SubscriptionPlanType = 'monthly' | 'semi-annual' | 'quarterly';
+// Subscription types (aligned with UserSchema)
+export type SubscriptionStatus = 'none' | 'active' | 'trial' | 'cancelled' | 'expired' | 'grace_period';
+export type SubscriptionTier = 'basic' | 'pro' | 'ultra' | 'enterprise';
+export type SubscriptionBillingPeriod = 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'lifetime';
+export type SubscriptionProvider = 'none' | 'stripe' | 'apple' | 'google';
 
-export interface SubscriptionPlan {
-  type: SubscriptionPlanType;
-  price: number;
-  billingPeriod: string;
-  hasTrial?: boolean;
-  trialDays?: number;
+// User subscription data (stored in Firestore)
+export interface UserSubscription {
+  status: SubscriptionStatus;
+  tier?: SubscriptionTier;
+  billingPeriod?: SubscriptionBillingPeriod;
+  provider: SubscriptionProvider;
+  
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  trialEnd?: string;
+  cancelledAt?: string;
+  
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  stripePriceId?: string;
+  
+  appleOriginalTransactionId?: string;
+  appleTransactionId?: string;
+  appleProductId?: string;
+  appleReceiptData?: string;
+  appleEnvironment?: 'Sandbox' | 'Production';
+  
+  googlePlayPurchaseToken?: string;
+  googlePlayProductId?: string;
+  
+  createdAt?: string;
+  updatedAt?: string;
+  lastVerifiedAt?: string;
+  
+  priceAmount?: number;
+  priceCurrency?: string;
+  billingCycleMonths?: number;
+  
+  migratedFrom?: 'stripe' | 'apple';
+  migratedAt?: string;
+  
+  gracePeriodEnd?: string;
 }
 
-export interface UserSubscription {
-  currentPlan: SubscriptionPlanType;
-  status: 'active' | 'inactive' | 'cancelled';
-  nextPaymentDate: string;
-  price: number;
+// Subscription plan configuration (from Remote Config)
+export interface SubscriptionPlanConfig {
+  tier: SubscriptionTier;
+  billingPeriod: SubscriptionBillingPeriod;
+  priceAmount: number;
+  priceCurrency: string;
+  billingCycleMonths: number;
+  appleProductId: string;
+  googlePlayProductId: string;
+  stripeProductId?: string;
+  enabled: boolean;
+  trial?: {
+    days: number;
+  };
   savings?: number;
 }
 

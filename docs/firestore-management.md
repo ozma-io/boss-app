@@ -536,6 +536,79 @@ firebase firestore:databases:create --region=us-central1
 
 ---
 
+## 💳 Subscription System
+
+The Boss App uses a scalable subscription system that supports multiple tiers and billing periods.
+
+### Architecture
+
+**User Subscription Data (Firestore):**
+- Stored in `/users/{userId}/subscription`
+- Contains user's active subscription details
+- Tracks status, tier, billing period, payment provider
+- Supports Apple, Google Play, and Stripe
+
+**Subscription Plans Configuration (Remote Config):**
+- Plans defined in `remoteconfig.template.json`
+- Deployed to Firebase Remote Config
+- Can be updated without app release
+- Currently only 'basic' tier available (pro, ultra, enterprise planned for future)
+
+### Current Plans
+
+All plans are for the 'basic' tier:
+- **Monthly**: $19/month
+- **Quarterly**: $53/3 months (save $4)
+- **Semiannual**: $99/6 months (save $15, 7 days trial)
+- **Annual**: $180/year (save $48, 7 days trial)
+
+### User Subscription Schema
+
+```typescript
+subscription?: {
+  status: 'none' | 'active' | 'trial' | 'cancelled' | 'expired' | 'grace_period';
+  tier?: 'basic' | 'pro' | 'ultra' | 'enterprise';
+  billingPeriod?: 'monthly' | 'quarterly' | 'semiannual' | 'annual';
+  provider: 'none' | 'stripe' | 'apple' | 'google';
+  
+  // Dates
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  trialEnd?: string;
+  
+  // Provider-specific fields
+  appleProductId?: string;
+  googlePlayProductId?: string;
+  stripeCustomerId?: string;
+  
+  // Price info
+  priceAmount?: number;
+  priceCurrency?: string;
+  billingCycleMonths?: number;
+}
+```
+
+### Deployment
+
+**Update subscription plans:**
+
+```bash
+# Edit remoteconfig.template.json
+# Then deploy:
+firebase deploy --only remoteconfig
+```
+
+**Plans are versioned in git** - all changes to pricing go through code review.
+
+### Important Notes
+
+- **Apple Review Compliance**: Stripe subscriptions are hidden in iOS app UI
+- **Firebase as Source of Truth**: All subscription data stored in Firestore
+- **Only Basic tier**: Pro/Ultra tiers are in schema but not yet implemented
+- **Multi-platform**: Supports Apple, Google Play, and Stripe payment providers
+
+---
+
 ## 📚 Resources
 
 - [Firestore Documentation](https://firebase.google.com/docs/firestore)

@@ -82,12 +82,72 @@ export interface UserSchema {
   
   // === SUBSCRIPTION DATA (system-managed) ===
   
+  /**
+   * Subscription information
+   * 
+   * CURRENT STATE (Nov 2025):
+   * - Only 'basic' tier is available
+   * - 'pro', 'ultra', 'enterprise' tiers are planned for future
+   * - All billing periods supported: monthly, quarterly, semiannual, annual
+   * 
+   * IMPORTANT for Apple Review:
+   * - Stripe subscriptions are hidden from iOS app UI
+   * - iOS shows only Apple In-App Purchase options
+   * - Web funnels can use Stripe (user never sees this in app)
+   */
   subscription?: {
-    status?: 'active' | 'cancelled' | 'expired' | 'trial';
-    plan?: 'monthly' | 'quarterly' | 'semiannual' | 'annual';
-    currentPeriodEnd?: string; // ISO 8601 timestamp
+    // === CORE STATUS ===
+    status: 'none' | 'active' | 'trial' | 'cancelled' | 'expired' | 'grace_period';
+    
+    // === SUBSCRIPTION TIER ===
+    // Currently only 'basic' is implemented
+    // 'pro', 'ultra', 'enterprise' planned for future
+    tier?: 'basic' | 'pro' | 'ultra' | 'enterprise';
+    
+    // === BILLING PERIOD ===
+    billingPeriod?: 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'lifetime';
+    
+    // === PROVIDER INFO ===
+    provider: 'none' | 'stripe' | 'apple' | 'google';
+    
+    // === PERIOD & DATES ===
+    currentPeriodStart?: string;  // ISO 8601
+    currentPeriodEnd?: string;    // ISO 8601
+    trialEnd?: string;            // ISO 8601
+    cancelledAt?: string;         // ISO 8601
+    
+    // === STRIPE SPECIFIC (hidden from iOS app) ===
     stripeCustomerId?: string;
     stripeSubscriptionId?: string;
+    stripePriceId?: string;       // e.g., 'price_basic_monthly'
+    
+    // === APPLE SPECIFIC ===
+    appleOriginalTransactionId?: string;
+    appleTransactionId?: string;
+    appleProductId?: string;       // e.g., 'com.ozmaio.bossapp.basic.monthly'
+    appleReceiptData?: string;
+    appleEnvironment?: 'Sandbox' | 'Production';
+    
+    // === GOOGLE PLAY SPECIFIC ===
+    googlePlayPurchaseToken?: string;
+    googlePlayProductId?: string;
+    
+    // === METADATA ===
+    createdAt?: string;           // ISO 8601
+    updatedAt?: string;           // ISO 8601
+    lastVerifiedAt?: string;      // ISO 8601 - when last verified with provider
+    
+    // === PRICE INFO (for UI display) ===
+    priceAmount?: number;         // 19, 53, 99, 180
+    priceCurrency?: string;       // 'USD', 'EUR'
+    billingCycleMonths?: number;  // 1, 3, 6, 12, null for lifetime
+    
+    // === MIGRATION TRACKING ===
+    migratedFrom?: 'stripe' | 'apple';
+    migratedAt?: string;          // ISO 8601
+    
+    // === GRACE PERIOD (for failed payments) ===
+    gracePeriodEnd?: string;      // ISO 8601
   };
   
   // === CUSTOM FIELDS (user-deletable business data) ===

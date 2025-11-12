@@ -1,4 +1,4 @@
-import { Boss, ChatMessage, SubscriptionPlan, TimelineEntry, UserGoal, UserMetrics, UserSubscription } from '@/types';
+import { Boss, ChatMessage, TimelineEntry, UserGoal, UserMetrics } from '@/types';
 
 // Mock boss data with all attributes
 export const mockBoss: Boss = {
@@ -7,6 +7,8 @@ export const mockBoss: Boss = {
   position: 'CTO',
   department: 'Engineering',
   startedAt: '2024-09-01',
+  createdAt: '2024-09-01T10:00:00Z',
+  updatedAt: '2025-11-12T10:00:00Z',
   birthday: 'March 15',
   managementStyle: 'Collaborative and empowering',
   currentMood: 'Focused and optimistic',
@@ -173,33 +175,4 @@ export const mockChatMessages: ChatMessage[] = [
   },
 ];
 
-// Mock subscription plans
-export const mockSubscriptionPlans: SubscriptionPlan[] = [
-  {
-    type: 'monthly',
-    price: 19,
-    billingPeriod: 'per month',
-  },
-  {
-    type: 'semi-annual',
-    price: 99,
-    billingPeriod: 'every 6 month',
-    hasTrial: true,
-    trialDays: 7,
-  },
-  {
-    type: 'quarterly',
-    price: 53,
-    billingPeriod: 'every 3 month',
-  },
-];
-
-// Mock user subscription
-export const mockUserSubscription: UserSubscription = {
-  currentPlan: 'quarterly',
-  status: 'active',
-  nextPaymentDate: '20.02.2026',
-  price: 53,
-  savings: 10,
-};
 

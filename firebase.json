@@ -16,5 +16,8 @@
         "firebase-debug.*.log"
       ]
     }
-  ]
+  ],
+  "remoteconfig": {
+    "template": "remoteconfig.template.json"
+  }
 }

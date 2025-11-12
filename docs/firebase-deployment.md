@@ -206,6 +206,41 @@ firebase use staging && firebase deploy --only functions
 
 ---
 
+## 🔧 Remote Config Deployment
+
+### What is Remote Config?
+
+Firebase Remote Config allows you to change app behavior and appearance without publishing an app update. We use it to store subscription plans configuration.
+
+### Deploy Remote Config
+
+```bash
+# Deploy Remote Config template
+firebase deploy --only remoteconfig
+```
+
+**Template location:** `remoteconfig.template.json`
+
+### Update Subscription Plans
+
+1. Edit `remoteconfig.template.json` with new pricing or plans
+2. Commit changes to git (for review and version control)
+3. Deploy: `firebase deploy --only remoteconfig`
+
+**Important Notes:**
+- Changes are versioned in git
+- Console changes override template (useful for quick tests)
+- App fetches config on startup with 1-hour cache
+
+### View Current Config
+
+```bash
+# View current Remote Config in Firebase Console
+open https://console.firebase.google.com/project/the-boss-app-e42b6/config
+```
+
+---
+
 ## 📦 Deploy Everything
 
 ```bash
@@ -216,6 +251,7 @@ firebase deploy
 # - Cloud Functions
 # - Firestore Rules
 # - Firestore Indexes
+# - Remote Config
 # - Hosting (if configured)
 ```
 
