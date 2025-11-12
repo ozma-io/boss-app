@@ -211,41 +211,27 @@ export default function BossScreen() {
     }
   };
 
-  // Loading state
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="boss-loading">
-        <ActivityIndicator size="large" color="#B6D95C" />
-        <Text style={styles.loadingText}>Loading boss data...</Text>
-      </View>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="boss-error">
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
-      </View>
-    );
-  }
-
-  // Empty state (no boss)
-  if (!boss) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="boss-empty">
-        <Text style={styles.emptyIcon}>👤</Text>
-        <Text style={styles.emptyText}>No boss found</Text>
-        <Text style={styles.emptyHint}>Add a boss to get started</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="boss-scroll">
+      {loading ? (
+        <View style={styles.centerContent} testID="boss-loading">
+          <ActivityIndicator size="large" color="#B6D95C" />
+          <Text style={styles.loadingText}>Loading boss data...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.centerContent} testID="boss-error">
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
+        </View>
+      ) : !boss ? (
+        <View style={styles.centerContent} testID="boss-empty">
+          <Text style={styles.emptyIcon}>👤</Text>
+          <Text style={styles.emptyText}>No boss found</Text>
+          <Text style={styles.emptyHint}>Add a boss to get started</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="boss-scroll">
         <View style={styles.greenCircle} />
         <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="boss-header">
           <Text style={styles.headerTitle} testID="header-title">The Boss App</Text>
@@ -479,6 +465,7 @@ export default function BossScreen() {
           </View>
         </View>
       </ScrollView>
+      )}
 
       <FloatingChatButton />
     </View>

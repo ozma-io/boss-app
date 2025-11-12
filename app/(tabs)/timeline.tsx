@@ -41,60 +41,47 @@ export default function TimelineScreen() {
     });
   };
 
-  // Loading state
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="timeline-loading">
-        <ActivityIndicator size="large" color="#B6D95C" />
-        <Text style={styles.loadingText}>Loading timeline...</Text>
-      </View>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="timeline-error">
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
-      </View>
-    );
-  }
-
-  // Empty state
-  if (entries.length === 0) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="timeline-empty">
-        <Text style={styles.emptyIcon}>📝</Text>
-        <Text style={styles.emptyText}>No timeline entries yet</Text>
-        <Text style={styles.emptyHint}>Start tracking your interactions with your boss</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container} testID="timeline-container">
-      <ScrollView style={styles.timeline} contentContainerStyle={[styles.timelineContent, { paddingTop: topInset + 16 }]} testID="timeline-scroll">
-        <Text style={styles.timelineTitle} testID="timeline-title">The Boss App</Text>
-        {timelineGroups.map((group, groupIndex) => (
-          <View key={group.title} style={styles.timelineGroup}>
-            <Text style={styles.groupTitle} testID={`group-title-${groupIndex}`}>
-              {group.title}
-            </Text>
-            {group.entries.map((entry, entryIndex) => (
-              <View key={entry.id} style={styles.timelineItemContainer}>
-                <TimelineItem
-                  entry={entry}
-                  onPress={handleTimelineEntryPress}
-                  testID={`timeline-item-${entry.id}`}
-                  isLastInGroup={entryIndex === group.entries.length - 1}
-                />
-              </View>
-            ))}
-          </View>
-        ))}
-      </ScrollView>
+      {loading ? (
+        <View style={styles.centerContent} testID="timeline-loading">
+          <ActivityIndicator size="large" color="#B6D95C" />
+          <Text style={styles.loadingText}>Loading timeline...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.centerContent} testID="timeline-error">
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
+        </View>
+      ) : entries.length === 0 ? (
+        <View style={styles.centerContent} testID="timeline-empty">
+          <Text style={styles.emptyIcon}>📝</Text>
+          <Text style={styles.emptyText}>No timeline entries yet</Text>
+          <Text style={styles.emptyHint}>Start tracking your interactions with your boss</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.timeline} contentContainerStyle={[styles.timelineContent, { paddingTop: topInset + 16 }]} testID="timeline-scroll">
+          <Text style={styles.timelineTitle} testID="timeline-title">The Boss App</Text>
+          {timelineGroups.map((group, groupIndex) => (
+            <View key={group.title} style={styles.timelineGroup}>
+              <Text style={styles.groupTitle} testID={`group-title-${groupIndex}`}>
+                {group.title}
+              </Text>
+              {group.entries.map((entry, entryIndex) => (
+                <View key={entry.id} style={styles.timelineItemContainer}>
+                  <TimelineItem
+                    entry={entry}
+                    onPress={handleTimelineEntryPress}
+                    testID={`timeline-item-${entry.id}`}
+                    isLastInGroup={entryIndex === group.entries.length - 1}
+                  />
+                </View>
+              ))}
+            </View>
+          ))}
+        </ScrollView>
+      )}
 
       <FloatingChatButton />
     </View>

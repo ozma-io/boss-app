@@ -166,41 +166,27 @@ export default function ProfileScreen() {
     );
   };
 
-  // Loading state
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="profile-loading">
-        <ActivityIndicator size="large" color="#B6D95C" />
-        <Text style={styles.loadingText}>Loading profile...</Text>
-      </View>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="profile-error">
-        <Text style={styles.errorIcon}>⚠️</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
-      </View>
-    );
-  }
-
-  // No profile (shouldn't happen if authenticated)
-  if (!profile) {
-    return (
-      <View style={[styles.container, styles.centerContent]} testID="profile-empty">
-        <Text style={styles.emptyIcon}>👤</Text>
-        <Text style={styles.emptyText}>Profile not found</Text>
-        <Text style={styles.emptyHint}>Please try signing in again</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container} testID="profile-container">
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="profile-scroll-view">
+      {loading ? (
+        <View style={styles.centerContent} testID="profile-loading">
+          <ActivityIndicator size="large" color="#B6D95C" />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.centerContent} testID="profile-error">
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
+        </View>
+      ) : !profile ? (
+        <View style={styles.centerContent} testID="profile-empty">
+          <Text style={styles.emptyIcon}>👤</Text>
+          <Text style={styles.emptyText}>Profile not found</Text>
+          <Text style={styles.emptyHint}>Please try signing in again</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="profile-scroll-view">
         <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="profile-header">
           <Text style={styles.headerTitle} testID="header-title">The Boss App</Text>
         </View>
@@ -377,6 +363,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+      )}
 
       <FloatingChatButton />
     </View>
