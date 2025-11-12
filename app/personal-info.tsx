@@ -133,7 +133,7 @@ export default function PersonalInfoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: '#F5F1E8',
   },
   scrollView: {
     flex: 1,
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: AppColors.background,
+    backgroundColor: '#F5F1E8',
   },
   footerLink: {
     fontSize: 14,
