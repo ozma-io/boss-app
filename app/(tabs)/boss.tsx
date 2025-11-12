@@ -3,14 +3,12 @@ import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { mockBoss } from '@/utils/mockData';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
-import { Image, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const IOS_MIN_TOP_INSET = 47;
 
 export default function BossScreen() {
   const insets = useSafeAreaInsets();
-  const topInset = insets.top > 0 ? insets.top : (Platform.OS === 'ios' ? IOS_MIN_TOP_INSET : 0);
+  const topInset = insets.top;
 
   useFocusEffect(
     useCallback(() => {

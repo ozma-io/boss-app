@@ -10,11 +10,9 @@ import { useCallback, useState } from 'react';
 import { Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const IOS_MIN_TOP_INSET = 47;
-
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
-  const topInset = insets.top > 0 ? insets.top : (Platform.OS === 'ios' ? IOS_MIN_TOP_INSET : 0);
+  const topInset = insets.top;
   
   const { user } = useAuth();
   const [goalDescription, setGoalDescription] = useState(mockUserGoal.description);
