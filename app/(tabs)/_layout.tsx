@@ -8,7 +8,7 @@ import { StyleSheet, Text, View } from 'react-native';
 export default function TabsLayout() {
   return (
     <Tabs
-      initialRouteName="profile"
+      // initialRouteName="profile"
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
