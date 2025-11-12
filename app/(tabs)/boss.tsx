@@ -214,18 +214,18 @@ export default function BossScreen() {
   return (
     <View style={styles.container}>
       {loading ? (
-        <View style={styles.centerContent} testID="boss-loading">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="boss-loading">
           <ActivityIndicator size="large" color="#B6D95C" />
           <Text style={styles.loadingText}>Loading boss data...</Text>
         </View>
       ) : error ? (
-        <View style={styles.centerContent} testID="boss-error">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="boss-error">
           <Text style={styles.errorIcon}>⚠️</Text>
           <Text style={styles.errorText}>{error}</Text>
           <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
         </View>
       ) : !boss ? (
-        <View style={styles.centerContent} testID="boss-empty">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="boss-empty">
           <Text style={styles.emptyIcon}>👤</Text>
           <Text style={styles.emptyText}>No boss found</Text>
           <Text style={styles.emptyHint}>Add a boss to get started</Text>

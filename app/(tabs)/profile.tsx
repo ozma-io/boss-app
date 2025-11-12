@@ -179,18 +179,18 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container} testID="profile-container">
       {loading ? (
-        <View style={styles.centerContent} testID="profile-loading">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="profile-loading">
           <ActivityIndicator size="large" color="#B6D95C" />
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       ) : error ? (
-        <View style={styles.centerContent} testID="profile-error">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="profile-error">
           <Text style={styles.errorIcon}>⚠️</Text>
           <Text style={styles.errorText}>{error}</Text>
           <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
         </View>
       ) : !profile ? (
-        <View style={styles.centerContent} testID="profile-empty">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="profile-empty">
           <Text style={styles.emptyIcon}>👤</Text>
           <Text style={styles.emptyText}>Profile not found</Text>
           <Text style={styles.emptyHint}>Please try signing in again</Text>

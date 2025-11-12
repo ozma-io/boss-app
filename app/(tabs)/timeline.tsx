@@ -47,18 +47,18 @@ export default function TimelineScreen() {
   return (
     <View style={styles.container} testID="timeline-container">
       {loading ? (
-        <View style={styles.centerContent} testID="timeline-loading">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="timeline-loading">
           <ActivityIndicator size="large" color="#B6D95C" />
           <Text style={styles.loadingText}>Loading timeline...</Text>
         </View>
       ) : error ? (
-        <View style={styles.centerContent} testID="timeline-error">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="timeline-error">
           <Text style={styles.errorIcon}>⚠️</Text>
           <Text style={styles.errorText}>{error}</Text>
           <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
         </View>
       ) : entries.length === 0 ? (
-        <View style={styles.centerContent} testID="timeline-empty">
+        <View style={[styles.centerContent, { flex: 1 }]} testID="timeline-empty">
           <Text style={styles.emptyIcon}>📝</Text>
           <Text style={styles.emptyText}>No timeline entries yet</Text>
           <Text style={styles.emptyHint}>Start tracking your interactions with your boss</Text>
