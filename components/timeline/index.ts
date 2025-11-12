@@ -1,5 +1,3 @@
-export { InteractionEntry } from './InteractionEntry';
-export { NoteEntry } from './NoteEntry';
-export { SurveyEntry } from './SurveyEntry';
+export { TimelineEntryCard } from './TimelineEntryCard';
 export { TimelineItem } from './TimelineItem';
 

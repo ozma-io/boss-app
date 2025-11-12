@@ -1,9 +1,7 @@
 import { TimelineEntry } from '@/types';
 import { formatTimelineDate } from '@/utils/timelineHelpers';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { InteractionEntry } from './InteractionEntry';
-import { NoteEntry } from './NoteEntry';
-import { SurveyEntry } from './SurveyEntry';
+import { TimelineEntryCard } from './TimelineEntryCard';
 
 interface TimelineItemProps {
   entry: TimelineEntry;
@@ -21,16 +19,7 @@ export function TimelineItem({ entry, onPress, testID, isLastInGroup }: Timeline
 
   const renderEntry = () => {
     const timestamp = formatTimelineDate(entry.timestamp);
-    switch (entry.type) {
-      case 'note':
-        return <NoteEntry entry={entry} testID={testID} timestamp={timestamp} />;
-      case 'survey':
-        return <SurveyEntry entry={entry} testID={testID} timestamp={timestamp} />;
-      case 'interaction':
-        return <InteractionEntry entry={entry} testID={testID} timestamp={timestamp} />;
-      default:
-        return <NoteEntry entry={entry as any} testID={testID} timestamp={timestamp} />;
-    }
+    return <TimelineEntryCard entry={entry} testID={testID} timestamp={timestamp} />;
   };
 
   const content = (
