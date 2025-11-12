@@ -66,7 +66,7 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
             logger.info('No attribution data found, skipping AppInstall events', { feature: 'TrackingOnboarding' });
           }
         } catch (fbError) {
-          logger.error('Failed to send AppInstall events to Facebook', fbError instanceof Error ? fbError : new Error(String(fbError)), { feature: 'TrackingOnboarding' });
+          logger.error('Failed to send AppInstall events to Facebook', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
           // Don't block user flow on FB error
         }
       } else {
@@ -83,7 +83,7 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
         router.replace('/(auth)/welcome');
       }
     } catch (error) {
-      logger.error('Failed to handle tracking permission', error instanceof Error ? error : new Error(String(error)), { feature: 'TrackingOnboarding' });
+      logger.error('Failed to handle tracking permission', { feature: 'TrackingOnboarding', error: error instanceof Error ? error : new Error(String(error)) });
       setShouldShowOnboarding(false);
       
       // Navigate to appropriate screen even on error

@@ -67,7 +67,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        logger.error('Failed to update working hours', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
+        logger.error('Failed to update working hours', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -87,7 +87,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        logger.error('Failed to update birthday', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
+        logger.error('Failed to update birthday', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -107,7 +107,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        logger.error('Failed to update position', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
+        logger.error('Failed to update position', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -127,7 +127,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        logger.error('Failed to update started at', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
+        logger.error('Failed to update started at', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -147,7 +147,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        logger.error('Failed to update management style', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
+        logger.error('Failed to update management style', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -167,7 +167,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        logger.error('Failed to update favorite color', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
+        logger.error('Failed to update favorite color', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -187,7 +187,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        logger.error('Failed to update communication preference', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
+        logger.error('Failed to update communication preference', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -207,7 +207,7 @@ export default function BossScreen() {
           bossId: boss.id,
         });
       } catch (err) {
-        logger.error('Failed to update department', err instanceof Error ? err : new Error(String(err)), { feature: 'BossScreen', bossId: boss.id });
+        logger.error('Failed to update department', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };

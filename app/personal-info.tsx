@@ -40,7 +40,7 @@ export default function PersonalInfoScreen() {
       await signOut();
     } catch (error) {
       Alert.alert('Error', 'Failed to sign out. Please try again.');
-      logger.error('Failed to sign out', error instanceof Error ? error : new Error(String(error)), { feature: 'PersonalInfoScreen' });
+      logger.error('Failed to sign out', { feature: 'PersonalInfoScreen', error: error instanceof Error ? error : new Error(String(error)) });
     }
   };
 
@@ -53,7 +53,7 @@ export default function PersonalInfoScreen() {
           field: 'displayName',
         });
       } catch (err) {
-        logger.error('Failed to update name', err instanceof Error ? err : new Error(String(err)), { feature: 'PersonalInfoScreen' });
+        logger.error('Failed to update name', { feature: 'PersonalInfoScreen', error: err instanceof Error ? err : new Error(String(err)) });
         Alert.alert('Error', 'Failed to save name. Please try again.');
       }
     }
@@ -64,7 +64,7 @@ export default function PersonalInfoScreen() {
       try {
         await updateProfile({ displayName: name });
       } catch (err) {
-        logger.error('Failed to save fields', err instanceof Error ? err : new Error(String(err)), { feature: 'PersonalInfoScreen' });
+        logger.error('Failed to save fields', { feature: 'PersonalInfoScreen', error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };

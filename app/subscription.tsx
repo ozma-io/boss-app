@@ -50,7 +50,7 @@ export default function SubscriptionScreen() {
       setPlans(basicPlans);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      logger.error('Failed to load subscription plans', error instanceof Error ? error : new Error(errorMessage), { feature: 'SubscriptionScreen' });
+      logger.error('Failed to load subscription plans', { feature: 'SubscriptionScreen', error: error instanceof Error ? error : new Error(errorMessage) });
       
       // Track error in Amplitude
       trackAmplitudeEvent('subscription_plans_load_failed', {

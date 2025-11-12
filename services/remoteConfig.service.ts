@@ -18,7 +18,7 @@ export async function initRemoteConfig(): Promise<void> {
     await fetchAndActivate(remoteConfig);
     logger.info('Successfully fetched and activated', { feature: 'RemoteConfig' });
   } catch (error) {
-    logger.error('Failed to fetch and activate', error, { feature: 'RemoteConfig' });
+    logger.error('Failed to fetch and activate', { feature: 'RemoteConfig', error });
     throw error;
   }
 }
@@ -38,7 +38,7 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     
     if (!plansJson) {
       const error = new Error('No subscription_plans parameter found in Remote Config');
-      logger.error('No subscription_plans parameter found', error, { feature: 'RemoteConfig' });
+      logger.error('No subscription_plans parameter found', { feature: 'RemoteConfig', error });
       throw error;
     }
     
@@ -48,14 +48,14 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     // Validate structure
     if (!plansObject || typeof plansObject !== 'object') {
       const error = new Error('Invalid subscription plans structure in Remote Config');
-      logger.error('Invalid subscription plans structure', error, { feature: 'RemoteConfig' });
+      logger.error('Invalid subscription plans structure', { feature: 'RemoteConfig', error });
       throw error;
     }
     
     logger.info('Successfully loaded subscription plans from Remote Config', { feature: 'RemoteConfig' });
     return flattenPlans(plansObject);
   } catch (error) {
-    logger.error('Error fetching subscription plans', error, { feature: 'RemoteConfig' });
+    logger.error('Error fetching subscription plans', { feature: 'RemoteConfig', error });
     throw error;
   }
 }

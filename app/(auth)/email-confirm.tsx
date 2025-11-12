@@ -37,7 +37,7 @@ export default function EmailConfirmScreen(): React.JSX.Element {
       setUser(user);
       router.replace('/(tabs)');
     } catch (error) {
-      logger.error('Failed to verify email link', error instanceof Error ? error : new Error(String(error)), { feature: 'EmailConfirm', email });
+      logger.error('Failed to verify email link', { feature: 'EmailConfirm', email, error: error instanceof Error ? error : new Error(String(error)) });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       Alert.alert('Error', `Invalid or expired link.\n\nDetails: ${errorMessage}\n\nPlease try again.`);
     } finally {

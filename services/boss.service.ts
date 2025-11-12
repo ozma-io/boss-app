@@ -65,7 +65,7 @@ export async function getBosses(userId: string): Promise<Boss[]> {
         retries: 3,
       });
     } else {
-      logger.error('Error getting bosses', err, { feature: 'BossService', userId });
+      logger.error('Error getting bosses', { feature: 'BossService', userId, error: err });
     }
     
     return [];
@@ -113,7 +113,7 @@ export async function getFirstBoss(userId: string): Promise<Boss | null> {
         retries: 3,
       });
     } else {
-      logger.error('Error getting first boss', err, { feature: 'BossService', userId });
+      logger.error('Error getting first boss', { feature: 'BossService', userId, error: err });
     }
     
     return null;
@@ -161,7 +161,7 @@ export async function getBoss(userId: string, bossId: string): Promise<Boss | nu
         retries: 3,
       });
     } else {
-      logger.error('Error getting boss', err, { feature: 'BossService', userId, bossId });
+      logger.error('Error getting boss', { feature: 'BossService', userId, bossId, error: err });
     }
     
     return null;
@@ -201,7 +201,7 @@ export function subscribeToBoss(
       }
     },
     (error) => {
-      logger.error('Error in boss subscription', error, { feature: 'BossService', bossId });
+      logger.error('Error in boss subscription', { feature: 'BossService', bossId, error });
       callback(null);
     }
   );
@@ -236,7 +236,7 @@ export async function createBoss(userId: string): Promise<string> {
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    logger.error('Error creating boss', err, { feature: 'BossService', userId });
+    logger.error('Error creating boss', { feature: 'BossService', userId, error: err });
     throw error;
   }
 }
@@ -269,7 +269,7 @@ export async function updateBoss(
     logger.info('Successfully updated boss', { feature: 'BossService', userId, bossId });
   } catch (error) {
     const err = error as Error;
-    logger.error('Error updating boss', err, { feature: 'BossService', userId, bossId });
+    logger.error('Error updating boss', { feature: 'BossService', userId, bossId, error: err });
     throw error;
   }
 }

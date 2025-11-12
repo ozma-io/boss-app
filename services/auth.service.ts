@@ -85,7 +85,7 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     logger.info('Sign-in link sent successfully', { feature: 'AuthService', email });
   } catch (error) {
-    logger.error('Failed to send sign-in link', error, { feature: 'AuthService', email });
+    logger.error('Failed to send sign-in link', { feature: 'AuthService', email, error });
     throw error;
   }
 }

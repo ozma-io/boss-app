@@ -77,7 +77,7 @@ export default function EmailInputScreen(): React.JSX.Element {
         params: { email },
       });
     } catch (error) {
-      logger.error('Failed to send magic link', error instanceof Error ? error : new Error(String(error)), { feature: 'EmailInput', email });
+      logger.error('Failed to send magic link', { feature: 'EmailInput', email, error: error instanceof Error ? error : new Error(String(error)) });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       trackAmplitudeEvent('auth_signin_failed', {

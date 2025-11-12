@@ -52,7 +52,7 @@ export function subscribeToTimelineEntries(
       callback(entries);
     },
     (error) => {
-      logger.error('Error in timeline subscription', error, { feature: 'TimelineService', bossId });
+      logger.error('Error in timeline subscription', { feature: 'TimelineService', bossId, error });
       callback([]);
     }
   );
@@ -89,7 +89,7 @@ export async function createNoteEntry(
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    logger.error('Error creating note entry', err, { feature: 'TimelineService', userId, bossId });
+    logger.error('Error creating note entry', { feature: 'TimelineService', userId, bossId, error: err });
     throw error;
   }
 }
@@ -125,7 +125,7 @@ export async function createInteractionEntry(
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    logger.error('Error creating interaction entry', err, { feature: 'TimelineService', userId, bossId });
+    logger.error('Error creating interaction entry', { feature: 'TimelineService', userId, bossId, error: err });
     throw error;
   }
 }
@@ -161,7 +161,7 @@ export async function createSurveyEntry(
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    logger.error('Error creating survey entry', err, { feature: 'TimelineService', userId, bossId });
+    logger.error('Error creating survey entry', { feature: 'TimelineService', userId, bossId, error: err });
     throw error;
   }
 }

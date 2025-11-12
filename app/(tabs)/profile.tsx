@@ -69,7 +69,7 @@ export default function ProfileScreen() {
       await signOut();
     } catch (error) {
       Alert.alert('Error', 'Failed to sign out. Please try again.');
-      logger.error('Failed to sign out', error instanceof Error ? error : new Error(String(error)), { feature: 'ProfileScreen' });
+      logger.error('Failed to sign out', { feature: 'ProfileScreen', error: error instanceof Error ? error : new Error(String(error)) });
     }
   };
 
@@ -86,7 +86,7 @@ export default function ProfileScreen() {
           field: 'goal',
         });
       } catch (err) {
-        logger.error('Failed to update goal', err instanceof Error ? err : new Error(String(err)), { feature: 'ProfileScreen' });
+        logger.error('Failed to update goal', { feature: 'ProfileScreen', error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -104,7 +104,7 @@ export default function ProfileScreen() {
           field: 'position',
         });
       } catch (err) {
-        logger.error('Failed to update position', err instanceof Error ? err : new Error(String(err)), { feature: 'ProfileScreen' });
+        logger.error('Failed to update position', { feature: 'ProfileScreen', error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -122,7 +122,7 @@ export default function ProfileScreen() {
           field: 'department',
         });
       } catch (err) {
-        logger.error('Failed to update department', err instanceof Error ? err : new Error(String(err)), { feature: 'ProfileScreen' });
+        logger.error('Failed to update department', { feature: 'ProfileScreen', error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -148,7 +148,7 @@ export default function ProfileScreen() {
       try {
         await showIntercomMessenger();
       } catch (error) {
-        logger.error('Failed to open Intercom messenger', error instanceof Error ? error : new Error(String(error)), { feature: 'ProfileScreen' });
+        logger.error('Failed to open Intercom messenger', { feature: 'ProfileScreen', error: error instanceof Error ? error : new Error(String(error)) });
         Alert.alert(
           'Support Error',
           'Failed to open support messenger. Please email us at support@ozma.io',

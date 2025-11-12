@@ -126,7 +126,7 @@ export default function RootLayout() {
                   
                   logger.info('Android: AppInstall events sent successfully', { feature: 'App' });
                 } catch (fbError) {
-                  logger.error('Android: Failed to send AppInstall events', fbError instanceof Error ? fbError : new Error(String(fbError)), { feature: 'App' });
+                  logger.error('Android: Failed to send AppInstall events', { feature: 'App', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
                 }
               }
             } else {
@@ -138,7 +138,7 @@ export default function RootLayout() {
           await markAppAsLaunched();
         }
       } catch (initError) {
-        logger.error('Failed to initialize Facebook SDK or attribution', initError instanceof Error ? initError : new Error(String(initError)), { feature: 'App' });
+        logger.error('Failed to initialize Facebook SDK or attribution', { feature: 'App', error: initError instanceof Error ? initError : new Error(String(initError)) });
       }
     };
 
@@ -186,7 +186,7 @@ function RootLayoutNav() {
             setRedirectPath(`/(auth)/email-input?email=${encodeURIComponent(attributionEmail)}`);
           }
         } catch (error) {
-          logger.error('Failed to check attribution email', error instanceof Error ? error : new Error(String(error)), { feature: 'App' });
+          logger.error('Failed to check attribution email', { feature: 'App', error: error instanceof Error ? error : new Error(String(error)) });
         }
       };
       

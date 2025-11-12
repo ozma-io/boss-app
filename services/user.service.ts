@@ -53,7 +53,7 @@ export async function getUserNotificationData(userId: string): Promise<UserNotif
         retries: 3,
       });
     } else {
-      logger.error('Error getting user notification data', err, { feature: 'UserService', userId });
+      logger.error('Error getting user notification data', { feature: 'UserService', userId, error: err });
     }
     
     return null;
@@ -101,7 +101,7 @@ export async function updateNotificationPermissionStatus(
     
     logger.info('Notification permission status updated and tracked', { feature: 'UserService', status });
   } catch (error) {
-    logger.error('Error updating notification permission status', error, { feature: 'UserService' });
+    logger.error('Error updating notification permission status', { feature: 'UserService', error });
     throw error;
   }
 }
@@ -130,7 +130,7 @@ export async function recordNotificationPromptShown(userId: string): Promise<voi
       });
     }
   } catch (error) {
-    logger.error('Error recording notification prompt shown', error, { feature: 'UserService' });
+    logger.error('Error recording notification prompt shown', { feature: 'UserService', error });
     throw error;
   }
 }
@@ -162,7 +162,7 @@ async function syncNotificationStatusWithFirestore(
     await updateNotificationPermissionStatus(userId, systemStatus);
     logger.info('Successfully synced notification status to Firestore', { feature: 'UserService' });
   } catch (error) {
-    logger.error('Failed to sync notification status to Firestore', error, { feature: 'UserService' });
+    logger.error('Failed to sync notification status to Firestore', { feature: 'UserService', error });
   }
 }
 
@@ -223,7 +223,7 @@ export async function updateUserAttribution(userId: string, attributionData: Att
     });
     logger.info('Attribution data updated for user', { feature: 'UserService', userId });
   } catch (error) {
-    logger.error('Error updating user attribution', error, { feature: 'UserService', userId });
+    logger.error('Error updating user attribution', { feature: 'UserService', userId, error });
     throw error;
   }
 }
@@ -264,7 +264,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
         retries: 3,
       });
     } else {
-      logger.error('Error getting user profile', err, { feature: 'UserService', userId });
+      logger.error('Error getting user profile', { feature: 'UserService', userId, error: err });
     }
     
     return null;
@@ -299,7 +299,7 @@ export function subscribeToUserProfile(
       }
     },
     (error) => {
-      logger.error('Error in user profile subscription', error, { feature: 'UserService', userId });
+      logger.error('Error in user profile subscription', { feature: 'UserService', userId, error });
       callback(null);
     }
   );
@@ -331,7 +331,7 @@ export async function updateUserProfile(
     logger.info('Successfully updated profile', { feature: 'UserService', userId });
   } catch (error) {
     const err = error as Error;
-    logger.error('Error updating user profile', err, { feature: 'UserService', userId });
+    logger.error('Error updating user profile', { feature: 'UserService', userId, error: err });
     throw error;
   }
 }

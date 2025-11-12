@@ -30,7 +30,7 @@ export async function saveAttributionData(data: AttributionData): Promise<void> 
     await AsyncStorage.setItem(ATTRIBUTION_STORAGE_KEY, JSON.stringify(attributionData));
     logger.info('Attribution data saved to AsyncStorage', { feature: 'AttributionService', attributionData });
   } catch (error) {
-    logger.error('Error saving attribution data', error, { feature: 'AttributionService' });
+    logger.error('Error saving attribution data', { feature: 'AttributionService', error });
     throw error;
   }
 }
@@ -49,7 +49,7 @@ export async function getAttributionData(): Promise<AttributionData | null> {
     logger.debug('Attribution data retrieved from AsyncStorage', { feature: 'AttributionService', attributionData: parsedData });
     return parsedData;
   } catch (error) {
-    logger.error('Error getting attribution data', error, { feature: 'AttributionService' });
+    logger.error('Error getting attribution data', { feature: 'AttributionService', error });
     return null;
   }
 }
@@ -62,7 +62,7 @@ export async function clearAttributionData(): Promise<void> {
     await AsyncStorage.removeItem(ATTRIBUTION_STORAGE_KEY);
     logger.info('Attribution data cleared from AsyncStorage', { feature: 'AttributionService' });
   } catch (error) {
-    logger.error('Error clearing attribution data', error, { feature: 'AttributionService' });
+    logger.error('Error clearing attribution data', { feature: 'AttributionService', error });
     throw error;
   }
 }
@@ -79,7 +79,7 @@ export async function linkAttributionToUser(userId: string, attributionData: Att
     });
     logger.info('Attribution data linked to user', { feature: 'AttributionService', userId, attributionData });
   } catch (error) {
-    logger.error('Error linking attribution to user', error, { feature: 'AttributionService', userId });
+    logger.error('Error linking attribution to user', { feature: 'AttributionService', userId, error });
     throw error;
   }
 }
@@ -92,7 +92,7 @@ export async function isFirstLaunch(): Promise<boolean> {
     const value = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
     return value === null;
   } catch (error) {
-    logger.error('Error checking first launch', error, { feature: 'AttributionService' });
+    logger.error('Error checking first launch', { feature: 'AttributionService', error });
     return false;
   }
 }
@@ -105,7 +105,7 @@ export async function markAppAsLaunched(): Promise<void> {
     await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
     logger.info('App marked as launched', { feature: 'AttributionService' });
   } catch (error) {
-    logger.error('Error marking app as launched', error, { feature: 'AttributionService' });
+    logger.error('Error marking app as launched', { feature: 'AttributionService', error });
     throw error;
   }
 }
@@ -118,7 +118,7 @@ export async function getAttributionEmail(): Promise<string | null> {
     const attributionData = await getAttributionData();
     return attributionData?.email || null;
   } catch (error) {
-    logger.error('Error getting attribution email', error, { feature: 'AttributionService' });
+    logger.error('Error getting attribution email', { feature: 'AttributionService', error });
     return null;
   }
 }

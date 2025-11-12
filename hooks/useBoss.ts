@@ -86,7 +86,7 @@ export function useBoss() {
           setLoading(false);
         });
       } catch (err) {
-        logger.error('Failed to load boss', err instanceof Error ? err : new Error(String(err)), { feature: 'useBoss', userId: user.id });
+        logger.error('Failed to load boss', { feature: 'useBoss', userId: user.id, error: err instanceof Error ? err : new Error(String(err)) });
         setError('Failed to load boss data');
         setLoading(false);
       }

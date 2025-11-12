@@ -39,7 +39,7 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
       
       router.replace('/(tabs)');
     } catch (error) {
-      logger.error('Failed to handle notification permission', error instanceof Error ? error : new Error(String(error)), { feature: 'NotificationOnboarding' });
+      logger.error('Failed to handle notification permission', { feature: 'NotificationOnboarding', error: error instanceof Error ? error : new Error(String(error)) });
       setShouldShowOnboarding(false);
       router.replace('/(tabs)');
     } finally {

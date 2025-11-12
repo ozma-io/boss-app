@@ -56,7 +56,7 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
         onClose();
         router.replace('/(tabs)');
       } catch (error) {
-        logger.error('Failed to verify email link', error instanceof Error ? error : new Error(String(error)), { feature: 'EmailAuthModal', email });
+        logger.error('Failed to verify email link', { feature: 'EmailAuthModal', email, error: error instanceof Error ? error : new Error(String(error)) });
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         Alert.alert('Error', `Invalid or expired link.\n\nDetails: ${errorMessage}\n\nPlease try again.`);
       } finally {
@@ -158,7 +158,7 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
       setResendTimer(60);
       setCanResend(false);
     } catch (error) {
-      logger.error('Failed to send magic link', error instanceof Error ? error : new Error(String(error)), { feature: 'EmailAuthModal', email });
+      logger.error('Failed to send magic link', { feature: 'EmailAuthModal', email, error: error instanceof Error ? error : new Error(String(error)) });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       Alert.alert('Error', `Failed to send magic link.\n\nDetails: ${errorMessage}\n\nPlease try again.`);
     } finally {
