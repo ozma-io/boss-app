@@ -1,7 +1,7 @@
 import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { mockTimelineEntries } from '@/utils/mockData';
-import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -170,19 +170,9 @@ export default function EntryDetailsScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: 'Entry Details',
-          headerShown: true,
-          headerBackTitle: '',
-          headerTintColor: '#000',
-        }}
-      />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="entry-details-scroll">
-        {renderContent()}
-      </ScrollView>
-    </>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} testID="entry-details-scroll">
+      {renderContent()}
+    </ScrollView>
   );
 }
 

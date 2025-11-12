@@ -3,7 +3,7 @@ import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { ChatMessage } from '@/types';
 import { mockChatMessages } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Stack, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -66,25 +66,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: 'The Boss App',
-          headerShown: true,
-          headerBackTitle: '',
-          headerStyle: {
-            backgroundColor: '#F5F1E8',
-          },
-          headerTintColor: '#000',
-          headerTitleStyle: {
-            color: '#333',
-            fontSize: 16,
-            fontWeight: '600',
-            fontFamily: 'Manrope-SemiBold',
-          },
-        }}
-      />
-      <View style={styles.container} testID="chat-container">
+    <View style={styles.container} testID="chat-container">
         <ScrollView
           ref={scrollViewRef}
           style={styles.messagesContainer}
@@ -115,7 +97,6 @@ export default function ChatScreen() {
           )}
         </View>
       </View>
-    </>
   );
 }
 

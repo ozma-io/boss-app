@@ -278,8 +278,18 @@ function RootLayoutNav() {
           name="chat" 
           options={{ 
             headerShown: true, 
-            title: '',
-            headerBackTitle: 'Back',
+            title: 'The Boss App',
+            headerBackTitle: '',
+            headerStyle: {
+              backgroundColor: '#F5F1E8',
+            },
+            headerTintColor: '#000',
+            headerTitleStyle: {
+              color: '#333',
+              fontSize: 16,
+              fontWeight: '600',
+              fontFamily: 'Manrope-SemiBold',
+            },
           }} 
         />
         <Stack.Screen 
@@ -287,6 +297,17 @@ function RootLayoutNav() {
           options={{ 
             headerShown: true, 
             title: 'Personal information',
+            headerBackTitle: '',
+            headerStyle: {
+              backgroundColor: '#F5F1E8',
+            },
+            headerTintColor: '#000',
+            headerTitleStyle: {
+              color: '#333',
+              fontSize: 16,
+              fontWeight: '600',
+              fontFamily: 'Manrope-SemiBold',
+            },
           }} 
         />
         <Stack.Screen 
@@ -294,9 +315,37 @@ function RootLayoutNav() {
           options={{ 
             headerShown: true, 
             title: 'Subscription',
+            headerBackTitle: '',
+            headerStyle: {
+              backgroundColor: '#F5F1E8',
+            },
+            headerTintColor: '#000',
+            headerTitleStyle: {
+              color: '#333',
+              fontSize: 16,
+              fontWeight: '600',
+              fontFamily: 'Manrope-SemiBold',
+            },
           }} 
         />
-        <Stack.Screen name="entry-details" options={{ headerShown: true, title: 'Entry Details' }} />
+        <Stack.Screen 
+          name="entry-details" 
+          options={{ 
+            headerShown: true, 
+            title: 'Entry Details',
+            headerBackTitle: '',
+            headerStyle: {
+              backgroundColor: '#FAF8F0',
+            },
+            headerTintColor: '#000',
+            headerTitleStyle: {
+              color: '#333',
+              fontSize: 16,
+              fontWeight: '600',
+              fontFamily: 'Manrope-SemiBold',
+            },
+          }} 
+        />
       </Stack>
     </ThemeProvider>
   );
