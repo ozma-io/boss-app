@@ -6,8 +6,11 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SubscriptionScreen() {
+  const insets = useSafeAreaInsets();
+
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('subscription_screen_viewed');
@@ -66,7 +69,7 @@ export default function SubscriptionScreen() {
           <Text style={styles.planTitle} testID={`plan-title-${plan.type}`}>{getPlanTitle(plan.type)}</Text>
           {isActive && (
             <View style={styles.activeBadge} testID={`plan-active-badge-${plan.type}`}>
-              <FontAwesome name="check" size={12} color="#fff" testID={`plan-active-icon-${plan.type}`} />
+              <FontAwesome name="check" size={12} color="#333" testID={`plan-active-icon-${plan.type}`} />
               <Text style={styles.activeBadgeText} testID={`plan-active-text-${plan.type}`}>Active</Text>
             </View>
           )}
@@ -86,35 +89,39 @@ export default function SubscriptionScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} testID="subscription-scroll">
-      <View style={styles.content} testID="subscription-content">
-        <View style={[styles.currentPlanCard, styles.activePlanCard]} testID="current-plan-card">
-          <View style={styles.currentPlanHeader} testID="current-plan-header">
-            <Text style={styles.yourPlanLabel} testID="your-plan-label">Your plan</Text>
-            <View style={styles.activeBadge} testID="current-plan-active-badge">
-              <FontAwesome name="check" size={12} color="#fff" testID="current-plan-active-icon" />
-              <Text style={styles.activeBadgeText} testID="current-plan-active-text">Active</Text>
+    <View style={styles.container} testID="subscription-container">
+      <ScrollView style={styles.scrollView} testID="subscription-scroll">
+        <View style={styles.content} testID="subscription-content">
+          <View style={[styles.currentPlanCard, styles.activePlanCard]} testID="current-plan-card">
+            <View style={styles.currentPlanHeader} testID="current-plan-header">
+              <Text style={styles.yourPlanLabel} testID="your-plan-label">Your plan</Text>
+              <View style={styles.activeBadge} testID="current-plan-active-badge">
+                <FontAwesome name="check" size={12} color="#333" testID="current-plan-active-icon" />
+                <Text style={styles.activeBadgeText} testID="current-plan-active-text">Active</Text>
+              </View>
             </View>
+            <Text style={styles.currentPlanTitle} testID="current-plan-title">
+              {currentPlan ? currentPlan.type.charAt(0).toUpperCase() + currentPlan.type.slice(1) : 'Quarterly'}
+            </Text>
+            <Text style={styles.currentPlanDescription} testID="current-plan-description">
+              You pay {mockUserSubscription.price}$ every 3 month. You save {mockUserSubscription.savings}$
+            </Text>
+            <Text style={styles.nextPayment} testID="next-payment-text">
+              Next payment: {mockUserSubscription.nextPaymentDate}
+            </Text>
           </View>
-          <Text style={styles.currentPlanTitle} testID="current-plan-title">
-            {currentPlan ? currentPlan.type.charAt(0).toUpperCase() + currentPlan.type.slice(1) : 'Quarterly'}
-          </Text>
-          <Text style={styles.currentPlanDescription} testID="current-plan-description">
-            You pay {mockUserSubscription.price}$ every 3 month. You save {mockUserSubscription.savings}$
-          </Text>
-          <Text style={styles.nextPayment} testID="next-payment-text">
-            Next payment: {mockUserSubscription.nextPaymentDate}
-          </Text>
+
+          <Text style={styles.sectionTitle} testID="section-title">You can change your plan</Text>
+
+          <View style={styles.plansContainer} testID="plans-container">
+            {mockSubscriptionPlans
+              .filter((plan) => plan.type !== mockUserSubscription.currentPlan)
+              .map((plan) => renderPlanCard(plan, false))}
+          </View>
         </View>
+      </ScrollView>
 
-        <Text style={styles.sectionTitle} testID="section-title">You can change your plan</Text>
-
-        <View style={styles.plansContainer} testID="plans-container">
-          {mockSubscriptionPlans
-            .filter((plan) => plan.type !== mockUserSubscription.currentPlan)
-            .map((plan) => renderPlanCard(plan, false))}
-        </View>
-
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]} testID="subscription-footer">
         <Pressable
           style={({ pressed }) => [
             styles.changePlanButton,
@@ -138,17 +145,21 @@ export default function SubscriptionScreen() {
           <Text style={styles.cancelButtonText} testID="cancel-subscription-button-text">Cancel Subscription</Text>
         </Pressable>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AppColors.background,
+    backgroundColor: '#F5F1E8',
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: 16,
+    paddingBottom: 24,
   },
   currentPlanCard: {
     backgroundColor: '#B8E986',
@@ -174,20 +185,20 @@ const styles = StyleSheet.create({
   activeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#333',
+    backgroundColor: '#fff',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
   activeBadgeText: {
-    color: '#fff',
+    color: '#333',
     fontSize: 12,
     fontWeight: '600',
     marginLeft: 4,
     fontFamily: 'Manrope-SemiBold',
   },
   currentPlanTitle: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 8,
@@ -215,7 +226,6 @@ const styles = StyleSheet.create({
   plansContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
     gap: 12,
   },
   planCard: {
@@ -223,8 +233,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
   },
   planHeader: {
     flexDirection: 'row',
@@ -269,6 +277,11 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontFamily: 'Manrope-Regular',
   },
+  footer: {
+    backgroundColor: '#F5F1E8',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
   changePlanButton: {
     backgroundColor: '#333',
     paddingVertical: 16,
@@ -277,7 +290,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   changePlanButtonText: {
     color: '#fff',
@@ -292,7 +305,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#ff3b30',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Manrope-SemiBold',
   },
