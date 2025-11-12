@@ -140,84 +140,92 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.goalCard} testID="goal-card">
-          <View style={styles.goalHeader} testID="goal-header">
-            <View style={styles.goalTitleContainer} testID="goal-title-container">
-              <FontAwesome name="flag" size={20} color="#333" testID="goal-flag-icon" />
-              <Text style={styles.goalTitle} testID="goal-title">{mockUserGoal.title}</Text>
-            </View>
-            {!isEditingGoal && (
-              <TouchableOpacity onPress={handleEditGoal} style={styles.editButton} testID="goal-edit-button">
-                <FontAwesome name="pencil" size={18} color="#333" testID="goal-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
-          {isEditingGoal ? (
+          <Image 
+            source={require('@/assets/images/flag-icon.png')} 
+            style={styles.cardIcon}
+            resizeMode="contain"
+            testID="goal-flag-icon"
+          />
+          <View style={styles.cardContent} testID="goal-content">
+            <Text style={styles.cardLabel} testID="goal-label">{mockUserGoal.title}: </Text>
+            {isEditingGoal ? (
               <TextInput
-              style={[styles.goalInput, { outlineStyle: 'none' } as any]}
+                style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
                 value={goalDescription}
                 onChangeText={setGoalDescription}
-              onBlur={handleBlurGoal}
-                multiline
+                onBlur={handleBlurGoal}
                 autoFocus
                 placeholder="Enter your goal"
                 testID="goal-input"
               />
-          ) : (
-            <Text style={styles.goalDescription} testID="goal-description">{goalDescription}</Text>
+            ) : (
+              <Text style={styles.cardValue} testID="goal-description">{goalDescription}</Text>
+            )}
+          </View>
+          {!isEditingGoal && (
+            <TouchableOpacity onPress={handleEditGoal} style={styles.cardEditButton} testID="goal-edit-button">
+              <FontAwesome name="pencil" size={18} color="#333" testID="goal-edit-icon" />
+            </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.infoCard} testID="position-card">
-          <View style={styles.infoHeader} testID="position-header">
-            <View style={styles.infoTitleContainer} testID="position-title-container">
-              <FontAwesome name="briefcase" size={20} color="#333" testID="position-briefcase-icon" />
-              <Text style={styles.infoTitle} testID="position-title">Position</Text>
-            </View>
-            {!isEditingPosition && (
-              <TouchableOpacity onPress={handleEditPosition} style={styles.editButton} testID="position-edit-button">
-                <FontAwesome name="pencil" size={18} color="#333" testID="position-edit-icon" />
-              </TouchableOpacity>
+          <Image 
+            source={require('@/assets/images/briefcase-icon.png')} 
+            style={styles.cardIcon}
+            resizeMode="contain"
+            testID="position-briefcase-icon"
+          />
+          <View style={styles.cardContent} testID="position-content">
+            <Text style={styles.cardLabel} testID="position-label">Position: </Text>
+            {isEditingPosition ? (
+              <TextInput
+                style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                value={position}
+                onChangeText={setPosition}
+                onBlur={handleBlurPosition}
+                autoFocus
+                placeholder="Enter your position"
+                testID="position-input"
+              />
+            ) : (
+              <Text style={styles.cardValue} testID="position-description">{position}</Text>
             )}
           </View>
-          {isEditingPosition ? (
-            <TextInput
-              style={[styles.infoInput, { outlineStyle: 'none' } as any]}
-              value={position}
-              onChangeText={setPosition}
-              onBlur={handleBlurPosition}
-              autoFocus
-              placeholder="Enter your position"
-              testID="position-input"
-            />
-          ) : (
-            <Text style={styles.infoDescription} testID="position-description">{position}</Text>
+          {!isEditingPosition && (
+            <TouchableOpacity onPress={handleEditPosition} style={styles.cardEditButton} testID="position-edit-button">
+              <FontAwesome name="pencil" size={18} color="#333" testID="position-edit-icon" />
+            </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.infoCard} testID="department-card">
-          <View style={styles.infoHeader} testID="department-header">
-            <View style={styles.infoTitleContainer} testID="department-title-container">
-              <FontAwesome name="building" size={20} color="#333" testID="department-building-icon" />
-              <Text style={styles.infoTitle} testID="department-title">Department</Text>
-            </View>
-            {!isEditingDepartment && (
-              <TouchableOpacity onPress={handleEditDepartment} style={styles.editButton} testID="department-edit-button">
-                <FontAwesome name="pencil" size={18} color="#333" testID="department-edit-icon" />
-              </TouchableOpacity>
+          <Image 
+            source={require('@/assets/images/department-icon.png')} 
+            style={styles.cardIcon}
+            resizeMode="contain"
+            testID="department-building-icon"
+          />
+          <View style={styles.cardContent} testID="department-content">
+            <Text style={styles.cardLabel} testID="department-label">Department: </Text>
+            {isEditingDepartment ? (
+              <TextInput
+                style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                value={department}
+                onChangeText={setDepartment}
+                onBlur={handleBlurDepartment}
+                autoFocus
+                placeholder="Enter your department"
+                testID="department-input"
+              />
+            ) : (
+              <Text style={styles.cardValue} testID="department-description">{department}</Text>
             )}
           </View>
-          {isEditingDepartment ? (
-            <TextInput
-              style={[styles.infoInput, { outlineStyle: 'none' } as any]}
-              value={department}
-              onChangeText={setDepartment}
-              onBlur={handleBlurDepartment}
-              autoFocus
-              placeholder="Enter your department"
-              testID="department-input"
-            />
-          ) : (
-            <Text style={styles.infoDescription} testID="department-description">{department}</Text>
+          {!isEditingDepartment && (
+            <TouchableOpacity onPress={handleEditDepartment} style={styles.cardEditButton} testID="department-edit-button">
+              <FontAwesome name="pencil" size={18} color="#333" testID="department-edit-icon" />
+            </TouchableOpacity>
           )}
         </View>
 
@@ -355,79 +363,61 @@ const styles = StyleSheet.create({
   goalCard: {
     backgroundColor: '#B8E986',
     marginHorizontal: 12,
-    marginBottom: 16,
+    marginBottom: 8,
     padding: 20,
     borderRadius: 16,
-  },
-  goalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  goalTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  goalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
-    fontFamily: 'Manrope-SemiBold',
-  },
-  editButton: {
-    padding: 4,
-  },
-  goalDescription: {
-    fontSize: 16,
-    color: '#333',
-    fontFamily: 'Manrope-Regular',
-  },
-  goalInput: {
-    fontSize: 16,
-    color: '#333',
-    fontFamily: 'Manrope-Regular',
-    padding: 0,
-    margin: 0,
-    borderWidth: 0,
   },
   infoCard: {
     backgroundColor: '#fff',
     marginHorizontal: 12,
-    marginBottom: 16,
+    marginBottom: 8,
     padding: 20,
     borderRadius: 16,
-  },
-  infoHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  infoTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
-    fontFamily: 'Manrope-SemiBold',
+  cardIcon: {
+    width: 40,
+    height: 40,
+    marginRight: 12,
   },
-  infoDescription: {
+  cardContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  cardLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    fontFamily: 'Manrope-Bold',
+  },
+  cardValue: {
     fontSize: 16,
     color: '#333',
     fontFamily: 'Manrope-Regular',
+    flex: 1,
   },
-  infoInput: {
+  cardValueInput: {
     fontSize: 16,
     color: '#333',
     fontFamily: 'Manrope-Regular',
+    flex: 1,
     padding: 0,
     margin: 0,
     borderWidth: 0,
+  },
+  cardEditButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   metricsSection: {
     backgroundColor: '#fff',
