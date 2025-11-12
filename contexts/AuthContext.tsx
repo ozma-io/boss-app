@@ -3,6 +3,7 @@ import { resetAmplitudeUser, setAmplitudeUserId } from '@/services/amplitude.ser
 import { clearAttributionData, getAttributionData } from '@/services/attribution.service';
 import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { logoutIntercomUser, registerIntercomUser } from '@/services/intercom.service';
+import { logger } from '@/services/logger.service';
 import { updateUserAttribution } from '@/services/user.service';
 import { AuthState, User } from '@/types';
 import { isSignInWithEmailLink } from 'firebase/auth';
@@ -51,7 +52,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               isProcessingEmailLinkRef.current = false;
               return;
             } catch (error) {
-              console.error('Error signing in with email link:', error);
+              logger.error('Error signing in with email link', { feature: 'AuthContext', error });
               isProcessingEmailLinkRef.current = false;
             }
           }
@@ -73,7 +74,10 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       if (isProcessingEmailLinkRef.current) {
         return;
       }
-      console.log(`🔐 [AuthContext] Auth state changed: ${newUser ? 'authenticated' : 'unauthenticated'} at ${new Date().toISOString()}`);
+      logger.info(`Auth state changed: ${newUser ? 'authenticated' : 'unauthenticated'}`, { 
+        feature: 'AuthContext', 
+        hasUser: !!newUser 
+      });
       setUser(newUser);
       setAuthState(newUser ? 'authenticated' : 'unauthenticated');
       
@@ -82,32 +86,32 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         getAttributionData()
           .then(async (attributionData) => {
             if (attributionData) {
-              console.log('[AuthContext] Linking attribution data to user:', newUser.id);
+              logger.info('Linking attribution data to user', { feature: 'AuthContext', userId: newUser.id });
               try {
                 await updateUserAttribution(newUser.id, attributionData);
                 // Clear attribution data after successfully linking to user
                 await clearAttributionData();
-                console.log('[AuthContext] Attribution data linked and cleared from storage');
+                logger.info('Attribution data linked and cleared from storage', { feature: 'AuthContext' });
               } catch (error) {
-                console.error('[AuthContext] Error linking attribution data:', error);
+                logger.error('Error linking attribution data', { feature: 'AuthContext', error });
               }
             }
           })
-          .catch(err => console.error('[AuthContext] Error getting attribution data:', err));
+          .catch(err => logger.error('Error getting attribution data', { feature: 'AuthContext', error: err }));
         
         // Set Amplitude user ID and email
         setAmplitudeUserId(newUser.id, newUser.email)
-          .catch(err => console.error('Amplitude setUserId failed:', err));
+          .catch(err => logger.error('Amplitude setUserId failed', { feature: 'AuthContext', error: err }));
         
         registerIntercomUser(newUser.id, newUser.email, undefined)
-          .catch(err => console.error('Intercom registration failed:', err));
+          .catch(err => logger.error('Intercom registration failed', { feature: 'AuthContext', error: err }));
       } else {
         // Reset Amplitude user on logout
         resetAmplitudeUser()
-          .catch(err => console.error('Amplitude reset failed:', err));
+          .catch(err => logger.error('Amplitude reset failed', { feature: 'AuthContext', error: err }));
         
         logoutIntercomUser()
-          .catch(err => console.error('Intercom logout failed:', err));
+          .catch(err => logger.error('Intercom logout failed', { feature: 'AuthContext', error: err }));
       }
     });
 

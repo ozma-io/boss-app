@@ -1,5 +1,6 @@
 import { FACEBOOK_CONFIG } from '@/constants/facebook.config';
 import { functions } from '@/constants/firebase.config';
+import { logger } from '@/services/logger.service';
 import { buildExtinfo, getAdvertiserTrackingEnabled, getApplicationTrackingEnabledSync } from '@/utils/deviceInfo';
 import { httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
@@ -15,7 +16,7 @@ if (Platform.OS !== 'web') {
     Settings = fbsdk.Settings;
     AppEventsLogger = fbsdk.AppEventsLogger;
   } catch (error) {
-    console.warn('[Facebook] react-native-fbsdk-next not available');
+    logger.warn('react-native-fbsdk-next not available', { feature: 'Facebook', error });
   }
 }
 
@@ -25,18 +26,18 @@ if (Platform.OS !== 'web') {
 export async function initializeFacebookSdk(): Promise<void> {
   // Skip on web
   if (Platform.OS === 'web') {
-    console.log('[Facebook] Skipping SDK initialization on web');
+    logger.info('Skipping SDK initialization on web', { feature: 'Facebook' });
     return;
   }
 
   if (!Settings) {
-    console.warn('[Facebook] Facebook SDK not available, skipping initialization');
+    logger.warn('Facebook SDK not available, skipping initialization', { feature: 'Facebook' });
     return;
   }
 
   try {
     if (!FACEBOOK_CONFIG.appId) {
-      console.warn('[Facebook] Facebook App ID not configured, skipping initialization');
+      logger.warn('Facebook App ID not configured, skipping initialization', { feature: 'Facebook' });
       return;
     }
 
@@ -55,9 +56,9 @@ export async function initializeFacebookSdk(): Promise<void> {
     // Initialize App Events
     await Settings.initializeSDK();
     
-    console.log('[Facebook] SDK initialized successfully');
+    logger.info('SDK initialized successfully', { feature: 'Facebook' });
   } catch (error) {
-    console.error('[Facebook] Error initializing SDK:', error);
+    logger.error('Error initializing SDK', { feature: 'Facebook', error });
     throw error;
   }
 }
@@ -73,10 +74,10 @@ export async function fetchDeferredAppLink(): Promise<string | null> {
     // The deferred deep link will be available through the regular deep link mechanism
     // after the Facebook SDK processes it on the native side
     
-    console.log('[Facebook] Deferred deep link fetch attempted (handled by native SDK)');
+    logger.info('Deferred deep link fetch attempted (handled by native SDK)', { feature: 'Facebook' });
     return null;
   } catch (error) {
-    console.error('[Facebook] Error fetching deferred app link:', error);
+    logger.error('Error fetching deferred app link', { feature: 'Facebook', error });
     return null;
   }
 }
@@ -100,10 +101,10 @@ export function parseDeepLinkParams(url: string): AttributionData {
       appUserId: params.get('app_user_id'),
     };
     
-    console.log('[Facebook] Parsed deep link params:', attributionData);
+    logger.info('Parsed deep link params', { feature: 'Facebook', attributionData });
     return attributionData;
   } catch (error) {
-    console.error('[Facebook] Error parsing deep link params:', error);
+    logger.error('Error parsing deep link params', { feature: 'Facebook', error });
     return {};
   }
 }
@@ -114,7 +115,7 @@ export function parseDeepLinkParams(url: string): AttributionData {
 export async function logAppInstallEvent(attributionData: AttributionData): Promise<void> {
   // Skip on web or if SDK not available
   if (Platform.OS === 'web' || !AppEventsLogger) {
-    console.log('[Facebook] Skipping AppInstall event (web or SDK not available)');
+    logger.info('Skipping AppInstall event (web or SDK not available)', { feature: 'Facebook' });
     return;
   }
   
@@ -126,7 +127,7 @@ export async function logAppInstallEvent(attributionData: AttributionData): Prom
     canTrack = status === 'authorized';
     
     if (!canTrack) {
-      console.log('[Facebook] Skipping AppInstall event (tracking permission not granted)');
+      logger.info('Skipping AppInstall event (tracking permission not granted)', { feature: 'Facebook' });
       return;
     }
   }
@@ -154,9 +155,9 @@ export async function logAppInstallEvent(attributionData: AttributionData): Prom
     // Log the event
     AppEventsLogger.logEvent('fb_mobile_activate_app', eventParams);
     
-    console.log('[Facebook] AppInstall event logged to Facebook:', eventParams);
+    logger.info('AppInstall event logged to Facebook', { feature: 'Facebook', eventParams });
   } catch (error) {
-    console.error('[Facebook] Error logging AppInstall event:', error);
+    logger.error('Error logging AppInstall event', { feature: 'Facebook', error });
     throw error;
   }
 }

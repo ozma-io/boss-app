@@ -1,5 +1,6 @@
 import { db } from '@/constants/firebase.config';
 import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
+import { logger } from '@/services/logger.service';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
@@ -50,7 +51,7 @@ function isFirebaseOfflineError(error: Error): boolean {
  */
 export async function getUserTrackingData(userId: string): Promise<UserTrackingData | null> {
   const startTime = Date.now();
-  console.log(`📊 [TrackingService] >>> Getting tracking data for user: ${userId} at ${new Date().toISOString()}`);
+  logger.info('Getting tracking data for user', { feature: 'TrackingService', userId });
   
   try {
     const result = await retryWithBackoff(async () => {
@@ -72,7 +73,7 @@ export async function getUserTrackingData(userId: string): Promise<UserTrackingD
     }, 3, 500);
     
     const duration = Date.now() - startTime;
-    console.log(`📊 [TrackingService] <<< Successfully retrieved tracking data in ${duration}ms`);
+    logger.info('Successfully retrieved tracking data', { feature: 'TrackingService', duration });
     return result;
   } catch (error) {
     const err = error as Error;
@@ -80,14 +81,18 @@ export async function getUserTrackingData(userId: string): Promise<UserTrackingD
     const duration = Date.now() - startTime;
     
     if (isOffline) {
-      console.warn(
-        `📊 [TrackingService] Failed to get user tracking data after 3 retries (offline) in ${duration}ms. User: ${userId}. Defaulting to null.`
-      );
+      logger.warn('Failed to get user tracking data after 3 retries (offline). Defaulting to null', { 
+        feature: 'TrackingService', 
+        userId, 
+        duration 
+      });
     } else {
-      console.error(
-        `📊 [TrackingService] Error getting user tracking data for ${userId} after ${duration}ms:`,
-        err.message
-      );
+      logger.error('Error getting user tracking data', { 
+        feature: 'TrackingService', 
+        userId, 
+        duration,
+        error: err
+      });
     }
     
     return null;
@@ -140,9 +145,9 @@ export async function updateTrackingPermissionStatus(
       tracking_permission_status: status,
     });
     
-    console.log('[TrackingService] Tracking permission status updated and tracked in Amplitude:', status);
+    logger.info('Tracking permission status updated and tracked in Amplitude', { feature: 'TrackingService', status });
   } catch (error) {
-    console.error('[TrackingService] Error updating tracking permission status:', error);
+    logger.error('Error updating tracking permission status', { feature: 'TrackingService', error });
     throw error;
   }
 }
@@ -178,7 +183,7 @@ export async function recordTrackingPromptShown(userId: string): Promise<void> {
       });
     }
   } catch (error) {
-    console.error('[TrackingService] Error recording tracking prompt shown:', error);
+    logger.error('Error recording tracking prompt shown', { feature: 'TrackingService', error });
     throw error;
   }
 }
@@ -196,20 +201,21 @@ async function syncTrackingStatusWithFirestore(
 ): Promise<void> {
   // If Firestore already has the correct status, no need to sync
   if (firestoreData?.trackingPermissionStatus === systemStatus) {
-    console.log(`📊 [TrackingService] Firestore already in sync with system status: ${systemStatus}`);
+    logger.info('Firestore already in sync with system status', { feature: 'TrackingService', systemStatus });
     return;
   }
   
-  console.log(
-    `📊 [TrackingService] Syncing status - System: ${systemStatus}, ` +
-    `Firestore: ${firestoreData?.trackingPermissionStatus || 'null'}`
-  );
+  logger.info('Syncing status', { 
+    feature: 'TrackingService', 
+    systemStatus, 
+    firestoreStatus: firestoreData?.trackingPermissionStatus || 'null' 
+  });
   
   try {
     await updateTrackingPermissionStatus(userId, systemStatus);
-    console.log(`📊 [TrackingService] Successfully synced tracking status to Firestore`);
+    logger.info('Successfully synced tracking status to Firestore', { feature: 'TrackingService' });
   } catch (error) {
-    console.error('[TrackingService] Failed to sync tracking status to Firestore:', error);
+    logger.error('Failed to sync tracking status to Firestore', { feature: 'TrackingService', error });
   }
 }
 
@@ -219,18 +225,18 @@ async function syncTrackingStatusWithFirestore(
  */
 export async function shouldShowTrackingOnboarding(userId: string): Promise<boolean> {
   const startTime = Date.now();
-  console.log(`📊 [TrackingService] >>> Checking if should show tracking onboarding for user: ${userId}`);
+  logger.info('Checking if should show tracking onboarding', { feature: 'TrackingService', userId });
   
   // First, check if ATT is available (iOS 14+)
   if (Platform.OS !== 'ios') {
     const duration = Date.now() - startTime;
-    console.log(`📊 [TrackingService] <<< Not iOS platform, no need for ATT onboarding (${duration}ms)`);
+    logger.info('Not iOS platform, no need for ATT onboarding', { feature: 'TrackingService', duration });
     return false;
   }
   
   // Check current system status first
   const systemStatus = await getTrackingPermissionStatus();
-  console.log(`📊 [TrackingService] Current system tracking status: ${systemStatus}`);
+  logger.info('Current system tracking status', { feature: 'TrackingService', systemStatus });
   
   // Get Firestore data
   const trackingData = await getUserTrackingData(userId);
@@ -239,24 +245,25 @@ export async function shouldShowTrackingOnboarding(userId: string): Promise<bool
   if (systemStatus === 'authorized' || systemStatus === 'denied') {
     await syncTrackingStatusWithFirestore(userId, systemStatus, trackingData);
     const duration = Date.now() - startTime;
-    console.log(
-      `📊 [TrackingService] <<< System status already determined (${systemStatus}), ` +
-      `skipping onboarding (${duration}ms)`
-    );
+    logger.info('System status already determined, skipping onboarding', { 
+      feature: 'TrackingService', 
+      systemStatus, 
+      duration 
+    });
     return false;
   }
   
   // If no tracking data in Firestore, show onboarding
   if (!trackingData) {
     const duration = Date.now() - startTime;
-    console.log(`📊 [TrackingService] <<< No tracking data found, will show onboarding (${duration}ms)`);
+    logger.info('No tracking data found, will show onboarding', { feature: 'TrackingService', duration });
     return true;
   }
   
   // If never prompted before, show onboarding
   if (!trackingData.lastTrackingPromptAt) {
     const duration = Date.now() - startTime;
-    console.log(`📊 [TrackingService] <<< Never prompted before, will show onboarding (${duration}ms)`);
+    logger.info('Never prompted before, will show onboarding', { feature: 'TrackingService', duration });
     return true;
   }
   
@@ -266,10 +273,11 @@ export async function shouldShowTrackingOnboarding(userId: string): Promise<bool
   const shouldShow = daysSinceLastPrompt >= DAYS_BETWEEN_TRACKING_PROMPTS;
   const duration = Date.now() - startTime;
   
-  console.log(
-    `📊 [TrackingService] <<< Last prompted ${daysSinceLastPrompt.toFixed(1)} days ago, ` +
-    `${shouldShow ? 'will show' : 'will skip'} onboarding (${duration}ms)`
-  );
+  logger.info(`Last prompted ${daysSinceLastPrompt.toFixed(1)} days ago`, { 
+    feature: 'TrackingService', 
+    shouldShow, 
+    duration 
+  });
   
   return shouldShow;
 }
@@ -293,7 +301,7 @@ export function hasFacebookAttribution(attributionData?: {
 export async function requestTrackingPermission(): Promise<TrackingPermissionStatus> {
   // On non-iOS platforms, we don't have ATT
   if (Platform.OS !== 'ios') {
-    console.log('[TrackingService] Non-iOS platform, tracking permission is always authorized');
+    logger.info('Non-iOS platform, tracking permission is always authorized', { feature: 'TrackingService' });
     return 'authorized';
   }
   
@@ -306,27 +314,27 @@ export async function requestTrackingPermission(): Promise<TrackingPermissionSta
     }
     
     // Request permission
-    console.log('[TrackingService] Requesting tracking permission');
+    logger.info('Requesting tracking permission', { feature: 'TrackingService' });
     const { status } = await TrackingTransparency.requestTrackingPermissionsAsync();
     
     // Convert Expo status to our status type
     switch (status) {
       case 'granted': 
-        console.log('[TrackingService] Tracking permission granted');
+        logger.info('Tracking permission granted', { feature: 'TrackingService' });
         return 'authorized';
       case 'denied': 
-        console.log('[TrackingService] Tracking permission denied');
+        logger.info('Tracking permission denied', { feature: 'TrackingService' });
         return 'denied';
       // Expo's type is 'undetermined' (not 'unavailable')
       case 'undetermined': 
-        console.log('[TrackingService] Tracking status undetermined on this device');
+        logger.info('Tracking status undetermined on this device', { feature: 'TrackingService' });
         return 'not_determined';
       default: 
-        console.log('[TrackingService] Tracking permission status not determined');
+        logger.info('Tracking permission status not determined', { feature: 'TrackingService' });
         return 'not_determined';
     }
   } catch (error) {
-    console.error('[TrackingService] Error requesting tracking permission:', error);
+    logger.error('Error requesting tracking permission', { feature: 'TrackingService', error });
     return 'not_determined';
   }
 }
@@ -349,7 +357,7 @@ export async function getTrackingPermissionStatus(): Promise<TrackingPermissionS
       default: return 'not_determined';
     }
   } catch (error) {
-    console.error('[TrackingService] Error getting tracking permission status:', error);
+    logger.error('Error getting tracking permission status', { feature: 'TrackingService', error });
     return 'not_determined';
   }
 }
@@ -360,10 +368,10 @@ export async function getTrackingPermissionStatus(): Promise<TrackingPermissionS
  */
 export async function syncTrackingStatusIfNeeded(userId: string): Promise<void> {
   try {
-    console.log(`📊 [TrackingService] >>> Syncing tracking status for user: ${userId}`);
+    logger.info('Syncing tracking status', { feature: 'TrackingService', userId });
     
     if (Platform.OS !== 'ios') {
-      console.log(`📊 [TrackingService] <<< Not iOS platform, no sync needed`);
+      logger.info('Not iOS platform, no sync needed', { feature: 'TrackingService' });
       return;
     }
     
@@ -371,9 +379,9 @@ export async function syncTrackingStatusIfNeeded(userId: string): Promise<void> 
     const trackingData = await getUserTrackingData(userId);
     
     await syncTrackingStatusWithFirestore(userId, systemStatus, trackingData);
-    console.log(`📊 [TrackingService] <<< Sync completed`);
+    logger.info('Sync completed', { feature: 'TrackingService' });
   } catch (error) {
-    console.error('[TrackingService] Error syncing tracking status:', error);
+    logger.error('Error syncing tracking status', { feature: 'TrackingService', error });
   }
 }
 
@@ -385,7 +393,7 @@ export async function syncTrackingStatusIfNeeded(userId: string): Promise<void> 
 export async function shouldShowFirstLaunchTracking(): Promise<boolean> {
   // On non-iOS platforms, we don't show the ATT prompt
   if (Platform.OS !== 'ios') {
-    console.log('[TrackingService] Not iOS platform, no need to show first launch tracking');
+    logger.info('Not iOS platform, no need to show first launch tracking', { feature: 'TrackingService' });
     return false;
   }
   
@@ -394,10 +402,10 @@ export async function shouldShowFirstLaunchTracking(): Promise<boolean> {
   
   // If user has already made a choice, don't show again
   if (currentStatus.status === 'granted' || currentStatus.status === 'denied') {
-    console.log('[TrackingService] User has already made tracking choice:', currentStatus.status);
+    logger.info('User has already made tracking choice', { feature: 'TrackingService', status: currentStatus.status });
     return false;
   }
   
-  console.log('[TrackingService] First launch tracking should be shown');
+  logger.info('First launch tracking should be shown', { feature: 'TrackingService' });
   return true;
 }

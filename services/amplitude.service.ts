@@ -1,4 +1,5 @@
 import { AMPLITUDE_API_KEY } from '@/constants/amplitude.config';
+import { logger } from '@/services/logger.service';
 import { Platform } from 'react-native';
 
 let amplitude: any = null;
@@ -29,7 +30,7 @@ if (Platform.OS !== 'web') {
     const sessionReplayModule = require('@amplitude/plugin-session-replay-react-native');
     SessionReplayPlugin = sessionReplayModule.SessionReplayPlugin;
   } catch (error) {
-    console.warn('[Amplitude] Native SDK packages not available:', error);
+    logger.warn('Native SDK packages not available', { feature: 'Amplitude', error });
   }
 }
 
@@ -40,14 +41,14 @@ if (Platform.OS !== 'web') {
  */
 export async function initializeAmplitude(): Promise<void> {
   if (isInitialized) {
-    console.log('[Amplitude] Already initialized, skipping');
+    logger.info('Already initialized, skipping', { feature: 'Amplitude' });
     return;
   }
 
   try {
     if (Platform.OS === 'web') {
       // Web platform: use browser SDK
-      console.log('[Amplitude] Initializing Web SDK with Session Replay...');
+      logger.info('Initializing Web SDK with Session Replay', { feature: 'Amplitude' });
       
       // Check if the script is loaded
       if (typeof window !== 'undefined' && (window as any).amplitude) {
@@ -59,9 +60,9 @@ export async function initializeAmplitude(): Promise<void> {
             sampleRate: 1 // Record 100% of sessions
           });
           webAmplitude.add(sessionReplayPlugin);
-          console.log('[Amplitude] Session Replay plugin added for web');
+          logger.info('Session Replay plugin added for web', { feature: 'Amplitude' });
         } else {
-          console.warn('[Amplitude] Session Replay plugin not found in window object');
+          logger.warn('Session Replay plugin not found in window object', { feature: 'Amplitude' });
         }
         
         // Initialize with full config (no serverZone for US - it's default)
@@ -81,18 +82,18 @@ export async function initializeAmplitude(): Promise<void> {
         });
         
         isInitialized = true;
-        console.log('[Amplitude] Web SDK initialized successfully with Session Replay');
+        logger.info('Web SDK initialized successfully with Session Replay', { feature: 'Amplitude' });
       } else {
-        console.warn('[Amplitude] Web SDK script not loaded. Add script tag to index.html');
+        logger.warn('Web SDK script not loaded. Add script tag to index.html', { feature: 'Amplitude' });
       }
     } else {
       // Native platform: use React Native SDK
       if (!amplitude || !SessionReplayPlugin) {
-        console.warn('[Amplitude] Native SDK not available, skipping initialization');
+        logger.warn('Native SDK not available, skipping initialization', { feature: 'Amplitude' });
         return;
       }
 
-      console.log('[Amplitude] Initializing Native SDK with Session Replay...');
+      logger.info('Initializing Native SDK with Session Replay', { feature: 'Amplitude' });
       
       // Initialize Amplitude with API key (userId is undefined, config is 3rd param)
       await amplitude.init(AMPLITUDE_API_KEY, undefined, {
@@ -103,12 +104,12 @@ export async function initializeAmplitude(): Promise<void> {
       await amplitude.add(new SessionReplayPlugin());
       
       isInitialized = true;
-      console.log('[Amplitude] Native SDK initialized successfully with Session Replay');
+      logger.info('Native SDK initialized successfully with Session Replay', { feature: 'Amplitude' });
     }
 
     // Flush queued events after successful initialization
     if (isInitialized && eventQueue.length > 0) {
-      console.log(`[Amplitude] Flushing ${eventQueue.length} queued items...`);
+      logger.info(`Flushing ${eventQueue.length} queued items`, { feature: 'Amplitude' });
       const queueToFlush = [...eventQueue];
       eventQueue = []; // Clear queue immediately to prevent infinite loops
       
@@ -122,10 +123,10 @@ export async function initializeAmplitude(): Promise<void> {
         }
       }
       
-      console.log('[Amplitude] Queue flushed successfully');
+      logger.info('Queue flushed successfully', { feature: 'Amplitude' });
     }
   } catch (error) {
-    console.error('[Amplitude] Failed to initialize:', error);
+    logger.error('Failed to initialize', { feature: 'Amplitude', error });
     // Don't throw - allow app to continue without Amplitude
   }
 }
@@ -139,7 +140,7 @@ export async function initializeAmplitude(): Promise<void> {
  */
 export async function setAmplitudeUserId(userId: string, email: string): Promise<void> {
   if (!isInitialized) {
-    console.log('[Amplitude] SDK not initialized, queuing setUserId');
+    logger.info('SDK not initialized, queuing setUserId', { feature: 'Amplitude' });
     eventQueue.push({ type: 'setUserId', userId, email });
     return;
   }
@@ -154,7 +155,7 @@ export async function setAmplitudeUserId(userId: string, email: string): Promise
         const identifyObj = new webAmplitude.Identify();
         identifyObj.set('email', emailValue);
         webAmplitude.identify(identifyObj);
-        console.log('[Amplitude] User ID and email set (web):', userId, emailValue);
+        logger.info('User ID and email set (web)', { feature: 'Amplitude', userId, email: emailValue });
       }
     } else {
       if (amplitude) {
@@ -163,11 +164,11 @@ export async function setAmplitudeUserId(userId: string, email: string): Promise
         const identifyObj = new amplitude.Identify();
         identifyObj.set('email', emailValue);
         await amplitude.identify(identifyObj);
-        console.log('[Amplitude] User ID and email set (native):', userId, emailValue);
+        logger.info('User ID and email set (native)', { feature: 'Amplitude', userId, email: emailValue });
       }
     }
   } catch (error) {
-    console.error('[Amplitude] Failed to set user ID:', error);
+    logger.error('Failed to set user ID', { feature: 'Amplitude', error });
   }
 }
 
@@ -181,7 +182,7 @@ export async function setAmplitudeUserProperties(
   properties: Record<string, any>
 ): Promise<void> {
   if (!isInitialized) {
-    console.log('[Amplitude] SDK not initialized, queuing setUserProperties');
+    logger.info('SDK not initialized, queuing setUserProperties', { feature: 'Amplitude' });
     eventQueue.push({ type: 'setUserProperties', properties });
     return;
   }
@@ -194,7 +195,7 @@ export async function setAmplitudeUserProperties(
           identifyObj.set(key, value);
         });
         webAmplitude.identify(identifyObj);
-        console.log('[Amplitude] User properties set (web):', properties);
+        logger.info('User properties set (web)', { feature: 'Amplitude', properties });
       }
     } else {
       if (amplitude) {
@@ -203,11 +204,11 @@ export async function setAmplitudeUserProperties(
           identifyObj.set(key, value);
         });
         await amplitude.identify(identifyObj);
-        console.log('[Amplitude] User properties set (native):', properties);
+        logger.info('User properties set (native)', { feature: 'Amplitude', properties });
       }
     }
   } catch (error) {
-    console.error('[Amplitude] Failed to set user properties:', error);
+    logger.error('Failed to set user properties', { feature: 'Amplitude', error });
   }
 }
 
@@ -222,7 +223,7 @@ export function trackAmplitudeEvent(
   eventProperties?: Record<string, any>
 ): void {
   if (!isInitialized) {
-    console.log('[Amplitude] SDK not initialized, queuing event:', eventName);
+    logger.info('SDK not initialized, queuing event', { feature: 'Amplitude', eventName });
     eventQueue.push({ type: 'event', eventName, eventProperties });
     return;
   }
@@ -231,16 +232,16 @@ export function trackAmplitudeEvent(
     if (Platform.OS === 'web') {
       if (webAmplitude) {
         webAmplitude.track(eventName, eventProperties);
-        console.log('[Amplitude] Event tracked (web):', eventName, eventProperties || {});
+        logger.info('Event tracked (web)', { feature: 'Amplitude', eventName, eventProperties: eventProperties || {} });
       }
     } else {
       if (amplitude) {
         amplitude.track(eventName, eventProperties);
-        console.log('[Amplitude] Event tracked (native):', eventName, eventProperties || {});
+        logger.info('Event tracked (native)', { feature: 'Amplitude', eventName, eventProperties: eventProperties || {} });
       }
     }
   } catch (error) {
-    console.error('[Amplitude] Failed to track event:', error);
+    logger.error('Failed to track event', { feature: 'Amplitude', error });
   }
 }
 
@@ -257,16 +258,16 @@ export async function resetAmplitudeUser(): Promise<void> {
     if (Platform.OS === 'web') {
       if (webAmplitude) {
         webAmplitude.reset();
-        console.log('[Amplitude] User session reset (web)');
+        logger.info('User session reset (web)', { feature: 'Amplitude' });
       }
     } else {
       if (amplitude) {
         await amplitude.reset();
-        console.log('[Amplitude] User session reset (native)');
+        logger.info('User session reset (native)', { feature: 'Amplitude' });
       }
     }
   } catch (error) {
-    console.error('[Amplitude] Failed to reset user:', error);
+    logger.error('Failed to reset user', { feature: 'Amplitude', error });
   }
 }
 

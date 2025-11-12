@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { AttributionData } from '@/services/attribution.service';
+import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution, shouldShowFirstLaunchTracking, shouldShowTrackingOnboarding, syncTrackingStatusIfNeeded } from '@/services/tracking.service';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -31,16 +32,16 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
     }
 
     const startTime = Date.now();
-    console.log(`📱 [TrackingOnboarding] ======== START ======== User: ${user.id} at ${new Date().toISOString()}`);
+    logger.info('Checking tracking onboarding', { feature: 'TrackingOnboarding', userId: user.id });
 
     try {
       const shouldShow = await shouldShowTrackingOnboarding(user.id);
       const duration = Date.now() - startTime;
-      console.log(`📱 [TrackingOnboarding] ======== RESULT: ${shouldShow ? 'SHOW' : 'SKIP'} ======== Duration: ${duration}ms`);
+      logger.info(`Result: ${shouldShow ? 'SHOW' : 'SKIP'}`, { feature: 'TrackingOnboarding', duration });
       setShouldShowOnboarding(shouldShow);
     } catch (error) {
       const duration = Date.now() - startTime;
-      console.warn(`📱 [TrackingOnboarding] ======== FAILED ======== Duration: ${duration}ms`, error);
+      logger.warn('Failed to check tracking onboarding', { feature: 'TrackingOnboarding', duration, error });
       setShouldShowOnboarding(false);
     }
   };
@@ -52,7 +53,7 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
     try {
       // Prevent multiple calls
       if (hasCheckedFirstLaunchRef.current) {
-        console.log('[TrackingOnboarding] Already checked first launch, skipping');
+        logger.info('Already checked first launch, skipping', { feature: 'TrackingOnboarding' });
         return;
       }
       
@@ -68,18 +69,22 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
         const hasFbAttribution = hasFacebookAttribution(attributionData || {});
         
         if (hasFbAttribution) {
-          console.log('[TrackingOnboarding] First launch with Facebook attribution detected, will show tracking onboarding');
+          logger.info('First launch with Facebook attribution detected, will show tracking onboarding', { 
+            feature: 'TrackingOnboarding' 
+          });
           setShouldShowOnboarding(true);
         } else {
-          console.log('[TrackingOnboarding] First launch but no Facebook attribution, skipping tracking onboarding');
+          logger.info('First launch but no Facebook attribution, skipping tracking onboarding', { 
+            feature: 'TrackingOnboarding' 
+          });
           setShouldShowOnboarding(false);
         }
       } else {
-        console.log('[TrackingOnboarding] Not first launch or tracking already determined');
+        logger.info('Not first launch or tracking already determined', { feature: 'TrackingOnboarding' });
         setShouldShowOnboarding(false);
       }
     } catch (error) {
-      console.error('[TrackingOnboarding] Error checking first launch:', error);
+      logger.error('Error checking first launch', { feature: 'TrackingOnboarding', error });
       setShouldShowOnboarding(false);
     }
   };
@@ -89,7 +94,7 @@ export function TrackingOnboardingProvider({ children }: TrackingOnboardingProvi
     const hasFbAttribution = hasFacebookAttribution(attributionData);
     
     if (hasFbAttribution && isFirstLaunch) {
-      console.log('[TrackingOnboarding] Facebook attribution detected, showing tracking onboarding');
+      logger.info('Facebook attribution detected, showing tracking onboarding', { feature: 'TrackingOnboarding' });
       setShouldShowOnboarding(true);
     }
   };

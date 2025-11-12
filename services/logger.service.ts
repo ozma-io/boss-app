@@ -16,7 +16,8 @@
  * import { logger } from '@/services/logger.service';
  * 
  * logger.info('User logged in', { userId: '123' });
- * logger.error('Failed to fetch data', error, { feature: 'DataService' });
+ * logger.error('Failed to fetch data', { error, feature: 'DataService' });
+ * logger.warn('SDK not available', { error: String(error), feature: 'SDK' });
  * logger.time('fetchData');
  * // ... code ...
  * logger.timeEnd('fetchData'); // Logs: "fetchData completed in 123ms"
@@ -173,14 +174,17 @@ class LoggerService {
 
   /**
    * Log an error message
+   * 
+   * For errors with Error objects, include them in context:
+   * logger.error('Failed to fetch', { error, feature: 'API' })
    */
-  error(message: string, error?: Error | unknown, context?: LogContext): void {
-    const errorContext = this.enrichErrorContext(error, context);
+  error(message: string, context?: LogContext): void {
+    const errorContext = this.enrichErrorContext(context?.error, context);
     this.log(LogLevel.ERROR, message, errorContext);
 
     // TODO: Send to Sentry/Crashlytics
-    // if (error instanceof Error) {
-    //   Sentry.captureException(error, {
+    // if (context?.error instanceof Error) {
+    //   Sentry.captureException(context.error, {
     //     level: 'error',
     //     tags: { feature: context?.feature },
     //     extra: errorContext,
@@ -190,14 +194,17 @@ class LoggerService {
 
   /**
    * Log a fatal error (critical errors requiring immediate attention)
+   * 
+   * For errors with Error objects, include them in context:
+   * logger.fatal('Critical failure', { error, feature: 'Database' })
    */
-  fatal(message: string, error?: Error | unknown, context?: LogContext): void {
-    const errorContext = this.enrichErrorContext(error, context);
+  fatal(message: string, context?: LogContext): void {
+    const errorContext = this.enrichErrorContext(context?.error, context);
     this.log(LogLevel.FATAL, message, errorContext);
 
     // TODO: Send to Sentry/Crashlytics with high priority
-    // if (error instanceof Error) {
-    //   Sentry.captureException(error, {
+    // if (context?.error instanceof Error) {
+    //   Sentry.captureException(context.error, {
     //     level: 'fatal',
     //     tags: { feature: context?.feature },
     //     extra: errorContext,

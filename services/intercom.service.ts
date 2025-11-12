@@ -1,4 +1,5 @@
 import { functions } from '@/constants/firebase.config';
+import { logger } from '@/services/logger.service';
 import { httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
 
@@ -8,7 +9,7 @@ if (Platform.OS !== 'web') {
   try {
     IntercomNative = require('@intercom/intercom-react-native').default;
   } catch (error) {
-    console.warn('[Intercom] @intercom/intercom-react-native not available:', error);
+    logger.warn('@intercom/intercom-react-native not available', { feature: 'Intercom', error });
   }
 }
 
@@ -22,16 +23,16 @@ if (Platform.OS !== 'web') {
  */
 export async function initializeIntercom(): Promise<void> {
   if (Platform.OS === 'web') {
-    console.log('[Intercom] Skipping on web');
+    logger.info('Skipping on web', { feature: 'Intercom' });
     return;
   }
 
   if (!IntercomNative) {
-    console.warn('[Intercom] SDK not available, skipping initialization');
+    logger.warn('SDK not available, skipping initialization', { feature: 'Intercom' });
     return;
   }
 
-  console.log('[Intercom] SDK is initialized via Expo config plugin');
+  logger.info('SDK is initialized via Expo config plugin', { feature: 'Intercom' });
 }
 
 /**
@@ -39,14 +40,13 @@ export async function initializeIntercom(): Promise<void> {
  */
 async function getJwtFromBackend(userId: string): Promise<string> {
   try {
-    console.log('[Intercom] Calling getIntercomJwt for userId:', userId);
+    logger.info('Calling getIntercomJwt', { feature: 'Intercom', userId });
     const getIntercomJwt = httpsCallable<void, { token: string }>(functions, 'getIntercomJwt');
     const result = await getIntercomJwt();
-    console.log('[Intercom] Got response from backend, token exists:', !!result.data?.token);
+    logger.info('Got response from backend', { feature: 'Intercom', tokenExists: !!result.data?.token });
     return result.data.token;
   } catch (error) {
-    console.error('[Intercom] Failed to get JWT from backend:', error);
-    console.error('[Intercom] Backend error details:', JSON.stringify(error, null, 2));
+    logger.error('Failed to get JWT from backend', { feature: 'Intercom', error, errorDetails: JSON.stringify(error, null, 2) });
     throw new Error('Failed to get Intercom JWT');
   }
 }
@@ -62,36 +62,31 @@ export async function registerIntercomUser(
   name?: string
 ): Promise<void> {
   if (Platform.OS === 'web' || !IntercomNative) {
-    console.log('[Intercom] Skipping registration (web or SDK not available)');
+    logger.info('Skipping registration (web or SDK not available)', { feature: 'Intercom' });
     return;
   }
 
   try {
-    console.log('[Intercom] Starting user registration with params:', {
-      userId,
-      email,
-      name,
-      platform: Platform.OS
-    });
+    logger.info('Starting user registration', { feature: 'Intercom', userId, email, name, platform: Platform.OS });
 
     // CRITICAL: Logout any existing session to prevent JWT identity mismatch
     // Reference: https://help.intercom.com/en/articles/183-authenticating-users-in-the-messenger-with-json-web-tokens-jwts
-    console.log('[Intercom] Step 0: Logging out any existing session...');
+    logger.info('Step 0: Logging out any existing session', { feature: 'Intercom' });
     try {
       await IntercomNative.logout();
-      console.log('[Intercom] Step 0: Existing session cleared');
+      logger.info('Step 0: Existing session cleared', { feature: 'Intercom' });
     } catch (logoutError) {
       // Ignore logout errors (e.g., if no session exists)
-      console.log('[Intercom] Step 0: No existing session to clear');
+      logger.info('Step 0: No existing session to clear', { feature: 'Intercom' });
     }
 
-    console.log('[Intercom] Step 1: Getting JWT from backend...');
+    logger.info('Step 1: Getting JWT from backend', { feature: 'Intercom' });
     const jwt = await getJwtFromBackend(userId);
-    console.log('[Intercom] Step 1: JWT received, length:', jwt?.length);
+    logger.info('Step 1: JWT received', { feature: 'Intercom', jwtLength: jwt?.length });
     
-    console.log('[Intercom] Step 2: Setting user JWT...');
+    logger.info('Step 2: Setting user JWT', { feature: 'Intercom' });
     await IntercomNative.setUserJwt(jwt);
-    console.log('[Intercom] Step 2: JWT set successfully');
+    logger.info('Step 2: JWT set successfully', { feature: 'Intercom' });
     
     // Use simple format as per official documentation
     // https://developers.intercom.com/installing-intercom/react-native/installation
@@ -105,58 +100,33 @@ export async function registerIntercomUser(
       loginParams.name = name;
     }
     
-    console.log('[Intercom] Step 3: Logging in with attributes:', JSON.stringify(loginParams, null, 2));
+    logger.info('Step 3: Logging in with attributes', { feature: 'Intercom', loginParams });
     await IntercomNative.loginUserWithUserAttributes(loginParams);
-    console.log('[Intercom] Step 3: Login successful');
+    logger.info('Step 3: Login successful', { feature: 'Intercom' });
     
-    console.log('[Intercom] User registered successfully');
+    logger.info('User registered successfully', { feature: 'Intercom' });
   } catch (error) {
-    console.error('[Intercom] Failed to register user:', error);
-    console.error('[Intercom] Error details:', JSON.stringify(error, null, 2));
-    if (error && typeof error === 'object') {
-      console.error('[Intercom] Error keys:', Object.keys(error));
-      console.error('[Intercom] Error message:', (error as any).message);
-      console.error('[Intercom] Error code:', (error as any).code);
-      console.error('[Intercom] Error domain:', (error as any).domain);
-      
-      // Log userInfo details which often contain the actual error description
-      if ((error as any).userInfo) {
-        console.error('[Intercom] Error userInfo (full):', JSON.stringify((error as any).userInfo, null, 2));
-        
-        // Standard iOS NSError keys
-        if ((error as any).userInfo.NSLocalizedDescription) {
-          console.error('[Intercom] NSLocalizedDescription:', (error as any).userInfo.NSLocalizedDescription);
-        }
-        if ((error as any).userInfo.NSLocalizedRecoverySuggestion) {
-          console.error('[Intercom] NSLocalizedRecoverySuggestion:', (error as any).userInfo.NSLocalizedRecoverySuggestion);
-        }
-        if ((error as any).userInfo.NSLocalizedFailureReason) {
-          console.error('[Intercom] NSLocalizedFailureReason:', (error as any).userInfo.NSLocalizedFailureReason);
-        }
-        if ((error as any).userInfo.NSDebugDescription) {
-          console.error('[Intercom] NSDebugDescription:', (error as any).userInfo.NSDebugDescription);
-        }
-        
-        // Underlying error (often contains the real cause)
-        if ((error as any).userInfo.NSUnderlyingError) {
-          console.error('[Intercom] NSUnderlyingError:', JSON.stringify((error as any).userInfo.NSUnderlyingError, null, 2));
-        }
-        
-        // HTTP response related
-        if ((error as any).userInfo.statusCode) {
-          console.error('[Intercom] HTTP Status Code:', (error as any).userInfo.statusCode);
-        }
-        if ((error as any).userInfo.responseBody) {
-          console.error('[Intercom] Response Body:', (error as any).userInfo.responseBody);
-        }
-        if ((error as any).userInfo.body) {
-          console.error('[Intercom] Body:', (error as any).userInfo.body);
-        }
-        
-        // Log all keys to see what's available
-        console.error('[Intercom] All userInfo keys:', Object.keys((error as any).userInfo));
-      }
-    }
+    const err = error as any;
+    logger.error('Failed to register user', { 
+      feature: 'Intercom',
+      error,
+      errorKeys: err && typeof err === 'object' ? Object.keys(err) : [],
+      errorMessage: err?.message,
+      errorCode: err?.code,
+      errorDomain: err?.domain,
+      userInfo: err?.userInfo ? {
+        full: JSON.stringify(err.userInfo, null, 2),
+        NSLocalizedDescription: err.userInfo.NSLocalizedDescription,
+        NSLocalizedRecoverySuggestion: err.userInfo.NSLocalizedRecoverySuggestion,
+        NSLocalizedFailureReason: err.userInfo.NSLocalizedFailureReason,
+        NSDebugDescription: err.userInfo.NSDebugDescription,
+        NSUnderlyingError: err.userInfo.NSUnderlyingError ? JSON.stringify(err.userInfo.NSUnderlyingError, null, 2) : undefined,
+        statusCode: err.userInfo.statusCode,
+        responseBody: err.userInfo.responseBody,
+        body: err.userInfo.body,
+        allKeys: Object.keys(err.userInfo)
+      } : undefined
+    });
     // Don't throw - allow app to continue without Intercom
   }
 }
@@ -168,15 +138,15 @@ export async function registerIntercomUser(
  */
 export async function showIntercomMessenger(): Promise<void> {
   if (Platform.OS === 'web' || !IntercomNative) {
-    console.log('[Intercom] Skipping messenger (web or SDK not available)');
+    logger.info('Skipping messenger (web or SDK not available)', { feature: 'Intercom' });
     return;
   }
 
   try {
     await IntercomNative.present();
-    console.log('[Intercom] Messenger opened');
+    logger.info('Messenger opened', { feature: 'Intercom' });
   } catch (error) {
-    console.error('[Intercom] Failed to open messenger:', error);
+    logger.error('Failed to open messenger', { feature: 'Intercom', error });
     // Don't throw - just log the error
   }
 }
@@ -188,15 +158,15 @@ export async function showIntercomMessenger(): Promise<void> {
  */
 export async function logoutIntercomUser(): Promise<void> {
   if (Platform.OS === 'web' || !IntercomNative) {
-    console.log('[Intercom] Skipping logout (web or SDK not available)');
+    logger.info('Skipping logout (web or SDK not available)', { feature: 'Intercom' });
     return;
   }
 
   try {
     await IntercomNative.logout();
-    console.log('[Intercom] User logged out');
+    logger.info('User logged out', { feature: 'Intercom' });
   } catch (error) {
-    console.error('[Intercom] Failed to logout:', error);
+    logger.error('Failed to logout', { feature: 'Intercom', error });
     // Don't throw - allow app to continue
   }
 }
