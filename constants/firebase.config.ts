@@ -33,7 +33,7 @@ if (Platform.OS === 'web') {
   });
 }
 
-export { auth };
+export { app, auth };
 
 export const functions = getFunctions(app);
 

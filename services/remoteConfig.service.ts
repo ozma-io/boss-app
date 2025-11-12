@@ -9,65 +9,6 @@ remoteConfig.settings.minimumFetchIntervalMillis = __DEV__
   ? 0  // No cache in development
   : 3600000; // 1 hour cache in production
 
-// Default subscription plans (fallback if Remote Config unavailable)
-const DEFAULT_SUBSCRIPTION_PLANS: Record<string, Record<string, SubscriptionPlanConfig>> = {
-  basic: {
-    monthly: {
-      tier: 'basic',
-      billingPeriod: 'monthly',
-      priceAmount: 19,
-      priceCurrency: 'USD',
-      billingCycleMonths: 1,
-      appleProductId: 'com.ozmaio.bossapp.basic.monthly',
-      googlePlayProductId: 'play_basic_monthly',
-      stripeProductId: 'price_basic_monthly',
-      enabled: true,
-    },
-    quarterly: {
-      tier: 'basic',
-      billingPeriod: 'quarterly',
-      priceAmount: 53,
-      priceCurrency: 'USD',
-      billingCycleMonths: 3,
-      appleProductId: 'com.ozmaio.bossapp.basic.quarterly',
-      googlePlayProductId: 'play_basic_quarterly',
-      stripeProductId: 'price_basic_quarterly',
-      enabled: true,
-      savings: 4,
-    },
-    semiannual: {
-      tier: 'basic',
-      billingPeriod: 'semiannual',
-      priceAmount: 99,
-      priceCurrency: 'USD',
-      billingCycleMonths: 6,
-      appleProductId: 'com.ozmaio.bossapp.basic.semiannual',
-      googlePlayProductId: 'play_basic_semiannual',
-      stripeProductId: 'price_basic_semiannual',
-      enabled: true,
-      trial: {
-        days: 7,
-      },
-      savings: 15,
-    },
-    annual: {
-      tier: 'basic',
-      billingPeriod: 'annual',
-      priceAmount: 180,
-      priceCurrency: 'USD',
-      billingCycleMonths: 12,
-      appleProductId: 'com.ozmaio.bossapp.basic.annual',
-      googlePlayProductId: 'play_basic_annual',
-      stripeProductId: 'price_basic_annual',
-      enabled: true,
-      trial: {
-        days: 7,
-      },
-      savings: 48,
-    },
-  },
-};
-
 /**
  * Initialize Remote Config and fetch latest values
  */
@@ -77,13 +18,13 @@ export async function initRemoteConfig(): Promise<void> {
     console.log('[RemoteConfig] Successfully fetched and activated');
   } catch (error) {
     console.error('[RemoteConfig] Failed to fetch and activate:', error);
-    // Continue with default values
+    throw error;
   }
 }
 
 /**
  * Fetch subscription plans from Remote Config
- * Returns default plans if Remote Config unavailable or parsing fails
+ * Throws error if Remote Config unavailable or parsing fails
  */
 export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]> {
   try {
@@ -95,8 +36,9 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     const plansJson = plansValue.asString();
     
     if (!plansJson) {
-      console.warn('[RemoteConfig] No subscription_plans parameter found, using defaults');
-      return flattenPlans(DEFAULT_SUBSCRIPTION_PLANS);
+      const error = new Error('No subscription_plans parameter found in Remote Config');
+      console.error('[RemoteConfig]', error.message);
+      throw error;
     }
     
     // Parse JSON
@@ -104,16 +46,16 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     
     // Validate structure
     if (!plansObject || typeof plansObject !== 'object') {
-      console.error('[RemoteConfig] Invalid plans structure, using defaults');
-      return flattenPlans(DEFAULT_SUBSCRIPTION_PLANS);
+      const error = new Error('Invalid subscription plans structure in Remote Config');
+      console.error('[RemoteConfig]', error.message);
+      throw error;
     }
     
     console.log('[RemoteConfig] Successfully loaded subscription plans from Remote Config');
     return flattenPlans(plansObject);
   } catch (error) {
     console.error('[RemoteConfig] Error fetching subscription plans:', error);
-    console.log('[RemoteConfig] Falling back to default plans');
-    return flattenPlans(DEFAULT_SUBSCRIPTION_PLANS);
+    throw error;
   }
 }
 

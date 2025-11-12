@@ -20,6 +20,7 @@ export default function SubscriptionScreen() {
   const { profile, loading: profileLoading } = useUserProfile();
   const [plans, setPlans] = useState<SubscriptionPlanConfig[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
+  const [plansError, setPlansError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   const subscriptionInfo = getSubscriptionDisplayInfo(profile);
@@ -41,13 +42,22 @@ export default function SubscriptionScreen() {
   async function loadPlans() {
     try {
       setPlansLoading(true);
+      setPlansError(null);
       const fetchedPlans = await fetchSubscriptionPlans();
       // Only show Basic tier plans for now
       const basicPlans = fetchedPlans.filter(plan => plan.tier === 'basic');
       setPlans(basicPlans);
     } catch (error) {
-      console.error('[SubscriptionScreen] Failed to load plans:', error);
-      Alert.alert('Error', 'Failed to load subscription plans. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[SubscriptionScreen] Failed to load plans:', errorMessage);
+      
+      // Track error in Amplitude
+      trackAmplitudeEvent('subscription_plans_load_failed', {
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : 'unknown',
+      });
+      
+      setPlansError('Failed to load subscription plans. We are working on fixing this issue.');
     } finally {
       setPlansLoading(false);
     }
@@ -194,7 +204,22 @@ export default function SubscriptionScreen() {
             {subscriptionInfo.hasSubscription ? 'You can change your plan' : 'Choose your plan'}
           </Text>
 
-          {plans.length === 0 ? (
+          {plansError ? (
+            <View style={styles.errorContainer} testID="plans-error-container">
+              <Text style={styles.errorIcon}>⚠️</Text>
+              <Text style={styles.errorText}>{plansError}</Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed && styles.buttonPressed
+                ]}
+                onPress={loadPlans}
+                testID="retry-button"
+              >
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </Pressable>
+            </View>
+          ) : plans.length === 0 ? (
             <Text style={styles.noPlansText}>No subscription plans available at the moment.</Text>
           ) : (
             <ScrollView 
@@ -335,6 +360,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     fontFamily: 'Manrope-Regular',
+  },
+  errorContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 22,
+    fontFamily: 'Manrope-Regular',
+  },
+  retryButton: {
+    backgroundColor: '#333',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Manrope-SemiBold',
   },
   plansContainer: {
     paddingRight: 16,
