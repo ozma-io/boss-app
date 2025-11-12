@@ -147,28 +147,36 @@ User installs app
 
 **Status:** ✅ **Ready** (Implemented in `app/(auth)/email-confirm.tsx` and `EmailAuthModal.tsx`)
 
-**Next:** → Main App (Home Screen)
+**Next:** → Main App (Profile Screen)
 
 ---
 
-### Screen 5: Main App (Home Screen)
+### Screen 5: Main App (Profile Screen)
 
 **What happens:**
 - User is fully authenticated
 - Attribution data (if any) permanently linked to user profile in Firestore
 - User profile created/updated with email and metadata
-- App navigates to `/(tabs)` route
+- App navigates to `/(tabs)` route, which opens Profile tab by default
 
 **What user sees:**
 - **Header:** "The Boss App" title centered at top
 - **Profile Section:**
   - Avatar image (120x120px, rounded)
-  - Username (mock data: "John Doe")
+  - Username (mock data: "Mike_reex")
   - User's email address
 - **Goal Card** (green background `#B8E986`):
-  - 🚩 Flag icon + "My Goal" title
-  - ✏️ Edit button (top-right)
+  - 🚩 Flag icon + "Your Goal:" label
+  - ✏️ Edit button (right side)
   - Goal description text (editable on tap)
+- **Position Card** (white background):
+  - 💼 Briefcase icon + "Position:" label
+  - ✏️ Edit button (right side)
+  - Position text (editable on tap, mock data: "Senior Developer")
+- **Department Card** (white background):
+  - 🏢 Department icon + "Department:" label
+  - ✏️ Edit button (right side)
+  - Department text (editable on tap, mock data: "Engineering")
 - **"Where You Now" Metrics Section:**
   - **Your stress level** - Progress bar with percentage
   - **Boss relationship challenges** - Progress bar with percentage (red)
@@ -177,10 +185,8 @@ User installs app
   - Personal information →
   - Subscription →
   - Support →
-- **Footer:**
-  - Privacy policy | Terms of service (links)
 - **Floating Chat Button** (bottom-right):
-  - Black circular button with chat icon
+  - Green circular button with chat icon
   - Always visible, opens AI assistant chat
 
 **User actions available:**
@@ -191,11 +197,11 @@ User installs app
 
 **Background color:** Warm beige `#F5F1E8`
 
-**Status:** ✅ **Ready** (Implemented in `app/(tabs)/index.tsx`)
+**Status:** ✅ **Ready** (Implemented in `app/(tabs)/profile.tsx`)
 
 **Technical notes:**
 - Uses mock data for profile, goal, and metrics
-- Amplitude event: `home_screen_viewed` tracked on focus
+- Amplitude event: `profile_screen_viewed` tracked on focus
 - Chat button navigates to `/chat` route
 - Settings items navigate to respective screens
 
