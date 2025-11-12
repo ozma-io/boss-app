@@ -1,13 +1,14 @@
 import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { showIntercomMessenger } from '@/services/intercom.service';
-import { mockUserGoal, mockUserMetrics, mockUserProfile } from '@/utils/mockData';
+import { mockUserMetrics } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
@@ -15,17 +16,36 @@ export default function ProfileScreen() {
   const topInset = insets.top;
   
   const { user } = useAuth();
-  const [goalDescription, setGoalDescription] = useState(mockUserGoal.description);
+  const { profile, loading, error, updateProfile } = useUserProfile();
+  
+  const [goalDescription, setGoalDescription] = useState('');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [position, setPosition] = useState(mockUserProfile.position);
+  const [position, setPosition] = useState('');
   const [isEditingPosition, setIsEditingPosition] = useState(false);
-  const [department, setDepartment] = useState(mockUserProfile.department);
+  const [department, setDepartment] = useState('');
   const [isEditingDepartment, setIsEditingDepartment] = useState(false);
+
+  // Sync local state with profile data when it loads
+  useEffect(() => {
+    if (profile) {
+      setGoalDescription(profile.custom_goal || '');
+      setPosition(profile.custom_position || '');
+      setDepartment(profile.custom_department || '');
+    }
+  }, [profile]);
 
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('profile_screen_viewed');
-    }, [])
+      
+      if (profile) {
+        trackAmplitudeEvent('profile_data_loaded', {
+          hasGoal: !!profile.custom_goal,
+          hasPosition: !!profile.custom_position,
+          hasDepartment: !!profile.custom_department,
+        });
+      }
+    }, [profile])
   );
 
   const handleSignOut = async (): Promise<void> => {
@@ -46,24 +66,54 @@ export default function ProfileScreen() {
     setIsEditingGoal(true);
   };
 
-  const handleBlurGoal = (): void => {
+  const handleBlurGoal = async (): Promise<void> => {
     setIsEditingGoal(false);
+    if (goalDescription !== profile?.custom_goal) {
+      try {
+        await updateProfile({ custom_goal: goalDescription });
+        trackAmplitudeEvent('profile_field_edited', {
+          field: 'goal',
+        });
+      } catch (err) {
+        console.error('Failed to update goal:', err);
+      }
+    }
   };
 
   const handleEditPosition = (): void => {
     setIsEditingPosition(true);
   };
 
-  const handleBlurPosition = (): void => {
+  const handleBlurPosition = async (): Promise<void> => {
     setIsEditingPosition(false);
+    if (position !== profile?.custom_position) {
+      try {
+        await updateProfile({ custom_position: position });
+        trackAmplitudeEvent('profile_field_edited', {
+          field: 'position',
+        });
+      } catch (err) {
+        console.error('Failed to update position:', err);
+      }
+    }
   };
 
   const handleEditDepartment = (): void => {
     setIsEditingDepartment(true);
   };
 
-  const handleBlurDepartment = (): void => {
+  const handleBlurDepartment = async (): Promise<void> => {
     setIsEditingDepartment(false);
+    if (department !== profile?.custom_department) {
+      try {
+        await updateProfile({ custom_department: department });
+        trackAmplitudeEvent('profile_field_edited', {
+          field: 'department',
+        });
+      } catch (err) {
+        console.error('Failed to update department:', err);
+      }
+    }
   };
 
   const handleOpenPersonalInfo = (): void => {
@@ -116,6 +166,38 @@ export default function ProfileScreen() {
     );
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]} testID="profile-loading">
+        <ActivityIndicator size="large" color="#B6D95C" />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]} testID="profile-error">
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
+      </View>
+    );
+  }
+
+  // No profile (shouldn't happen if authenticated)
+  if (!profile) {
+    return (
+      <View style={[styles.container, styles.centerContent]} testID="profile-empty">
+        <Text style={styles.emptyIcon}>👤</Text>
+        <Text style={styles.emptyText}>Profile not found</Text>
+        <Text style={styles.emptyHint}>Please try signing in again</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container} testID="profile-container">
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="profile-scroll-view">
@@ -132,8 +214,8 @@ export default function ProfileScreen() {
               testID="avatar-image"
             />
           </View>
-          <Text style={styles.username} testID="username-text">{mockUserProfile.username}</Text>
-          <Text style={styles.email} testID="email-text">{user?.email || mockUserProfile.email}</Text>
+          <Text style={styles.username} testID="username-text">{profile.displayName || 'User'}</Text>
+          <Text style={styles.email} testID="email-text">{profile.email}</Text>
         </View>
 
         <View style={styles.goalCard} testID="goal-card">
@@ -144,7 +226,7 @@ export default function ProfileScreen() {
             testID="goal-flag-icon"
           />
           <View style={styles.cardContent} testID="goal-content">
-            <Text style={styles.cardLabel} testID="goal-label">{mockUserGoal.title}: </Text>
+            <Text style={styles.cardLabel} testID="goal-label">Your Goal: </Text>
             {isEditingGoal ? (
               <TextInput
                 style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
@@ -305,6 +387,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F1E8',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Manrope-Regular',
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+    fontFamily: 'Manrope-SemiBold',
+  },
+  errorHint: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    fontFamily: 'Manrope-Regular',
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+    fontFamily: 'Manrope-SemiBold',
+  },
+  emptyHint: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    fontFamily: 'Manrope-Regular',
   },
   scrollView: {
     flex: 1,

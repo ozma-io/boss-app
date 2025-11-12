@@ -1,8 +1,8 @@
 import { db } from '@/constants/firebase.config';
 import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
-import { NotificationPermissionStatus, NotificationPromptHistoryItem, UserNotificationData } from '@/types';
+import { NotificationPermissionStatus, NotificationPromptHistoryItem, Unsubscribe, UserNotificationData, UserProfile } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import { AttributionData } from './attribution.service';
 
@@ -231,6 +231,117 @@ export async function updateUserAttribution(userId: string, attributionData: Att
     console.log('[UserService] Attribution data updated for user:', userId);
   } catch (error) {
     console.error('[UserService] Error updating user attribution:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get user profile data from Firestore
+ * 
+ * @param userId - User ID
+ * @returns User profile or null if not found
+ */
+export async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  const startTime = Date.now();
+  console.log(`📊 [UserService] >>> Getting profile for user: ${userId} at ${new Date().toISOString()}`);
+  
+  try {
+    const result = await retryWithBackoff(async () => {
+      const userDocRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (!userDoc.exists()) {
+        console.log(`📊 [UserService] User profile does not exist: ${userId}`);
+        return null;
+      }
+      
+      return userDoc.data() as UserProfile;
+    }, 3, 500);
+    
+    const duration = Date.now() - startTime;
+    console.log(`📊 [UserService] <<< Successfully retrieved profile in ${duration}ms`);
+    return result;
+  } catch (error) {
+    const err = error as Error;
+    const isOffline = isFirebaseOfflineError(err);
+    const duration = Date.now() - startTime;
+    
+    if (isOffline) {
+      console.warn(
+        `📊 [UserService] Failed to get user profile after 3 retries (offline) in ${duration}ms. User: ${userId}. Returning null.`
+      );
+    } else {
+      console.error(
+        `📊 [UserService] Error getting user profile for ${userId} after ${duration}ms:`,
+        err.message
+      );
+    }
+    
+    return null;
+  }
+}
+
+/**
+ * Subscribe to real-time updates for user profile
+ * 
+ * @param userId - User ID
+ * @param callback - Callback function called with profile data on updates
+ * @returns Unsubscribe function to stop listening to updates
+ */
+export function subscribeToUserProfile(
+  userId: string,
+  callback: (profile: UserProfile | null) => void
+): Unsubscribe {
+  console.log(`📊 [UserService] >>> Subscribing to profile for user: ${userId}`);
+  
+  const userDocRef = doc(db, 'users', userId);
+  
+  return onSnapshot(
+    userDocRef,
+    (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const profile = docSnapshot.data() as UserProfile;
+        console.log(`📊 [UserService] User profile updated for ${userId}`);
+        callback(profile);
+      } else {
+        console.log(`📊 [UserService] User profile does not exist for ${userId}`);
+        callback(null);
+      }
+    },
+    (error) => {
+      console.error(`📊 [UserService] Error in user profile subscription for ${userId}:`, error);
+      callback(null);
+    }
+  );
+}
+
+/**
+ * Update user profile data
+ * 
+ * Supports updating core fields and custom fields.
+ * Custom fields should use the `custom_` prefix.
+ * 
+ * @param userId - User ID
+ * @param data - Partial profile data to update
+ */
+export async function updateUserProfile(
+  userId: string,
+  data: Partial<UserProfile>
+): Promise<void> {
+  try {
+    console.log(`📊 [UserService] >>> Updating profile for user: ${userId}`);
+    
+    const userDocRef = doc(db, 'users', userId);
+    
+    await updateDoc(userDocRef, {
+      ...data,
+      updatedAt: new Date().toISOString(),
+    });
+    
+    console.log(`📊 [UserService] <<< Successfully updated profile for ${userId}`);
+  } catch (error) {
+    const err = error as Error;
+    console.error(`📊 [UserService] Error updating user profile for ${userId}:`, err.message);
     throw error;
   }
 }

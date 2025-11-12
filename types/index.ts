@@ -1,22 +1,45 @@
-// Boss type definition with all attributes
+// Boss type definition synced with BossSchema
 export interface Boss {
   id: string;
+  
+  // Core fields (required)
   name: string;
   position: string;
   department: string;
   startedAt: string;
-  birthday: string;
-  managementStyle: string;
-  currentMood: string;
-  favoriteColor: string;
-  communicationPreference: string;
-  meetingFrequency: string;
-  workingHours: string;
-  keyInterests: string[];
+  createdAt: string;
+  updatedAt: string;
+  
+  // Optional core fields
+  birthday?: string;
+  workingHours?: string;
+  
+  // Legacy fields (deprecated, kept for compatibility)
+  managementStyle?: string;
+  currentMood?: string;
+  favoriteColor?: string;
+  communicationPreference?: string;
+  meetingFrequency?: string;
+  keyInterests?: string[];
+  
+  // Field metadata for custom fields
+  _fieldsMeta?: {
+    [fieldKey: string]: {
+      label: string;
+      type: 'text' | 'select' | 'date' | 'multiline' | 'multiselect';
+      category?: string;
+      source?: 'onboarding_funnel' | 'user_added';
+      createdAt: string;
+      options?: string[];
+    };
+  };
+  
+  // Allow custom fields
+  [key: string]: any;
 }
 
 // Timeline entry types
-export type TimelineEntryType = 'note' | 'survey' | 'interaction';
+export type TimelineEntryType = 'note' | 'survey' | 'interaction' | 'fact';
 
 // Base entry interface
 interface BaseEntry {
@@ -54,18 +77,60 @@ export interface InteractionEntry extends BaseEntry {
   topics?: string[];
 }
 
-// Discriminated union for all timeline entries
-export type TimelineEntry = NoteEntry | SurveyEntry | InteractionEntry;
+// Fact entry - for tracking single assessments over time
+export interface FactEntry extends BaseEntry {
+  type: 'fact';
+  factKey: string;
+  factLabel: string;
+  value: string | number | string[];
+  category?: string;
+  source?: 'onboarding_funnel' | 'user_added' | 'weekly_survey';
+}
 
-// User type definition
+// Discriminated union for all timeline entries
+export type TimelineEntry = NoteEntry | SurveyEntry | InteractionEntry | FactEntry;
+
+// User type definition (for authentication)
 export interface User {
   id: string;
   email: string;
   createdAt: string;
 }
 
+// User Profile type definition (for Firestore data)
+export interface UserProfile {
+  email: string;
+  displayName?: string;
+  photoURL?: string;
+  createdAt: string;
+  updatedAt?: string;
+  
+  // Custom fields for profile data
+  custom_position?: string;
+  custom_department?: string;
+  custom_goal?: string;
+  
+  // Field metadata for custom fields
+  _fieldsMeta?: {
+    [fieldKey: string]: {
+      label: string;
+      type: 'text' | 'select' | 'date' | 'multiline';
+      category?: string;
+      source?: string;
+      createdAt: string;
+      options?: string[];
+    };
+  };
+  
+  // Allow custom fields
+  [key: string]: any;
+}
+
 // Auth state type
 export type AuthState = 'authenticated' | 'unauthenticated' | 'loading';
+
+// Unsubscribe function type for Firestore subscriptions
+export type Unsubscribe = () => void;
 
 // Notification permission types
 export type NotificationPermissionStatus = 'granted' | 'denied' | 'not_asked';
