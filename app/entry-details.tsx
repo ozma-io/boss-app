@@ -1,6 +1,6 @@
 import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { mockTimelineEntries } from '@/utils/mockData';
+import { TimelineEntry } from '@/types';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -12,8 +12,11 @@ const moodEmojis: Record<string, string> = {
 };
 
 export default function EntryDetailsScreen() {
-  const { entryId } = useLocalSearchParams<{ entryId: string }>();
-  const entry = mockTimelineEntries.find((e) => e.id === entryId);
+  const { entryId, entryData } = useLocalSearchParams<{
+    entryId: string;
+    entryData: string;
+  }>();
+  const entry: TimelineEntry | null = entryData ? JSON.parse(entryData) : null;
 
   useFocusEffect(
     useCallback(() => {

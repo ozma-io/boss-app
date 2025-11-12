@@ -37,7 +37,10 @@ export default function TimelineScreen() {
   const handleTimelineEntryPress = (entry: TimelineEntry): void => {
     router.push({
       pathname: '/entry-details',
-      params: { entryId: entry.id },
+      params: {
+        entryId: entry.id,
+        entryData: JSON.stringify(entry),
+      },
     });
   };
 

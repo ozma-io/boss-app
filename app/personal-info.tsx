@@ -1,20 +1,27 @@
-import { AppColors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
-import { mockUserProfile } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PersonalInfoScreen() {
   const { user } = useAuth();
+  const { profile, loading, error, updateProfile } = useUserProfile();
   const insets = useSafeAreaInsets();
-  const [name, setName] = useState(mockUserProfile.name);
+  const [name, setName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
+
+  // Sync local state with profile data when it loads
+  useEffect(() => {
+    if (profile) {
+      setName(profile.displayName || '');
+    }
+  }, [profile]);
 
   useFocusEffect(
     useCallback(() => {
@@ -36,14 +43,29 @@ export default function PersonalInfoScreen() {
     }
   };
 
-  const handleBlurName = (): void => {
+  const handleBlurName = async (): Promise<void> => {
     setIsEditingName(false);
-    // TODO: Save name to backend
+    if (name !== profile?.displayName) {
+      try {
+        await updateProfile({ displayName: name });
+        trackAmplitudeEvent('personal_info_field_edited', {
+          field: 'displayName',
+        });
+      } catch (err) {
+        console.error('Failed to update name:', err);
+        Alert.alert('Error', 'Failed to save name. Please try again.');
+      }
+    }
   };
 
-  const saveAllFields = (): void => {
-    // TODO: Save all fields to backend
-    console.log('Saving fields:', { name });
+  const saveAllFields = async (): Promise<void> => {
+    if (name !== profile?.displayName) {
+      try {
+        await updateProfile({ displayName: name });
+      } catch (err) {
+        console.error('Failed to save fields:', err);
+      }
+    }
   };
 
   useEffect(() => {
@@ -53,6 +75,41 @@ export default function PersonalInfoScreen() {
       }
     };
   }, [isEditingName, name]);
+
+  // Format joined date
+  const formatJoinedDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centerContent]} testID="personal-info-loading">
+        <ActivityIndicator size="large" color="#B6D95C" />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent]} testID="personal-info-error">
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} testID="personal-info-container">
@@ -79,7 +136,7 @@ export default function PersonalInfoScreen() {
                     testID="input-name"
                   />
                 ) : (
-                  <Text style={styles.value} testID="value-name">{name}</Text>
+                  <Text style={styles.value} testID="value-name">{name || 'Not set'}</Text>
                 )}
               </View>
             </Pressable>
@@ -90,7 +147,7 @@ export default function PersonalInfoScreen() {
               </View>
               <View style={styles.infoContent} testID="info-content-email">
                 <Text style={styles.label} testID="label-email">Email</Text>
-                <Text style={styles.value} testID="value-email">{user?.email || mockUserProfile.email}</Text>
+                <Text style={styles.value} testID="value-email">{profile?.email || user?.email || 'Not set'}</Text>
               </View>
             </View>
 
@@ -100,7 +157,9 @@ export default function PersonalInfoScreen() {
               </View>
               <View style={styles.infoContent} testID="info-content-joined">
                 <Text style={styles.label} testID="label-joined">Joined at</Text>
-                <Text style={styles.value} testID="value-joined">{mockUserProfile.joinedAt}</Text>
+                <Text style={styles.value} testID="value-joined">
+                  {profile?.createdAt ? formatJoinedDate(profile.createdAt) : 'Not set'}
+                </Text>
               </View>
             </View>
           </View>
@@ -134,6 +193,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F1E8',
+  },
+  centerContent: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Manrope-Regular',
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'center',
+    fontFamily: 'Manrope-SemiBold',
+  },
+  errorHint: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    fontFamily: 'Manrope-Regular',
   },
   scrollView: {
     flex: 1,

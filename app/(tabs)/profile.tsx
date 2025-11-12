@@ -4,7 +4,6 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { showIntercomMessenger } from '@/services/intercom.service';
-import { mockUserMetrics } from '@/utils/mockData';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -24,6 +23,17 @@ export default function ProfileScreen() {
   const [isEditingPosition, setIsEditingPosition] = useState(false);
   const [department, setDepartment] = useState('');
   const [isEditingDepartment, setIsEditingDepartment] = useState(false);
+
+  // TODO: These metrics should be calculated dynamically based on:
+  // - Timeline entries (fact entries with stress/confidence assessments)
+  // - Interaction mood patterns over time
+  // - Survey response trends
+  // For now using placeholder values
+  const mockMetrics = {
+    stressLevel: 0.25,
+    bossRelationshipChallenges: 0.20,
+    selfDoubtConfidenceGap: 0.30,
+  };
 
   // Sync local state with profile data when it loads
   useEffect(() => {
@@ -300,25 +310,25 @@ export default function ProfileScreen() {
           <View style={styles.metricItem} testID="metric-stress-level">
             <View style={styles.metricHeader} testID="metric-stress-level-header">
               <Text style={styles.metricLabel} testID="metric-stress-level-label">Your stress level</Text>
-              <Text style={styles.metricValue} testID="metric-stress-level-value">Higher than {Math.round(mockUserMetrics.stressLevel * 100)}%</Text>
+              <Text style={styles.metricValue} testID="metric-stress-level-value">Higher than {Math.round(mockMetrics.stressLevel * 100)}%</Text>
             </View>
-            {renderProgressBar(mockUserMetrics.stressLevel, '#B8E986', 'metric-stress-level-progress')}
+            {renderProgressBar(mockMetrics.stressLevel, '#B8E986', 'metric-stress-level-progress')}
           </View>
 
           <View style={styles.metricItem} testID="metric-boss-challenges">
             <View style={styles.metricHeader} testID="metric-boss-challenges-header">
               <Text style={styles.metricLabel} testID="metric-boss-challenges-label">Boss relationship challenges</Text>
-              <Text style={styles.metricValue} testID="metric-boss-challenges-value">More than {Math.round(mockUserMetrics.bossRelationshipChallenges * 100)}%</Text>
+              <Text style={styles.metricValue} testID="metric-boss-challenges-value">More than {Math.round(mockMetrics.bossRelationshipChallenges * 100)}%</Text>
             </View>
-            {renderProgressBar(mockUserMetrics.bossRelationshipChallenges, '#FF6B6B', 'metric-boss-challenges-progress')}
+            {renderProgressBar(mockMetrics.bossRelationshipChallenges, '#FF6B6B', 'metric-boss-challenges-progress')}
           </View>
 
           <View style={styles.metricItem} testID="metric-confidence-gap">
             <View style={styles.metricHeader} testID="metric-confidence-gap-header">
               <Text style={styles.metricLabel} testID="metric-confidence-gap-label">Self-doubt / confidence gap</Text>
-              <Text style={styles.metricValue} testID="metric-confidence-gap-value">Higher than {Math.round(mockUserMetrics.selfDoubtConfidenceGap * 100)}%</Text>
+              <Text style={styles.metricValue} testID="metric-confidence-gap-value">Higher than {Math.round(mockMetrics.selfDoubtConfidenceGap * 100)}%</Text>
             </View>
-            {renderProgressBar(mockUserMetrics.selfDoubtConfidenceGap, '#B8E986', 'metric-confidence-gap-progress')}
+            {renderProgressBar(mockMetrics.selfDoubtConfidenceGap, '#B8E986', 'metric-confidence-gap-progress')}
           </View>
         </View>
 
