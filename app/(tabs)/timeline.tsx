@@ -7,11 +7,11 @@ import { useBoss } from '@/hooks/useBoss';
 import { useTimelineEntries } from '@/hooks/useTimelineEntries';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { logger } from '@/services/logger.service';
-import { createFactEntry, createNoteEntry, deleteTimelineEntry } from '@/services/timeline.service';
+import { createFactEntry, createNoteEntry, deleteTimelineEntry, updateTimelineEntry } from '@/services/timeline.service';
 import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { groupTimelineEntries } from '@/utils/timelineHelpers';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -25,6 +25,7 @@ export default function TimelineScreen() {
   const { boss, loading: bossLoading } = useBoss();
   const { entries, loading: entriesLoading, error } = useTimelineEntries(boss?.id);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [entryToEdit, setEntryToEdit] = useState<TimelineEntry | undefined>(undefined);
 
   const loading = bossLoading || entriesLoading;
 
@@ -44,13 +45,13 @@ export default function TimelineScreen() {
   const timelineGroups = groupTimelineEntries(entries);
 
   const handleTimelineEntryPress = (entry: TimelineEntry): void => {
-    router.push({
-      pathname: '/entry-details',
-      params: {
-        entryId: entry.id,
-        entryData: JSON.stringify(entry),
-      },
-    });
+    setEntryToEdit(entry);
+    setIsAddModalVisible(true);
+  };
+
+  const handleCloseModal = (): void => {
+    setIsAddModalVisible(false);
+    setEntryToEdit(undefined);
   };
 
   const handleAddEntry = async (entryData: any): Promise<void> => {
@@ -66,8 +67,7 @@ export default function TimelineScreen() {
           subtype: entryData.subtype,
           title: entryData.title,
           content: entryData.content,
-          // TODO: Pass icon when icon picker is implemented
-          icon: entryData.icon || null,
+          icon: entryData.icon,
           timestamp: entryData.timestamp,
         });
 
@@ -89,8 +89,7 @@ export default function TimelineScreen() {
           content: entryData.content,
           factKey: entryData.factKey,
           value: entryData.value,
-          // TODO: Pass icon when icon picker is implemented
-          icon: entryData.icon || null,
+          icon: entryData.icon,
           timestamp: entryData.timestamp,
         });
 
@@ -110,6 +109,36 @@ export default function TimelineScreen() {
       logger.error('Failed to create timeline entry', {
         feature: 'TimelineScreen',
         bossId: boss.id,
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
+      throw err;
+    }
+  };
+
+  const handleUpdateEntry = async (entryId: string, updates: Partial<TimelineEntry>): Promise<void> => {
+    if (!user || !boss) {
+      showAlert('Error', 'Unable to update entry. Please try again.');
+      return;
+    }
+
+    try {
+      await updateTimelineEntry(user.id, boss.id, entryId, updates);
+
+      trackAmplitudeEvent('timeline_entry_updated', {
+        entryId,
+        bossId: boss.id,
+      });
+
+      logger.info('Timeline entry updated', {
+        feature: 'TimelineScreen',
+        bossId: boss.id,
+        entryId,
+      });
+    } catch (err) {
+      logger.error('Failed to update timeline entry', {
+        feature: 'TimelineScreen',
+        bossId: boss.id,
+        entryId,
         error: err instanceof Error ? err : new Error(String(err)),
       });
       throw err;
@@ -209,8 +238,10 @@ export default function TimelineScreen() {
 
         <AddTimelineEntryModal
           isVisible={isAddModalVisible}
-          onClose={() => setIsAddModalVisible(false)}
+          onClose={handleCloseModal}
           onAdd={handleAddEntry}
+          onUpdate={handleUpdateEntry}
+          entryToEdit={entryToEdit}
         />
       </View>
     </GestureHandlerRootView>

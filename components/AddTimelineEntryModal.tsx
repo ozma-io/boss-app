@@ -1,7 +1,8 @@
+import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -18,7 +19,9 @@ import Modal from 'react-native-modal';
 interface AddTimelineEntryModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onAdd: (entryData: NoteEntryData | FactEntryData) => Promise<void>;
+  onAdd?: (entryData: NoteEntryData | FactEntryData) => Promise<void>;
+  onUpdate?: (entryId: string, updates: Partial<TimelineEntry>) => Promise<void>;
+  entryToEdit?: TimelineEntry;
 }
 
 type EntryType = 'note' | 'fact';
@@ -29,7 +32,7 @@ interface NoteEntryData {
   subtype: NoteSubtype;
   title: string;
   content: string;
-  icon: null;
+  icon?: string;
   timestamp: string;
 }
 
@@ -39,7 +42,7 @@ interface FactEntryData {
   content: string;
   factKey: string;
   value: string;
-  icon: null;
+  icon?: string;
   timestamp: string;
 }
 
@@ -58,16 +61,18 @@ const NOTE_SUBTYPES: Array<{ value: NoteSubtype; label: string }> = [
 ];
 
 /**
- * Modal for adding a new timeline entry
+ * Modal for adding or editing a timeline entry
  * Allows user to select entry type (Note or Metric) and fill in type-specific fields
+ * In edit mode, entry type is locked and cannot be changed
  */
-export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimelineEntryModalProps) {
+export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, entryToEdit }: AddTimelineEntryModalProps) {
+  const isEditMode = !!entryToEdit;
+  
   const [entryType, setEntryType] = useState<EntryType>('note');
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const [noteSubtype, setNoteSubtype] = useState<NoteSubtype>('note');
-  // TODO: Add icon picker UI for users to select custom icons for entries
-  // const [icon, setIcon] = useState<string>('');
+  const [icon, setIcon] = useState<string>('');
   const [factKey, setFactKey] = useState<string>('');
   const [factValue, setFactValue] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -75,53 +80,92 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const handleClose = (): void => {
-    if (!isSubmitting) {
-      // Reset all fields
+  // Populate fields when editing
+  useEffect(() => {
+    if (entryToEdit) {
+      setEntryType(entryToEdit.type);
+      setTitle(entryToEdit.title);
+      setContent(entryToEdit.content || '');
+      setIcon(entryToEdit.icon || '');
+      setSelectedDate(new Date(entryToEdit.timestamp));
+      
+      if (entryToEdit.type === 'note') {
+        setNoteSubtype(entryToEdit.subtype);
+      } else if (entryToEdit.type === 'fact') {
+        setFactKey(entryToEdit.factKey);
+        setFactValue(String(entryToEdit.value));
+      }
+    } else {
+      // Reset to defaults when not editing
       setEntryType('note');
       setTitle('');
       setContent('');
       setNoteSubtype('note');
-      // setIcon('');
+      setIcon('');
       setFactKey('');
       setFactValue('');
       setSelectedDate(new Date());
+    }
+  }, [entryToEdit, isVisible]);
+
+  const handleClose = (): void => {
+    if (!isSubmitting) {
       onClose();
     }
   };
 
-  const handleAdd = async (): Promise<void> => {
+  const handleSubmit = async (): Promise<void> => {
     setIsSubmitting(true);
     try {
-      if (entryType === 'note') {
-        const entryData: NoteEntryData = {
-          type: 'note',
-          subtype: noteSubtype,
+      if (isEditMode && entryToEdit && onUpdate) {
+        // Update existing entry
+        const updates: any = {
           title: title.trim(),
           content: content.trim(),
-          // TODO: Allow users to set custom icons when icon picker is implemented
-          icon: null,
+          icon: icon.trim() || undefined,
           timestamp: selectedDate.toISOString(),
         };
-        await onAdd(entryData);
-      } else {
-        const entryData: FactEntryData = {
-          type: 'fact',
-          title: title.trim(),
-          content: content.trim(),
-          factKey: factKey.trim(),
-          value: factValue.trim(),
-          // TODO: Allow users to set custom icons when icon picker is implemented
-          icon: null,
-          timestamp: selectedDate.toISOString(),
-        };
-        await onAdd(entryData);
+        
+        if (entryType === 'note') {
+          updates.subtype = noteSubtype;
+        } else if (entryType === 'fact') {
+          updates.factKey = factKey.trim();
+          updates.value = factValue.trim();
+        }
+        
+        await onUpdate(entryToEdit.id, updates);
+      } else if (onAdd) {
+        // Create new entry
+        if (entryType === 'note') {
+          const entryData: NoteEntryData = {
+            type: 'note',
+            subtype: noteSubtype,
+            title: title.trim(),
+            content: content.trim(),
+            icon: icon.trim() || undefined,
+            timestamp: selectedDate.toISOString(),
+          };
+          await onAdd(entryData);
+        } else {
+          const entryData: FactEntryData = {
+            type: 'fact',
+            title: title.trim(),
+            content: content.trim(),
+            factKey: factKey.trim(),
+            value: factValue.trim(),
+            icon: icon.trim() || undefined,
+            timestamp: selectedDate.toISOString(),
+          };
+          await onAdd(entryData);
+        }
       }
       handleClose();
     } catch (error) {
       showAlert(
         'Something went wrong',
-        'We couldn\'t add this entry right now. Our team has been notified and is working on it. Please try again later.'
+        isEditMode 
+          ? 'We couldn\'t update this entry right now. Our team has been notified and is working on it. Please try again later.'
+          : 'We couldn\'t add this entry right now. Our team has been notified and is working on it. Please try again later.'
       );
     } finally {
       setIsSubmitting(false);
@@ -184,7 +228,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
           <View style={styles.header}>
             <View style={styles.dragHandle} />
             <Text style={styles.title} testID="modal-title">
-              Add Timeline Entry
+              {isEditMode ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
             </Text>
           </View>
 
@@ -226,8 +270,10 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
                     style={[
                       styles.typeCard,
                       entryType === type.value && styles.typeCardSelected,
+                      isEditMode && styles.typeCardDisabled,
                     ]}
-                    onPress={() => setEntryType(type.value)}
+                    onPress={() => !isEditMode && setEntryType(type.value)}
+                    disabled={isEditMode}
                     testID={`entry-type-${type.value}`}
                   >
                     <Ionicons
@@ -438,12 +484,14 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
                 styles.addButton,
                 (isSubmitting || !isFormValid()) && styles.buttonDisabled
               ]}
-              onPress={handleAdd}
+              onPress={handleSubmit}
               disabled={isSubmitting || !isFormValid()}
               testID="add-entry-button"
             >
               <Text style={styles.addButtonText}>
-                {isSubmitting ? 'Adding...' : 'Add Entry'}
+                {isSubmitting 
+                  ? (isEditMode ? 'Saving...' : 'Adding...') 
+                  : (isEditMode ? 'Save Changes' : 'Add Entry')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -560,6 +608,9 @@ const styles = StyleSheet.create({
   typeCardSelected: {
     backgroundColor: '#f0f9e6',
     borderColor: '#B8E986',
+  },
+  typeCardDisabled: {
+    opacity: 0.5,
   },
   typeLabel: {
     fontSize: 14,

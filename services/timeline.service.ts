@@ -13,6 +13,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  updateDoc,
 } from 'firebase/firestore';
 import { logger } from './logger.service';
 
@@ -145,6 +146,34 @@ export async function createFactEntry(
   } catch (error) {
     const err = error as Error;
     logger.error('Error creating fact entry', { feature: 'TimelineService', userId, bossId, error: err });
+    throw error;
+  }
+}
+
+/**
+ * Update a timeline entry
+ * 
+ * @param userId - User ID
+ * @param bossId - Boss ID
+ * @param entryId - Entry ID to update
+ * @param updates - Partial entry data to update
+ */
+export async function updateTimelineEntry(
+  userId: string,
+  bossId: string,
+  entryId: string,
+  updates: Partial<Omit<TimelineEntry, 'id' | 'type'>>
+): Promise<void> {
+  try {
+    logger.debug('Updating timeline entry', { feature: 'TimelineService', userId, bossId, entryId });
+    
+    const entryRef = doc(db, 'users', userId, 'bosses', bossId, 'entries', entryId);
+    await updateDoc(entryRef, updates);
+    
+    logger.info('Successfully updated timeline entry', { feature: 'TimelineService', userId, bossId, entryId });
+  } catch (error) {
+    const err = error as Error;
+    logger.error('Error updating timeline entry', { feature: 'TimelineService', userId, bossId, entryId, error: err });
     throw error;
   }
 }
