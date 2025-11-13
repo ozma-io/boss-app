@@ -190,6 +190,7 @@ export interface UserSchema {
       category?: string;
       source?: 'onboarding_funnel' | 'user_added' | 'weekly_survey';
       createdAt: string; // ISO 8601 timestamp
+      displayOrder?: number; // For custom ordering of fields
       options?: string[]; // For select type
     };
   };

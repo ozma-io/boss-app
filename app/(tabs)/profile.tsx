@@ -1,13 +1,15 @@
 import { FloatingChatButton } from '@/components/FloatingChatButton';
+import { CustomFieldRow } from '@/components/CustomFieldRow';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { showIntercomMessenger } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
+import { getCustomFields } from '@/utils/fieldHelpers';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,12 +20,11 @@ export default function ProfileScreen() {
   const { user } = useAuth();
   const { profile, loading, error, updateProfile } = useUserProfile();
   
-  const [goalDescription, setGoalDescription] = useState('');
+  // Editing states for fixed required fields
+  const [goal, setGoal] = useState('');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [position, setPosition] = useState('');
   const [isEditingPosition, setIsEditingPosition] = useState(false);
-  const [department, setDepartment] = useState('');
-  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
 
   // TODO: These metrics should be calculated dynamically based on:
   // - Timeline entries (fact entries with stress/confidence assessments)
@@ -36,24 +37,14 @@ export default function ProfileScreen() {
     selfDoubtConfidenceGap: 0.30,
   };
 
-  // Sync local state with profile data when it loads
-  useEffect(() => {
-    if (profile) {
-      setGoalDescription(profile.custom_goal || '');
-      setPosition(profile.custom_position || '');
-      setDepartment(profile.custom_department || '');
-    }
-  }, [profile]);
-
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('profile_screen_viewed');
       
       if (profile) {
         trackAmplitudeEvent('profile_data_loaded', {
-          hasGoal: !!profile.custom_goal,
-          hasPosition: !!profile.custom_position,
-          hasDepartment: !!profile.custom_department,
+          hasGoal: !!profile.goal,
+          hasPosition: !!profile.position,
         });
       }
     }, [profile])
@@ -74,14 +65,15 @@ export default function ProfileScreen() {
   };
 
   const handleEditGoal = (): void => {
+    setGoal(profile?.goal || '');
     setIsEditingGoal(true);
   };
 
   const handleBlurGoal = async (): Promise<void> => {
     setIsEditingGoal(false);
-    if (goalDescription !== profile?.custom_goal) {
+    if (goal !== profile?.goal) {
       try {
-        await updateProfile({ custom_goal: goalDescription });
+        await updateProfile({ goal });
         trackAmplitudeEvent('profile_field_edited', {
           field: 'goal',
         });
@@ -92,14 +84,15 @@ export default function ProfileScreen() {
   };
 
   const handleEditPosition = (): void => {
+    setPosition(profile?.position || '');
     setIsEditingPosition(true);
   };
 
   const handleBlurPosition = async (): Promise<void> => {
     setIsEditingPosition(false);
-    if (position !== profile?.custom_position) {
+    if (position !== profile?.position) {
       try {
-        await updateProfile({ custom_position: position });
+        await updateProfile({ position });
         trackAmplitudeEvent('profile_field_edited', {
           field: 'position',
         });
@@ -109,23 +102,22 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleEditDepartment = (): void => {
-    setIsEditingDepartment(true);
-  };
-
-  const handleBlurDepartment = async (): Promise<void> => {
-    setIsEditingDepartment(false);
-    if (department !== profile?.custom_department) {
-      try {
-        await updateProfile({ custom_department: department });
-        trackAmplitudeEvent('profile_field_edited', {
-          field: 'department',
-        });
-      } catch (err) {
-        logger.error('Failed to update department', { feature: 'ProfileScreen', error: err instanceof Error ? err : new Error(String(err)) });
-      }
+  // Handler for custom fields
+  const handleCustomFieldUpdate = async (fieldKey: string, value: any): Promise<void> => {
+    if (!profile) return;
+    
+    try {
+      await updateProfile({ [fieldKey]: value });
+      trackAmplitudeEvent('profile_field_edited', {
+        field: fieldKey,
+      });
+    } catch (err) {
+      logger.error('Failed to update custom field', { feature: 'ProfileScreen', fieldKey, error: err instanceof Error ? err : new Error(String(err)) });
     }
   };
+
+  // Get sorted custom fields
+  const customFields = profile ? getCustomFields(profile, profile._fieldsMeta) : [];
 
   const handleOpenPersonalInfo = (): void => {
     router.push('/personal-info');
@@ -215,92 +207,78 @@ export default function ProfileScreen() {
           <Text style={styles.email} testID="email-text">{profile.email}</Text>
         </View>
 
-        <Pressable 
-          style={styles.goalCard} 
-          testID="goal-card"
-          onPress={isEditingGoal ? undefined : handleEditGoal}
-        >
-          <Image 
-            source={require('@/assets/images/flag-icon.png')} 
-            style={styles.cardIcon}
-            resizeMode="contain"
-            testID="goal-flag-icon"
-          />
-          <View style={styles.cardContent} testID="goal-content">
-            <Text style={styles.cardLabel} testID="goal-label">Your Goal: </Text>
-            {isEditingGoal ? (
-              <TextInput
-                style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                value={goalDescription}
-                onChangeText={setGoalDescription}
-                onBlur={handleBlurGoal}
-                autoFocus
-                placeholder="Enter your goal"
-                testID="goal-input"
-              />
-            ) : (
-              <Text style={[styles.cardValue, !goalDescription && { opacity: 0.5 }]} testID="goal-description">{goalDescription || 'Not set'}</Text>
-            )}
-          </View>
-        </Pressable>
+        <View style={styles.fieldsSection} testID="fields-section">
+          <Pressable 
+            style={styles.goalCard} 
+            testID="goal-card"
+            onPress={isEditingGoal ? undefined : handleEditGoal}
+          >
+            <Image 
+              source={require('@/assets/images/flag-icon.png')} 
+              style={styles.cardIcon}
+              resizeMode="contain"
+              testID="goal-flag-icon"
+            />
+            <View style={styles.cardContent} testID="goal-content">
+              <Text style={styles.cardLabel} testID="goal-label">Your Goal: </Text>
+              {isEditingGoal ? (
+                <TextInput
+                  style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                  value={goal}
+                  onChangeText={setGoal}
+                  onBlur={handleBlurGoal}
+                  autoFocus
+                  placeholder="Enter your goal"
+                  testID="goal-input"
+                />
+              ) : (
+                <Text style={[styles.cardValue, !profile.goal && { opacity: 0.5 }]} testID="goal-description">{profile.goal || 'Not set'}</Text>
+              )}
+            </View>
+          </Pressable>
 
-        <Pressable 
-          style={styles.infoCard} 
-          testID="position-card"
-          onPress={isEditingPosition ? undefined : handleEditPosition}
-        >
-          <Image 
-            source={require('@/assets/images/briefcase-icon.png')} 
-            style={styles.cardIcon}
-            resizeMode="contain"
-            testID="position-briefcase-icon"
-          />
-          <View style={styles.cardContent} testID="position-content">
-            <Text style={styles.cardLabel} testID="position-label">Position: </Text>
-            {isEditingPosition ? (
-              <TextInput
-                style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                value={position}
-                onChangeText={setPosition}
-                onBlur={handleBlurPosition}
-                autoFocus
-                placeholder="Enter your position"
-                testID="position-input"
-              />
-            ) : (
-              <Text style={[styles.cardValue, !position && { opacity: 0.5 }]} testID="position-description">{position || 'Not set'}</Text>
-            )}
-          </View>
-        </Pressable>
+          <Pressable 
+            style={styles.infoCard} 
+            testID="position-card"
+            onPress={isEditingPosition ? undefined : handleEditPosition}
+          >
+            <Image 
+              source={require('@/assets/images/briefcase-icon.png')} 
+              style={styles.cardIcon}
+              resizeMode="contain"
+              testID="position-briefcase-icon"
+            />
+            <View style={styles.cardContent} testID="position-content">
+              <Text style={styles.cardLabel} testID="position-label">Position: </Text>
+              {isEditingPosition ? (
+                <TextInput
+                  style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                  value={position}
+                  onChangeText={setPosition}
+                  onBlur={handleBlurPosition}
+                  autoFocus
+                  placeholder="Enter your position"
+                  testID="position-input"
+                />
+              ) : (
+                <Text style={[styles.cardValue, !profile.position && { opacity: 0.5 }]} testID="position-description">{profile.position || 'Not set'}</Text>
+              )}
+            </View>
+          </Pressable>
 
-        <Pressable 
-          style={styles.infoCard} 
-          testID="department-card"
-          onPress={isEditingDepartment ? undefined : handleEditDepartment}
-        >
-          <Image 
-            source={require('@/assets/images/department-icon.png')} 
-            style={styles.cardIcon}
-            resizeMode="contain"
-            testID="department-building-icon"
-          />
-          <View style={styles.cardContent} testID="department-content">
-            <Text style={styles.cardLabel} testID="department-label">Department: </Text>
-            {isEditingDepartment ? (
-              <TextInput
-                style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                value={department}
-                onChangeText={setDepartment}
-                onBlur={handleBlurDepartment}
-                autoFocus
-                placeholder="Enter your department"
-                testID="department-input"
+          {/* Render all custom fields dynamically */}
+          {customFields.map((field) => (
+            <View key={field.key} style={styles.customFieldWrapper}>
+              <CustomFieldRow
+                fieldKey={field.key}
+                fieldValue={field.value}
+                metadata={field.metadata}
+                onUpdate={handleCustomFieldUpdate}
+                variant="profile"
               />
-            ) : (
-              <Text style={[styles.cardValue, !department && { opacity: 0.5 }]} testID="department-description">{department || 'Not set'}</Text>
-            )}
-          </View>
-        </Pressable>
+            </View>
+          ))}
+        </View>
 
         {/* TODO: This section uses mocked metrics data. Replace with real calculations based on timeline entries */}
         {/* <View style={styles.metricsSection} testID="metrics-section">
@@ -602,5 +580,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontFamily: 'Manrope-Regular',
+  },
+  fieldsSection: {
+    marginBottom: 24,
+  },
+  customFieldWrapper: {
+    marginHorizontal: 12,
   },
 });

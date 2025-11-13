@@ -1,8 +1,9 @@
+import { CustomFieldRow } from '@/components/CustomFieldRow';
 import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { useBoss } from '@/hooks/useBoss';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { logger } from '@/services/logger.service';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { getCustomFields } from '@/utils/fieldHelpers';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -14,10 +15,7 @@ export default function BossScreen() {
   
   const { boss, loading, error, updateBoss } = useBoss();
   
-  // Editing states for each field
-  const [isEditingWorkingHours, setIsEditingWorkingHours] = useState(false);
-  const [workingHours, setWorkingHours] = useState('');
-  
+  // Editing states for fixed layout fields
   const [isEditingBirthday, setIsEditingBirthday] = useState(false);
   const [birthday, setBirthday] = useState('');
   
@@ -29,15 +27,6 @@ export default function BossScreen() {
   
   const [isEditingManagementStyle, setIsEditingManagementStyle] = useState(false);
   const [managementStyle, setManagementStyle] = useState('');
-  
-  const [isEditingFavoriteColor, setIsEditingFavoriteColor] = useState(false);
-  const [favoriteColor, setFavoriteColor] = useState('');
-  
-  const [isEditingCommunicationPreference, setIsEditingCommunicationPreference] = useState(false);
-  const [communicationPreference, setCommunicationPreference] = useState('');
-  
-  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
-  const [department, setDepartment] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -51,26 +40,6 @@ export default function BossScreen() {
       }
     }, [boss])
   );
-
-  const handleEditWorkingHours = (): void => {
-    setWorkingHours(boss?.workingHours || '');
-    setIsEditingWorkingHours(true);
-  };
-
-  const handleBlurWorkingHours = async (): Promise<void> => {
-    setIsEditingWorkingHours(false);
-    if (workingHours !== boss?.workingHours && boss) {
-      try {
-        await updateBoss({ workingHours });
-        trackAmplitudeEvent('boss_field_edited', {
-          field: 'workingHours',
-          bossId: boss.id,
-        });
-      } catch (err) {
-        logger.error('Failed to update working hours', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
-      }
-    }
-  };
 
   const handleEditBirthday = (): void => {
     setBirthday(boss?.birthday || '');
@@ -152,65 +121,23 @@ export default function BossScreen() {
     }
   };
 
-  const handleEditFavoriteColor = (): void => {
-    setFavoriteColor(boss?.favoriteColor || '');
-    setIsEditingFavoriteColor(true);
-  };
-
-  const handleBlurFavoriteColor = async (): Promise<void> => {
-    setIsEditingFavoriteColor(false);
-    if (favoriteColor !== boss?.favoriteColor && boss) {
-      try {
-        await updateBoss({ favoriteColor });
-        trackAmplitudeEvent('boss_field_edited', {
-          field: 'favoriteColor',
-          bossId: boss.id,
-        });
-      } catch (err) {
-        logger.error('Failed to update favorite color', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
-      }
+  // Handler for custom fields
+  const handleCustomFieldUpdate = async (fieldKey: string, value: any): Promise<void> => {
+    if (!boss) return;
+    
+    try {
+      await updateBoss({ [fieldKey]: value });
+      trackAmplitudeEvent('boss_field_edited', {
+        field: fieldKey,
+        bossId: boss.id,
+      });
+    } catch (err) {
+      logger.error('Failed to update custom field', { feature: 'BossScreen', bossId: boss.id, fieldKey, error: err instanceof Error ? err : new Error(String(err)) });
     }
   };
 
-  const handleEditCommunicationPreference = (): void => {
-    setCommunicationPreference(boss?.communicationPreference || '');
-    setIsEditingCommunicationPreference(true);
-  };
-
-  const handleBlurCommunicationPreference = async (): Promise<void> => {
-    setIsEditingCommunicationPreference(false);
-    if (communicationPreference !== boss?.communicationPreference && boss) {
-      try {
-        await updateBoss({ communicationPreference });
-        trackAmplitudeEvent('boss_field_edited', {
-          field: 'communicationPreference',
-          bossId: boss.id,
-        });
-      } catch (err) {
-        logger.error('Failed to update communication preference', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
-      }
-    }
-  };
-
-  const handleEditDepartment = (): void => {
-    setDepartment(boss?.department || '');
-    setIsEditingDepartment(true);
-  };
-
-  const handleBlurDepartment = async (): Promise<void> => {
-    setIsEditingDepartment(false);
-    if (department !== boss?.department && boss) {
-      try {
-        await updateBoss({ department });
-        trackAmplitudeEvent('boss_field_edited', {
-          field: 'department',
-          bossId: boss.id,
-        });
-      } catch (err) {
-        logger.error('Failed to update department', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
-      }
-    }
-  };
+  // Get sorted custom fields
+  const customFields = boss ? getCustomFields(boss, boss._fieldsMeta) : [];
 
   return (
     <View style={styles.container}>
@@ -253,24 +180,24 @@ export default function BossScreen() {
         <View style={styles.cardsRow} testID="cards-row">
           <Pressable 
             style={styles.infoCard} 
-            testID="working-hours-card"
-            onPress={isEditingWorkingHours ? undefined : handleEditWorkingHours}
+            testID="management-style-card"
+            onPress={isEditingManagementStyle ? undefined : handleEditManagementStyle}
           >
-            <Text style={styles.cardIcon} testID="working-hours-icon">⏰</Text>
+            <Text style={styles.cardIcon} testID="management-style-icon">🤝</Text>
             <View style={styles.cardContent}>
-              <Text style={styles.cardLabel} testID="working-hours-label">Working hours</Text>
-              {isEditingWorkingHours ? (
+              <Text style={styles.cardLabel} testID="management-style-label">Management style</Text>
+              {isEditingManagementStyle ? (
                 <TextInput
                   style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                  value={workingHours}
-                  onChangeText={setWorkingHours}
-                  onBlur={handleBlurWorkingHours}
+                  value={managementStyle}
+                  onChangeText={setManagementStyle}
+                  onBlur={handleBlurManagementStyle}
                   autoFocus
-                  placeholder="Enter working hours"
-                  testID="working-hours-input"
+                  placeholder="Enter management style"
+                  testID="management-style-input"
                 />
               ) : (
-                <Text style={[styles.cardValue, !boss.workingHours && { opacity: 0.5 }]} testID="working-hours-value">{boss.workingHours || 'Not set'}</Text>
+                <Text style={[styles.cardValue, !boss.managementStyle && { opacity: 0.5 }]} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
               )}
             </View>
           </Pressable>
@@ -356,106 +283,17 @@ export default function BossScreen() {
             </View>
           </Pressable>
 
-          <Pressable 
-            style={styles.infoRow} 
-            testID="management-style-row"
-            onPress={isEditingManagementStyle ? undefined : handleEditManagementStyle}
-          >
-            <Text style={styles.rowIconEmoji} testID="management-style-icon">🤝</Text>
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel} testID="management-style-label">Management style</Text>
-              {isEditingManagementStyle ? (
-                <TextInput
-                  style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                  value={managementStyle}
-                  onChangeText={setManagementStyle}
-                  onBlur={handleBlurManagementStyle}
-                  autoFocus
-                  placeholder="Enter management style"
-                  testID="management-style-input"
-                />
-              ) : (
-                <Text style={[styles.rowValue, !boss.managementStyle && { opacity: 0.5 }]} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
-              )}
-            </View>
-          </Pressable>
-
-          <Pressable 
-            style={styles.infoRow} 
-            testID="favorite-color-row"
-            onPress={isEditingFavoriteColor ? undefined : handleEditFavoriteColor}
-          >
-            <Text style={styles.rowIconEmoji} testID="favorite-color-icon">👀</Text>
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel} testID="favorite-color-label">Favorite color</Text>
-              {isEditingFavoriteColor ? (
-                <TextInput
-                  style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                  value={favoriteColor}
-                  onChangeText={setFavoriteColor}
-                  onBlur={handleBlurFavoriteColor}
-                  autoFocus
-                  placeholder="Enter favorite color"
-                  testID="favorite-color-input"
-                />
-              ) : (
-                <Text style={[styles.rowValue, !boss.favoriteColor && { opacity: 0.5 }]} testID="favorite-color-value">{boss.favoriteColor || 'Not set'}</Text>
-              )}
-            </View>
-          </Pressable>
-
-          <Pressable 
-            style={styles.infoRow} 
-            testID="communication-preference-row"
-            onPress={isEditingCommunicationPreference ? undefined : handleEditCommunicationPreference}
-          >
-            <Text style={styles.rowIconEmoji} testID="communication-preference-icon">🗣️</Text>
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel} testID="communication-preference-label">Communicative preference</Text>
-              {isEditingCommunicationPreference ? (
-                <TextInput
-                  style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                  value={communicationPreference}
-                  onChangeText={setCommunicationPreference}
-                  onBlur={handleBlurCommunicationPreference}
-                  autoFocus
-                  placeholder="Enter communication preference"
-                  testID="communication-preference-input"
-                />
-              ) : (
-                <Text style={[styles.rowValue, !boss.communicationPreference && { opacity: 0.5 }]} testID="communication-preference-value">{boss.communicationPreference || 'Not set'}</Text>
-              )}
-            </View>
-          </Pressable>
-
-          <Pressable 
-            style={styles.infoRow} 
-            testID="department-row"
-            onPress={isEditingDepartment ? undefined : handleEditDepartment}
-          >
-            <Image 
-              source={require('@/assets/images/department-icon.png')} 
-              style={styles.rowIcon}
-              resizeMode="contain"
-              testID="department-icon"
+          {/* Render all custom fields dynamically */}
+          {customFields.map((field) => (
+            <CustomFieldRow
+              key={field.key}
+              fieldKey={field.key}
+              fieldValue={field.value}
+              metadata={field.metadata}
+              onUpdate={handleCustomFieldUpdate}
+              variant="boss"
             />
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel} testID="department-label">Departament</Text>
-              {isEditingDepartment ? (
-                <TextInput
-                  style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                  value={department}
-                  onChangeText={setDepartment}
-                  onBlur={handleBlurDepartment}
-                  autoFocus
-                  placeholder="Enter department"
-                  testID="department-input"
-                />
-              ) : (
-                <Text style={styles.rowValue} testID="department-value">{boss.department}</Text>
-              )}
-            </View>
-          </Pressable>
+          ))}
         </View>
       </ScrollView>
       )}

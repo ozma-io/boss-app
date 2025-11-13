@@ -30,6 +30,7 @@ export interface Boss {
       category?: string;
       source?: 'onboarding_funnel' | 'user_added';
       createdAt: string;
+      displayOrder?: number;
       options?: string[];
     };
   };
@@ -122,6 +123,7 @@ export interface UserProfile {
       category?: string;
       source?: string;
       createdAt: string;
+      displayOrder?: number;
       options?: string[];
     };
   };

@@ -98,6 +98,7 @@ export interface BossSchema {
       category?: string;
       source?: 'onboarding_funnel' | 'user_added';
       createdAt: string; // ISO 8601 timestamp
+      displayOrder?: number; // For custom ordering of fields
       options?: string[]; // For select/multiselect type
     };
   };
