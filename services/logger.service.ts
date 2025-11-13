@@ -33,6 +33,9 @@ try {
   console.error('Sentry SDK not available, using console logging only');
 }
 
+// Amplitude import for error tracking
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
+
 /**
  * Log levels in order of severity
  */
@@ -231,6 +234,14 @@ class LoggerService {
         console.error('Failed to send error to Sentry:', sentryError);
       }
     }
+
+    // Track to Amplitude with generic message
+    try {
+      trackAmplitudeEvent('error_logged', { message: 'Check Sentry for details' });
+    } catch (amplitudeError) {
+      // Use console.error to avoid circular dependency with logger
+      console.error('Failed to track error to Amplitude:', amplitudeError);
+    }
   }
 
   /**
@@ -261,6 +272,14 @@ class LoggerService {
       } catch (sentryError) {
         console.error('Failed to send fatal error to Sentry:', sentryError);
       }
+    }
+
+    // Track to Amplitude with generic message
+    try {
+      trackAmplitudeEvent('error_logged', { message: 'Check Sentry for details' });
+    } catch (amplitudeError) {
+      // Use console.error to avoid circular dependency with logger
+      console.error('Failed to track error to Amplitude:', amplitudeError);
     }
   }
 
