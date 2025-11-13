@@ -22,11 +22,15 @@ interface AddCustomFieldModalProps {
 
 type FieldType = 'text' | 'multiline' | 'select' | 'date';
 
-const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: string }> = [
-  { value: 'text', label: 'Text', icon: 'text-outline' },
-  { value: 'multiline', label: 'Multiline Text', icon: 'document-text-outline' },
-  { value: 'select', label: 'Select', icon: 'list-outline' },
-  { value: 'date', label: 'Date', icon: 'calendar-outline' },
+// TODO: Currently only 'text' type is fully implemented and enabled
+// TODO: Implement 'multiline' type - support for multiline text input with proper rendering
+// TODO: Implement 'select' type - dropdown with custom options, needs options management UI
+// TODO: Implement 'date' type - date picker with proper date formatting and storage
+const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: string; enabled: boolean }> = [
+  { value: 'text', label: 'Text', icon: 'text-outline', enabled: true },
+  { value: 'multiline', label: 'Multiline Text', icon: 'document-text-outline', enabled: false },
+  { value: 'select', label: 'Select', icon: 'list-outline', enabled: false },
+  { value: 'date', label: 'Date', icon: 'calendar-outline', enabled: false },
 ];
 
 /**
@@ -115,8 +119,10 @@ export function AddCustomFieldModal({ isVisible, onClose, onAdd }: AddCustomFiel
                     style={[
                       styles.typeCard,
                       selectedType === type.value && styles.typeCardSelected,
+                      !type.enabled && styles.typeCardDisabled,
                     ]}
-                    onPress={() => setSelectedType(type.value)}
+                    onPress={() => type.enabled && setSelectedType(type.value)}
+                    disabled={!type.enabled}
                     testID={`type-option-${type.value}`}
                   >
                     <Ionicons
@@ -268,6 +274,9 @@ const styles = StyleSheet.create({
   typeCardSelected: {
     backgroundColor: '#f0f9e6',
     borderColor: '#B8E986',
+  },
+  typeCardDisabled: {
+    opacity: 0.5,
   },
   typeLabel: {
     fontSize: 14,
