@@ -21,11 +21,6 @@ import { ActivityIndicator, Linking, Platform, StyleSheet, TouchableOpacity, Vie
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-export {
-    // Catch any errors thrown by the Layout component.
-    ErrorBoundary
-} from 'expo-router';
-
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: '(tabs)',
