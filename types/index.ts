@@ -139,20 +139,6 @@ export interface RetryOptions {
   shouldRetry: (error: Error) => boolean;
 }
 
-// User Goal
-export interface UserGoal {
-  id: string;
-  title: string;
-  description: string;
-}
-
-// User Metrics
-export interface UserMetrics {
-  stressLevel: number;
-  bossRelationshipChallenges: number;
-  selfDoubtConfidenceGap: number;
-}
-
 // Chat Message
 export interface ChatMessage {
   id: string;
