@@ -99,6 +99,68 @@ const newBoss: BossSchema = {
 await setDoc(doc(db, 'users', userId, 'bosses', bossId), newBoss);
 ```
 
+### User vs UserProfile
+
+The codebase uses two distinct types for user-related data:
+
+#### User (Authentication State)
+
+**Location:** `types/index.ts`  
+**Purpose:** In-memory representation of authenticated user  
+**Used in:** `AuthContext`, `auth.service.ts`
+
+```typescript
+interface User {
+  id: string;
+  email: string;
+  createdAt: string;
+}
+```
+
+**Required fields:** `id`, `email`, `createdAt`
+
+This type contains minimal data from Firebase Authentication and is used for:
+- Authentication state management
+- Checking if user is logged in
+- Getting user ID for Firestore queries
+
+#### UserProfile (Firestore Document)
+
+**Location:** `types/index.ts`  
+**Source of truth:** `firestore/schemas/user.schema.ts` (UserSchema)  
+**Purpose:** Full user profile stored in Firestore  
+**Path:** `/users/{userId}`  
+**Used in:** `user.service.ts`, profile components
+
+```typescript
+interface UserProfile {
+  email: string;
+  name: string;          // Required
+  goal: string;          // Required
+  position: string;      // Required
+  displayName?: string;
+  photoURL?: string;
+  createdAt: string;
+  updatedAt?: string;
+  subscription?: UserSubscription;
+  // ... additional fields
+}
+```
+
+**Required fields:** `email`, `name`, `goal`, `position`, `createdAt`
+
+This type contains complete user profile data and is used for:
+- Displaying user information in UI
+- Updating user profile
+- Storing user preferences and settings
+
+#### When to Use Which
+
+- **Use `User`** when you only need authentication info (checking if logged in, getting user ID for queries)
+- **Use `UserProfile`** when you need full profile data (displaying name, goal, position, or other profile information)
+
+**Note:** `UserSchema` in `firestore/schemas/user.schema.ts` is the authoritative schema for Firestore documents and includes all fields including technical fields (FCM tokens, notification permissions, etc.) and custom fields.
+
 ### Schema Versioning
 
 Each schema has a version number:

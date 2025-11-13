@@ -90,14 +90,11 @@ export interface FactEntry extends BaseEntry {
 // Discriminated union for all timeline entries
 export type TimelineEntry = NoteEntry | SurveyEntry | InteractionEntry | FactEntry;
 
-// User type definition (for authentication)
+// User type definition (for authentication state - minimal data from Firebase Auth)
 export interface User {
   id: string;
   email: string;
   createdAt: string;
-  name: string;
-  goal: string;
-  position: string;
 }
 
 // User Profile type definition (for Firestore data)

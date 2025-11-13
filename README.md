@@ -71,6 +71,8 @@ firebase deploy               # Deploy everything
   │   └── entries/{entryId}
 ```
 
+**Types:** `User` (auth state with id/email) vs `UserProfile` (Firestore document with full profile data) - see [docs/authentication.md](./docs/authentication.md) and [docs/firestore-management.md](./docs/firestore-management.md)
+
 **User data scoping:** All paths include `{userId}` - Firebase Security Rules enforce `request.auth.uid === userId`
 
 **Entry types:** `note`, `survey`, `interaction`, `fact` - flexible timeline history

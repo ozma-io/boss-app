@@ -101,16 +101,51 @@ Sensitive Firebase configuration is stored in `.env` file:
 
 ## Data Types
 
-### User Type
+### User Type (Authentication State)
+
+The `User` type represents the **authentication state** and contains minimal data from Firebase Auth:
 
 ```typescript
 interface User {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
+  id: string;
+  email: string;
+  createdAt: string;
 }
 ```
+
+This type is used in:
+- `AuthContext` - global authentication state
+- `auth.service.ts` - authentication operations
+- In-memory representation of the authenticated user
+
+**Important:** The `User` type does NOT contain profile fields like `name`, `goal`, or `position`. For complete user profile data, use `UserProfile` (see below).
+
+### UserProfile Type (Firestore Data)
+
+The `UserProfile` type represents the **full user profile** stored in Firestore at `/users/{userId}`:
+
+```typescript
+interface UserProfile {
+  email: string;
+  name: string;          // Required
+  goal: string;          // Required
+  position: string;      // Required
+  displayName?: string;
+  photoURL?: string;
+  createdAt: string;
+  updatedAt?: string;
+  subscription?: UserSubscription;
+  // ... additional fields
+}
+```
+
+This type is used in:
+- `user.service.ts` - fetching and updating user profile data from Firestore
+- Components that display or edit user profile information
+
+**When to use which:**
+- Use `User` when you only need authentication info (user ID, email)
+- Use `UserProfile` when you need full profile data (name, goal, position, etc.)
 
 ### Auth State Type
 
