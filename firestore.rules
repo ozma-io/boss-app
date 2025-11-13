@@ -39,10 +39,21 @@ service cloud.firestore {
     
     /**
      * Ensure required fields are not deleted during update
-     * Checks that all required fields still exist in the updated document
+     * Checks that no required fields were explicitly removed
+     * Custom fields (starting with custom_) can be deleted freely
      */
-    function requiredFieldsNotDeleted(requiredFields, afterData) {
-      return afterData.keys().hasAll(requiredFields);
+    function requiredFieldsNotDeleted(requiredFields) {
+      let removedKeys = request.resource.data.diff(resource.data).removedKeys();
+      return !removedKeys.hasAny(requiredFields);
+    }
+    
+    /**
+     * Ensure technical fields are not modified
+     * Technical fields: email, createdAt (for both User and Boss)
+     */
+    function technicalFieldsNotModified(technicalFields) {
+      let affectedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return !affectedKeys.hasAny(technicalFields);
     }
 
     // Users collection - users can only access their own data
@@ -50,9 +61,14 @@ service cloud.firestore {
       // Create: must have required fields
       allow create: if isOwner(userId) && hasRequiredUserFields(request.resource.data);
       
-      // Update: required fields must not be deleted
+      // Update: 
+      // - Required fields must not be deleted
+      // - Technical fields (email, createdAt) must not be modified
+      // - Custom fields (custom_*) can be added/modified/deleted freely
+      // - Regular fields (name, goal, position) can be modified
       allow update: if isOwner(userId) 
-                    && requiredFieldsNotDeleted(['email', 'createdAt', 'name', 'goal', 'position'], request.resource.data);
+                    && requiredFieldsNotDeleted(['email', 'createdAt', 'name', 'goal', 'position'])
+                    && technicalFieldsNotModified(['email', 'createdAt']);
       
       // Read and delete: owner only
       allow read, delete: if isOwner(userId);
@@ -62,7 +78,11 @@ service cloud.firestore {
         // Create: must have required fields
         allow create: if isOwner(userId) && hasRequiredBossFields(request.resource.data);
         
-        // Update: required fields must not be deleted
+        // Update:
+        // - Required fields must not be deleted
+        // - Technical field (createdAt) must not be modified
+        // - Custom fields (custom_*) can be added/modified/deleted freely
+        // - Regular fields (name, position, birthday, managementStyle, startedAt, updatedAt) can be modified
         allow update: if isOwner(userId) 
                       && requiredFieldsNotDeleted([
                         'name',
@@ -72,7 +92,8 @@ service cloud.firestore {
                         'startedAt',
                         'createdAt',
                         'updatedAt'
-                      ], request.resource.data);
+                      ])
+                      && technicalFieldsNotModified(['createdAt']);
         
         // Read and delete: owner only
         allow read, delete: if isOwner(userId);

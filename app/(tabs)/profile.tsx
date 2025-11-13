@@ -1,16 +1,23 @@
+import { AddCustomFieldButton } from '@/components/AddCustomFieldButton';
+import { AddCustomFieldModal } from '@/components/AddCustomFieldModal';
 import { FloatingChatButton } from '@/components/FloatingChatButton';
-import { CustomFieldRow } from '@/components/CustomFieldRow';
+import { SwipeableCustomFieldRow } from '@/components/SwipeableCustomFieldRow';
 import { useAuth } from '@/contexts/AuthContext';
+import { isUserFieldRequired } from '@/firestore/schemas/field-presets';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { showIntercomMessenger } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
+import { showAlert } from '@/utils/alert';
+import { sanitizeFieldKey, validateFieldKey } from '@/utils/customFieldHelpers';
 import { getCustomFields } from '@/utils/fieldHelpers';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
+import { deleteField } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
@@ -25,6 +32,9 @@ export default function ProfileScreen() {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [position, setPosition] = useState('');
   const [isEditingPosition, setIsEditingPosition] = useState(false);
+  
+  // State for custom field management
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
   // TODO: These metrics should be calculated dynamically based on:
   // - Timeline entries (fact entries with stress/confidence assessments)
@@ -59,7 +69,7 @@ export default function ProfileScreen() {
     try {
       await signOut();
     } catch (error) {
-      Alert.alert('Error', 'Failed to sign out. Please try again.');
+      showAlert('Error', 'Failed to sign out. Please try again.');
       logger.error('Failed to sign out', { feature: 'ProfileScreen', error: error instanceof Error ? error : new Error(String(error)) });
     }
   };
@@ -116,6 +126,106 @@ export default function ProfileScreen() {
     }
   };
 
+  // Handler for adding custom field
+  const handleAddCustomField = async (
+    label: string,
+    type: 'text' | 'multiline' | 'select' | 'date',
+    initialValue: string
+  ): Promise<void> => {
+    if (!profile) return;
+
+    const fieldKey = `custom_${sanitizeFieldKey(label)}`;
+
+    // Check if field already exists
+    if (!validateFieldKey(profile, fieldKey)) {
+      showAlert('Error', 'A field with this name already exists');
+      throw new Error('Field already exists');
+    }
+
+    try {
+      await updateProfile({
+        [fieldKey]: initialValue || '',
+        [`_fieldsMeta.${fieldKey}`]: {
+          label,
+          type,
+          source: 'user_added',
+          createdAt: new Date().toISOString(),
+          displayOrder: Object.keys(profile._fieldsMeta || {}).length,
+        },
+      });
+
+      trackAmplitudeEvent('profile_custom_field_added', {
+        fieldKey,
+        type,
+      });
+
+      logger.info('Custom field added', {
+        feature: 'ProfileScreen',
+        fieldKey,
+        type,
+      });
+    } catch (err) {
+      logger.error('Failed to add custom field', {
+        feature: 'ProfileScreen',
+        fieldKey,
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
+      throw err;
+    }
+  };
+
+  // Handler for deleting custom field
+  const handleDeleteCustomField = (fieldKey: string): void => {
+    if (!profile) return;
+
+    // Check if field can be deleted
+    if (isUserFieldRequired(fieldKey)) {
+      showAlert('Error', 'Cannot delete required field');
+      return;
+    }
+
+    const fieldLabel = profile._fieldsMeta?.[fieldKey]?.label || fieldKey;
+
+    showAlert(
+      'Delete Field',
+      `Are you sure you want to delete "${fieldLabel}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await updateProfile({
+                [fieldKey]: deleteField(),
+                [`_fieldsMeta.${fieldKey}`]: deleteField(),
+              });
+
+              trackAmplitudeEvent('profile_custom_field_deleted', {
+                fieldKey,
+              });
+
+              logger.info('Custom field deleted', {
+                feature: 'ProfileScreen',
+                fieldKey,
+              });
+            } catch (err) {
+              logger.error('Failed to delete custom field', {
+                feature: 'ProfileScreen',
+                fieldKey,
+                error: err instanceof Error ? err : new Error(String(err)),
+              });
+              showAlert(
+                'Something went wrong',
+                'We couldn\'t delete this field right now. Our team has been notified and is working on it. Please try again later.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Get sorted custom fields
   const customFields = profile ? getCustomFields(profile, profile._fieldsMeta) : [];
 
@@ -141,7 +251,7 @@ export default function ProfileScreen() {
         await showIntercomMessenger();
       } catch (error) {
         logger.error('Failed to open Intercom messenger', { feature: 'ProfileScreen', error: error instanceof Error ? error : new Error(String(error)) });
-        Alert.alert(
+        showAlert(
           'Support Error',
           'Failed to open support messenger. Please email us at support@ozma.io',
           [
@@ -170,7 +280,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container} testID="profile-container">
+    <GestureHandlerRootView style={styles.container} testID="profile-container">
       {loading ? (
         <View style={[styles.centerContent, { flex: 1 }]} testID="profile-loading">
           <ActivityIndicator size="large" color="#B6D95C" />
@@ -269,15 +379,19 @@ export default function ProfileScreen() {
           {/* Render all custom fields dynamically */}
           {customFields.map((field) => (
             <View key={field.key} style={styles.customFieldWrapper}>
-              <CustomFieldRow
+              <SwipeableCustomFieldRow
                 fieldKey={field.key}
                 fieldValue={field.value}
                 metadata={field.metadata}
                 onUpdate={handleCustomFieldUpdate}
+                onDelete={handleDeleteCustomField}
                 variant="profile"
               />
             </View>
           ))}
+          
+          {/* Add custom field button */}
+          <AddCustomFieldButton onPress={() => setIsAddModalVisible(true)} />
         </View>
 
         {/* TODO: This section uses mocked metrics data. Replace with real calculations based on timeline entries */}
@@ -353,7 +467,14 @@ export default function ProfileScreen() {
       )}
 
       <FloatingChatButton />
-    </View>
+      
+      {/* Add custom field modal */}
+      <AddCustomFieldModal
+        isVisible={isAddModalVisible}
+        onClose={() => setIsAddModalVisible(false)}
+        onAdd={handleAddCustomField}
+      />
+    </GestureHandlerRootView>
   );
 }
 

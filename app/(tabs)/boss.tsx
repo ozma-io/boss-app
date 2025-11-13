@@ -1,12 +1,19 @@
-import { CustomFieldRow } from '@/components/CustomFieldRow';
+import { AddCustomFieldButton } from '@/components/AddCustomFieldButton';
+import { AddCustomFieldModal } from '@/components/AddCustomFieldModal';
 import { FloatingChatButton } from '@/components/FloatingChatButton';
+import { SwipeableCustomFieldRow } from '@/components/SwipeableCustomFieldRow';
+import { isBossFieldRequired } from '@/firestore/schemas/field-presets';
 import { useBoss } from '@/hooks/useBoss';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { logger } from '@/services/logger.service';
+import { showAlert } from '@/utils/alert';
+import { sanitizeFieldKey, validateFieldKey } from '@/utils/customFieldHelpers';
 import { getCustomFields } from '@/utils/fieldHelpers';
 import { useFocusEffect } from 'expo-router';
+import { deleteField } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BossScreen() {
@@ -27,6 +34,9 @@ export default function BossScreen() {
   
   const [isEditingManagementStyle, setIsEditingManagementStyle] = useState(false);
   const [managementStyle, setManagementStyle] = useState('');
+  
+  // State for custom field management
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -136,11 +146,117 @@ export default function BossScreen() {
     }
   };
 
+  // Handler for adding custom field
+  const handleAddCustomField = async (
+    label: string,
+    type: 'text' | 'multiline' | 'select' | 'date',
+    initialValue: string
+  ): Promise<void> => {
+    if (!boss) return;
+
+    const fieldKey = `custom_${sanitizeFieldKey(label)}`;
+
+    // Check if field already exists
+    if (!validateFieldKey(boss, fieldKey)) {
+      showAlert('Error', 'A field with this name already exists');
+      throw new Error('Field already exists');
+    }
+
+    try {
+      await updateBoss({
+        [fieldKey]: initialValue || '',
+        [`_fieldsMeta.${fieldKey}`]: {
+          label,
+          type,
+          source: 'user_added',
+          createdAt: new Date().toISOString(),
+          displayOrder: Object.keys(boss._fieldsMeta || {}).length,
+        },
+      });
+
+      trackAmplitudeEvent('boss_custom_field_added', {
+        fieldKey,
+        type,
+        bossId: boss.id,
+      });
+
+      logger.info('Custom field added', {
+        feature: 'BossScreen',
+        bossId: boss.id,
+        fieldKey,
+        type,
+      });
+    } catch (err) {
+      logger.error('Failed to add custom field', {
+        feature: 'BossScreen',
+        bossId: boss.id,
+        fieldKey,
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
+      throw err;
+    }
+  };
+
+  // Handler for deleting custom field
+  const handleDeleteCustomField = (fieldKey: string): void => {
+    if (!boss) return;
+
+    // Check if field can be deleted
+    if (isBossFieldRequired(fieldKey)) {
+      showAlert('Error', 'Cannot delete required field');
+      return;
+    }
+
+    const fieldLabel = boss._fieldsMeta?.[fieldKey]?.label || fieldKey;
+
+    showAlert(
+      'Delete Field',
+      `Are you sure you want to delete "${fieldLabel}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await updateBoss({
+                [fieldKey]: deleteField(),
+                [`_fieldsMeta.${fieldKey}`]: deleteField(),
+              });
+
+              trackAmplitudeEvent('boss_custom_field_deleted', {
+                fieldKey,
+                bossId: boss.id,
+              });
+
+              logger.info('Custom field deleted', {
+                feature: 'BossScreen',
+                bossId: boss.id,
+                fieldKey,
+              });
+            } catch (err) {
+              logger.error('Failed to delete custom field', {
+                feature: 'BossScreen',
+                bossId: boss.id,
+                fieldKey,
+                error: err instanceof Error ? err : new Error(String(err)),
+              });
+              showAlert(
+                'Something went wrong',
+                'We couldn\'t delete this field right now. Our team has been notified and is working on it. Please try again later.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Get sorted custom fields
   const customFields = boss ? getCustomFields(boss, boss._fieldsMeta) : [];
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.container}>
       {loading ? (
         <View style={[styles.centerContent, { flex: 1 }]} testID="boss-loading">
           <ActivityIndicator size="large" color="#B6D95C" />
@@ -287,21 +403,32 @@ export default function BossScreen() {
 
           {/* Render all custom fields dynamically */}
           {customFields.map((field) => (
-            <CustomFieldRow
+            <SwipeableCustomFieldRow
               key={field.key}
               fieldKey={field.key}
               fieldValue={field.value}
               metadata={field.metadata}
               onUpdate={handleCustomFieldUpdate}
+              onDelete={handleDeleteCustomField}
               variant="boss"
             />
           ))}
+          
+          {/* Add custom field button */}
+          <AddCustomFieldButton onPress={() => setIsAddModalVisible(true)} />
         </View>
       </ScrollView>
       )}
 
       <FloatingChatButton />
-    </View>
+      
+      {/* Add custom field modal */}
+      <AddCustomFieldModal
+        isVisible={isAddModalVisible}
+        onClose={() => setIsAddModalVisible(false)}
+        onAdd={handleAddCustomField}
+      />
+    </GestureHandlerRootView>
   );
 }
 

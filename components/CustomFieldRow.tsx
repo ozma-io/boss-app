@@ -17,6 +17,7 @@ interface CustomFieldRowProps {
   metadata: FieldMetadata;
   onUpdate: (fieldKey: string, value: any) => Promise<void>;
   variant?: 'boss' | 'profile';
+  disabled?: boolean;
 }
 
 /**
@@ -32,11 +33,13 @@ export function CustomFieldRow({
   metadata,
   onUpdate,
   variant = 'boss',
+  disabled = false,
 }: CustomFieldRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState('');
 
   const handleEdit = (): void => {
+    if (disabled) return;
     setValue(String(fieldValue || ''));
     setIsEditing(true);
   };
