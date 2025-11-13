@@ -359,7 +359,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
                     placeholder="Enter details..."
                     placeholderTextColor="rgba(0, 0, 0, 0.3)"
                     multiline
-                    numberOfLines={4}
                     testID="content-input"
                   />
                 </View>
@@ -452,7 +451,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
                     placeholder="Enter details..."
                     placeholderTextColor="rgba(0, 0, 0, 0.3)"
                     multiline
-                    numberOfLines={4}
                     testID="content-input"
                   />
                 </View>
