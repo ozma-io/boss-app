@@ -272,8 +272,16 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
                       entryType === type.value && styles.typeCardSelected,
                       isEditMode && styles.typeCardDisabled,
                     ]}
-                    onPress={() => !isEditMode && setEntryType(type.value)}
-                    disabled={isEditMode}
+                    onPress={() => {
+                      if (isEditMode) {
+                        showAlert(
+                          'Cannot Change Entry Type',
+                          'Unfortunately, changing the entry type is not possible yet. This feature will be available in future versions. For now, you can delete this entry and create a new one.'
+                        );
+                      } else {
+                        setEntryType(type.value);
+                      }
+                    }}
                     testID={`entry-type-${type.value}`}
                   >
                     <Ionicons
