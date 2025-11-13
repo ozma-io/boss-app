@@ -8,7 +8,7 @@
  * ## Field Categories:
  * 
  * 1. **Core Fields** (cannot be deleted):
- *    - email, createdAt (required)
+ *    - email, createdAt, name, goal, position (required)
  *    - displayName, photoURL, updatedAt (optional core)
  * 
  * 2. **Technical Fields** (system-managed):
@@ -20,7 +20,7 @@
  * 4. **Custom Fields** (user-deletable business data):
  *    - All fields with `custom_` prefix
  *    - Metadata stored in `_fieldsMeta`
- *    - Examples: custom_age, custom_goal, custom_position
+ *    - Examples: custom_age, custom_department, custom_whenStartedJob
  * 
  * ## Custom Fields Pattern:
  * 
@@ -37,6 +37,11 @@ export interface UserSchema {
   // Identity (required)
   email: string;
   createdAt: string; // ISO 8601 timestamp
+  
+  // Profile (required)
+  name: string;
+  goal: string;
+  position: string;
   
   // Profile (optional core)
   updatedAt?: string;
@@ -154,10 +159,8 @@ export interface UserSchema {
   
   // Examples of custom fields (all optional, all deletable):
   // custom_age?: string;
-  // custom_position?: string;
   // custom_department?: string;
   // custom_whenStartedJob?: string;
-  // custom_goal?: string;
   // custom_skillsMatch?: string;
   // custom_careerDiscussion?: string;
   // custom_growthOpportunities?: string;
@@ -216,6 +219,7 @@ export const UserDefaults: Partial<UserSchema> = {
  * Increment this when making breaking schema changes
  * 
  * Version 3: Added custom fields pattern with _fieldsMeta
+ * Version 4: Added name, goal, position as required core fields
  */
-export const USER_SCHEMA_VERSION = 3;
+export const USER_SCHEMA_VERSION = 4;
 

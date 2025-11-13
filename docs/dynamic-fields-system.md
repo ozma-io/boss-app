@@ -73,11 +73,14 @@ Whether a field comes from the web funnel or is added by the user in the app, it
 
 ### User Schema
 
-**Core fields** (required: `email`, `createdAt`):
+**Core fields** (required: `email`, `createdAt`, `name`, `goal`, `position`):
 ```typescript
 {
   email: string
   createdAt: string
+  name: string
+  goal: string
+  position: string
   updatedAt?: string
   displayName?: string
   photoURL?: string
@@ -99,24 +102,25 @@ Whether a field comes from the web funnel or is added by the user in the app, it
 ```typescript
 {
   custom_age: "25-34"
-  custom_goal: "Pass probation period"
-  custom_position: "Senior Developer"
+  custom_department: "Engineering"
   custom_skillsMatch: "Have gaps"
+  custom_whenStartedJob: "1-3 months ago"
 }
 ```
 
 ### Boss Schema
 
-**Core fields** (required: `name`, `position`, `department`, `startedAt`, `createdAt`, `updatedAt`):
+**Core fields** (required: `name`, `position`, `birthday`, `managementStyle`, `startedAt`, `createdAt`, `updatedAt`):
 ```typescript
 {
   name: string
   position: string
-  department: string
+  birthday: string  // ISO 8601 date
+  managementStyle: string
   startedAt: string  // ISO 8601
   createdAt: string
   updatedAt: string
-  birthday?: string
+  department?: string
   workingHours?: string
 }
 ```
@@ -301,9 +305,12 @@ When a user completes the web funnel:
 ```typescript
 const userData = {
   email: "user@example.com",
+  createdAt: new Date().toISOString(),
+  name: "John Doe",
+  goal: "Pass probation period",
+  position: "Senior Developer",
   custom_age: "25-34",
-  custom_goal: "Pass probation period",
-  custom_position: "Senior Developer",
+  custom_department: "Engineering",
   _fieldsMeta: {
     custom_age: {
       label: "Age",
@@ -313,8 +320,8 @@ const userData = {
       createdAt: new Date().toISOString(),
       options: ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
     },
-    custom_goal: {
-      label: "Main Goal",
+    custom_department: {
+      label: "Department",
       type: "text",
       category: "Career",
       source: "onboarding_funnel",
@@ -329,10 +336,12 @@ const userData = {
 const bossData = {
   name: "Sarah Johnson",
   position: "CTO",
-  department: "Engineering",
+  birthday: "1980-05-15",
+  managementStyle: "Collaborative",
   startedAt: "2024-10-01T00:00:00Z",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
+  department: "Engineering",
   custom_age: "35-44",
   custom_oneOnOne: "Every 2 weeks",
   custom_availability: "Sometimes available",
@@ -419,15 +428,15 @@ const fieldMeta = {
 Required fields are protected:
 
 ```javascript
-// User: email, createdAt cannot be deleted
+// User: email, createdAt, name, goal, position cannot be deleted
 function hasRequiredUserFields(data) {
-  return data.keys().hasAll(['email', 'createdAt']);
+  return data.keys().hasAll(['email', 'createdAt', 'name', 'goal', 'position']);
 }
 
-// Boss: name, position, department, startedAt, createdAt, updatedAt cannot be deleted
+// Boss: name, position, birthday, managementStyle, startedAt, createdAt, updatedAt cannot be deleted
 function hasRequiredBossFields(data) {
   return data.keys().hasAll([
-    'name', 'position', 'department', 'startedAt', 'createdAt', 'updatedAt'
+    'name', 'position', 'birthday', 'managementStyle', 'startedAt', 'createdAt', 'updatedAt'
   ]);
 }
 ```

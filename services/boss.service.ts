@@ -2,15 +2,15 @@ import { db } from '@/constants/firebase.config';
 import { Boss, Unsubscribe } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
-    addDoc,
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    onSnapshot,
-    orderBy,
-    query,
-    updateDoc,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  updateDoc,
 } from 'firebase/firestore';
 import { logger } from './logger.service';
 
@@ -223,7 +223,8 @@ export async function createBoss(userId: string): Promise<string> {
     const newBoss = {
       name: 'My Boss',
       position: 'Manager',
-      department: 'Company',
+      birthday: '',
+      managementStyle: '',
       startedAt: now,
       createdAt: now,
       updatedAt: now,

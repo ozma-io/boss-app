@@ -127,6 +127,11 @@ export async function updateTrackingPermissionStatus(
       });
     } else {
       await setDoc(userDocRef, {
+        email: '',
+        createdAt: new Date().toISOString(),
+        name: '',
+        goal: '',
+        position: '',
         trackingPermissionStatus: status,
         lastTrackingPromptAt: new Date().toISOString(),
         trackingPromptHistory: [historyItem],
@@ -176,6 +181,11 @@ export async function recordTrackingPromptShown(userId: string): Promise<void> {
       });
     } else {
       await setDoc(userDocRef, {
+        email: '',
+        createdAt: new Date().toISOString(),
+        name: '',
+        goal: '',
+        position: '',
         trackingPermissionStatus: 'not_determined',
         lastTrackingPromptAt: new Date().toISOString(),
         trackingPromptHistory: [historyItem],

@@ -8,11 +8,11 @@
  * ## Field Categories:
  * 
  * 1. **Core Fields** (cannot be deleted):
- *    - name, position, department, startedAt, createdAt, updatedAt (required)
- *    - birthday, workingHours (optional core)
+ *    - name, position, birthday, managementStyle, startedAt, createdAt, updatedAt (required)
+ *    - department, workingHours (optional core)
  * 
  * 2. **Legacy Fields** (deprecated, kept for backward compatibility):
- *    - managementStyle, currentMood, favoriteColor, communicationPreference
+ *    - currentMood, favoriteColor, communicationPreference
  *    - meetingFrequency, keyInterests
  *    - These can be migrated to custom_ fields over time
  * 
@@ -35,19 +35,19 @@ export interface BossSchema {
   
   name: string;
   position: string;
-  department: string;
+  birthday: string; // ISO 8601 date string
+  managementStyle: string;
   startedAt: string; // ISO 8601 timestamp - when user started working with this boss
   createdAt: string; // ISO 8601 timestamp
   updatedAt: string; // ISO 8601 timestamp
   
   // === OPTIONAL CORE FIELDS ===
   
-  birthday?: string; // ISO 8601 date string
+  department?: string;
   workingHours?: string;
   
   // === LEGACY FIELDS (deprecated, kept for compatibility) ===
   
-  managementStyle?: string;
   currentMood?: string;
   favoriteColor?: string;
   communicationPreference?: string;
@@ -124,6 +124,8 @@ export const BossDefaults: Partial<BossSchema> = {
  * 
  * Version 2: Added custom fields pattern with _fieldsMeta
  *            Made createdAt and updatedAt required
+ * Version 3: Made birthday and managementStyle required core fields
+ *            Made department optional
  */
-export const BOSS_SCHEMA_VERSION = 2;
+export const BOSS_SCHEMA_VERSION = 3;
 

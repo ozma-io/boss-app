@@ -5,17 +5,17 @@ export interface Boss {
   // Core fields (required)
   name: string;
   position: string;
-  department: string;
+  birthday: string;
+  managementStyle: string;
   startedAt: string;
   createdAt: string;
   updatedAt: string;
   
   // Optional core fields
-  birthday?: string;
+  department?: string;
   workingHours?: string;
   
   // Legacy fields (deprecated, kept for compatibility)
-  managementStyle?: string;
   currentMood?: string;
   favoriteColor?: string;
   communicationPreference?: string;
@@ -95,11 +95,17 @@ export interface User {
   id: string;
   email: string;
   createdAt: string;
+  name: string;
+  goal: string;
+  position: string;
 }
 
 // User Profile type definition (for Firestore data)
 export interface UserProfile {
   email: string;
+  name: string;
+  goal: string;
+  position: string;
   displayName?: string;
   photoURL?: string;
   createdAt: string;
@@ -109,9 +115,7 @@ export interface UserProfile {
   subscription?: UserSubscription;
   
   // Custom fields for profile data
-  custom_position?: string;
   custom_department?: string;
-  custom_goal?: string;
   
   // Field metadata for custom fields
   _fieldsMeta?: {

@@ -15,21 +15,22 @@ service cloud.firestore {
     
     /**
      * Check if User document has all required fields
-     * Required: email, createdAt
+     * Required: email, createdAt, name, goal, position
      */
     function hasRequiredUserFields(data) {
-      return data.keys().hasAll(['email', 'createdAt']);
+      return data.keys().hasAll(['email', 'createdAt', 'name', 'goal', 'position']);
     }
     
     /**
      * Check if Boss document has all required fields
-     * Required: name, position, department, startedAt, createdAt, updatedAt
+     * Required: name, position, birthday, managementStyle, startedAt, createdAt, updatedAt
      */
     function hasRequiredBossFields(data) {
       return data.keys().hasAll([
         'name',
         'position',
-        'department',
+        'birthday',
+        'managementStyle',
         'startedAt',
         'createdAt',
         'updatedAt'
@@ -51,7 +52,7 @@ service cloud.firestore {
       
       // Update: required fields must not be deleted
       allow update: if isOwner(userId) 
-                    && requiredFieldsNotDeleted(['email', 'createdAt'], request.resource.data);
+                    && requiredFieldsNotDeleted(['email', 'createdAt', 'name', 'goal', 'position'], request.resource.data);
       
       // Read and delete: owner only
       allow read, delete: if isOwner(userId);
@@ -66,7 +67,8 @@ service cloud.firestore {
                       && requiredFieldsNotDeleted([
                         'name',
                         'position',
-                        'department',
+                        'birthday',
+                        'managementStyle',
                         'startedAt',
                         'createdAt',
                         'updatedAt'

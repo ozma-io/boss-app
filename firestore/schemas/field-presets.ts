@@ -17,7 +17,7 @@
  * Required fields for User documents
  * These fields cannot be deleted and are enforced by Firestore security rules
  */
-export const USER_REQUIRED_FIELDS = ['email', 'createdAt'] as const;
+export const USER_REQUIRED_FIELDS = ['email', 'createdAt', 'name', 'goal', 'position'] as const;
 
 /**
  * Required fields for Boss documents
@@ -26,7 +26,8 @@ export const USER_REQUIRED_FIELDS = ['email', 'createdAt'] as const;
 export const BOSS_REQUIRED_FIELDS = [
   'name',
   'position',
-  'department',
+  'birthday',
+  'managementStyle',
   'startedAt',
   'createdAt',
   'updatedAt',

@@ -82,6 +82,11 @@ export async function updateNotificationPermissionStatus(
       });
     } else {
       await setDoc(userDocRef, {
+        email: '',
+        createdAt: new Date().toISOString(),
+        name: '',
+        goal: '',
+        position: '',
         notificationPermissionStatus: status,
         lastNotificationPromptAt: new Date().toISOString(),
         notificationPromptHistory: [historyItem],
@@ -124,6 +129,11 @@ export async function recordNotificationPromptShown(userId: string): Promise<voi
       });
     } else {
       await setDoc(userDocRef, {
+        email: '',
+        createdAt: new Date().toISOString(),
+        name: '',
+        goal: '',
+        position: '',
         notificationPermissionStatus: 'not_asked',
         lastNotificationPromptAt: new Date().toISOString(),
         notificationPromptHistory: [historyItem],
