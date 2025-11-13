@@ -5,7 +5,7 @@ import { logger } from '@/services/logger.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BossScreen() {
@@ -251,7 +251,11 @@ export default function BossScreen() {
         </View>
 
         <View style={styles.cardsRow} testID="cards-row">
-          <View style={styles.infoCard} testID="working-hours-card">
+          <Pressable 
+            style={styles.infoCard} 
+            testID="working-hours-card"
+            onPress={isEditingWorkingHours ? undefined : handleEditWorkingHours}
+          >
             <Text style={styles.cardIcon} testID="working-hours-icon">⏰</Text>
             <View style={styles.cardContent}>
               <Text style={styles.cardLabel} testID="working-hours-label">Working hours</Text>
@@ -269,14 +273,13 @@ export default function BossScreen() {
                 <Text style={styles.cardValue} testID="working-hours-value">{boss.workingHours || 'Not set'}</Text>
               )}
             </View>
-            {!isEditingWorkingHours && (
-              <TouchableOpacity onPress={handleEditWorkingHours} style={styles.cardEditButton} testID="working-hours-edit-button">
-                <FontAwesome name="pencil" size={18} color="#333" testID="working-hours-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </Pressable>
 
-          <View style={styles.infoCard} testID="birthday-card">
+          <Pressable 
+            style={styles.infoCard} 
+            testID="birthday-card"
+            onPress={isEditingBirthday ? undefined : handleEditBirthday}
+          >
             <Text style={styles.cardIcon} testID="birthday-icon">🎂</Text>
             <View style={styles.cardContent}>
               <Text style={styles.cardLabel} testID="birthday-label">Birthday</Text>
@@ -294,18 +297,17 @@ export default function BossScreen() {
                 <Text style={styles.cardValue} testID="birthday-value">{boss.birthday || 'Not set'}</Text>
               )}
             </View>
-            {!isEditingBirthday && (
-              <TouchableOpacity onPress={handleEditBirthday} style={styles.cardEditButton} testID="birthday-edit-button">
-                <FontAwesome name="pencil" size={18} color="#333" testID="birthday-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </Pressable>
         </View>
 
         <View style={styles.otherInfoSection} testID="other-info-section">
           <Text style={styles.sectionTitle} testID="section-title">Other information</Text>
 
-          <View style={styles.infoRow} testID="position-row">
+          <Pressable 
+            style={styles.infoRow} 
+            testID="position-row"
+            onPress={isEditingPosition ? undefined : handleEditPosition}
+          >
             <Image 
               source={require('@/assets/images/briefcase-icon.png')} 
               style={styles.rowIcon}
@@ -328,14 +330,13 @@ export default function BossScreen() {
                 <Text style={styles.rowValue} testID="position-value">{boss.position}</Text>
               )}
             </View>
-            {!isEditingPosition && (
-              <TouchableOpacity onPress={handleEditPosition} style={styles.rowEditButton} testID="position-edit-button">
-                <FontAwesome name="pencil" size={16} color="#666" testID="position-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </Pressable>
 
-          <View style={styles.infoRow} testID="started-at-row">
+          <Pressable 
+            style={styles.infoRow} 
+            testID="started-at-row"
+            onPress={isEditingStartedAt ? undefined : handleEditStartedAt}
+          >
             <Text style={styles.rowIconEmoji} testID="started-at-icon">📅</Text>
             <View style={styles.rowContent}>
               <Text style={styles.rowLabel} testID="started-at-label">Started at</Text>
@@ -353,14 +354,13 @@ export default function BossScreen() {
                 <Text style={styles.rowValue} testID="started-at-value">{boss.startedAt}</Text>
               )}
             </View>
-            {!isEditingStartedAt && (
-              <TouchableOpacity onPress={handleEditStartedAt} style={styles.rowEditButton} testID="started-at-edit-button">
-                <FontAwesome name="pencil" size={16} color="#666" testID="started-at-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </Pressable>
 
-          <View style={styles.infoRow} testID="management-style-row">
+          <Pressable 
+            style={styles.infoRow} 
+            testID="management-style-row"
+            onPress={isEditingManagementStyle ? undefined : handleEditManagementStyle}
+          >
             <Text style={styles.rowIconEmoji} testID="management-style-icon">🤝</Text>
             <View style={styles.rowContent}>
               <Text style={styles.rowLabel} testID="management-style-label">Management style</Text>
@@ -378,14 +378,13 @@ export default function BossScreen() {
                 <Text style={styles.rowValue} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
               )}
             </View>
-            {!isEditingManagementStyle && (
-              <TouchableOpacity onPress={handleEditManagementStyle} style={styles.rowEditButton} testID="management-style-edit-button">
-                <FontAwesome name="pencil" size={16} color="#666" testID="management-style-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </Pressable>
 
-          <View style={styles.infoRow} testID="favorite-color-row">
+          <Pressable 
+            style={styles.infoRow} 
+            testID="favorite-color-row"
+            onPress={isEditingFavoriteColor ? undefined : handleEditFavoriteColor}
+          >
             <Text style={styles.rowIconEmoji} testID="favorite-color-icon">👀</Text>
             <View style={styles.rowContent}>
               <Text style={styles.rowLabel} testID="favorite-color-label">Favorite color</Text>
@@ -403,14 +402,13 @@ export default function BossScreen() {
                 <Text style={styles.rowValue} testID="favorite-color-value">{boss.favoriteColor || 'Not set'}</Text>
               )}
             </View>
-            {!isEditingFavoriteColor && (
-              <TouchableOpacity onPress={handleEditFavoriteColor} style={styles.rowEditButton} testID="favorite-color-edit-button">
-                <FontAwesome name="pencil" size={16} color="#666" testID="favorite-color-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </Pressable>
 
-          <View style={styles.infoRow} testID="communication-preference-row">
+          <Pressable 
+            style={styles.infoRow} 
+            testID="communication-preference-row"
+            onPress={isEditingCommunicationPreference ? undefined : handleEditCommunicationPreference}
+          >
             <Text style={styles.rowIconEmoji} testID="communication-preference-icon">🗣️</Text>
             <View style={styles.rowContent}>
               <Text style={styles.rowLabel} testID="communication-preference-label">Communicative preference</Text>
@@ -428,14 +426,13 @@ export default function BossScreen() {
                 <Text style={styles.rowValue} testID="communication-preference-value">{boss.communicationPreference || 'Not set'}</Text>
               )}
             </View>
-            {!isEditingCommunicationPreference && (
-              <TouchableOpacity onPress={handleEditCommunicationPreference} style={styles.rowEditButton} testID="communication-preference-edit-button">
-                <FontAwesome name="pencil" size={16} color="#666" testID="communication-preference-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </Pressable>
 
-          <View style={styles.infoRow} testID="department-row">
+          <Pressable 
+            style={styles.infoRow} 
+            testID="department-row"
+            onPress={isEditingDepartment ? undefined : handleEditDepartment}
+          >
             <Image 
               source={require('@/assets/images/department-icon.png')} 
               style={styles.rowIcon}
@@ -458,12 +455,7 @@ export default function BossScreen() {
                 <Text style={styles.rowValue} testID="department-value">{boss.department}</Text>
               )}
             </View>
-            {!isEditingDepartment && (
-              <TouchableOpacity onPress={handleEditDepartment} style={styles.rowEditButton} testID="department-edit-button">
-                <FontAwesome name="pencil" size={16} color="#666" testID="department-edit-icon" />
-              </TouchableOpacity>
-            )}
-          </View>
+          </Pressable>
         </View>
       </ScrollView>
       )}
@@ -590,6 +582,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: 'column',
     alignItems: 'flex-start',
+    minHeight: 72,
   },
   cardIcon: {
     fontSize: 28,
@@ -650,6 +643,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 72,
   },
   rowIcon: {
     width: 32,

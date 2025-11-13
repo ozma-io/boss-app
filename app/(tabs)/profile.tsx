@@ -8,7 +8,7 @@ import { logger } from '@/services/logger.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
@@ -215,7 +215,11 @@ export default function ProfileScreen() {
           <Text style={styles.email} testID="email-text">{profile.email}</Text>
         </View>
 
-        <View style={styles.goalCard} testID="goal-card">
+        <Pressable 
+          style={styles.goalCard} 
+          testID="goal-card"
+          onPress={isEditingGoal ? undefined : handleEditGoal}
+        >
           <Image 
             source={require('@/assets/images/flag-icon.png')} 
             style={styles.cardIcon}
@@ -238,14 +242,13 @@ export default function ProfileScreen() {
               <Text style={styles.cardValue} testID="goal-description">{goalDescription}</Text>
             )}
           </View>
-          {!isEditingGoal && (
-            <TouchableOpacity onPress={handleEditGoal} style={styles.cardEditButton} testID="goal-edit-button">
-              <FontAwesome name="pencil" size={18} color="#333" testID="goal-edit-icon" />
-            </TouchableOpacity>
-          )}
-        </View>
+        </Pressable>
 
-        <View style={styles.infoCard} testID="position-card">
+        <Pressable 
+          style={styles.infoCard} 
+          testID="position-card"
+          onPress={isEditingPosition ? undefined : handleEditPosition}
+        >
           <Image 
             source={require('@/assets/images/briefcase-icon.png')} 
             style={styles.cardIcon}
@@ -268,14 +271,13 @@ export default function ProfileScreen() {
               <Text style={styles.cardValue} testID="position-description">{position}</Text>
             )}
           </View>
-          {!isEditingPosition && (
-            <TouchableOpacity onPress={handleEditPosition} style={styles.cardEditButton} testID="position-edit-button">
-              <FontAwesome name="pencil" size={18} color="#333" testID="position-edit-icon" />
-            </TouchableOpacity>
-          )}
-        </View>
+        </Pressable>
 
-        <View style={styles.infoCard} testID="department-card">
+        <Pressable 
+          style={styles.infoCard} 
+          testID="department-card"
+          onPress={isEditingDepartment ? undefined : handleEditDepartment}
+        >
           <Image 
             source={require('@/assets/images/department-icon.png')} 
             style={styles.cardIcon}
@@ -298,12 +300,7 @@ export default function ProfileScreen() {
               <Text style={styles.cardValue} testID="department-description">{department}</Text>
             )}
           </View>
-          {!isEditingDepartment && (
-            <TouchableOpacity onPress={handleEditDepartment} style={styles.cardEditButton} testID="department-edit-button">
-              <FontAwesome name="pencil" size={18} color="#333" testID="department-edit-icon" />
-            </TouchableOpacity>
-          )}
-        </View>
+        </Pressable>
 
         {/* TODO: This section uses mocked metrics data. Replace with real calculations based on timeline entries */}
         {/* <View style={styles.metricsSection} testID="metrics-section">
@@ -484,6 +481,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 72,
   },
   infoCard: {
     backgroundColor: '#fff',
@@ -493,6 +491,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 72,
   },
   cardIcon: {
     width: 20,
