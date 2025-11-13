@@ -8,6 +8,8 @@ import {
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   onSnapshot,
   orderBy,
   query,
@@ -125,6 +127,32 @@ export async function createFactEntry(
   } catch (error) {
     const err = error as Error;
     logger.error('Error creating fact entry', { feature: 'TimelineService', userId, bossId, error: err });
+    throw error;
+  }
+}
+
+/**
+ * Delete a timeline entry
+ * 
+ * @param userId - User ID
+ * @param bossId - Boss ID
+ * @param entryId - Entry ID to delete
+ */
+export async function deleteTimelineEntry(
+  userId: string,
+  bossId: string,
+  entryId: string
+): Promise<void> {
+  try {
+    logger.debug('Deleting timeline entry', { feature: 'TimelineService', userId, bossId, entryId });
+    
+    const entryRef = doc(db, 'users', userId, 'bosses', bossId, 'entries', entryId);
+    await deleteDoc(entryRef);
+    
+    logger.info('Successfully deleted timeline entry', { feature: 'TimelineService', userId, bossId, entryId });
+  } catch (error) {
+    const err = error as Error;
+    logger.error('Error deleting timeline entry', { feature: 'TimelineService', userId, bossId, entryId, error: err });
     throw error;
   }
 }
