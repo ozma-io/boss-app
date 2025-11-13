@@ -45,19 +45,20 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
   });
   
   if (Platform.OS === 'web') {
-    // Web: use localhost or production URL
-    redirectUrl = process.env.EXPO_PUBLIC_APP_URL || 'http://localhost:8081';
+    // Web: use current origin (localhost in dev, production URL in prod)
+    redirectUrl = typeof window !== 'undefined' 
+      ? window.location.origin 
+      : process.env.EXPO_PUBLIC_APP_URL || 'https://boss-app.ozma.io';
   } else {
-    // For development builds, check if dev server is available
+    // Mobile: check if dev server is available
     const devServerUrl = getExpoDevServerUrl();
     if (devServerUrl) {
-      // Development mode: use HTTP URL
+      // Development mode: use dev server URL
       redirectUrl = devServerUrl;
       logger.debug('Development build detected', { feature: 'AuthService', redirectUrl });
     } else {
-      // Production standalone build: use custom scheme
-      const scheme = process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp';
-      redirectUrl = `${scheme}://`;
+      // Production build: use custom domain
+      redirectUrl = 'https://boss-app.ozma.io';
       logger.debug('Production build detected', { feature: 'AuthService', redirectUrl });
     }
   }

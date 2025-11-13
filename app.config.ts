@@ -43,7 +43,7 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.ozmaio.bossapp',
-    associatedDomains: ['applinks:discovery.ozma.io'],
+    associatedDomains: ['applinks:boss-app.ozma.io', 'applinks:discovery.ozma.io'],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       FacebookAppID: FACEBOOK_APP_ID,
@@ -61,6 +61,18 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     intentFilters: [
+      {
+        action: 'VIEW',
+        autoVerify: true,
+        data: [
+          {
+            scheme: 'https',
+            host: 'boss-app.ozma.io',
+            pathPrefix: '/__/auth',
+          },
+        ],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
       {
         action: 'VIEW',
         autoVerify: true,
