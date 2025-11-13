@@ -1,10 +1,19 @@
-import { NotificationPermissionStatus } from '@/types';
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
 import { logger } from '@/services/logger.service';
+import { NotificationPermissionStatus } from '@/types';
+import { Platform } from 'react-native';
+
+// Only import on native platforms to avoid web initialization warnings
+let Notifications: any = null;
+if (Platform.OS !== 'web') {
+  Notifications = require('expo-notifications');
+}
 
 export async function requestNotificationPermissions(): Promise<NotificationPermissionStatus> {
   if (Platform.OS === 'ios') {
+    if (!Notifications) {
+      logger.warn('Notifications module not available', { feature: 'Notification' });
+      return 'not_asked';
+    }
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     
     if (existingStatus === 'granted') {
@@ -38,6 +47,10 @@ export async function requestNotificationPermissions(): Promise<NotificationPerm
 
 export async function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
   if (Platform.OS === 'ios') {
+    if (!Notifications) {
+      logger.warn('Notifications module not available', { feature: 'Notification' });
+      return 'not_asked';
+    }
     const { status } = await Notifications.getPermissionsAsync();
     
     if (status === 'granted') {
