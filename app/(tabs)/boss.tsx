@@ -270,7 +270,7 @@ export default function BossScreen() {
                   testID="working-hours-input"
                 />
               ) : (
-                <Text style={styles.cardValue} testID="working-hours-value">{boss.workingHours || 'Not set'}</Text>
+                <Text style={[styles.cardValue, !boss.workingHours && { opacity: 0.5 }]} testID="working-hours-value">{boss.workingHours || 'Not set'}</Text>
               )}
             </View>
           </Pressable>
@@ -294,7 +294,7 @@ export default function BossScreen() {
                   testID="birthday-input"
                 />
               ) : (
-                <Text style={styles.cardValue} testID="birthday-value">{boss.birthday || 'Not set'}</Text>
+                <Text style={[styles.cardValue, !boss.birthday && { opacity: 0.5 }]} testID="birthday-value">{boss.birthday || 'Not set'}</Text>
               )}
             </View>
           </Pressable>
@@ -375,7 +375,7 @@ export default function BossScreen() {
                   testID="management-style-input"
                 />
               ) : (
-                <Text style={styles.rowValue} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
+                <Text style={[styles.rowValue, !boss.managementStyle && { opacity: 0.5 }]} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
               )}
             </View>
           </Pressable>
@@ -399,7 +399,7 @@ export default function BossScreen() {
                   testID="favorite-color-input"
                 />
               ) : (
-                <Text style={styles.rowValue} testID="favorite-color-value">{boss.favoriteColor || 'Not set'}</Text>
+                <Text style={[styles.rowValue, !boss.favoriteColor && { opacity: 0.5 }]} testID="favorite-color-value">{boss.favoriteColor || 'Not set'}</Text>
               )}
             </View>
           </Pressable>
@@ -423,7 +423,7 @@ export default function BossScreen() {
                   testID="communication-preference-input"
                 />
               ) : (
-                <Text style={styles.rowValue} testID="communication-preference-value">{boss.communicationPreference || 'Not set'}</Text>
+                <Text style={[styles.rowValue, !boss.communicationPreference && { opacity: 0.5 }]} testID="communication-preference-value">{boss.communicationPreference || 'Not set'}</Text>
               )}
             </View>
           </Pressable>
@@ -594,21 +594,19 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     fontSize: 12,
-    color: '#999',
+    color: 'rgba(0, 0, 0, 0.4)',
     marginBottom: 4,
     fontFamily: 'Manrope-Regular',
   },
   cardValue: {
     fontSize: 16,
-    fontWeight: '600',
     color: '#333',
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Manrope-Regular',
   },
   cardValueInput: {
     fontSize: 16,
-    fontWeight: '600',
     color: '#333',
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Manrope-Regular',
     padding: 0,
     margin: 0,
     borderWidth: 0,
@@ -661,21 +659,19 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     fontSize: 12,
-    color: '#999',
+    color: 'rgba(0, 0, 0, 0.4)',
     marginBottom: 2,
     fontFamily: 'Manrope-Regular',
   },
   rowValue: {
     fontSize: 16,
-    fontWeight: '600',
     color: '#333',
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Manrope-Regular',
   },
   rowValueInput: {
     fontSize: 16,
-    fontWeight: '600',
     color: '#333',
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Manrope-Regular',
     padding: 0,
     margin: 0,
     borderWidth: 0,

@@ -239,7 +239,7 @@ export default function ProfileScreen() {
                 testID="goal-input"
               />
             ) : (
-              <Text style={styles.cardValue} testID="goal-description">{goalDescription}</Text>
+              <Text style={[styles.cardValue, !goalDescription && { opacity: 0.5 }]} testID="goal-description">{goalDescription || 'Not set'}</Text>
             )}
           </View>
         </Pressable>
@@ -268,7 +268,7 @@ export default function ProfileScreen() {
                 testID="position-input"
               />
             ) : (
-              <Text style={styles.cardValue} testID="position-description">{position}</Text>
+              <Text style={[styles.cardValue, !position && { opacity: 0.5 }]} testID="position-description">{position || 'Not set'}</Text>
             )}
           </View>
         </Pressable>
@@ -297,7 +297,7 @@ export default function ProfileScreen() {
                 testID="department-input"
               />
             ) : (
-              <Text style={styles.cardValue} testID="department-description">{department}</Text>
+              <Text style={[styles.cardValue, !department && { opacity: 0.5 }]} testID="department-description">{department || 'Not set'}</Text>
             )}
           </View>
         </Pressable>
@@ -604,4 +604,3 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-Regular',
   },
 });
-
