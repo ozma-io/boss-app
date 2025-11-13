@@ -212,24 +212,31 @@ export default function TimelineScreen() {
         ) : (
           <ScrollView style={styles.timeline} contentContainerStyle={[styles.timelineContent, { paddingTop: topInset + 16 }]} testID="timeline-scroll">
             <Text style={styles.timelineTitle} testID="timeline-title">The Boss App</Text>
-            {timelineGroups.map((group, groupIndex) => (
-              <View key={group.title} style={styles.timelineGroup}>
-                <Text style={styles.groupTitle} testID={`group-title-${groupIndex}`}>
-                  {group.title}
-                </Text>
-                {group.entries.map((entry, entryIndex) => (
-                  <View key={entry.id} style={styles.timelineItemContainer}>
-                    <SwipeableTimelineItem
-                      entry={entry}
-                      onPress={handleTimelineEntryPress}
-                      onDelete={handleDeleteEntry}
-                      testID={`timeline-item-${entry.id}`}
-                      isLastInGroup={entryIndex === group.entries.length - 1}
-                    />
+            <View style={styles.timelineWrapper}>
+              {entries.length > 0 && (
+                <View style={styles.timelineLine} />
+              )}
+              <View style={styles.timelineItems}>
+                {timelineGroups.map((group, groupIndex) => (
+                  <View key={group.title} style={styles.timelineGroup}>
+                    <Text style={styles.groupTitle} testID={`group-title-${groupIndex}`}>
+                      {group.title}
+                    </Text>
+                    {group.entries.map((entry, entryIndex) => (
+                      <View key={entry.id} style={styles.timelineItemContainer}>
+                        <SwipeableTimelineItem
+                          entry={entry}
+                          onPress={handleTimelineEntryPress}
+                          onDelete={handleDeleteEntry}
+                          testID={`timeline-item-${entry.id}`}
+                          isLastInGroup={entryIndex === group.entries.length - 1}
+                        />
+                      </View>
+                    ))}
                   </View>
                 ))}
               </View>
-            ))}
+            </View>
             <AddTimelineEntryButton onPress={() => setIsAddModalVisible(true)} />
           </ScrollView>
         )}
@@ -315,9 +322,24 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-SemiBold',
     textAlign: 'center',
   },
+  timelineWrapper: {
+    position: 'relative',
+  },
+  timelineLine: {
+    position: 'absolute',
+    top: 70,
+    bottom: 70,
+    left: 11,
+    width: 2,
+    backgroundColor: '#D1D5DB',
+    zIndex: 1,
+  },
+  timelineItems: {
+    position: 'relative',
+    zIndex: 2,
+  },
   timelineGroup: {
     marginBottom: 24,
-    overflow: 'hidden',
   },
   groupTitle: {
     fontSize: 16,

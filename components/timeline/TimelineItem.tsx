@@ -26,7 +26,6 @@ export function TimelineItem({ entry, onPress, testID, isLastInGroup }: Timeline
     <View style={styles.container}>
       <View style={styles.timelineIndicator}>
         <View style={styles.dot} />
-        {!isLastInGroup && <View style={styles.line} />}
       </View>
       <View style={styles.content}>
         {renderEntry()}
@@ -65,17 +64,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: '#E1DFD8',
-    zIndex: 1,
-  },
-  line: {
-    position: 'absolute',
-    top: '50%',
-    marginTop: 5,
-    height: 1000,
-    width: 2,
-    backgroundColor: '#D1D5DB',
-    left: '50%',
-    marginLeft: -1,
+    zIndex: 2,
   },
   content: {
     flex: 1,
