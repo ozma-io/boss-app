@@ -66,7 +66,8 @@ export default function TimelineScreen() {
           subtype: entryData.subtype,
           title: entryData.title,
           content: entryData.content,
-          icon: entryData.icon,
+          // TODO: Pass icon when icon picker is implemented
+          icon: entryData.icon || null,
           timestamp: entryData.timestamp,
         });
 
@@ -88,6 +89,8 @@ export default function TimelineScreen() {
           content: entryData.content,
           factKey: entryData.factKey,
           value: entryData.value,
+          // TODO: Pass icon when icon picker is implemented
+          icon: entryData.icon || null,
           timestamp: entryData.timestamp,
         });
 

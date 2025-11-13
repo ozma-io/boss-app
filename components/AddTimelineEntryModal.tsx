@@ -29,7 +29,7 @@ interface NoteEntryData {
   subtype: NoteSubtype;
   title: string;
   content: string;
-  icon?: string;
+  icon: null;
   timestamp: string;
 }
 
@@ -39,6 +39,7 @@ interface FactEntryData {
   content: string;
   factKey: string;
   value: string;
+  icon: null;
   timestamp: string;
 }
 
@@ -65,7 +66,8 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const [noteSubtype, setNoteSubtype] = useState<NoteSubtype>('note');
-  const [icon, setIcon] = useState<string>('');
+  // TODO: Add icon picker UI for users to select custom icons for entries
+  // const [icon, setIcon] = useState<string>('');
   const [factKey, setFactKey] = useState<string>('');
   const [factValue, setFactValue] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -80,7 +82,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
       setTitle('');
       setContent('');
       setNoteSubtype('note');
-      setIcon('');
+      // setIcon('');
       setFactKey('');
       setFactValue('');
       setSelectedDate(new Date());
@@ -97,7 +99,8 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
           subtype: noteSubtype,
           title: title.trim(),
           content: content.trim(),
-          icon: icon.trim() || undefined,
+          // TODO: Allow users to set custom icons when icon picker is implemented
+          icon: null,
           timestamp: selectedDate.toISOString(),
         };
         await onAdd(entryData);
@@ -108,6 +111,8 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
           content: content.trim(),
           factKey: factKey.trim(),
           value: factValue.trim(),
+          // TODO: Allow users to set custom icons when icon picker is implemented
+          icon: null,
           timestamp: selectedDate.toISOString(),
         };
         await onAdd(entryData);
@@ -305,6 +310,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
                   />
                 </View>
 
+                {/* TODO: Add icon picker UI for users to select custom icons
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel} testID="icon-section-label">
                     Icon (Optional)
@@ -318,6 +324,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
                     testID="icon-input"
                   />
                 </View>
+                */}
               </>
             )}
 
@@ -396,6 +403,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
                   />
                 </View>
 
+                {/* TODO: Add icon picker UI for users to select custom icons
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel} testID="icon-section-label">
                     Icon (Optional)
@@ -409,6 +417,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd }: AddTimeline
                     testID="icon-input"
                   />
                 </View>
+                */}
               </>
             )}
           </ScrollView>

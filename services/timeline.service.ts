@@ -77,12 +77,21 @@ export async function createNoteEntry(
     
     const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
     
+    // TODO: Remove null filtering when icon picker is implemented
+    // Filter out null/undefined values to avoid Firestore errors
     const entryData = {
       ...data,
       type: 'note' as const,
       timestamp: data.timestamp || new Date().toISOString(),
       createdAt: new Date().toISOString(),
+      // Remove icon if it's null or undefined
+      ...(data.icon && { icon: data.icon }),
     };
+    
+    // Remove icon key completely if it's null
+    if (entryData.icon === null || entryData.icon === undefined) {
+      delete (entryData as any).icon;
+    }
     
     const docRef = await addDoc(entriesRef, entryData);
     
@@ -113,12 +122,21 @@ export async function createFactEntry(
     
     const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
     
+    // TODO: Remove null filtering when icon picker is implemented
+    // Filter out null/undefined values to avoid Firestore errors
     const entryData = {
       ...data,
       type: 'fact' as const,
       timestamp: data.timestamp || new Date().toISOString(),
       createdAt: new Date().toISOString(),
+      // Remove icon if it's null or undefined
+      ...(data.icon && { icon: data.icon }),
     };
+    
+    // Remove icon key completely if it's null
+    if (entryData.icon === null || entryData.icon === undefined) {
+      delete (entryData as any).icon;
+    }
     
     const docRef = await addDoc(entriesRef, entryData);
     
