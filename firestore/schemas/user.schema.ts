@@ -179,7 +179,7 @@ export interface UserSchema {
    * - label: Display name for UI
    * - type: Field type (text, select, date, multiline)
    * - category: Optional grouping (Demographics, Career, etc.)
-   * - source: Where field was created (onboarding_funnel, user_added, weekly_survey)
+   * - source: Where field was created (onboarding_funnel, user_added)
    * - createdAt: When field was added
    * - options: Available options for select type
    */
@@ -188,7 +188,7 @@ export interface UserSchema {
       label: string;
       type: 'text' | 'select' | 'date' | 'multiline';
       category?: string;
-      source?: 'onboarding_funnel' | 'user_added' | 'weekly_survey';
+      source?: 'onboarding_funnel' | 'user_added';
       createdAt: string; // ISO 8601 timestamp
       displayOrder?: number; // For custom ordering of fields
       options?: string[]; // For select type

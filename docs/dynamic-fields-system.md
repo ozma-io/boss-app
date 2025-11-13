@@ -162,7 +162,7 @@ Every custom field must have metadata:
   label: string           // Display name in UI
   type: 'text' | 'select' | 'date' | 'multiline' | 'multiselect'
   category?: string       // Grouping (Demographics, Communication, etc.)
-  source?: string         // Where created (onboarding_funnel, user_added, weekly_survey)
+  source?: string         // Where created (onboarding_funnel, user_added)
   createdAt: string       // ISO 8601 timestamp
   options?: string[]      // For select/multiselect types
 }

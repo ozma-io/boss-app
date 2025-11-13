@@ -1,17 +1,16 @@
 import { db } from '@/constants/firebase.config';
 import {
-    InteractionEntry,
-    NoteEntry,
-    SurveyEntry,
-    TimelineEntry,
-    Unsubscribe,
+  FactEntry,
+  NoteEntry,
+  TimelineEntry,
+  Unsubscribe
 } from '@/types';
 import {
-    addDoc,
-    collection,
-    onSnapshot,
-    orderBy,
-    query,
+  addDoc,
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
 } from 'firebase/firestore';
 import { logger } from './logger.service';
 
@@ -72,7 +71,7 @@ export async function createNoteEntry(
   data: Omit<NoteEntry, 'id'>
 ): Promise<string> {
   try {
-    logger.debug('Creating note entry', { feature: 'TimelineService', userId, bossId });
+    logger.debug('Creating note entry', { feature: 'TimelineService', userId, bossId, subtype: data.subtype });
     
     const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
     
@@ -85,7 +84,7 @@ export async function createNoteEntry(
     
     const docRef = await addDoc(entriesRef, entryData);
     
-    logger.info('Successfully created note entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id });
+    logger.info('Successfully created note entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id, subtype: data.subtype });
     return docRef.id;
   } catch (error) {
     const err = error as Error;
@@ -95,73 +94,37 @@ export async function createNoteEntry(
 }
 
 /**
- * Create an interaction entry in the timeline
+ * Create a fact entry in the timeline
  * 
  * @param userId - User ID
  * @param bossId - Boss ID
- * @param data - Interaction entry data (without id)
+ * @param data - Fact entry data (without id)
  * @returns Created entry ID
  */
-export async function createInteractionEntry(
+export async function createFactEntry(
   userId: string,
   bossId: string,
-  data: Omit<InteractionEntry, 'id'>
+  data: Omit<FactEntry, 'id'>
 ): Promise<string> {
   try {
-    logger.debug('Creating interaction entry', { feature: 'TimelineService', userId, bossId });
+    logger.debug('Creating fact entry', { feature: 'TimelineService', userId, bossId, factKey: data.factKey });
     
     const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
     
     const entryData = {
       ...data,
-      type: 'interaction' as const,
+      type: 'fact' as const,
       timestamp: data.timestamp || new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };
     
     const docRef = await addDoc(entriesRef, entryData);
     
-    logger.info('Successfully created interaction entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id });
+    logger.info('Successfully created fact entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id, factKey: data.factKey });
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    logger.error('Error creating interaction entry', { feature: 'TimelineService', userId, bossId, error: err });
-    throw error;
-  }
-}
-
-/**
- * Create a survey entry in the timeline
- * 
- * @param userId - User ID
- * @param bossId - Boss ID
- * @param data - Survey entry data (without id)
- * @returns Created entry ID
- */
-export async function createSurveyEntry(
-  userId: string,
-  bossId: string,
-  data: Omit<SurveyEntry, 'id'>
-): Promise<string> {
-  try {
-    logger.debug('Creating survey entry', { feature: 'TimelineService', userId, bossId });
-    
-    const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
-    
-    const entryData = {
-      ...data,
-      type: 'survey' as const,
-      timestamp: data.timestamp || new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    };
-    
-    const docRef = await addDoc(entriesRef, entryData);
-    
-    logger.info('Successfully created survey entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id });
-    return docRef.id;
-  } catch (error) {
-    const err = error as Error;
-    logger.error('Error creating survey entry', { feature: 'TimelineService', userId, bossId, error: err });
+    logger.error('Error creating fact entry', { feature: 'TimelineService', userId, bossId, error: err });
     throw error;
   }
 }

@@ -4,10 +4,18 @@
  * Path: /users/{userId}/bosses/{bossId}/entries/{entryId}
  * 
  * Entries represent different types of timeline events:
- * - note: Free-form text notes
- * - survey: Structured questionnaires (simplified flat structure)
- * - interaction: Meeting/communication logs
- * - fact: Single data point/assessment (NEW - for frequently changing states)
+ * - note: Text-based entries with subtypes (note, interaction, feedback, achievement, challenge, other)
+ * - fact: Single data point/assessment for tracking measurements over time
+ * 
+ * ## Note Entry Pattern:
+ * 
+ * NoteEntry is used for all text-based timeline events with different subtypes:
+ * - note: General observations
+ * - interaction: Meeting/call/communication logs
+ * - feedback: Feedback from boss
+ * - achievement: Successes and milestones
+ * - challenge: Problems and conflicts
+ * - other: Anything else
  * 
  * ## Fact Entry Pattern:
  * 
@@ -15,56 +23,37 @@
  * - Each fact is a separate document in the timeline
  * - Examples: stress level, confidence level, workload assessment
  * - Allows tracking changes over time
- * - Source indicates where the fact was recorded (funnel, user, survey)
+ * - Source indicates where the fact was recorded (funnel, user)
  */
+
+/**
+ * Note subtypes for different kinds of text-based entries
+ */
+export type NoteSubtype = 'note' | 'interaction' | 'feedback' | 'achievement' | 'challenge' | 'other';
 
 /**
  * Base fields common to all entry types
  */
 interface BaseEntrySchema {
-  type: 'note' | 'survey' | 'interaction' | 'fact';
+  type: 'note' | 'fact';
   timestamp: string; // ISO 8601 timestamp
+  title: string;
+  content: string;
+  icon?: string;
+  source?: 'onboarding_funnel' | 'user_added' | 'ai_added';
   createdAt?: string;
   updatedAt?: string;
 }
 
 /**
- * Note Entry - Free-form text note
+ * Note Entry - Text-based timeline entry with subtypes
+ * 
+ * Represents any text-based event in the timeline.
+ * Subtype indicates the specific kind of note.
  */
 export interface NoteEntrySchema extends BaseEntrySchema {
   type: 'note';
-  content: string;
-  title?: string;
-  tags?: string[];
-}
-
-/**
- * Survey Entry - Structured questionnaire response
- * 
- * Simplified structure with flat array of responses.
- * No nested objects for better simplicity.
- */
-export interface SurveyEntrySchema extends BaseEntrySchema {
-  type: 'survey';
-  surveyTitle: string;
-  responses: Array<{
-    question: string;
-    answer: string | number;
-  }>;
-  notes?: string;
-}
-
-/**
- * Interaction Entry - Meeting or communication log
- */
-export interface InteractionEntrySchema extends BaseEntrySchema {
-  type: 'interaction';
-  interactionType: string; // 'meeting', 'email', 'slack', 'call', etc.
-  mood: string; // 'positive', 'neutral', 'negative'
-  notes: string;
-  duration?: number; // in minutes
-  participants?: string[];
-  topics?: string[];
+  subtype: NoteSubtype;
 }
 
 /**
@@ -73,25 +62,22 @@ export interface InteractionEntrySchema extends BaseEntrySchema {
  * Used for tracking changing states and assessments over time.
  * Each fact is stored as a separate timeline entry.
  * 
- * Examples from web funnel:
- * - custom_confidenceLevel: "Often doubt myself"
- * - custom_stressLevel: "Quite stressful"
- * - custom_workload: "Sometimes overloaded"
- * - custom_teamSupport: "Rather yes"
+ * Examples:
+ * - title: "Confidence Level", value: "Often doubt myself"
+ * - title: "Stress Level", value: "Quite stressful"
+ * - title: "Workload", value: "Sometimes overloaded"
+ * - title: "Team Support", value: "Rather yes"
  */
 export interface FactEntrySchema extends BaseEntrySchema {
   type: 'fact';
   factKey: string; // e.g., "custom_confidenceLevel", "custom_stressLevel"
-  factLabel: string; // e.g., "Confidence Level", "Stress Level"
   value: string | number | string[]; // The actual value
-  category?: string; // e.g., "Emotions", "Workload", "Team"
-  source?: 'onboarding_funnel' | 'user_added' | 'weekly_survey';
 }
 
 /**
  * Discriminated union of all entry types
  */
-export type EntrySchema = NoteEntrySchema | SurveyEntrySchema | InteractionEntrySchema | FactEntrySchema;
+export type EntrySchema = NoteEntrySchema | FactEntrySchema;
 
 /**
  * Version tracking
@@ -99,6 +85,10 @@ export type EntrySchema = NoteEntrySchema | SurveyEntrySchema | InteractionEntry
  * 
  * Version 2: Added FactEntrySchema for tracking single assessments
  *            Simplified SurveyEntrySchema (flat responses array)
+ * Version 3: Removed SurveyEntrySchema and InteractionEntrySchema
+ *            Added subtype field to NoteEntrySchema
+ *            Added icon field to all entry types
+ *            Removed 'weekly_survey' from source options
  */
-export const ENTRY_SCHEMA_VERSION = 2;
+export const ENTRY_SCHEMA_VERSION = 3;
 

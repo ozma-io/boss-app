@@ -1,3 +1,4 @@
+import { DEFAULT_TIMELINE_ICONS } from '@/constants/timeline';
 import { TimelineEntry } from '@/types';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -7,32 +8,22 @@ interface TimelineEntryCardProps {
   timestamp?: string;
 }
 
-const moodEmojis: Record<string, string> = {
-  positive: '😊',
-  neutral: '😐',
-  negative: '😕',
-};
-
 const getIcon = (entry: TimelineEntry): string => {
-  switch (entry.type) {
-    case 'note':
-      return '📝';
-    case 'survey':
-      return '🔍';
-    case 'interaction':
-      return moodEmojis[entry.mood] || '😐';
+  // Use custom icon if provided
+  if (entry.icon) {
+    return entry.icon;
   }
+  
+  // Fall back to default icons
+  if (entry.type === 'note') {
+    return DEFAULT_TIMELINE_ICONS[entry.subtype];
+  }
+  
+  return DEFAULT_TIMELINE_ICONS.fact;
 };
 
 const getTitle = (entry: TimelineEntry): string => {
-  switch (entry.type) {
-    case 'note':
-      return entry.title || 'Note';
-    case 'survey':
-      return entry.surveyTitle;
-    case 'interaction':
-      return entry.interactionType;
-  }
+  return entry.title;
 };
 
 export function TimelineEntryCard({ entry, testID, timestamp }: TimelineEntryCardProps) {
@@ -46,7 +37,7 @@ export function TimelineEntryCard({ entry, testID, timestamp }: TimelineEntryCar
         <Text style={styles.title} testID={testID ? `${testID}-title` : `${entry.type}-entry-title`}>{title}</Text>
       </View>
       <View style={styles.iconContainer} testID={testID ? `${testID}-icon-container` : `${entry.type}-entry-icon-container`}>
-        <Text style={styles.icon} testID={testID ? `${testID}-icon` : entry.type === 'interaction' ? `${testID}-mood-emoji` : `${entry.type}-entry-icon`}>{icon}</Text>
+        <Text style={styles.icon} testID={testID ? `${testID}-icon` : `${entry.type}-entry-icon`}>{icon}</Text>
       </View>
     </View>
   );

@@ -40,56 +40,36 @@ export interface Boss {
 }
 
 // Timeline entry types
-export type TimelineEntryType = 'note' | 'survey' | 'interaction' | 'fact';
+export type TimelineEntryType = 'note' | 'fact';
+
+// Note subtypes for different kinds of text-based entries
+export type NoteSubtype = 'note' | 'interaction' | 'feedback' | 'achievement' | 'challenge' | 'other';
 
 // Base entry interface
 interface BaseEntry {
   id: string;
   timestamp: string;
+  title: string;
+  content: string;
+  icon?: string;
+  source?: 'onboarding_funnel' | 'user_added' | 'ai_added';
 }
 
-// Note entry
+// Note entry - text-based timeline entry with subtypes
 export interface NoteEntry extends BaseEntry {
   type: 'note';
-  content: string;
-  title?: string;
-  tags?: string[];
-}
-
-// Survey entry
-export interface SurveyEntry extends BaseEntry {
-  type: 'survey';
-  surveyTitle: string;
-  responses: {
-    question: string;
-    answer: string | number;
-  }[];
-  notes?: string;
-}
-
-// Interaction entry
-export interface InteractionEntry extends BaseEntry {
-  type: 'interaction';
-  interactionType: string;
-  mood: string;
-  notes: string;
-  duration?: number;
-  participants?: string[];
-  topics?: string[];
+  subtype: NoteSubtype;
 }
 
 // Fact entry - for tracking single assessments over time
 export interface FactEntry extends BaseEntry {
   type: 'fact';
   factKey: string;
-  factLabel: string;
   value: string | number | string[];
-  category?: string;
-  source?: 'onboarding_funnel' | 'user_added' | 'weekly_survey';
 }
 
 // Discriminated union for all timeline entries
-export type TimelineEntry = NoteEntry | SurveyEntry | InteractionEntry | FactEntry;
+export type TimelineEntry = NoteEntry | FactEntry;
 
 // User type definition (for authentication state - minimal data from Firebase Auth)
 export interface User {

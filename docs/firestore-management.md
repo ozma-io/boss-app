@@ -299,23 +299,75 @@ Don't use for:
 - Stable characteristics (store in User/Boss document)
 - One-time events (use Note or Interaction entry)
 
-### FactEntry Schema
+### Timeline Entry Types
+
+The Boss App uses two technical entry types:
+
+1. **`note`** - Text-based entries with subtypes:
+   - `note` - General observations
+   - `interaction` - Meeting/call/communication logs
+   - `feedback` - Feedback from boss
+   - `achievement` - Successes and milestones
+   - `challenge` - Problems and conflicts
+   - `other` - Anything else
+
+2. **`fact`** - Single data points for measurements
+
+### Base Fields (Common to all entries)
 
 ```typescript
 {
-  type: 'fact',
-  timestamp: string,           // When recorded
-  factKey: string,             // e.g., "custom_stressLevel"
-  factLabel: string,           // e.g., "Stress Level"
-  value: string | number | string[],
-  category?: string,           // e.g., "Emotions"
-  source?: string,             // e.g., "onboarding_funnel", "weekly_survey"
+  id: string,
+  timestamp: string,
+  title: string,               // Required (display name for the entry)
+  content: string,             // Required (empty string by default for facts)
+  icon?: string,
+  source?: 'onboarding_funnel' | 'user_added' | 'ai_added',
   createdAt?: string,
   updatedAt?: string
 }
 ```
 
-### Example: Recording Stress Level
+### NoteEntry Schema
+
+```typescript
+{
+  type: 'note',
+  subtype: 'note' | 'interaction' | 'feedback' | 'achievement' | 'challenge' | 'other',
+  // + all base fields
+}
+```
+
+### FactEntry Schema
+
+```typescript
+{
+  type: 'fact',
+  factKey: string,             // e.g., "custom_stressLevel"
+  value: string | number | string[],
+  // + all base fields (title is the display name, e.g., "Stress Level")
+}
+```
+
+### Example: Creating a Note Entry
+
+```typescript
+import { addDoc, collection } from 'firebase/firestore';
+
+const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
+
+await addDoc(entriesRef, {
+  type: 'note',
+  subtype: 'feedback',
+  timestamp: new Date().toISOString(),
+  title: 'Positive feedback on presentation',
+  content: 'Boss praised my project presentation. She mentioned I explained technical concepts clearly.',
+  icon: '👍',
+  createdAt: new Date().toISOString()
+});
+```
+
+### Example: Recording Stress Level (User Input)
 
 ```typescript
 import { addDoc, collection } from 'firebase/firestore';
@@ -326,10 +378,26 @@ await addDoc(entriesRef, {
   type: 'fact',
   timestamp: new Date().toISOString(),
   factKey: 'custom_stressLevel',
-  factLabel: 'Stress Level',
+  title: 'Stress Level',
   value: 'Quite stressful',
-  category: 'Emotions',
-  source: 'weekly_survey',
+  content: '',
+  source: 'user_added',
+  createdAt: new Date().toISOString()
+});
+```
+
+### Example: AI-Generated Fact with Context
+
+```typescript
+await addDoc(entriesRef, {
+  type: 'fact',
+  timestamp: new Date().toISOString(),
+  factKey: 'custom_confidenceLevel',
+  title: 'Confidence Level',
+  value: 'High',
+  content: 'Based on recent achievements and positive feedback from the boss.',
+  source: 'ai_added',
+  icon: '🤖',
   createdAt: new Date().toISOString()
 });
 ```
