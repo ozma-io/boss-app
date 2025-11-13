@@ -73,25 +73,12 @@ export async function updateNotificationPermissionStatus(
       action: status === 'granted' ? 'granted' : 'denied',
     };
     
-    if (userDoc.exists()) {
-      const existingHistory = userDoc.data().notificationPromptHistory || [];
-      await updateDoc(userDocRef, {
-        notificationPermissionStatus: status,
-        lastNotificationPromptAt: new Date().toISOString(),
-        notificationPromptHistory: [...existingHistory, historyItem],
-      });
-    } else {
-      await setDoc(userDocRef, {
-        email: '',
-        createdAt: new Date().toISOString(),
-        name: '',
-        goal: '',
-        position: '',
-        notificationPermissionStatus: status,
-        lastNotificationPromptAt: new Date().toISOString(),
-        notificationPromptHistory: [historyItem],
-      });
-    }
+    const existingHistory = userDoc.data()?.notificationPromptHistory || [];
+    await updateDoc(userDocRef, {
+      notificationPermissionStatus: status,
+      lastNotificationPromptAt: new Date().toISOString(),
+      notificationPromptHistory: [...existingHistory, historyItem],
+    });
     
     // Track event in Amplitude
     trackAmplitudeEvent('notification_permission_responded', {
@@ -121,24 +108,11 @@ export async function recordNotificationPromptShown(userId: string): Promise<voi
       action: 'shown',
     };
     
-    if (userDoc.exists()) {
-      const existingHistory = userDoc.data().notificationPromptHistory || [];
-      await updateDoc(userDocRef, {
-        lastNotificationPromptAt: new Date().toISOString(),
-        notificationPromptHistory: [...existingHistory, historyItem],
-      });
-    } else {
-      await setDoc(userDocRef, {
-        email: '',
-        createdAt: new Date().toISOString(),
-        name: '',
-        goal: '',
-        position: '',
-        notificationPermissionStatus: 'not_asked',
-        lastNotificationPromptAt: new Date().toISOString(),
-        notificationPromptHistory: [historyItem],
-      });
-    }
+    const existingHistory = userDoc.data()?.notificationPromptHistory || [];
+    await updateDoc(userDocRef, {
+      lastNotificationPromptAt: new Date().toISOString(),
+      notificationPromptHistory: [...existingHistory, historyItem],
+    });
   } catch (error) {
     logger.error('Error recording notification prompt shown', { feature: 'UserService', error });
     throw error;
@@ -219,6 +193,41 @@ export async function shouldShowNotificationOnboarding(userId: string): Promise<
   });
   
   return shouldShow;
+}
+
+/**
+ * Ensure user profile exists in Firestore
+ * Creates the document with correct email from Auth if it doesn't exist
+ * 
+ * Should be called once when user authenticates to guarantee the document exists
+ * 
+ * @param userId - User ID
+ * @param userEmail - Email from Firebase Auth
+ */
+export async function ensureUserProfileExists(userId: string, userEmail: string): Promise<void> {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      logger.info('Creating user profile document', { feature: 'UserService', userId, userEmail });
+      
+      await setDoc(userDocRef, {
+        email: userEmail,
+        createdAt: new Date().toISOString(),
+        name: '',
+        goal: '',
+        position: '',
+      });
+      
+      logger.info('User profile document created', { feature: 'UserService', userId });
+    } else {
+      logger.debug('User profile already exists', { feature: 'UserService', userId });
+    }
+  } catch (error) {
+    logger.error('Error ensuring user profile exists', { feature: 'UserService', userId, error });
+    throw error;
+  }
 }
 
 /**

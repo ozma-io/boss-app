@@ -4,7 +4,7 @@ import { clearAttributionData, getAttributionData } from '@/services/attribution
 import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { logoutIntercomUser, registerIntercomUser } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
-import { updateUserAttribution } from '@/services/user.service';
+import { ensureUserProfileExists, updateUserAttribution } from '@/services/user.service';
 import { AuthState, User } from '@/types';
 import { isSignInWithEmailLink } from 'firebase/auth';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
@@ -82,6 +82,10 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       setAuthState(newUser ? 'authenticated' : 'unauthenticated');
       
       if (newUser) {
+        // Ensure user profile document exists with correct email
+        ensureUserProfileExists(newUser.id, newUser.email)
+          .catch(err => logger.error('Failed to ensure user profile exists', { feature: 'AuthContext', error: err }));
+        
         // Link attribution data to user if available
         getAttributionData()
           .then(async (attributionData) => {

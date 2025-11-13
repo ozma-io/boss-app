@@ -2,7 +2,7 @@ import { db } from '@/constants/firebase.config';
 import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
 import { logger } from '@/services/logger.service';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 
 // Create mock module for web platforms
@@ -115,29 +115,15 @@ export async function updateTrackingPermissionStatus(
       action: status === 'authorized' ? 'authorized' : 'denied',
     };
     
-    if (userDoc.exists()) {
-      const existingHistory = userDoc.data().trackingPromptHistory || [];
-      const existingCount = userDoc.data().trackingPromptCount || 0;
-      
-      await updateDoc(userDocRef, {
-        trackingPermissionStatus: status,
-        lastTrackingPromptAt: new Date().toISOString(),
-        trackingPromptHistory: [...existingHistory, historyItem],
-        trackingPromptCount: existingCount + 1
-      });
-    } else {
-      await setDoc(userDocRef, {
-        email: '',
-        createdAt: new Date().toISOString(),
-        name: '',
-        goal: '',
-        position: '',
-        trackingPermissionStatus: status,
-        lastTrackingPromptAt: new Date().toISOString(),
-        trackingPromptHistory: [historyItem],
-        trackingPromptCount: 1
-      });
-    }
+    const existingHistory = userDoc.data()?.trackingPromptHistory || [];
+    const existingCount = userDoc.data()?.trackingPromptCount || 0;
+    
+    await updateDoc(userDocRef, {
+      trackingPermissionStatus: status,
+      lastTrackingPromptAt: new Date().toISOString(),
+      trackingPromptHistory: [...existingHistory, historyItem],
+      trackingPromptCount: existingCount + 1
+    });
     
     // Track event in Amplitude
     trackAmplitudeEvent('tracking_permission_responded', {
@@ -170,28 +156,14 @@ export async function recordTrackingPromptShown(userId: string): Promise<void> {
       action: 'shown',
     };
     
-    if (userDoc.exists()) {
-      const existingHistory = userDoc.data().trackingPromptHistory || [];
-      const existingCount = userDoc.data().trackingPromptCount || 0;
-      
-      await updateDoc(userDocRef, {
-        lastTrackingPromptAt: new Date().toISOString(),
-        trackingPromptHistory: [...existingHistory, historyItem],
-        trackingPromptCount: existingCount + 1
-      });
-    } else {
-      await setDoc(userDocRef, {
-        email: '',
-        createdAt: new Date().toISOString(),
-        name: '',
-        goal: '',
-        position: '',
-        trackingPermissionStatus: 'not_determined',
-        lastTrackingPromptAt: new Date().toISOString(),
-        trackingPromptHistory: [historyItem],
-        trackingPromptCount: 1
-      });
-    }
+    const existingHistory = userDoc.data()?.trackingPromptHistory || [];
+    const existingCount = userDoc.data()?.trackingPromptCount || 0;
+    
+    await updateDoc(userDocRef, {
+      lastTrackingPromptAt: new Date().toISOString(),
+      trackingPromptHistory: [...existingHistory, historyItem],
+      trackingPromptCount: existingCount + 1
+    });
   } catch (error) {
     logger.error('Error recording tracking prompt shown', { feature: 'TrackingService', error });
     throw error;
