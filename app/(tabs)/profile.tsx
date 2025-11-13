@@ -305,7 +305,8 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        <View style={styles.metricsSection} testID="metrics-section">
+        {/* TODO: This section uses mocked metrics data. Replace with real calculations based on timeline entries */}
+        {/* <View style={styles.metricsSection} testID="metrics-section">
           <Text style={styles.sectionTitle} testID="metrics-title">Where You Now</Text>
 
           <View style={styles.metricItem} testID="metric-stress-level">
@@ -331,7 +332,7 @@ export default function ProfileScreen() {
             </View>
             {renderProgressBar(mockMetrics.selfDoubtConfidenceGap, '#B8E986', 'metric-confidence-gap-progress')}
           </View>
-        </View>
+        </View> */}
 
         <View style={styles.settingsSectionContainer} testID="settings-section-container">
           <Text style={styles.sectionTitle} testID="settings-title">Settings</Text>
@@ -582,6 +583,7 @@ const styles = StyleSheet.create({
   },
   settingsSectionContainer: {
     marginHorizontal: 20,
+    marginTop: 32,
     marginBottom: 24,
   },
   settingsSection: {
