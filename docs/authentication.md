@@ -2,65 +2,133 @@
 
 ## Overview
 
-Boss App uses Firebase Authentication with email link sign-in (passwordless) as the primary method, with support for Apple and Google OAuth providers.
+Boss App uses Firebase Authentication with three methods:
+- **Email magic links (passwordless)** - primary method
+- **Apple Sign-In** - OAuth
+- **Google Sign-In** - OAuth
+
+**Magic Link Domain:** `boss-app.ozma.io`
+- Custom domain for Universal Links (iOS) and App Links (Android)
+- Replaces deprecated Firebase Dynamic Links
+- Serves both authentication and marketing content
+
+---
 
 ## Architecture
 
-### Components
+### Key Components
 
-1. **Firebase Configuration** (`constants/firebase.config.ts`)
-   - Initializes Firebase app with environment variables
-   - Exports `auth` and `db` instances for use throughout the app
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| **Firebase Config** | `constants/firebase.config.ts` | Initializes Firebase app, exports `auth` and `db` |
+| **Auth Service** | `services/auth.service.ts` | All auth operations (magic links, Apple, Google, sign-out) |
+| **Auth Context** | `contexts/AuthContext.tsx` | Global auth state, session persistence, web magic link handler |
+| **Auth Components** | `components/auth/` | AuthButton, CodeInput, EmailAuthModal |
+| **Auth Screens** | `app/(auth)/` | welcome, email-input, email-confirm |
 
-2. **Auth Service** (`services/auth.service.ts`)
-   - Handles all authentication operations
-   - Methods: email link sign-in, Apple sign-in, Google sign-in, sign-out
-   - Returns typed `User` objects
+### Data Types
 
-3. **Auth Context** (`contexts/AuthContext.tsx`)
-   - Provides global authentication state
-   - Manages user session persistence
-   - Handles auth state changes via Firebase listener
+**`User` (Auth State)** - minimal Firebase Auth data:
+- `id: string` - Firebase Auth UID
+- `email: string` - User's email
+- `createdAt: string` - Account creation timestamp
 
-4. **Auth Components** (`components/auth/`)
-   - `AuthButton.tsx` - Styled buttons for authentication methods
-   - `CodeInput.tsx` - 4-digit verification code input
+**`UserProfile` (Firestore)** - full profile at `/users/{userId}`:
+- All User fields plus: `name`, `goal`, `position`, `displayName`, `photoURL`, `subscription`, etc.
 
-5. **Auth Screens** (`app/(auth)/`)
-   - `welcome.tsx` - Entry screen with sign-in options
-   - `email-input.tsx` - Email input and verification code sending
-   - `email-confirm.tsx` - Verification code confirmation
+**When to use:**
+- Use `User` for auth info only (ID, email)
+- Use `UserProfile` for full profile data (name, goal, position)
 
-## Authentication Flow
+---
 
-### Email Link Authentication (Passwordless)
+## Email Magic Links
 
-1. User enters email on `email-input` screen
-2. App calls `auth.service.sendSignInLinkToEmail()` which sends verification email
-3. User receives email with 4-digit code
-4. User enters code on `email-confirm` screen
-5. App verifies code with Firebase
-6. On success, user is authenticated and redirected to main app
+### User Flow
 
-### Apple Sign-In
+1. **Enter Email** → User enters email, no password
+2. **Receive Link** → Firebase sends link: `https://boss-app.ozma.io?email=...&oobCode=...`
+3. **Click Link** → Opens app (if installed) or browser
+4. **Auto Sign-In** → Deep link handler verifies and signs user in
 
-1. User taps "Continue with Apple" button on `welcome` screen
-2. App calls `auth.service.signInWithApple()`
-3. Native Apple authentication dialog appears
-4. On success, user is authenticated and redirected to main app
+### Platform Behavior
 
-### Google Sign-In
+**iOS Universal Links:**
+- Opens app directly when magic link clicked
+- Requires `app.config.ts` + `TheBossApp.entitlements` configuration
+- Production builds only (TestFlight, App Store)
 
-1. User taps "Continue with Google" button on `welcome` screen
-2. App calls `auth.service.signInWithGoogle()`
-3. Google OAuth dialog opens in browser
-4. On success, user is authenticated and redirected to main app
+**Android App Links:**
+- Opens app directly when magic link clicked
+- Requires intent filter in `app.config.ts` + SHA-256 certificate
+- Production builds only (signed release)
+
+**Web:**
+- Works in any browser
+- `AuthContext.tsx` detects magic link in URL
+- Works in development and production
+
+### Development vs Production
+
+| Environment | Web | Mobile | Universal/App Links |
+|-------------|-----|--------|---------------------|
+| **Production** | `https://boss-app.ozma.io` | `https://boss-app.ozma.io` | ✅ Works |
+| **Development** | `http://localhost:8081` | Local IP or `bossapp://` | ❌ HTTPS required |
+
+**Development Setup:**
+1. Add `localhost` to Firebase Console → Authentication → Authorized domains
+2. Keep dual-mode detection in `auth.service.ts`
+3. Use custom scheme `bossapp://` for mobile testing
+4. Or use Firebase Auth Emulator for offline dev
+
+### Deep Link Handlers
+
+- `app/(auth)/email-confirm.tsx` - Mobile deep link handler
+- `components/auth/EmailAuthModal.tsx` - Modal handler
+- `contexts/AuthContext.tsx` - Web handler
+
+All use:
+- `isSignInWithEmailLink(auth, url)` to detect Firebase magic link
+- `signInWithEmailLink(auth, email, url)` to complete sign-in
+
+### Custom Domain Setup
+
+**Path Routing:**
+- `/__/auth/*` → Firebase Authentication (automatic)
+- `/` → Marketing website (static files from `dist/`)
+
+**Verification Files (Auto-generated):**
+- `/.well-known/apple-app-site-association` (iOS)
+- `/.well-known/assetlinks.json` (Android)
+
+### Security
+
+- Single-use, time-limited links
+- Server-side validation by Firebase
+- Domain must be in authorized domains list
+- User data scoped to `userId` via Firestore rules
+
+---
+
+## Apple Sign-In
+
+**Flow:** Tap button → `signInWithApple()` → Native dialog → Authenticated
+
+**Setup:** Firebase Console → Authentication → Enable Apple provider → Add Services ID, Team ID, Private Key, Key ID
+
+---
+
+## Google Sign-In
+
+**Flow:** Tap button → `signInWithGoogle()` → OAuth dialog → Authenticated
+
+**Setup:** Firebase Console → Authentication → Enable Google provider → Add Web Client ID
+
+---
 
 ## State Management
 
-### AuthContext Provider
-
-The `AuthProvider` wraps the entire app in `app/_layout.tsx` and provides:
+### AuthContext
 
 ```typescript
 interface AuthContextType {
@@ -70,28 +138,83 @@ interface AuthContextType {
 }
 ```
 
-### Auth State Persistence
+**Routing Logic (`app/_layout.tsx`):**
+- `loading` → Show loading screen
+- `unauthenticated` → Redirect to `/(auth)/welcome`
+- `authenticated` → Redirect to `/(tabs)`
 
-Firebase automatically persists authentication state across app restarts. The AuthContext listens to Firebase's `onAuthStateChanged` event to keep the app state synchronized.
+**Persistence:** Firebase auto-persists auth state via `onAuthStateChanged` listener
 
-## Routing Logic
+---
 
-In `app/_layout.tsx`:
-- If `authState === 'loading'`: Show loading screen
-- If `authState === 'unauthenticated'`: Redirect to `/(auth)/welcome`
-- If `authState === 'authenticated'`: Redirect to `/(tabs)` (main app)
+## Firebase Setup
+
+### 1. Enable Authentication Methods
+
+**Firebase Console → Authentication → Sign-in methods:**
+
+**Email/Password:**
+- Enable provider
+- Enable "Email link (passwordless sign-in)"
+- Add authorized domains: `boss-app.ozma.io`, `localhost`
+
+**Apple:**
+- Enable provider
+- Add Services ID, Team ID, Private Key, Key ID, bundle ID
+
+**Google:**
+- Enable provider
+- Add Web Client ID
+- Configure OAuth consent screen
+
+### 2. Connect Custom Domain
+
+**Firebase Console → Hosting:**
+1. Add custom domain: `boss-app.ozma.io`
+2. Add DNS records (TXT for verification, A/CNAME for hosting)
+3. Wait for SSL provisioning (~15 min)
+
+### 3. Configure iOS
+
+**`app.config.ts`:**
+```typescript
+associatedDomains: ['applinks:boss-app.ozma.io']
+```
+
+**`ios/TheBossApp/TheBossApp.entitlements`:**
+Add `applinks:boss-app.ozma.io`
+
+**Apple Developer:** Enable Associated Domains capability
+
+### 4. Configure Android
+
+**`app.config.ts`:**
+```typescript
+intentFilters: [{
+  action: "VIEW",
+  autoVerify: true,
+  data: { host: "boss-app.ozma.io", pathPrefix: "/__/auth" }
+}]
+```
+
+**Google Play Console:** Get SHA-256 certificate fingerprint
+
+### 5. Deploy Firestore
+
+```bash
+firebase deploy --only firestore:rules
+firebase deploy --only firestore:indexes
+```
+
+---
 
 ## Security
 
-### User Data Scoping
+**User Data Scoping:**
+- All data at `/users/{userId}/bosses/{bossId}/entries/{entryId}`
+- Firestore rules enforce: `request.auth.uid === userId`
 
-All user data in Firestore is scoped to `userId`:
-- Path structure: `/users/{userId}/bosses/{bossId}/entries/{entryId}`
-- Firebase Security Rules enforce `request.auth.uid === userId`
-
-### Environment Variables
-
-Sensitive Firebase configuration is stored in `.env` file:
+**Environment Variables (`.env`):**
 - `EXPO_PUBLIC_FIREBASE_API_KEY`
 - `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`
 - `EXPO_PUBLIC_FIREBASE_PROJECT_ID`
@@ -99,105 +222,98 @@ Sensitive Firebase configuration is stored in `.env` file:
 - `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
 - `EXPO_PUBLIC_FIREBASE_APP_ID`
 
-## Data Types
-
-### User Type (Authentication State)
-
-The `User` type represents the **authentication state** and contains minimal data from Firebase Auth:
-
-```typescript
-interface User {
-  id: string;
-  email: string;
-  createdAt: string;
-}
-```
-
-This type is used in:
-- `AuthContext` - global authentication state
-- `auth.service.ts` - authentication operations
-- In-memory representation of the authenticated user
-
-**Important:** The `User` type does NOT contain profile fields like `name`, `goal`, or `position`. For complete user profile data, use `UserProfile` (see below).
-
-### UserProfile Type (Firestore Data)
-
-The `UserProfile` type represents the **full user profile** stored in Firestore at `/users/{userId}`:
-
-```typescript
-interface UserProfile {
-  email: string;
-  name: string;          // Required
-  goal: string;          // Required
-  position: string;      // Required
-  displayName?: string;
-  photoURL?: string;
-  createdAt: string;
-  updatedAt?: string;
-  subscription?: UserSubscription;
-  // ... additional fields
-}
-```
-
-This type is used in:
-- `user.service.ts` - fetching and updating user profile data from Firestore
-- Components that display or edit user profile information
-
-**When to use which:**
-- Use `User` when you only need authentication info (user ID, email)
-- Use `UserProfile` when you need full profile data (name, goal, position, etc.)
-
-### Auth State Type
-
-```typescript
-type AuthState = 'loading' | 'authenticated' | 'unauthenticated';
-```
-
-## Firebase Setup Requirements
-
-### Authentication Methods
-
-Enable in Firebase Console → Authentication → Sign-in methods:
-1. **Email/Password** - Enable with passwordless email link option
-2. **Apple** - Configure with Services ID, Team ID, Private Key, and Key ID from Apple Developer
-3. **Google** - Enable and use the Web Client ID in `constants/google.config.ts`
-
-### Firestore Database
-
-1. Create Firestore database in Firebase Console
-2. Configure security rules to enforce user-scoped data access
-3. Use test mode for development, production rules for deployment
-
-### Email Link Configuration
-
-In Firebase Console → Authentication → Templates:
-- Customize email action handler URL to match app's deep link
-- Template uses app scheme defined in environment variables
-
-## Implementation Details
-
-### Email Verification Code
-
-The system uses Firebase's `sendSignInLinkToEmail` which sends a verification link. The implementation extracts a 4-digit code from the email for easier mobile UX.
-
-### Session Management
-
-- Firebase handles session tokens automatically
-- Sessions persist until user signs out or token expires
-- `signOut()` method clears local state and Firebase session
-
-### Error Handling
-
-Authentication errors are caught and displayed to users with appropriate messages. Common errors:
-- Invalid email format
-- Expired verification code
-- Network connectivity issues
-- OAuth cancellation
+---
 
 ## Testing
 
-Authentication can be tested using Firebase Authentication Emulator:
-1. Start emulator: `firebase emulators:start --only auth`
-2. Configure app to use emulator endpoint
-3. Test all authentication flows without affecting production data
+### Production
 
+**iOS/Android:**
+1. Build production/TestFlight version
+2. Send magic link email
+3. Click link → App opens directly
+4. Verify authentication works
+
+**Web:**
+1. Open `https://boss-app.ozma.io`
+2. Send magic link → Click in email
+3. Verify authentication works
+
+### Development
+
+**Web:**
+```bash
+npm run web
+# Magic links work on localhost
+```
+
+**Mobile:**
+```bash
+npm run ios     # iOS Simulator
+npm run android # Android Emulator
+# Use custom scheme bossapp:// or manual testing
+```
+
+**Firebase Emulator (optional):**
+```bash
+firebase emulators:start --only auth
+# Instant email testing, no rate limits
+```
+
+---
+
+## Troubleshooting
+
+### iOS Universal Links Not Working
+
+**Check:**
+- Domain in Apple Developer App ID settings
+- Certificate validity in verification file
+- Reinstall app to clear cache
+
+**Debug:**
+```bash
+curl -I https://boss-app.ozma.io/.well-known/apple-app-site-association
+# Check iOS device logs for Universal Links errors
+```
+
+### Android App Links Not Opening
+
+**Check:**
+- SHA-256 matches in Google Play Console and `assetlinks.json`
+- App Links verification status
+
+**Debug:**
+```bash
+curl -I https://boss-app.ozma.io/.well-known/assetlinks.json
+adb shell pm get-app-links com.ozmaio.bossapp
+adb shell pm verify-app-links --re-verify com.ozmaio.bossapp
+```
+
+### Magic Link Invalid
+
+**Common Causes:**
+- Link expired or already used
+- Domain not in Firebase authorized domains
+- Missing `handleCodeInApp: true` in auth service
+
+**Fix:** Check authorized domains, request new link
+
+### Deep Links Not Working in Dev
+
+**Expected:** Universal/App Links require HTTPS (production only)
+
+**Workarounds:**
+- Use TestFlight/internal testing for full testing
+- Use custom scheme `bossapp://` in development
+- Test web version on localhost for quick iteration
+
+---
+
+## References
+
+- [Firebase Email Link Auth](https://firebase.google.com/docs/auth/web/email-link-auth)
+- [iOS Universal Links](https://developer.apple.com/ios/universal-links/)
+- [Android App Links](https://developer.android.com/training/app-links)
+- [Firebase Hosting Custom Domain](https://firebase.google.com/docs/hosting/custom-domain)
+- [Firebase Authentication](https://firebase.google.com/docs/auth)

@@ -24,11 +24,13 @@ Managing Firestore database:
 
 ### [Authentication System](./authentication.md)
 Complete authentication documentation:
-- Email link (passwordless) authentication
+- Email magic link (passwordless) authentication flow
+- Custom domain setup (boss-app.ozma.io)
+- Universal Links (iOS) and App Links (Android)
 - Apple Sign-In integration
 - Google Sign-In integration
-- Auth state management
-- Security and data scoping
+- Development vs production environments
+- Auth state management and security
 
 ### [Facebook Attribution & Conversions API](./facebook-integration.md)
 Facebook integration for attribution tracking and analytics:
@@ -102,7 +104,7 @@ docs/
 ├── README.md                       # This file - documentation index
 ├── firebase-deployment.md          # Firebase deployment guide
 ├── firestore-management.md         # Firestore database management
-├── authentication.md               # Authentication system
+├── authentication.md               # Authentication system (magic links, Apple, Google)
 ├── facebook-integration.md         # Facebook Attribution & Conversions API
 ├── tracking-and-attribution-flow.md # Tracking & Attribution flow scenarios
 ├── amplitude-integration.md        # Amplitude Analytics integration guide
