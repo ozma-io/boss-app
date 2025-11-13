@@ -82,7 +82,7 @@ export default function BossScreen() {
   };
 
   const handleEditStartedAt = (): void => {
-    setStartedAt(boss?.startedAt || '');
+    setStartedAt(boss?.startedAt ? new Date(boss.startedAt).toLocaleDateString() : '');
     setIsEditingStartedAt(true);
   };
 
@@ -180,24 +180,26 @@ export default function BossScreen() {
         <View style={styles.cardsRow} testID="cards-row">
           <Pressable 
             style={styles.infoCard} 
-            testID="management-style-card"
-            onPress={isEditingManagementStyle ? undefined : handleEditManagementStyle}
+            testID="started-at-card"
+            onPress={isEditingStartedAt ? undefined : handleEditStartedAt}
           >
-            <Text style={styles.cardIcon} testID="management-style-icon">🤝</Text>
+            <Text style={styles.cardIcon} testID="started-at-icon">📅</Text>
             <View style={styles.cardContent}>
-              <Text style={styles.cardLabel} testID="management-style-label">Management style</Text>
-              {isEditingManagementStyle ? (
+              <Text style={styles.cardLabel} testID="started-at-label">Started at</Text>
+              {isEditingStartedAt ? (
                 <TextInput
                   style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                  value={managementStyle}
-                  onChangeText={setManagementStyle}
-                  onBlur={handleBlurManagementStyle}
+                  value={startedAt}
+                  onChangeText={setStartedAt}
+                  onBlur={handleBlurStartedAt}
                   autoFocus
-                  placeholder="Enter management style"
-                  testID="management-style-input"
+                  placeholder="Enter started date"
+                  testID="started-at-input"
                 />
               ) : (
-                <Text style={[styles.cardValue, !boss.managementStyle && { opacity: 0.5 }]} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
+                <Text style={[styles.cardValue, !boss.startedAt && { opacity: 0.5 }]} testID="started-at-value">
+                  {boss.startedAt ? new Date(boss.startedAt).toLocaleDateString() : 'Not set'}
+                </Text>
               )}
             </View>
           </Pressable>
@@ -261,24 +263,24 @@ export default function BossScreen() {
 
           <Pressable 
             style={styles.infoRow} 
-            testID="started-at-row"
-            onPress={isEditingStartedAt ? undefined : handleEditStartedAt}
+            testID="management-style-row"
+            onPress={isEditingManagementStyle ? undefined : handleEditManagementStyle}
           >
-            <Text style={styles.rowIconEmoji} testID="started-at-icon">📅</Text>
+            <Text style={styles.rowIconEmoji} testID="management-style-icon">🤝</Text>
             <View style={styles.rowContent}>
-              <Text style={styles.rowLabel} testID="started-at-label">Started at</Text>
-              {isEditingStartedAt ? (
+              <Text style={styles.rowLabel} testID="management-style-label">Management style</Text>
+              {isEditingManagementStyle ? (
                 <TextInput
                   style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                  value={startedAt}
-                  onChangeText={setStartedAt}
-                  onBlur={handleBlurStartedAt}
+                  value={managementStyle}
+                  onChangeText={setManagementStyle}
+                  onBlur={handleBlurManagementStyle}
                   autoFocus
-                  placeholder="Enter started date"
-                  testID="started-at-input"
+                  placeholder="Enter management style"
+                  testID="management-style-input"
                 />
               ) : (
-                <Text style={styles.rowValue} testID="started-at-value">{boss.startedAt}</Text>
+                <Text style={[styles.rowValue, !boss.managementStyle && { opacity: 0.5 }]} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
               )}
             </View>
           </Pressable>
