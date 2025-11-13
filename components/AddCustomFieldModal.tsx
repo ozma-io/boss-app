@@ -2,15 +2,15 @@ import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import Modal from 'react-native-modal';
 
@@ -64,6 +64,17 @@ export function AddCustomFieldModal({ isVisible, onClose, onAdd }: AddCustomFiel
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleTypePress = (type: { value: FieldType; label: string; icon: string; enabled: boolean }): void => {
+    if (type.enabled) {
+      setSelectedType(type.value);
+    } else {
+      showAlert(
+        'Coming Soon',
+        'This field type is not yet implemented but will be available soon.'
+      );
     }
   };
 
@@ -121,8 +132,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onAdd }: AddCustomFiel
                       selectedType === type.value && styles.typeCardSelected,
                       !type.enabled && styles.typeCardDisabled,
                     ]}
-                    onPress={() => type.enabled && setSelectedType(type.value)}
-                    disabled={!type.enabled}
+                    onPress={() => handleTypePress(type)}
                     testID={`type-option-${type.value}`}
                   >
                     <Ionicons
