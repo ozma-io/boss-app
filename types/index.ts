@@ -144,6 +144,8 @@ export interface ChatThread {
   createdAt: string;
   updatedAt: string;
   messageCount: number;
+  assistantIsTyping: boolean;
+  currentGenerationId?: string;
 }
 
 export type MessageRole = 'user' | 'assistant' | 'system';

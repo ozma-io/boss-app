@@ -1,10 +1,12 @@
 import { SendArrowIcon } from '@/components/icons/SendArrowIcon';
+import { db } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { extractTextFromContent, getOrCreateThread, sendMessage, subscribeToMessages } from '@/services/chat.service';
+import { extractTextFromContent, generateAIResponse, getOrCreateThread, sendMessage, subscribeToMessages } from '@/services/chat.service';
 import { logger } from '@/services/logger.service';
-import { ChatMessage } from '@/types';
+import { ChatMessage, ChatThread } from '@/types';
 import { useFocusEffect } from 'expo-router';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -15,6 +17,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [threadId, setThreadId] = useState<string | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,6 +57,23 @@ export default function ChatScreen() {
     return unsubscribe;
   }, [user, threadId]);
 
+  // Subscribe to thread typing indicator
+  useEffect(() => {
+    if (!user || !threadId) {
+      return;
+    }
+
+    const threadRef = doc(db, 'users', user.id, 'chatThreads', threadId);
+    const unsubscribe = onSnapshot(threadRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const threadData = docSnapshot.data() as ChatThread;
+        setIsTyping(threadData.assistantIsTyping || false);
+      }
+    });
+
+    return unsubscribe;
+  }, [user, threadId]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messages.length > 0 && !loading) {
@@ -74,8 +94,17 @@ export default function ChatScreen() {
     setInputText('');
 
     try {
-      await sendMessage(user.id, threadId, textToSend);
+      // Send user message to Firestore
+      const messageId = await sendMessage(user.id, threadId, textToSend);
       trackAmplitudeEvent('chat_message_sent', { textLength: textToSend.length });
+
+      // Trigger AI response generation
+      // The typing indicator will be managed by the Cloud Function
+      generateAIResponse(user.id, threadId, messageId).catch((error) => {
+        logger.error('Failed to generate AI response', { feature: 'ChatScreen', error });
+        // Don't show error to user, just log it
+        // The typing indicator will be reset by the Cloud Function
+      });
     } catch (error) {
       logger.error('Failed to send message', { feature: 'ChatScreen', error });
       // Restore input text on error
@@ -139,7 +168,16 @@ export default function ChatScreen() {
               <ActivityIndicator size="large" color="#000" testID="loading-indicator" />
             </View>
           ) : (
-            messages.map((message, index) => renderMessage(message, index))
+            <>
+              {messages.map((message, index) => renderMessage(message, index))}
+              {isTyping && (
+                <View style={styles.typingIndicatorContainer} testID="typing-indicator">
+                  <View style={styles.typingIndicatorBubble}>
+                    <Text style={styles.typingIndicatorText}>Печатает...</Text>
+                  </View>
+                </View>
+              )}
+            </>
           )}
         </ScrollView>
 
@@ -258,6 +296,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  typingIndicatorContainer: {
+    marginBottom: 12,
+    maxWidth: '80%',
+    alignSelf: 'flex-start',
+  },
+  typingIndicatorBubble: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  typingIndicatorText: {
+    fontSize: 15,
+    lineHeight: 20,
+    color: '#666',
+    fontFamily: 'Manrope-Regular',
+    fontStyle: 'italic',
   },
 });
 

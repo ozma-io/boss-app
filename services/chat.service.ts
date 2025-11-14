@@ -1,4 +1,4 @@
-import { db } from '@/constants/firebase.config';
+import { db, functions } from '@/constants/firebase.config';
 import { ChatMessage, ChatThread, ContentItem, Unsubscribe } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
@@ -13,6 +13,7 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { logger } from './logger.service';
 
 /**
@@ -73,6 +74,7 @@ export async function getOrCreateThread(userId: string): Promise<string> {
           createdAt: now,
           updatedAt: now,
           messageCount: 0,
+          assistantIsTyping: false,
         };
         
         await setDoc(threadRef, newThread);
@@ -160,17 +162,18 @@ export function subscribeToMessages(
  * @param userId - User ID
  * @param threadId - Thread ID
  * @param text - Message text
+ * @returns Message ID of the created message
  */
 export async function sendMessage(
   userId: string,
   threadId: string,
   text: string
-): Promise<void> {
+): Promise<string> {
   logger.time('sendMessage');
   logger.debug('Sending message', { feature: 'ChatService', userId, threadId, textLength: text.length });
   
   try {
-    await retryWithBackoff(async () => {
+    const messageId = await retryWithBackoff(async () => {
       const messagesRef = collection(db, 'users', userId, 'chatThreads', threadId, 'messages');
       const threadRef = doc(db, 'users', userId, 'chatThreads', threadId);
       
@@ -182,7 +185,7 @@ export async function sendMessage(
       };
       
       // Add message to collection
-      await addDoc(messagesRef, message);
+      const messageRef = await addDoc(messagesRef, message);
       
       // Update thread metadata
       const threadDoc = await getDoc(threadRef);
@@ -194,10 +197,12 @@ export async function sendMessage(
         });
       }
       
-      logger.info('Message sent successfully', { feature: 'ChatService', userId, threadId });
+      logger.info('Message sent successfully', { feature: 'ChatService', userId, threadId, messageId: messageRef.id });
+      return messageRef.id;
     }, 3, 500);
     
-    logger.timeEnd('sendMessage', { feature: 'ChatService', userId, threadId });
+    logger.timeEnd('sendMessage', { feature: 'ChatService', userId, threadId, messageId });
+    return messageId;
   } catch (error) {
     const err = error as Error;
     const isOffline = isFirebaseOfflineError(err);
@@ -263,6 +268,63 @@ export async function getMessages(
     }
     
     return [];
+  }
+}
+
+/**
+ * Generate AI response for the latest user message
+ * Calls Cloud Function which handles OpenAI API interaction
+ * 
+ * @param userId - User ID
+ * @param threadId - Thread ID
+ * @param messageId - ID of the user message to respond to
+ */
+export async function generateAIResponse(
+  userId: string,
+  threadId: string,
+  messageId: string
+): Promise<void> {
+  logger.time('generateAIResponse');
+  logger.debug('Requesting AI response', { feature: 'ChatService', userId, threadId, messageId });
+  
+  try {
+    const generateChatResponse = httpsCallable<
+      { userId: string; threadId: string; messageId: string },
+      { success: boolean; messageId?: string; error?: string }
+    >(functions, 'generateChatResponse');
+    
+    const result = await generateChatResponse({ userId, threadId, messageId });
+    
+    if (!result.data.success) {
+      logger.warn('AI response generation was not successful', {
+        feature: 'ChatService',
+        userId,
+        threadId,
+        messageId,
+        error: result.data.error,
+      });
+      throw new Error(result.data.error || 'Failed to generate AI response');
+    }
+    
+    logger.info('AI response generated successfully', {
+      feature: 'ChatService',
+      userId,
+      threadId,
+      messageId,
+      responseMessageId: result.data.messageId,
+    });
+    
+    logger.timeEnd('generateAIResponse', { feature: 'ChatService', userId, threadId });
+  } catch (error) {
+    const err = error as Error;
+    logger.error('Error generating AI response', {
+      feature: 'ChatService',
+      userId,
+      threadId,
+      messageId,
+      error: err,
+    });
+    throw error;
   }
 }
 
