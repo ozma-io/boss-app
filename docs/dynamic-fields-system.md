@@ -389,13 +389,13 @@ const confidenceFactEntry = {
   createdAt: new Date().toISOString()
 };
 
-// Add to timeline
+// Add to timeline (entries are stored at user level)
 await addDoc(
-  collection(db, 'users', userId, 'bosses', bossId, 'entries'),
+  collection(db, 'users', userId, 'entries'),
   stressFactEntry
 );
 await addDoc(
-  collection(db, 'users', userId, 'bosses', bossId, 'entries'),
+  collection(db, 'users', userId, 'entries'),
   confidenceFactEntry
 );
 ```
