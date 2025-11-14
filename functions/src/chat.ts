@@ -12,11 +12,11 @@ import OpenAI from 'openai';
 import type { ChatCompletion } from 'openai/resources/chat';
 import { CHAT_MESSAGE_HISTORY_HOURS, CHAT_SYSTEM_PROMPT, OPENAI_MODEL } from './constants';
 import type {
-    ChatCompletionMessageParam,
-    ContentItem,
-    FirestoreChatMessage,
-    GenerateChatResponseRequest,
-    GenerateChatResponseResponse,
+  ChatCompletionMessageParam,
+  ContentItem,
+  FirestoreChatMessage,
+  GenerateChatResponseRequest,
+  GenerateChatResponseResponse,
 } from './types/chat.types';
 
 /**
@@ -229,6 +229,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       const response = await openai.chat.completions.create({
         model: OPENAI_MODEL,
         messages: messagesForOpenAI,
+        user: userId, // Unique identifier for end-user abuse tracking
       });
       
       logger.info('Received response from OpenAI', {
