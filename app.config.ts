@@ -8,7 +8,7 @@ import { ExpoConfig } from 'expo/config';
 // ============================================================================
 const FACEBOOK_APP_ID = '853405190716887';
 const FACEBOOK_CLIENT_TOKEN = '39f2bc67668285fbd6990e16805565cb';
-const FACEBOOK_APP_NAME = 'The Boss App';
+const FACEBOOK_APP_NAME = 'BossUp';
 // ============================================================================
 // End of duplicated section
 // ============================================================================
@@ -20,19 +20,19 @@ const FACEBOOK_APP_NAME = 'The Boss App';
 // ⚠️ DUPLICATED in constants/sentry.config.ts - keep both in sync!
 // ============================================================================
 const SENTRY_ORG = 'ozma-inc';
-const SENTRY_PROJECT = 'the-boss-app';
+const SENTRY_PROJECT = 'bossup';
 // ============================================================================
 // End of duplicated section
 // ============================================================================
 
 const config: ExpoConfig = {
-  name: 'The Boss App',
+  name: 'BossUp',
   slug: 'boss-app',
   owner: 'ozma-io',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'bossapp',
+  scheme: 'bossup',
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
   splash: {
@@ -42,7 +42,7 @@ const config: ExpoConfig = {
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.ozmaio.bossapp',
+    bundleIdentifier: 'com.ozmaio.bossup',
     associatedDomains: ['applinks:boss-app.ozma.io', 'applinks:discovery.ozma.io'],
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
@@ -57,7 +57,7 @@ const config: ExpoConfig = {
       foregroundImage: './assets/images/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
-    package: 'com.ozmaio.bossapp',
+    package: 'com.ozmaio.bossup',
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     permissions: [

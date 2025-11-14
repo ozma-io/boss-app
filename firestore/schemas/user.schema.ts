@@ -129,7 +129,7 @@ export interface UserSchema {
     // === APPLE SPECIFIC ===
     appleOriginalTransactionId?: string;
     appleTransactionId?: string;
-    appleProductId?: string;       // e.g., 'com.ozmaio.bossapp.basic.monthly'
+    appleProductId?: string;       // e.g., 'com.ozmaio.bossup.basic.monthly'
     appleReceiptData?: string;
     appleEnvironment?: 'Sandbox' | 'Production';
     

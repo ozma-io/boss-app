@@ -2,7 +2,7 @@
 
 ## Overview
 
-Boss App uses Firebase Authentication with three methods:
+BossUp uses Firebase Authentication with three methods:
 - **Email magic links (passwordless)** - primary method
 - **Apple Sign-In** - OAuth
 - **Google Sign-In** - OAuth
@@ -55,7 +55,7 @@ Boss App uses Firebase Authentication with three methods:
 
 **iOS Universal Links:**
 - Opens app directly when magic link clicked
-- Requires `app.config.ts` + `TheBossApp.entitlements` configuration
+- Requires `app.config.ts` + `TheBossUp.entitlements` configuration
 - Production builds only (TestFlight, App Store)
 
 **Android App Links:**
@@ -73,12 +73,12 @@ Boss App uses Firebase Authentication with three methods:
 | Environment | Web | Mobile | Universal/App Links |
 |-------------|-----|--------|---------------------|
 | **Production** | `https://boss-app.ozma.io` | `https://boss-app.ozma.io` | ✅ Works |
-| **Development** | `http://localhost:8081` | Local IP or `bossapp://` | ❌ HTTPS required |
+| **Development** | `http://localhost:8081` | Local IP or `bossup://` | ❌ HTTPS required |
 
 **Development Setup:**
 1. Add `localhost` to Firebase Console → Authentication → Authorized domains
 2. Keep dual-mode detection in `auth.service.ts`
-3. Use custom scheme `bossapp://` for mobile testing
+3. Use custom scheme `bossup://` for mobile testing
 4. Or use Firebase Auth Emulator for offline dev
 
 ### Deep Link Handlers
@@ -181,7 +181,7 @@ interface AuthContextType {
 associatedDomains: ['applinks:boss-app.ozma.io']
 ```
 
-**`ios/TheBossApp/TheBossApp.entitlements`:**
+**`ios/TheBossUp/TheBossUp.entitlements`:**
 Add `applinks:boss-app.ozma.io`
 
 **Apple Developer:** Enable Associated Domains capability
@@ -251,7 +251,7 @@ npm run web
 ```bash
 npm run ios     # iOS Simulator
 npm run android # Android Emulator
-# Use custom scheme bossapp:// or manual testing
+# Use custom scheme bossup:// or manual testing
 ```
 
 **Firebase Emulator (optional):**
@@ -286,8 +286,8 @@ curl -I https://boss-app.ozma.io/.well-known/apple-app-site-association
 **Debug:**
 ```bash
 curl -I https://boss-app.ozma.io/.well-known/assetlinks.json
-adb shell pm get-app-links com.ozmaio.bossapp
-adb shell pm verify-app-links --re-verify com.ozmaio.bossapp
+adb shell pm get-app-links com.ozmaio.bossup
+adb shell pm verify-app-links --re-verify com.ozmaio.bossup
 ```
 
 ### Magic Link Invalid
@@ -305,7 +305,7 @@ adb shell pm verify-app-links --re-verify com.ozmaio.bossapp
 
 **Workarounds:**
 - Use TestFlight/internal testing for full testing
-- Use custom scheme `bossapp://` in development
+- Use custom scheme `bossup://` in development
 - Test web version on localhost for quick iteration
 
 ---

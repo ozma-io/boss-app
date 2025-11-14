@@ -13,7 +13,7 @@ const FACEBOOK_ACCESS_TOKEN = process.env.FACEBOOK_ACCESS_TOKEN || '';
 // ============================================================================
 export const FACEBOOK_APP_ID = '853405190716887';
 export const FACEBOOK_CLIENT_TOKEN = '39f2bc67668285fbd6990e16805565cb';
-export const FACEBOOK_APP_NAME = 'The Boss App';
+export const FACEBOOK_APP_NAME = 'BossUp';
 // ============================================================================
 // End of duplicated section
 // ============================================================================

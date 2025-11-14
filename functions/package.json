@@ -1,7 +1,7 @@
 {
   "name": "functions",
   "version": "1.0.0",
-  "description": "Firebase Cloud Functions for The Boss App",
+  "description": "Firebase Cloud Functions for BossUp",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",

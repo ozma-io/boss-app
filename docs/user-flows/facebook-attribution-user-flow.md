@@ -160,7 +160,7 @@ User installs app
 - App navigates to `/(tabs)` route, which opens Profile tab by default
 
 **What user sees:**
-- **Header:** "The Boss App" title centered at top
+- **Header:** "BossUp" title centered at top
 - **Profile Section:**
   - Avatar image (120x120px, rounded)
   - Username (mock data: "Mike_reex")

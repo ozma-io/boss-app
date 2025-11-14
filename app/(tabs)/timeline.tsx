@@ -211,7 +211,7 @@ export default function TimelineScreen() {
           </View>
         ) : (
           <ScrollView style={styles.timeline} contentContainerStyle={[styles.timelineContent, { paddingTop: topInset + 16 }]} testID="timeline-scroll">
-            <Text style={styles.timelineTitle} testID="timeline-title">The Boss App</Text>
+            <Text style={styles.timelineTitle} testID="timeline-title">BossUp</Text>
             <View style={styles.timelineWrapper}>
               {entries.length > 0 && (
                 <View style={styles.timelineLine} />

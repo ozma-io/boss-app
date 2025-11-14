@@ -87,7 +87,7 @@ Create `/.well-known/apple-app-site-association` on `discovery.ozma.io`:
     "apps": [],
     "details": [
       {
-        "appID": "TEAM_ID.com.ozmaio.bossapp",
+        "appID": "TEAM_ID.com.ozmaio.bossup",
         "paths": ["/go-app/*"]
       }
     ]
@@ -113,7 +113,7 @@ Create `/.well-known/assetlinks.json` on `discovery.ozma.io`:
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.ozmaio.bossapp",
+      "package_name": "com.ozmaio.bossup",
       "sha256_cert_fingerprints": [
         "YOUR_SHA256_FINGERPRINT"
       ]
@@ -237,7 +237,7 @@ async function handleLeadSubmit() {
 xcrun simctl openurl booted "https://discovery.ozma.io/go-app/the-boss?fbclid=test123&utm_source=facebook&email=test@example.com"
 
 # Android
-adb shell am start -W -a android.intent.action.VIEW -d "https://discovery.ozma.io/go-app/the-boss?fbclid=test123&utm_source=facebook&email=test@example.com" com.ozmaio.bossapp
+adb shell am start -W -a android.intent.action.VIEW -d "https://discovery.ozma.io/go-app/the-boss?fbclid=test123&utm_source=facebook&email=test@example.com" com.ozmaio.bossup
 ```
 
 ### Verify Events in Facebook

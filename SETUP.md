@@ -1,4 +1,4 @@
-# Boss App - Setup Instructions
+# BossUp - Setup Instructions
 
 ## ✅ Completed Setup
 

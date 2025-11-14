@@ -1,7 +1,7 @@
 /**
  * Sentry Configuration
  * 
- * Error tracking and monitoring configuration for the Boss App.
+ * Error tracking and monitoring configuration for BossUp.
  * DSN provided by Sentry setup: https://f1a4dd0c3c892048c31d0f9752af4e0f@o4510351607136256.ingest.us.sentry.io/4510351607922689
  */
 
@@ -23,7 +23,7 @@ export const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN || 'https://f1a4dd0
 // must be duplicated in app.config.ts for the Sentry plugin configuration
 // ============================================================================
 export const SENTRY_ORG = 'ozma-inc';
-export const SENTRY_PROJECT = 'the-boss-app';
+export const SENTRY_PROJECT = 'bossup';
 // ============================================================================
 // End of duplicated section
 // ============================================================================

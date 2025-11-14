@@ -278,7 +278,7 @@ export default function BossScreen() {
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="boss-scroll">
         <View style={styles.greenCircle} />
         <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="boss-header">
-          <Text style={styles.headerTitle} testID="header-title">The Boss App</Text>
+          <Text style={styles.headerTitle} testID="header-title">BossUp</Text>
         </View>
 
         <View style={styles.profileSection} testID="profile-section">

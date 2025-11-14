@@ -1,4 +1,4 @@
-# 📦 The Boss App
+# 📦 BossUp
 
 ## 🚀 Quick Start
 

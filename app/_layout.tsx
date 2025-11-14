@@ -329,7 +329,7 @@ function RootLayoutNav() {
           name="chat" 
           options={{ 
             headerShown: true, 
-            title: 'The Boss App',
+            title: 'BossUp',
             headerBackTitle: '',
             headerShadowVisible: false,
             headerTitleAlign: 'center',

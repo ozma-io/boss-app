@@ -1,12 +1,12 @@
 # Dynamic Fields System
 
-Complete guide to the dynamic custom fields system in The Boss App.
+Complete guide to the dynamic custom fields system in BossUp.
 
 ---
 
 ## Overview
 
-The Boss App uses a **minimal core + dynamic custom fields** architecture. This allows:
+BossUp uses a **minimal core + dynamic custom fields** architecture. This allows:
 - System fields that cannot be deleted (email, name, etc.)
 - Business data fields that users can freely add/remove
 - Web funnel data seamlessly integrated as custom fields

@@ -1,9 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { logger } from '@/services/logger.service';
 import { requestNotificationPermissions } from '@/services/notification.service';
 import { recordNotificationPromptShown, updateNotificationPermissionStatus } from '@/services/user.service';
-import { logger } from '@/services/logger.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -66,7 +66,7 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
               <View style={styles.appIconContainer} testID="app-icon-container-1">
                 <FontAwesome name="briefcase" size={16} color="#8BC34A" testID="app-icon-1" />
               </View>
-              <Text style={styles.appName} testID="app-name-1">THE BOSS APP</Text>
+              <Text style={styles.appName} testID="app-name-1">BOSSUP</Text>
               <Text style={styles.timestamp} testID="timestamp-1">now</Text>
             </View>
             <Text style={styles.notificationTitle} testID="notification-title-1">Time to make yourself visible 👀</Text>
@@ -80,7 +80,7 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
               <View style={styles.appIconContainer} testID="app-icon-container-2">
                 <FontAwesome name="briefcase" size={16} color="#8BC34A" testID="app-icon-2" />
               </View>
-              <Text style={styles.appName} testID="app-name-2">THE BOSS APP</Text>
+              <Text style={styles.appName} testID="app-name-2">BOSSUP</Text>
               <Text style={styles.timestamp} testID="timestamp-2">3 days ago</Text>
             </View>
             <Text style={styles.notificationTitle} testID="notification-title-2">Collect your weekly win 🌱</Text>

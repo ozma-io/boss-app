@@ -2,7 +2,7 @@
 alwaysApply: true
 ---
 
-# The Boss App
+# BossUp
 
 ## Tech Stack
 React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functions)

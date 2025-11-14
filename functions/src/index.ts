@@ -1,5 +1,5 @@
 /**
- * Firebase Cloud Functions for The Boss App MVP
+ * Firebase Cloud Functions for BossUp MVP
  * 
  * This file contains serverless backend logic for:
  * - Scheduled notifications

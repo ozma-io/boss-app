@@ -1,6 +1,6 @@
-# Boss App Documentation
+# BossUp Documentation
 
-Complete documentation for The Boss App project.
+Complete documentation for BossUp project.
 
 ---
 

@@ -185,7 +185,7 @@ Increment this when making breaking changes. Optionally store version in documen
 
 ## 🎯 Dynamic Custom Fields
 
-The Boss App uses a **minimal core + dynamic custom fields** architecture.
+BossUp uses a **minimal core + dynamic custom fields** architecture.
 
 📖 **For complete documentation, see [dynamic-fields-system.md](./dynamic-fields-system.md)**
 
@@ -302,7 +302,7 @@ Don't use for:
 
 ### Timeline Entry Types
 
-The Boss App uses two technical entry types:
+BossUp uses two technical entry types:
 
 1. **`note`** - Text-based entries with subtypes:
    - `note` - General observations
@@ -669,7 +669,7 @@ firebase firestore:databases:create --region=us-central1
 
 ## 💳 Subscription System
 
-The Boss App uses a scalable subscription system that supports multiple tiers and billing periods.
+BossUp uses a scalable subscription system that supports multiple tiers and billing periods.
 
 ### Architecture
 

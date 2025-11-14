@@ -38,8 +38,8 @@ interface FacebookConversionEventData {
   // [13] external storage size in GB
   // [14] free space on external storage in GB
   // [15] device timezone
-  // Example iOS: ["i2", "com.ozmaio.bossapp", "1.0", "1.0 (1)", "17.0.0", "iPhone14,3", "en_US", "PST", "AT&T", "390", "844", "3", "6", "128", "64", "America/New_York"]
-  // Example Android: ["a2", "com.ozmaio.bossapp", "1.0", "1.0 (1)", "14", "Pixel 7 Pro", "en_US", "PST", "Verizon", "1080", "2340", "3", "8", "128", "64", "America/New_York"]
+  // Example iOS: ["i2", "com.ozmaio.bossup", "1.0", "1.0 (1)", "17.0.0", "iPhone14,3", "en_US", "PST", "AT&T", "390", "844", "3", "6", "128", "64", "America/New_York"]
+  // Example Android: ["a2", "com.ozmaio.bossup", "1.0", "1.0 (1)", "14", "Pixel 7 Pro", "en_US", "PST", "Verizon", "1080", "2340", "3", "8", "128", "64", "America/New_York"]
   extinfo: string[];
   fbclid?: string;
   userData?: {

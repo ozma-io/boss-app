@@ -43,12 +43,12 @@ xcrun simctl openurl booted "http://192.168.1.74:8081/?email=...&apiKey=...&oobC
 In production, configure one of these options:
 
 **Option A: Universal Links** (recommended)
-- Set up a real domain (e.g., `https://bossapp.com`)
+- Set up a real domain (e.g., `https://bossup.com`)
 - Add Associated Domains in Xcode
 - iOS automatically opens the app when magic link is clicked
 
 **Option B: Custom URL Scheme**
-- Use `bossapp://` scheme
+- Use `bossup://` scheme
 - Configure in Firebase Console → Authentication → Settings → Authorized domains
 - Less reliable than Universal Links
 
@@ -86,7 +86,7 @@ For production, either remove this or restrict to dev mode:
 
 ## FAQ
 
-**Q: Why not use `bossapp://` immediately?**  
+**Q: Why not use `bossup://` immediately?**  
 A: Firebase Auth requires HTTP/HTTPS URLs for magic links. Custom schemes don't work with Firebase email link authentication.
 
 **Q: Why does this require manual handling?**  

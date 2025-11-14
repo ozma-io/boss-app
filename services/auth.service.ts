@@ -67,10 +67,10 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     url: `${redirectUrl}?email=${email}`,
     handleCodeInApp: true,
     iOS: {
-      bundleId: process.env.EXPO_PUBLIC_IOS_BUNDLE_ID || 'com.ozmaio.bossapp',
+      bundleId: process.env.EXPO_PUBLIC_IOS_BUNDLE_ID || 'com.ozmaio.bossup',
     },
     android: {
-      packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE || 'com.ozmaio.bossapp',
+      packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE || 'com.ozmaio.bossup',
       installApp: true,
     },
   };
@@ -148,7 +148,7 @@ export async function signInWithGoogleCredential(idToken: string): Promise<User>
 export async function signInWithGoogle(): Promise<User> {
   try {
     const redirectUri = AuthSession.makeRedirectUri({
-      scheme: process.env.EXPO_PUBLIC_APP_SCHEME || 'bossapp',
+      scheme: process.env.EXPO_PUBLIC_APP_SCHEME || 'bossup',
     });
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
