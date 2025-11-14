@@ -10,7 +10,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { onCall } from 'firebase-functions/v2/https';
 import OpenAI from 'openai';
 import type { ChatCompletion } from 'openai/resources/chat';
-import { CHAT_MESSAGE_HISTORY_HOURS, CHAT_SYSTEM_PROMPT, OPENAI_MODEL } from './constants';
+import { CHAT_MESSAGE_HISTORY_HOURS, CHAT_REMINDER_PROMPT, CHAT_SYSTEM_PROMPT, OPENAI_MODEL } from './constants';
 import type {
   ChatCompletionMessageParam,
   ContentItem,
@@ -98,6 +98,140 @@ function getRecentMessages(
     // Include messages within the time window
     return message.timestamp >= cutoffISO;
   });
+}
+
+/**
+ * Fetch all user context data (profile, bosses, timeline entries)
+ * Returns formatted string for system message
+ */
+async function fetchUserContext(userId: string): Promise<string> {
+  const db = admin.firestore();
+  
+  // Fetch user profile
+  const userDoc = await db.collection('users').doc(userId).get();
+  const userData = userDoc.data();
+  
+  // Fetch all bosses
+  const bossesSnapshot = await db.collection('users').doc(userId)
+    .collection('bosses')
+    .orderBy('createdAt', 'asc')
+    .get();
+  
+  const bossesData: any[] = [];
+  
+  // For each boss, fetch their timeline entries
+  for (const bossDoc of bossesSnapshot.docs) {
+    const bossData = { id: bossDoc.id, ...bossDoc.data() };
+    
+    // Fetch timeline entries for this boss
+    const entriesSnapshot = await db
+      .collection('users').doc(userId)
+      .collection('bosses').doc(bossDoc.id)
+      .collection('entries')
+      .orderBy('timestamp', 'desc')
+      .limit(50)
+      .get();
+    
+    const entries: any[] = [];
+    entriesSnapshot.forEach((entryDoc) => {
+      entries.push({ id: entryDoc.id, ...entryDoc.data() });
+    });
+    
+    bossesData.push({
+      ...bossData,
+      entries,
+    });
+  }
+  
+  // Build context string
+  const contextParts: string[] = [];
+  
+  // User profile info
+  if (userData) {
+    contextParts.push('## User Profile');
+    contextParts.push(`Name: ${userData.name || 'Not set'}`);
+    contextParts.push(`Position: ${userData.position || 'Not set'}`);
+    contextParts.push(`Goal: ${userData.goal || 'Not set'}`);
+    contextParts.push(`Email: ${userData.email || 'Not set'}`);
+    
+    // Add custom fields if they exist
+    if (userData._fieldsMeta) {
+      contextParts.push('\n### Custom Profile Fields');
+      for (const [fieldKey, fieldMeta] of Object.entries(userData._fieldsMeta)) {
+        const fieldValue = userData[fieldKey];
+        if (fieldValue !== undefined && fieldValue !== null) {
+          contextParts.push(`${(fieldMeta as any).label}: ${fieldValue}`);
+        }
+      }
+    }
+  }
+  
+  // Bosses and their data
+  if (bossesData.length > 0) {
+    contextParts.push('\n## Bosses');
+    
+    for (const boss of bossesData) {
+      contextParts.push(`\n### Boss: ${boss.name || 'Unnamed'}`);
+      contextParts.push(`Position: ${boss.position || 'Not set'}`);
+      contextParts.push(`Department: ${boss.department || 'Not set'}`);
+      contextParts.push(`Management Style: ${boss.managementStyle || 'Not set'}`);
+      contextParts.push(`Working Hours: ${boss.workingHours || 'Not set'}`);
+      contextParts.push(`Started At: ${boss.startedAt || 'Not set'}`);
+      
+      // Add custom fields if they exist
+      if (boss._fieldsMeta) {
+        contextParts.push('\n#### Custom Boss Fields');
+        for (const [fieldKey, fieldMeta] of Object.entries(boss._fieldsMeta)) {
+          const fieldValue = boss[fieldKey];
+          if (fieldValue !== undefined && fieldValue !== null) {
+            contextParts.push(`${(fieldMeta as any).label}: ${fieldValue}`);
+          }
+        }
+      }
+      
+      // Add timeline entries
+      if (boss.entries && boss.entries.length > 0) {
+        contextParts.push('\n#### Timeline Entries (Recent)');
+        for (const entry of boss.entries) {
+          const entryType = entry.type === 'note' ? `Note (${entry.subtype})` : `Fact (${entry.factKey})`;
+          contextParts.push(`- [${entry.timestamp}] ${entryType}: ${entry.title}`);
+          if (entry.content) {
+            contextParts.push(`  Content: ${entry.content}`);
+          }
+          if (entry.type === 'fact' && entry.value !== undefined) {
+            contextParts.push(`  Value: ${entry.value}`);
+          }
+        }
+      }
+    }
+  }
+  
+  return contextParts.join('\n');
+}
+
+/**
+ * Fetch system prompts from Remote Config
+ * Falls back to constants if Remote Config is not available
+ */
+async function getSystemPrompts(): Promise<{ mainPrompt: string; reminderPrompt: string }> {
+  try {
+    const remoteConfig = admin.remoteConfig();
+    const template = await remoteConfig.getTemplate();
+    
+    const chatSystemPromptParam = template.parameters?.chat_system_prompt;
+    const chatReminderPromptParam = template.parameters?.chat_reminder_prompt;
+    
+    const mainPrompt = (chatSystemPromptParam?.defaultValue as any)?.value || CHAT_SYSTEM_PROMPT;
+    const reminderPrompt = (chatReminderPromptParam?.defaultValue as any)?.value || CHAT_REMINDER_PROMPT;
+    
+    return { mainPrompt, reminderPrompt };
+  } catch (error) {
+    logger.warn('Failed to fetch prompts from Remote Config, using constants', { error });
+    return {
+      mainPrompt: CHAT_SYSTEM_PROMPT,
+      reminderPrompt: CHAT_REMINDER_PROMPT,
+    };
+  }
 }
 
 /**
@@ -206,16 +340,49 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         };
       }
       
-      // Prepare messages for OpenAI (add system prompt first)
-      const systemMessage: FirestoreChatMessage = {
+      // Fetch system prompts from Remote Config
+      const { mainPrompt, reminderPrompt } = await getSystemPrompts();
+      
+      logger.debug('Fetching user context', { userId, threadId });
+      
+      // Fetch user context
+      const userContext = await fetchUserContext(userId);
+      
+      logger.debug('User context fetched', { 
+        userId, 
+        threadId, 
+        contextLength: userContext.length 
+      });
+      
+      // Prepare messages for OpenAI with 4-layer structure:
+      // 1. Main system prompt
+      // 2. User context wrapped in <user-info> tags
+      // 3. Recent messages (last 24 hours)
+      // 4. Reminder prompt
+      
+      const systemMessage1: FirestoreChatMessage = {
         role: 'system',
-        content: [{ type: 'text', text: CHAT_SYSTEM_PROMPT }],
+        content: [{ type: 'text', text: mainPrompt }],
+        timestamp: new Date().toISOString(),
+      };
+      
+      const systemMessage2: FirestoreChatMessage = {
+        role: 'system',
+        content: [{ type: 'text', text: `<user-info>\n${userContext}\n</user-info>` }],
+        timestamp: new Date().toISOString(),
+      };
+      
+      const systemMessage3: FirestoreChatMessage = {
+        role: 'system',
+        content: [{ type: 'text', text: reminderPrompt }],
         timestamp: new Date().toISOString(),
       };
       
       const messagesForOpenAI: ChatCompletionMessageParam[] = [
-        toOpenAIMessage(systemMessage),
+        toOpenAIMessage(systemMessage1),
+        toOpenAIMessage(systemMessage2),
         ...recentMessages.map(toOpenAIMessage),
+        toOpenAIMessage(systemMessage3),
       ];
       
       logger.info('Calling OpenAI API', {
@@ -223,6 +390,8 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         threadId,
         model: OPENAI_MODEL,
         messageCount: messagesForOpenAI.length,
+        systemMessagesCount: 3,
+        userMessagesCount: recentMessages.length,
       });
       
       // Call OpenAI API
