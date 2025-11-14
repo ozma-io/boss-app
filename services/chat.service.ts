@@ -2,16 +2,16 @@ import { db, functions } from '@/constants/firebase.config';
 import { ChatMessage, ChatThread, ContentItem, Unsubscribe } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  onSnapshot,
-  orderBy,
-  query,
-  setDoc,
-  updateDoc,
+    addDoc,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    onSnapshot,
+    orderBy,
+    query,
+    setDoc,
+    updateDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { logger } from './logger.service';
