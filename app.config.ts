@@ -44,6 +44,7 @@ const config: ExpoConfig = {
     supportsTablet: true,
     bundleIdentifier: 'com.ozmaio.bossup',
     associatedDomains: ['applinks:boss-app.ozma.io', 'applinks:discovery.ozma.io'],
+    googleServicesFile: './firebase/GoogleService-Info.plist',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       FacebookAppID: FACEBOOK_APP_ID,
@@ -58,6 +59,7 @@ const config: ExpoConfig = {
       backgroundColor: '#ffffff',
     },
     package: 'com.ozmaio.bossup',
+    googleServicesFile: './firebase/google-services.json',
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     permissions: [
@@ -140,6 +142,7 @@ const config: ExpoConfig = {
         iosApiKey: 'ios_sdk-b5e22560fe55000d92cb6eeb3590bef7dae364ed',
       },
     ],
+    '@react-native-firebase/app',
   ],
   experiments: {
     typedRoutes: true,

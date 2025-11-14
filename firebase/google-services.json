@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "289257148619",
+    "project_id": "the-boss-app-e42b6",
+    "storage_bucket": "the-boss-app-e42b6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:289257148619:android:2a074e1c1e7afb13accb4e",
+        "android_client_info": {
+          "package_name": "com.ozmaio.bossup"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "289257148619-ii1e62trmovpcl7m02goj9ccm3cpn4eu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBt2Y4Yp9KK1kQ6QbgtNHlg6X7Ev-WxgGg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "289257148619-ii1e62trmovpcl7m02goj9ccm3cpn4eu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
