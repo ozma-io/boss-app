@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
 export function TypingIndicator() {
-  const [dotCount, setDotCount] = useState(0);
+  const [dotCount, setDotCount] = useState(1);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setDotCount((prev) => (prev + 1) % 4);
+      setDotCount((prev) => (prev % 3) + 1);
     }, 500);
 
     return () => clearInterval(interval);
