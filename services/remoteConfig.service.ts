@@ -1,23 +1,12 @@
+import { remoteConfig as webRemoteConfig } from '@/constants/firebase.config';
 import { DEFAULT_SUBSCRIPTION_PLANS } from '@/constants/subscriptionPlans';
 import { SubscriptionPlanConfig } from '@/types';
 import { Platform } from 'react-native';
 import { logger } from './logger.service';
 
-// Platform-specific imports
-let remoteConfig: any = null;
+// Platform-specific: Native uses React Native Firebase
 let nativeRemoteConfig: any = null;
-
-if (Platform.OS === 'web') {
-  // Web: use Firebase Web SDK
-  const { app } = require('@/constants/firebase.config');
-  const { getRemoteConfig, fetchAndActivate: webFetchAndActivate, getValue: webGetValue } = require('firebase/remote-config');
-  remoteConfig = getRemoteConfig(app);
-  
-  // Configure Remote Config for web
-  remoteConfig.settings.minimumFetchIntervalMillis = __DEV__ 
-    ? 0  // No cache in development
-    : 3600000; // 1 hour cache in production
-} else {
+if (Platform.OS !== 'web') {
   // iOS/Android: use React Native Firebase
   nativeRemoteConfig = require('@react-native-firebase/remote-config').default;
 }
@@ -29,8 +18,11 @@ export async function initRemoteConfig(): Promise<void> {
   try {
     if (Platform.OS === 'web') {
       // Web: use Firebase Web SDK
+      if (!webRemoteConfig) {
+        throw new Error('Remote Config not available on web platform');
+      }
       const { fetchAndActivate } = require('firebase/remote-config');
-      await fetchAndActivate(remoteConfig);
+      await fetchAndActivate(webRemoteConfig);
       logger.info('Successfully fetched and activated Remote Config', { 
         feature: 'RemoteConfig',
         platform: 'web'
@@ -71,9 +63,17 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     
     if (Platform.OS === 'web') {
       // Web: use Firebase Web SDK
+      if (!webRemoteConfig) {
+        logger.warn('Remote Config not available on web, using fallback constants', { 
+          feature: 'RemoteConfig',
+          platform: 'web'
+        });
+        return DEFAULT_SUBSCRIPTION_PLANS.filter(plan => plan.enabled);
+      }
+      
       const { fetchAndActivate, getValue } = require('firebase/remote-config');
-      await fetchAndActivate(remoteConfig);
-      const plansValue = getValue(remoteConfig, 'subscription_plans');
+      await fetchAndActivate(webRemoteConfig);
+      const plansValue = getValue(webRemoteConfig, 'subscription_plans');
       plansJson = plansValue.asString();
     } else {
       // iOS/Android: use React Native Firebase

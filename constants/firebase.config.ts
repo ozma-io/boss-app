@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { Auth, getAuth, initializeAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getFunctions } from 'firebase/functions';
+import { getRemoteConfig, RemoteConfig } from 'firebase/remote-config';
 import { Platform } from 'react-native';
 
 // Firebase configuration
@@ -38,3 +39,15 @@ export { app, auth };
 export const functions = getFunctions(app);
 
 export const db = getFirestore(app);
+
+// Initialize Remote Config (web only - native uses @react-native-firebase/remote-config)
+let remoteConfig: RemoteConfig | null = null;
+if (Platform.OS === 'web') {
+  remoteConfig = getRemoteConfig(app);
+  // Configure Remote Config settings
+  remoteConfig.settings.minimumFetchIntervalMillis = __DEV__ 
+    ? 0  // No cache in development
+    : 3600000; // 1 hour cache in production
+}
+
+export { remoteConfig };
