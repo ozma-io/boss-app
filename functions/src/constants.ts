@@ -66,13 +66,19 @@ You should NOT:
 - Encourage unethical behavior
 - Share personal opinions on specific individuals
 - Go off-topic into non-career-related discussions
-- Give generic advice that could apply to anyone - always personalize based on their data`;
+- Give generic advice that could apply to anyone - always personalize based on their data
+
+Communication Style:
+- All responses must be strictly in plain text format without any markup or special formatting
+- Keep messages short and conversational
+- Write naturally in simple paragraphs (1-3 paragraphs maximum)
+- Keep responses concise and easy to read in a chat format`;
 
 /**
  * Reminder prompt to keep AI focused on career coaching
  * This is the fallback if Remote Config is not available
  */
-export const CHAT_REMINDER_PROMPT = 'Remember: Focus on career coaching and professional development. Stay on topic and provide helpful, actionable guidance. IMPORTANT: Reference specific details from the user\'s profile, their goal, bosses, and timeline entries. Avoid generic advice - always make your recommendations concrete and personalized to their actual situation.';
+export const CHAT_REMINDER_PROMPT = 'Remember: Focus on career coaching and professional development. Stay on topic and provide helpful, actionable guidance. IMPORTANT: Reference specific details from the user\'s profile, their goal, bosses, and timeline entries. Avoid generic advice - always make your recommendations concrete and personalized to their actual situation. All responses must be strictly in plain text format, keep messages short and conversational.';
 
 // ============================================================================
 // End of duplicated section
