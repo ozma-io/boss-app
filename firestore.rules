@@ -103,6 +103,15 @@ service cloud.firestore {
           allow read, write: if isOwner(userId);
         }
       }
+      
+      // Chat threads and messages subcollection
+      match /chatThreads/{threadId} {
+        allow read, write: if isOwner(userId);
+        
+        match /messages/{messageId} {
+          allow read, write: if isOwner(userId);
+        }
+      }
     }
     
     // Deny all other access

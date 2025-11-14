@@ -1,15 +1,20 @@
 import { SendArrowIcon } from '@/components/icons/SendArrowIcon';
+import { useAuth } from '@/contexts/AuthContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { extractTextFromContent, getOrCreateThread, sendMessage, subscribeToMessages } from '@/services/chat.service';
+import { logger } from '@/services/logger.service';
 import { ChatMessage } from '@/types';
-import { mockChatMessages } from '@/utils/mockData';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function ChatScreen() {
+  const { user } = useAuth();
   const scrollViewRef = useRef<ScrollView>(null);
   const [inputText, setInputText] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [threadId, setThreadId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -17,53 +22,108 @@ export default function ChatScreen() {
     }, [])
   );
 
+  // Initialize thread on mount
   useEffect(() => {
-    scrollViewRef.current?.scrollToEnd({ animated: false });
-  }, []);
+    if (!user) {
+      return;
+    }
+
+    const initThread = async (): Promise<void> => {
+      try {
+        const id = await getOrCreateThread(user.id);
+        setThreadId(id);
+      } catch (error) {
+        logger.error('Failed to initialize chat thread', { feature: 'ChatScreen', error });
+      }
+    };
+
+    initThread();
+  }, [user]);
+
+  // Subscribe to messages when thread is ready
+  useEffect(() => {
+    if (!user || !threadId) {
+      return;
+    }
+
+    const unsubscribe = subscribeToMessages(user.id, threadId, (newMessages) => {
+      setMessages(newMessages);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user, threadId]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messages.length > 0 && !loading) {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }
+  }, [messages, loading]);
 
   const handleContentSizeChange = () => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
   };
 
-  const handleSend = () => {
-    if (inputText.trim()) {
-      // TODO: Implement send message logic
-      setInputText('');
+  const handleSend = async (): Promise<void> => {
+    if (!inputText.trim() || !user || !threadId) {
+      return;
+    }
+
+    const textToSend = inputText.trim();
+    setInputText('');
+
+    try {
+      await sendMessage(user.id, threadId, textToSend);
+      trackAmplitudeEvent('chat_message_sent', { textLength: textToSend.length });
+    } catch (error) {
+      logger.error('Failed to send message', { feature: 'ChatScreen', error });
+      // Restore input text on error
+      setInputText(textToSend);
     }
   };
 
-  const renderMessage = (message: ChatMessage) => {
-    const isUser = message.type === 'user';
+  const renderMessage = (message: ChatMessage, index: number) => {
+    const isUser = message.role === 'user';
+    const text = extractTextFromContent(message.content);
     
     return (
       <View
-        key={message.id}
+        key={`${message.timestamp}-${index}`}
         style={[
           styles.messageContainer,
           isUser ? styles.userMessageContainer : styles.aiMessageContainer,
         ]}
-        testID={`message-${message.id}`}
+        testID={`message-${index}`}
       >
         <View
           style={[
             styles.messageBubble,
             isUser ? styles.userMessageBubble : styles.aiMessageBubble,
           ]}
-          testID={`message-bubble-${message.id}`}
+          testID={`message-bubble-${index}`}
         >
           <Text
             style={[
               styles.messageText,
               isUser ? styles.userMessageText : styles.aiMessageText,
             ]}
-            testID={`message-text-${message.id}`}
+            testID={`message-text-${index}`}
           >
-            {message.text}
+            {text}
           </Text>
         </View>
       </View>
     );
   };
+
+  if (!user) {
+    return (
+      <View style={[styles.container, styles.centerContent]} testID="chat-container">
+        <Text style={styles.loadingText}>Please sign in to use chat</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container} testID="chat-container">
@@ -74,7 +134,13 @@ export default function ChatScreen() {
           onContentSizeChange={handleContentSizeChange}
           testID="messages-scroll"
         >
-          {mockChatMessages.map(renderMessage)}
+          {loading ? (
+            <View style={styles.centerContent}>
+              <ActivityIndicator size="large" color="#000" testID="loading-indicator" />
+            </View>
+          ) : (
+            messages.map((message, index) => renderMessage(message, index))
+          )}
         </ScrollView>
 
         <View style={styles.inputContainer} testID="input-container">
@@ -85,16 +151,19 @@ export default function ChatScreen() {
             value={inputText}
             onChangeText={setInputText}
             testID="message-input"
+            editable={!loading}
           />
           {inputText.trim() ? (
-            <TouchableOpacity style={styles.sendButton} onPress={handleSend} testID="send-button">
+            <TouchableOpacity 
+              style={styles.sendButton} 
+              onPress={handleSend} 
+              testID="send-button"
+              disabled={loading}
+            >
               <SendArrowIcon size={20} color="#FFFFFF" testID="send-icon" />
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.micButton} testID="mic-button">
-              <FontAwesome name="microphone" size={20} color="#666" testID="mic-icon" />
-            </TouchableOpacity>
-          )}
+          ) : null}
+          {/* TODO: Implement voice input (microphone button hidden for MVP) */}
         </View>
       </View>
   );
@@ -104,6 +173,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F1E8',
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+    fontFamily: 'Manrope-Regular',
   },
   messagesContainer: {
     flex: 1,

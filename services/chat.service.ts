@@ -1,0 +1,268 @@
+import { db } from '@/constants/firebase.config';
+import { ChatMessage, ChatThread, ContentItem, Unsubscribe } from '@/types';
+import { retryWithBackoff } from '@/utils/retryWithBackoff';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
+import { logger } from './logger.service';
+
+/**
+ * Check if error is related to offline state
+ */
+function isFirebaseOfflineError(error: Error): boolean {
+  return (
+    error.message.includes('client is offline') ||
+    error.message.includes('Failed to get document') ||
+    error.name === 'FirebaseError'
+  );
+}
+
+/**
+ * Helper function to create text-only content array
+ */
+export function createTextContent(text: string): ContentItem[] {
+  return [
+    {
+      type: 'text',
+      text: text,
+    },
+  ];
+}
+
+/**
+ * Helper function to extract text from content array
+ */
+export function extractTextFromContent(content: ContentItem[]): string {
+  return content
+    .filter((item) => item.type === 'text' && item.text)
+    .map((item) => item.text)
+    .join(' ');
+}
+
+/**
+ * Get or create the main chat thread for a user
+ * For MVP, each user has a single thread with ID 'main'
+ * 
+ * @param userId - User ID
+ * @returns Thread ID (always 'main' for MVP)
+ */
+export async function getOrCreateThread(userId: string): Promise<string> {
+  logger.time('getOrCreateThread');
+  logger.debug('Getting or creating chat thread', { feature: 'ChatService', userId });
+  
+  const threadId = 'main'; // Single thread per user for MVP
+  
+  try {
+    const result = await retryWithBackoff(async () => {
+      const threadRef = doc(db, 'users', userId, 'chatThreads', threadId);
+      const threadDoc = await getDoc(threadRef);
+      
+      if (!threadDoc.exists()) {
+        // Create new thread
+        const now = new Date().toISOString();
+        const newThread: ChatThread = {
+          createdAt: now,
+          updatedAt: now,
+          messageCount: 0,
+        };
+        
+        await setDoc(threadRef, newThread);
+        logger.info('Created new chat thread', { feature: 'ChatService', userId, threadId });
+      } else {
+        logger.debug('Chat thread already exists', { feature: 'ChatService', userId, threadId });
+      }
+      
+      return threadId;
+    }, 3, 500);
+    
+    logger.timeEnd('getOrCreateThread', { feature: 'ChatService', userId, threadId: result });
+    return result;
+  } catch (error) {
+    const err = error as Error;
+    const isOffline = isFirebaseOfflineError(err);
+    
+    if (isOffline) {
+      logger.warn('Failed to get or create thread (offline)', {
+        feature: 'ChatService',
+        userId,
+        retries: 3,
+      });
+    } else {
+      logger.error('Error getting or creating thread', { feature: 'ChatService', userId, error: err });
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Subscribe to messages in a thread with real-time updates
+ * 
+ * @param userId - User ID
+ * @param threadId - Thread ID
+ * @param callback - Function to call with updated messages
+ * @returns Unsubscribe function
+ */
+export function subscribeToMessages(
+  userId: string,
+  threadId: string,
+  callback: (messages: ChatMessage[]) => void
+): Unsubscribe {
+  logger.debug('Subscribing to chat messages', { feature: 'ChatService', userId, threadId });
+  
+  const messagesRef = collection(db, 'users', userId, 'chatThreads', threadId, 'messages');
+  const q = query(messagesRef, orderBy('timestamp', 'asc'));
+  
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      const messages: ChatMessage[] = [];
+      
+      snapshot.forEach((doc) => {
+        messages.push(doc.data() as ChatMessage);
+      });
+      
+      logger.debug('Received messages update', { 
+        feature: 'ChatService', 
+        userId, 
+        threadId, 
+        count: messages.length 
+      });
+      
+      callback(messages);
+    },
+    (error) => {
+      logger.error('Error in messages subscription', { 
+        feature: 'ChatService', 
+        userId, 
+        threadId, 
+        error 
+      });
+    }
+  );
+  
+  return unsubscribe;
+}
+
+/**
+ * Send a text message in a thread
+ * Creates a user message with text content
+ * 
+ * @param userId - User ID
+ * @param threadId - Thread ID
+ * @param text - Message text
+ */
+export async function sendMessage(
+  userId: string,
+  threadId: string,
+  text: string
+): Promise<void> {
+  logger.time('sendMessage');
+  logger.debug('Sending message', { feature: 'ChatService', userId, threadId, textLength: text.length });
+  
+  try {
+    await retryWithBackoff(async () => {
+      const messagesRef = collection(db, 'users', userId, 'chatThreads', threadId, 'messages');
+      const threadRef = doc(db, 'users', userId, 'chatThreads', threadId);
+      
+      // Create the message
+      const message: ChatMessage = {
+        role: 'user',
+        content: createTextContent(text),
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Add message to collection
+      await addDoc(messagesRef, message);
+      
+      // Update thread metadata
+      const threadDoc = await getDoc(threadRef);
+      if (threadDoc.exists()) {
+        const threadData = threadDoc.data() as ChatThread;
+        await updateDoc(threadRef, {
+          updatedAt: message.timestamp,
+          messageCount: threadData.messageCount + 1,
+        });
+      }
+      
+      logger.info('Message sent successfully', { feature: 'ChatService', userId, threadId });
+    }, 3, 500);
+    
+    logger.timeEnd('sendMessage', { feature: 'ChatService', userId, threadId });
+  } catch (error) {
+    const err = error as Error;
+    const isOffline = isFirebaseOfflineError(err);
+    
+    if (isOffline) {
+      logger.warn('Failed to send message (offline)', {
+        feature: 'ChatService',
+        userId,
+        threadId,
+        retries: 3,
+      });
+    } else {
+      logger.error('Error sending message', { feature: 'ChatService', userId, threadId, error: err });
+    }
+    
+    throw error;
+  }
+}
+
+/**
+ * Get all messages in a thread (for initial load without subscription)
+ * 
+ * @param userId - User ID
+ * @param threadId - Thread ID
+ * @returns Array of messages ordered by timestamp
+ */
+export async function getMessages(
+  userId: string,
+  threadId: string
+): Promise<ChatMessage[]> {
+  logger.time('getMessages');
+  logger.debug('Getting messages', { feature: 'ChatService', userId, threadId });
+  
+  try {
+    const result = await retryWithBackoff(async () => {
+      const messagesRef = collection(db, 'users', userId, 'chatThreads', threadId, 'messages');
+      const q = query(messagesRef, orderBy('timestamp', 'asc'));
+      const snapshot = await getDocs(q);
+      
+      const messages: ChatMessage[] = [];
+      snapshot.forEach((doc) => {
+        messages.push(doc.data() as ChatMessage);
+      });
+      
+      return messages;
+    }, 3, 500);
+    
+    logger.timeEnd('getMessages', { feature: 'ChatService', userId, threadId, count: result.length });
+    return result;
+  } catch (error) {
+    const err = error as Error;
+    const isOffline = isFirebaseOfflineError(err);
+    
+    if (isOffline) {
+      logger.warn('Failed to get messages (offline), returning empty array', {
+        feature: 'ChatService',
+        userId,
+        threadId,
+        retries: 3,
+      });
+    } else {
+      logger.error('Error getting messages', { feature: 'ChatService', userId, threadId, error: err });
+    }
+    
+    return [];
+  }
+}
+

@@ -139,11 +139,28 @@ export interface RetryOptions {
   shouldRetry: (error: Error) => boolean;
 }
 
-// Chat Message
+// Chat types (OpenAI-compatible multimodal format)
+export interface ChatThread {
+  createdAt: string;
+  updatedAt: string;
+  messageCount: number;
+}
+
+export type MessageRole = 'user' | 'assistant' | 'system';
+export type ContentType = 'text' | 'image_url';
+
+export interface ContentItem {
+  type: ContentType;
+  text?: string;
+  image_url?: {
+    url: string;
+    detail?: 'auto' | 'low' | 'high';
+  };
+}
+
 export interface ChatMessage {
-  id: string;
-  type: 'user' | 'ai';
-  text: string;
+  role: MessageRole;
+  content: ContentItem[];
   timestamp: string;
 }
 
