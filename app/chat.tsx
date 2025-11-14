@@ -1,4 +1,5 @@
 import { SendArrowIcon } from '@/components/icons/SendArrowIcon';
+import { TypingIndicator } from '@/components/TypingIndicator';
 import { db } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
@@ -173,7 +174,7 @@ export default function ChatScreen() {
               {isTyping && (
                 <View style={styles.typingIndicatorContainer} testID="typing-indicator">
                   <View style={styles.typingIndicatorBubble}>
-                    <Text style={styles.typingIndicatorText}>Typing...</Text>
+                    <TypingIndicator />
                   </View>
                 </View>
               )}
@@ -307,13 +308,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
-  },
-  typingIndicatorText: {
-    fontSize: 15,
-    lineHeight: 20,
-    color: '#666',
-    fontFamily: 'Manrope-Regular',
-    fontStyle: 'italic',
   },
 });
 
