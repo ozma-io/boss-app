@@ -33,6 +33,9 @@ export default function ChatScreen() {
   const [isLoadingOlder, setIsLoadingOlder] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [paginationBatchSize, setPaginationBatchSize] = useState(50);
+  
+  // Typing indicator timeout management
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -106,11 +109,24 @@ export default function ChatScreen() {
     const unsubscribe = onSnapshot(threadRef, (docSnapshot) => {
       if (docSnapshot.exists()) {
         const threadData = docSnapshot.data() as ChatThread;
-        setIsTyping(threadData.assistantIsTyping || false);
+        const assistantTyping = threadData.assistantIsTyping || false;
+        
+        // Clear timeout if Cloud Function disabled typing
+        if (!assistantTyping && typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = null;
+        }
+        
+        setIsTyping(assistantTyping);
       }
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
   }, [user, threadId]);
 
   // Handler for loading older messages (pagination)
@@ -159,6 +175,19 @@ export default function ChatScreen() {
       const messageId = await sendMessage(user.id, threadId, textToSend);
       trackAmplitudeEvent('chat_message_sent', { textLength: textToSend.length });
 
+      // Immediately show typing indicator for better UX
+      setIsTyping(true);
+
+      // Set fallback timeout (60 seconds) in case Cloud Function fails
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+        typingTimeoutRef.current = null;
+        logger.warn('Typing indicator timeout reached', { feature: 'ChatScreen', threadId });
+      }, 60000);
+
       // Trigger AI response generation
       // The typing indicator will be managed by the Cloud Function
       generateAIResponse(user.id, threadId, messageId, sessionId).catch((error) => {
@@ -168,6 +197,12 @@ export default function ChatScreen() {
       });
     } catch (error) {
       logger.error('Failed to send message', { feature: 'ChatScreen', error });
+      // Reset typing indicator on error
+      setIsTyping(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
       // Restore input text on error
       setInputText(textToSend);
     }
