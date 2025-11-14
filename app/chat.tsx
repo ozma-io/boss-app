@@ -4,13 +4,13 @@ import { db } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSession } from '@/contexts/SessionContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { extractTextFromContent, generateAIResponse, getOrCreateThread, markChatAsRead, sendMessage, subscribeToMessages } from '@/services/chat.service';
+import { extractTextFromContent, generateAIResponse, getOrCreateThread, loadOlderMessages, markChatAsRead, sendMessage, subscribeToMessages } from '@/services/chat.service';
 import { logger } from '@/services/logger.service';
 import { ChatMessage, ChatThread } from '@/types';
 import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // Only import on native platforms
 let Notifications: any = null;
@@ -21,12 +21,18 @@ if (Platform.OS !== 'web') {
 export default function ChatScreen() {
   const { user } = useAuth();
   const { sessionId } = useSession();
-  const scrollViewRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  
+  // Pagination state
+  const [oldestTimestamp, setOldestTimestamp] = useState<string | null>(null);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [paginationBatchSize, setPaginationBatchSize] = useState(50);
 
   useFocusEffect(
     useCallback(() => {
@@ -75,7 +81,17 @@ export default function ChatScreen() {
     const unsubscribe = subscribeToMessages(user.id, threadId, (newMessages) => {
       setMessages(newMessages);
       setLoading(false);
-    });
+      
+      // On first load, set pagination state
+      if (newMessages.length > 0) {
+        // Messages are in DESC order (newest first)
+        const oldestMessage = newMessages[newMessages.length - 1];
+        setOldestTimestamp(oldestMessage.timestamp);
+        
+        // If we got fewer messages than the limit, there are no more older messages
+        setHasMoreMessages(newMessages.length >= 20);
+      }
+    }, 20);
 
     return unsubscribe;
   }, [user, threadId]);
@@ -97,15 +113,37 @@ export default function ChatScreen() {
     return unsubscribe;
   }, [user, threadId]);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (messages.length > 0 && !loading) {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
+  // Handler for loading older messages (pagination)
+  const handleLoadOlder = async (): Promise<void> => {
+    if (!user || !threadId || !oldestTimestamp || isLoadingOlder || !hasMoreMessages) {
+      return;
     }
-  }, [messages, loading]);
 
-  const handleContentSizeChange = () => {
-    scrollViewRef.current?.scrollToEnd({ animated: true });
+    setIsLoadingOlder(true);
+    
+    try {
+      const result = await loadOlderMessages(user.id, threadId, oldestTimestamp, paginationBatchSize);
+      
+      if (result.messages.length > 0) {
+        // Prepend older messages to existing messages (both in DESC order)
+        setMessages((prev) => [...prev, ...result.messages]);
+        
+        // Update oldest timestamp for next pagination
+        const newOldest = result.messages[result.messages.length - 1];
+        setOldestTimestamp(newOldest.timestamp);
+        
+        // Increase batch size for next load (50 -> 100 -> 100...)
+        if (paginationBatchSize === 50) {
+          setPaginationBatchSize(100);
+        }
+      }
+      
+      setHasMoreMessages(result.hasMore);
+    } catch (error) {
+      logger.error('Failed to load older messages', { feature: 'ChatScreen', error });
+    } finally {
+      setIsLoadingOlder(false);
+    }
   };
 
   const handleSend = async (): Promise<void> => {
@@ -179,20 +217,32 @@ export default function ChatScreen() {
 
   return (
     <View style={styles.container} testID="chat-container">
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.messagesContainer}
+      {loading ? (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#000" testID="loading-indicator" />
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          inverted={true}
+          keyExtractor={(item, index) => `${item.timestamp}-${index}`}
+          renderItem={({ item, index }) => renderMessage(item, messages.length - 1 - index)}
+          onEndReached={handleLoadOlder}
+          onEndReachedThreshold={0.5}
           contentContainerStyle={styles.messagesContent}
-          onContentSizeChange={handleContentSizeChange}
-          testID="messages-scroll"
-        >
-          {loading ? (
-            <View style={styles.centerContent}>
-              <ActivityIndicator size="large" color="#000" testID="loading-indicator" />
-            </View>
-          ) : (
+          testID="messages-list"
+          ListFooterComponent={
             <>
-              {messages.map((message, index) => renderMessage(message, index))}
+              {isLoadingOlder && (
+                <View style={styles.loaderContainer} testID="older-messages-loader">
+                  <ActivityIndicator size="small" color="#666" />
+                </View>
+              )}
+            </>
+          }
+          ListHeaderComponent={
+            <>
               {isTyping && (
                 <View style={styles.typingIndicatorContainer} testID="typing-indicator">
                   <View style={styles.typingIndicatorBubble}>
@@ -201,32 +251,33 @@ export default function ChatScreen() {
                 </View>
               )}
             </>
-          )}
-        </ScrollView>
+          }
+        />
+      )}
 
-        <View style={styles.inputContainer} testID="input-container">
-          <TextInput
-            style={styles.input}
-            placeholder="Lorem ipsum"
-            placeholderTextColor="#999"
-            value={inputText}
-            onChangeText={setInputText}
-            testID="message-input"
-            editable={!loading}
-          />
-          {inputText.trim() ? (
-            <TouchableOpacity 
-              style={styles.sendButton} 
-              onPress={handleSend} 
-              testID="send-button"
-              disabled={loading}
-            >
-              <SendArrowIcon size={20} color="#FFFFFF" testID="send-icon" />
-            </TouchableOpacity>
-          ) : null}
-          {/* TODO: Implement voice input (microphone button hidden for MVP) */}
-        </View>
+      <View style={styles.inputContainer} testID="input-container">
+        <TextInput
+          style={styles.input}
+          placeholder="Lorem ipsum"
+          placeholderTextColor="#999"
+          value={inputText}
+          onChangeText={setInputText}
+          testID="message-input"
+          editable={!loading}
+        />
+        {inputText.trim() ? (
+          <TouchableOpacity 
+            style={styles.sendButton} 
+            onPress={handleSend} 
+            testID="send-button"
+            disabled={loading}
+          >
+            <SendArrowIcon size={20} color="#FFFFFF" testID="send-icon" />
+          </TouchableOpacity>
+        ) : null}
+        {/* TODO: Implement voice input (microphone button hidden for MVP) */}
       </View>
+    </View>
   );
 }
 
@@ -245,11 +296,12 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: 'Manrope-Regular',
   },
-  messagesContainer: {
-    flex: 1,
-  },
   messagesContent: {
     padding: 16,
+  },
+  loaderContainer: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   messageContainer: {
     marginBottom: 12,

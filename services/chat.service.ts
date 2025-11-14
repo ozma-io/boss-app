@@ -1,5 +1,5 @@
 import { db, functions } from '@/constants/firebase.config';
-import { ChatMessage, ChatThread, ContentItem, Unsubscribe } from '@/types';
+import { ChatMessage, ChatThread, ContentItem, LoadMessagesResult, Unsubscribe } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
   addDoc,
@@ -7,10 +7,12 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
   onSnapshot,
   orderBy,
   query,
   setDoc,
+  startAt,
   updateDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -116,17 +118,19 @@ export async function getOrCreateThread(userId: string): Promise<string> {
  * @param userId - User ID
  * @param threadId - Thread ID
  * @param callback - Function to call with updated messages
+ * @param messageLimit - Maximum number of recent messages to load (default: 20)
  * @returns Unsubscribe function
  */
 export function subscribeToMessages(
   userId: string,
   threadId: string,
-  callback: (messages: ChatMessage[]) => void
+  callback: (messages: ChatMessage[]) => void,
+  messageLimit: number = 20
 ): Unsubscribe {
-  logger.debug('Subscribing to chat messages', { feature: 'ChatService', userId, threadId });
+  logger.debug('Subscribing to chat messages', { feature: 'ChatService', userId, threadId, limit: messageLimit });
   
   const messagesRef = collection(db, 'users', userId, 'chatThreads', threadId, 'messages');
-  const q = query(messagesRef, orderBy('timestamp', 'asc'));
+  const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(messageLimit));
   
   const unsubscribe = onSnapshot(
     q,
@@ -368,6 +372,81 @@ export async function generateAIResponse(
       error: err,
     });
     throw error;
+  }
+}
+
+/**
+ * Load older messages for pagination
+ * 
+ * @param userId - User ID
+ * @param threadId - Thread ID
+ * @param oldestTimestamp - Timestamp of the oldest currently loaded message
+ * @param batchLimit - Number of messages to load
+ * @returns Object with messages array and hasMore flag
+ */
+export async function loadOlderMessages(
+  userId: string,
+  threadId: string,
+  oldestTimestamp: string,
+  batchLimit: number
+): Promise<LoadMessagesResult> {
+  logger.time('loadOlderMessages');
+  logger.debug('Loading older messages', { feature: 'ChatService', userId, threadId, oldestTimestamp, batchLimit });
+  
+  try {
+    const result = await retryWithBackoff(async () => {
+      const messagesRef = collection(db, 'users', userId, 'chatThreads', threadId, 'messages');
+      // Load batchLimit + 1 to check if there are more messages
+      const q = query(
+        messagesRef, 
+        orderBy('timestamp', 'desc'),
+        startAt(oldestTimestamp),
+        limit(batchLimit + 1)
+      );
+      const snapshot = await getDocs(q);
+      
+      const messages: ChatMessage[] = [];
+      snapshot.forEach((doc) => {
+        const message = doc.data() as ChatMessage;
+        // Skip the first message as it's the cursor (oldestTimestamp)
+        if (message.timestamp !== oldestTimestamp) {
+          messages.push(message);
+        }
+      });
+      
+      // If we got more than batchLimit messages (excluding cursor), there are more to load
+      const hasMore = messages.length > batchLimit;
+      
+      // Return only batchLimit messages
+      const resultMessages = hasMore ? messages.slice(0, batchLimit) : messages;
+      
+      return { messages: resultMessages, hasMore };
+    }, 3, 500);
+    
+    logger.timeEnd('loadOlderMessages', { 
+      feature: 'ChatService', 
+      userId, 
+      threadId, 
+      count: result.messages.length,
+      hasMore: result.hasMore 
+    });
+    return result;
+  } catch (error) {
+    const err = error as Error;
+    const isOffline = isFirebaseOfflineError(err);
+    
+    if (isOffline) {
+      logger.warn('Failed to load older messages (offline)', {
+        feature: 'ChatService',
+        userId,
+        threadId,
+        retries: 3,
+      });
+    } else {
+      logger.error('Error loading older messages', { feature: 'ChatService', userId, threadId, error: err });
+    }
+    
+    return { messages: [], hasMore: false };
   }
 }
 

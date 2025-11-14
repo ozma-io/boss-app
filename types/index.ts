@@ -172,6 +172,12 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+// Result type for loading older messages with pagination
+export interface LoadMessagesResult {
+  messages: ChatMessage[];
+  hasMore: boolean;
+}
+
 // Request data for generateChatResponse Cloud Function
 export interface GenerateChatResponseRequest {
   userId: string;
