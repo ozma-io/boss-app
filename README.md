@@ -52,6 +52,7 @@ firebase deploy               # Deploy everything
   - **Firebase Cloud Messaging (FCM)** — push notification service
   - **Firebase Cloud Functions** — serverless backend logic (scheduling, triggers, etc.)
   - **Firebase Security Rules** — per-user access control
+- **OpenAI API** — AI chat integration (GPT-5 via Cloud Functions)
 
 ### Deployment
 - **Expo EAS Build** — cloud builds for iOS and Android
@@ -69,6 +70,8 @@ firebase deploy               # Deploy everything
 /users/{userId}
   ├── bosses/{bossId}
   │   └── entries/{entryId}
+  └── chatThreads/{threadId}
+      └── messages/{messageId}
 ```
 
 **Types:** `User` (auth state with id/email) vs `UserProfile` (Firestore document with full profile data) - see [docs/authentication.md](./docs/authentication.md) and [docs/firestore-management.md](./docs/firestore-management.md)
@@ -78,6 +81,10 @@ firebase deploy               # Deploy everything
 **Entry types:**
 - `note` with subtypes: `note`, `interaction`, `feedback`, `achievement`, `challenge`, `other` - text-based timeline events
 - `fact` - single data points for tracking measurements over time
+
+**Chat:**
+- `chatThreads` - AI conversation sessions (OpenAI-compatible multimodal format)
+- `messages` - chat messages with roles: `user`, `assistant`, `system`
 
 ### Data Organization Principle
 
@@ -141,12 +148,18 @@ This project uses **Expo Development Build** for full native module support and 
 ```
 boss-app/
 ├── app/                    # Expo Router screens (file-based routing)
+│   └── chat.tsx           # AI chat screen
 ├── components/             # Reusable UI components
-├── services/               # Firebase services (auth, firestore, notifications)
+├── services/               # Firebase services (auth, firestore, notifications, chat)
+│   └── chat.service.ts    # Chat service (messages, AI response triggering)
 ├── types/                  # TypeScript type definitions
 ├── functions/              # Firebase Cloud Functions
+│   └── src/
+│       ├── chat.ts        # OpenAI integration (GPT-5)
+│       └── types/chat.types.ts
 ├── firestore/              # Database tooling
 │   ├── schemas/           # TypeScript schemas (not deployed)
+│   │   └── chat.schema.ts # Chat data schemas
 │   └── migrations/        # Data migration scripts
 ├── docs/                   # Documentation
 ├── scripts/                # Automation scripts

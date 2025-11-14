@@ -56,6 +56,15 @@ Simple naming rules for custom Amplitude events:
 - Event categories and properties usage
 - When and what to track
 
+### AI Chat Integration
+AI-powered chat feature with OpenAI GPT-5:
+- **Frontend:** `app/chat.tsx` - chat screen with typing indicator
+- **Service:** `services/chat.service.ts` - message management, AI response triggering
+- **Backend:** `functions/src/chat.ts` - Cloud Function with OpenAI API integration
+- **Schema:** `firestore/schemas/chat.schema.ts` - OpenAI-compatible multimodal format
+- **Types:** `types/index.ts` + `functions/src/types/chat.types.ts`
+- **Config:** Message history window (24h), model selection in `functions/src/constants.ts`
+
 ### [Magic Link Development](./magic-link-development.md)
 Development workflow for magic link authentication:
 - Testing magic links in iOS Simulator
@@ -114,6 +123,12 @@ docs/
 ├── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)
 └── user-flows/                     # User journey documentation
     └── facebook-attribution-user-flow.md
+
+Key files for AI Chat:
+├── app/chat.tsx                    # Chat UI
+├── services/chat.service.ts        # Chat service
+├── functions/src/chat.ts           # OpenAI Cloud Function
+└── firestore/schemas/chat.schema.ts # Chat data schema
 ```
 
 ---

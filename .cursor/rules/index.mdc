@@ -67,3 +67,12 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 ## Find Details In
 - **Tech stack & data model**: `README.md`
 - **Setup instructions**: `SETUP.md`
+
+### AI Chat Integration
+AI-powered chat feature with OpenAI GPT-5:
+- **Frontend:** `app/chat.tsx` - chat screen with typing indicator
+- **Service:** `services/chat.service.ts` - message management, AI response triggering
+- **Backend:** `functions/src/chat.ts` - Cloud Function with OpenAI API integration
+- **Schema:** `firestore/schemas/chat.schema.ts` - OpenAI-compatible multimodal format
+- **Types:** `types/index.ts` + `functions/src/types/chat.types.ts`
+- **Config:** Message history window (24h), model selection in `functions/src/constants.ts`
