@@ -364,21 +364,22 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       // 1. Main system prompt
       // 2. User context wrapped in <user-info> tags
       // 3. Recent messages (last 24 hours)
-      // 4. Reminder prompt
+      // 4. Date/time information
+      // 5. Reminder prompt
       
-      const systemMessage1: FirestoreChatMessage = {
+      const systemMessageMain: FirestoreChatMessage = {
         role: 'system',
         content: [{ type: 'text', text: mainPrompt }],
         timestamp: new Date().toISOString(),
       };
       
-      const systemMessage2: FirestoreChatMessage = {
+      const systemMessageUserData: FirestoreChatMessage = {
         role: 'system',
         content: [{ type: 'text', text: `<user-info>\n${userContext}\n</user-info>` }],
         timestamp: new Date().toISOString(),
       };
       
-      const systemMessage3: FirestoreChatMessage = {
+      const systemMessageReminder: FirestoreChatMessage = {
         role: 'system',
         content: [{ type: 'text', text: reminderPrompt }],
         timestamp: new Date().toISOString(),
@@ -412,7 +413,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         }
       }
       
-      const systemMessage4: FirestoreChatMessage = {
+      const systemMessageTimes: FirestoreChatMessage = {
         role: 'system',
         content: [{
           type: 'text',
@@ -422,11 +423,11 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       };
       
       const messagesForOpenAI: ChatCompletionMessageParam[] = [
-        toOpenAIMessage(systemMessage1),
-        toOpenAIMessage(systemMessage2),
+        toOpenAIMessage(systemMessageMain),
+        toOpenAIMessage(systemMessageUserData),
         ...recentMessages.map(toOpenAIMessage),
-        toOpenAIMessage(systemMessage3),
-        toOpenAIMessage(systemMessage4),
+        toOpenAIMessage(systemMessageTimes),
+        toOpenAIMessage(systemMessageReminder),
       ];
       
       logger.info('Calling OpenAI API', {
