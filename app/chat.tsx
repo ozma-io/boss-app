@@ -37,7 +37,7 @@ export default function ChatScreen() {
   const [paginationBatchSize, setPaginationBatchSize] = useState(50);
   
   // Typing indicator timeout management
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useFocusEffect(
     useCallback(() => {
