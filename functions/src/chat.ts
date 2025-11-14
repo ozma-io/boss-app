@@ -8,6 +8,7 @@ import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
 import { defineSecret } from 'firebase-functions/params';
 import { onCall } from 'firebase-functions/v2/https';
+import { observeOpenAI } from 'langfuse';
 import OpenAI from 'openai';
 import type { ChatCompletion } from 'openai/resources/chat';
 import { CHAT_MESSAGE_HISTORY_HOURS, CHAT_REMINDER_PROMPT, CHAT_SYSTEM_PROMPT, OPENAI_MODEL } from './constants';
@@ -23,6 +24,12 @@ import type {
  * Define the OpenAI API key secret
  */
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
+
+/**
+ * Define LangFuse secrets for tracing
+ */
+const langfusePublicKey = defineSecret('LANGFUSE_PUBLIC_KEY');
+const langfuseSecretKey = defineSecret('LANGFUSE_SECRET_KEY');
 
 /**
  * Logger utility (mimics client logger service for Cloud Functions)
@@ -248,15 +255,29 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
   {
     region: 'us-central1',
     invoker: 'private', // Requires authentication
-    secrets: [openaiApiKey], // Declare the secret
+    secrets: [openaiApiKey, langfusePublicKey, langfuseSecretKey], // Declare the secrets
   },
   async (request) => {
     const { userId, threadId, messageId } = request.data;
     
-    // Initialize OpenAI client with secret (trim to remove any whitespace)
-    const openai = new OpenAI({
-      apiKey: openaiApiKey.value().trim(),
-    });
+    // Initialize OpenAI client with LangFuse observability wrapper
+    const openai = observeOpenAI(
+      new OpenAI({
+        apiKey: openaiApiKey.value().trim(),
+      }),
+      {
+        generationName: 'chat-completion',
+        metadata: {
+          userId,
+          threadId,
+        },
+        clientInitParams: {
+          publicKey: langfusePublicKey.value().trim(),
+          secretKey: langfuseSecretKey.value().trim(),
+          baseUrl: 'https://us.cloud.langfuse.com',
+        },
+      }
+    );
     
     // Verify authentication
     if (!request.auth) {
@@ -450,6 +471,13 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         messageId: messageRef.id,
       });
       
+      // Flush LangFuse events to ensure they are sent
+      try {
+        await openai.flushAsync();
+      } catch (flushError) {
+        logger.warn('Failed to flush LangFuse events', { flushError });
+      }
+      
       return {
         success: true,
         messageId: messageRef.id,
@@ -472,6 +500,13 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         threadId,
         error,
       });
+      
+      // Flush LangFuse events even on error
+      try {
+        await openai.flushAsync();
+      } catch (flushError) {
+        logger.warn('Failed to flush LangFuse events on error', { flushError });
+      }
       
       // Throw user-friendly error
       throw new functions.https.HttpsError(
