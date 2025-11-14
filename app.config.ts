@@ -103,6 +103,14 @@ const config: ExpoConfig = {
     'expo-localization',
     'expo-web-browser',
     [
+      'expo-notifications',
+      {
+        icon: './assets/images/icon.png',
+        color: '#8BC34A',
+        sounds: [],
+      },
+    ],
+    [
       '@sentry/react-native/expo',
       {
         organization: SENTRY_ORG,
