@@ -100,6 +100,17 @@ Automatic web deployment on Vercel:
 
 ---
 
+## 🔧 Troubleshooting
+
+### [iOS Pod Install Issues](./troubleshooting-ios-pod-install.md)
+Solutions for common CocoaPods errors:
+- RCT-Folly dependency error with New Architecture
+- Prebuilt artifacts vs building from source
+- react-native-iap installation issues
+- New Architecture compatibility problems
+
+---
+
 ## 📁 Additional Documentation
 
 - **[scripts/README.md](../scripts/README.md)** - Automation scripts
@@ -132,6 +143,7 @@ docs/
 ├── magic-link-development.md       # Magic link development workflow
 ├── vercel-deployment.md            # Vercel web deployment
 ├── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)
+├── troubleshooting-ios-pod-install.md # iOS CocoaPods troubleshooting
 └── user-flows/                     # User journey documentation
     └── facebook-attribution-user-flow.md
 
