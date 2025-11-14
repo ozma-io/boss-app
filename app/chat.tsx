@@ -173,7 +173,7 @@ export default function ChatScreen() {
               {isTyping && (
                 <View style={styles.typingIndicatorContainer} testID="typing-indicator">
                   <View style={styles.typingIndicatorBubble}>
-                    <Text style={styles.typingIndicatorText}>Печатает...</Text>
+                    <Text style={styles.typingIndicatorText}>Typing...</Text>
                   </View>
                 </View>
               )}
