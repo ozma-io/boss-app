@@ -384,11 +384,39 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         timestamp: new Date().toISOString(),
       };
       
+      // Calculate time since last user message
+      const userMessages = recentMessages.filter((m) => m.role === 'user');
+      let timeSinceLastMessageText = '';
+      
+      if (userMessages.length > 0) {
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        const lastMessageTime = new Date(lastUserMessage.timestamp);
+        const currentTime = new Date(currentDateTimeUTC || new Date().toISOString());
+        const diffMs = currentTime.getTime() - lastMessageTime.getTime();
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        
+        // Only add time info if more than 30 minutes passed
+        if (diffMinutes > 30) {
+          const hours = Math.floor(diffMinutes / 60);
+          const days = Math.floor(hours / 24);
+          
+          if (days > 0) {
+            const remainingHours = hours % 24;
+            timeSinceLastMessageText = `Time since last user message: ${days} day${days > 1 ? 's' : ''}${remainingHours > 0 ? ` ${remainingHours} hour${remainingHours > 1 ? 's' : ''}` : ''}\n`;
+          } else if (hours > 0) {
+            const remainingMinutes = diffMinutes % 60;
+            timeSinceLastMessageText = `Time since last user message: ${hours} hour${hours > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}` : ''}\n`;
+          } else {
+            timeSinceLastMessageText = `Time since last user message: ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}\n`;
+          }
+        }
+      }
+      
       const systemMessage4: FirestoreChatMessage = {
         role: 'system',
         content: [{
           type: 'text',
-          text: `Current date and time (UTC): ${currentDateTimeUTC || 'not available'}\nCurrent date and time (user's timezone): ${currentDateTimeLocal || 'not available'}`,
+          text: `${timeSinceLastMessageText}Current date and time (UTC): ${currentDateTimeUTC || 'not available'}\nCurrent date and time (user's timezone): ${currentDateTimeLocal || 'not available'}`,
         }],
         timestamp: new Date().toISOString(),
       };
