@@ -39,13 +39,14 @@ Location: `firestore.rules`
 match /users/{userId} {
   allow read, write: if request.auth.uid == userId;
   
-  // All subcollections inherit the same rule
+  // Entries at user level
+  match /entries/{entryId} {
+    allow read, write: if request.auth.uid == userId;
+  }
+  
+  // Bosses subcollection
   match /bosses/{bossId} {
     allow read, write: if request.auth.uid == userId;
-    
-    match /entries/{entryId} {
-      allow read, write: if request.auth.uid == userId;
-    }
   }
 }
 ```
@@ -354,7 +355,7 @@ The Boss App uses two technical entry types:
 ```typescript
 import { addDoc, collection } from 'firebase/firestore';
 
-const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
+const entriesRef = collection(db, 'users', userId, 'entries');
 
 await addDoc(entriesRef, {
   type: 'note',
@@ -372,7 +373,7 @@ await addDoc(entriesRef, {
 ```typescript
 import { addDoc, collection } from 'firebase/firestore';
 
-const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
+const entriesRef = collection(db, 'users', userId, 'entries');
 
 await addDoc(entriesRef, {
   type: 'fact',
@@ -409,7 +410,7 @@ import { query, collection, where, orderBy, getDocs } from 'firebase/firestore';
 
 // Get all stress level assessments, most recent first
 const q = query(
-  collection(db, 'users', userId, 'bosses', bossId, 'entries'),
+  collection(db, 'users', userId, 'entries'),
   where('type', '==', 'fact'),
   where('factKey', '==', 'custom_stressLevel'),
   orderBy('timestamp', 'desc')

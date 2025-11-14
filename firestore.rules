@@ -73,6 +73,11 @@ service cloud.firestore {
       // Read and delete: owner only
       allow read, delete: if isOwner(userId);
       
+      // Entries subcollection (notes with subtypes, facts) - user level
+      match /entries/{entryId} {
+        allow read, write: if isOwner(userId);
+      }
+      
       // Bosses subcollection
       match /bosses/{bossId} {
         // Create: must have required fields
@@ -97,11 +102,6 @@ service cloud.firestore {
         
         // Read and delete: owner only
         allow read, delete: if isOwner(userId);
-        
-        // Entries subcollection (notes with subtypes, facts)
-        match /entries/{entryId} {
-          allow read, write: if isOwner(userId);
-        }
       }
       
       // Chat threads and messages subcollection

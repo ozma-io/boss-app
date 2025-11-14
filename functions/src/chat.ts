@@ -126,29 +126,24 @@ async function fetchUserContext(userId: string): Promise<string> {
   
   const bossesData: any[] = [];
   
-  // For each boss, fetch their timeline entries
+  // Collect all bosses (without entries nested inside)
   for (const bossDoc of bossesSnapshot.docs) {
     const bossData = { id: bossDoc.id, ...bossDoc.data() };
-    
-    // Fetch timeline entries for this boss
-    const entriesSnapshot = await db
-      .collection('users').doc(userId)
-      .collection('bosses').doc(bossDoc.id)
-      .collection('entries')
-      .orderBy('timestamp', 'desc')
-      .limit(50)
-      .get();
-    
-    const entries: any[] = [];
-    entriesSnapshot.forEach((entryDoc) => {
-      entries.push({ id: entryDoc.id, ...entryDoc.data() });
-    });
-    
-    bossesData.push({
-      ...bossData,
-      entries,
-    });
+    bossesData.push(bossData);
   }
+  
+  // Fetch all timeline entries from user level
+  const entriesSnapshot = await db
+    .collection('users').doc(userId)
+    .collection('entries')
+    .orderBy('timestamp', 'desc')
+    .limit(50)
+    .get();
+  
+  const entries: any[] = [];
+  entriesSnapshot.forEach((entryDoc) => {
+    entries.push({ id: entryDoc.id, ...entryDoc.data() });
+  });
   
   // Build context string
   const contextParts: string[] = [];
@@ -195,20 +190,20 @@ async function fetchUserContext(userId: string): Promise<string> {
           }
         }
       }
-      
-      // Add timeline entries
-      if (boss.entries && boss.entries.length > 0) {
-        contextParts.push('\n#### Timeline Entries (Recent)');
-        for (const entry of boss.entries) {
-          const entryType = entry.type === 'note' ? `Note (${entry.subtype})` : `Fact (${entry.factKey})`;
-          contextParts.push(`- [${entry.timestamp}] ${entryType}: ${entry.title}`);
-          if (entry.content) {
-            contextParts.push(`  Content: ${entry.content}`);
-          }
-          if (entry.type === 'fact' && entry.value !== undefined) {
-            contextParts.push(`  Value: ${entry.value}`);
-          }
-        }
+    }
+  }
+  
+  // Add timeline entries
+  if (entries.length > 0) {
+    contextParts.push('\n## Timeline Entries (Recent)');
+    for (const entry of entries) {
+      const entryType = entry.type === 'note' ? `Note (${entry.subtype})` : `Fact (${entry.factKey})`;
+      contextParts.push(`- [${entry.timestamp}] ${entryType}: ${entry.title}`);
+      if (entry.content) {
+        contextParts.push(`  Content: ${entry.content}`);
+      }
+      if (entry.type === 'fact' && entry.value !== undefined) {
+        contextParts.push(`  Value: ${entry.value}`);
       }
     }
   }

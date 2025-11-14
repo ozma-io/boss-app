@@ -23,11 +23,11 @@ export default function TimelineScreen() {
 
   const { user } = useAuth();
   const { boss, loading: bossLoading } = useBoss();
-  const { entries, loading: entriesLoading, error } = useTimelineEntries(boss?.id);
+  const { entries, loading: entriesLoading, error } = useTimelineEntries();
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [entryToEdit, setEntryToEdit] = useState<TimelineEntry | undefined>(undefined);
 
-  const loading = bossLoading || entriesLoading;
+  const loading = entriesLoading;
 
   useFocusEffect(
     useCallback(() => {
@@ -55,14 +55,14 @@ export default function TimelineScreen() {
   };
 
   const handleAddEntry = async (entryData: any): Promise<void> => {
-    if (!user || !boss) {
+    if (!user) {
       showAlert('Error', 'Unable to add entry. Please try again.');
       return;
     }
 
     try {
       if (entryData.type === 'note') {
-        await createNoteEntry(user.id, boss.id, {
+        await createNoteEntry(user.id, {
           type: 'note',
           subtype: entryData.subtype,
           title: entryData.title,
@@ -74,16 +74,16 @@ export default function TimelineScreen() {
         trackAmplitudeEvent('timeline_entry_created', {
           entryType: 'note',
           subtype: entryData.subtype,
-          bossId: boss.id,
+          bossId: boss?.id,
         });
 
         logger.info('Timeline note entry created', {
           feature: 'TimelineScreen',
-          bossId: boss.id,
+          bossId: boss?.id,
           subtype: entryData.subtype,
         });
       } else if (entryData.type === 'fact') {
-        await createFactEntry(user.id, boss.id, {
+        await createFactEntry(user.id, {
           type: 'fact',
           title: entryData.title,
           content: entryData.content,
@@ -96,19 +96,19 @@ export default function TimelineScreen() {
         trackAmplitudeEvent('timeline_entry_created', {
           entryType: 'fact',
           factKey: entryData.factKey,
-          bossId: boss.id,
+          bossId: boss?.id,
         });
 
         logger.info('Timeline fact entry created', {
           feature: 'TimelineScreen',
-          bossId: boss.id,
+          bossId: boss?.id,
           factKey: entryData.factKey,
         });
       }
     } catch (err) {
       logger.error('Failed to create timeline entry', {
         feature: 'TimelineScreen',
-        bossId: boss.id,
+        bossId: boss?.id,
         error: err instanceof Error ? err : new Error(String(err)),
       });
       throw err;
@@ -116,28 +116,28 @@ export default function TimelineScreen() {
   };
 
   const handleUpdateEntry = async (entryId: string, updates: Partial<TimelineEntry>): Promise<void> => {
-    if (!user || !boss) {
+    if (!user) {
       showAlert('Error', 'Unable to update entry. Please try again.');
       return;
     }
 
     try {
-      await updateTimelineEntry(user.id, boss.id, entryId, updates);
+      await updateTimelineEntry(user.id, entryId, updates);
 
       trackAmplitudeEvent('timeline_entry_updated', {
         entryId,
-        bossId: boss.id,
+        bossId: boss?.id,
       });
 
       logger.info('Timeline entry updated', {
         feature: 'TimelineScreen',
-        bossId: boss.id,
+        bossId: boss?.id,
         entryId,
       });
     } catch (err) {
       logger.error('Failed to update timeline entry', {
         feature: 'TimelineScreen',
-        bossId: boss.id,
+        bossId: boss?.id,
         entryId,
         error: err instanceof Error ? err : new Error(String(err)),
       });
@@ -146,7 +146,7 @@ export default function TimelineScreen() {
   };
 
   const handleDeleteEntry = (entryId: string): void => {
-    if (!user || !boss) return;
+    if (!user) return;
 
     showAlert(
       'Delete Entry',
@@ -158,22 +158,22 @@ export default function TimelineScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteTimelineEntry(user.id, boss.id, entryId);
+              await deleteTimelineEntry(user.id, entryId);
 
               trackAmplitudeEvent('timeline_entry_deleted', {
                 entryId,
-                bossId: boss.id,
+                bossId: boss?.id,
               });
 
               logger.info('Timeline entry deleted', {
                 feature: 'TimelineScreen',
-                bossId: boss.id,
+                bossId: boss?.id,
                 entryId,
               });
             } catch (err) {
               logger.error('Failed to delete timeline entry', {
                 feature: 'TimelineScreen',
-                bossId: boss.id,
+                bossId: boss?.id,
                 entryId,
                 error: err instanceof Error ? err : new Error(String(err)),
               });

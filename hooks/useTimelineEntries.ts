@@ -7,19 +7,17 @@ import { useEffect, useState } from 'react';
 /**
  * Hook for managing timeline entries with real-time updates
  * 
- * Loads timeline entries for a specific boss and subscribes
+ * Loads all timeline entries for the user and subscribes
  * to real-time changes from Firestore. Automatically handles
  * loading states and errors. Entries are returned sorted by
  * timestamp (newest first).
  * 
- * @param bossId - Boss ID to load entries for (optional, waits if undefined)
  * @returns Timeline entries, loading state, and error
  * 
  * @example
  * ```tsx
  * function TimelineScreen() {
- *   const { boss } = useBoss();
- *   const { entries, loading, error } = useTimelineEntries(boss?.id);
+ *   const { entries, loading, error } = useTimelineEntries();
  *   
  *   if (loading) return <LoadingSpinner />;
  *   if (error) return <ErrorMessage message={error} />;
@@ -29,7 +27,7 @@ import { useEffect, useState } from 'react';
  * }
  * ```
  */
-export function useTimelineEntries(bossId: string | undefined) {
+export function useTimelineEntries() {
   const { user } = useAuth();
   const [entries, setEntries] = useState<TimelineEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -43,20 +41,13 @@ export function useTimelineEntries(bossId: string | undefined) {
       return;
     }
 
-    // If no bossId yet, keep loading (boss is being created/loaded)
-    if (!bossId) {
-      setLoading(true);
-      return;
-    }
-
-    // User and bossId are available, subscribe to entries
+    // User is available, subscribe to entries
     setLoading(true);
     setError(null);
 
     // Subscribe to real-time updates
     const unsubscribe = subscribeToTimelineEntries(
       user.id,
-      bossId,
       (updatedEntries) => {
         setEntries(updatedEntries);
         setLoading(false);
@@ -64,7 +55,7 @@ export function useTimelineEntries(bossId: string | undefined) {
         // No explicit error set here as subscribeToTimelineEntries
         // already handles errors by returning empty array
         if (updatedEntries.length === 0) {
-          logger.info('No timeline entries found', { feature: 'useTimelineEntries', userId: user.id, bossId });
+          logger.info('No timeline entries found', { feature: 'useTimelineEntries', userId: user.id });
         }
       }
     );
@@ -73,7 +64,7 @@ export function useTimelineEntries(bossId: string | undefined) {
     return () => {
       unsubscribe();
     };
-  }, [user?.id, bossId]);
+  }, [user?.id]);
 
   return {
     entries,

@@ -1,7 +1,7 @@
 /**
  * Timeline Entry Schemas
  * 
- * Path: /users/{userId}/bosses/{bossId}/entries/{entryId}
+ * Path: /users/{userId}/entries/{entryId}
  * 
  * Entries represent different types of timeline events:
  * - note: Text-based entries with subtypes (note, interaction, feedback, achievement, challenge, other)

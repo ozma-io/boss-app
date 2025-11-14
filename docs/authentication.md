@@ -211,7 +211,7 @@ firebase deploy --only firestore:indexes
 ## Security
 
 **User Data Scoping:**
-- All data at `/users/{userId}/bosses/{bossId}/entries/{entryId}`
+- All data at `/users/{userId}/entries/{entryId}`
 - Firestore rules enforce: `request.auth.uid === userId`
 
 **Environment Variables (`.env`):**

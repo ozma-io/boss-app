@@ -9,6 +9,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   onSnapshot,
   orderBy,
@@ -20,23 +21,21 @@ import { logger } from './logger.service';
 /**
  * Subscribe to real-time updates for timeline entries
  * 
- * Loads all timeline entries for a specific boss and listens
+ * Loads all timeline entries for the user and listens
  * for real-time changes. Entries are ordered by timestamp
  * (newest first).
  * 
  * @param userId - User ID
- * @param bossId - Boss ID
  * @param callback - Callback function called with entries array on updates
  * @returns Unsubscribe function to stop listening to updates
  */
 export function subscribeToTimelineEntries(
   userId: string,
-  bossId: string,
   callback: (entries: TimelineEntry[]) => void
 ): Unsubscribe {
-  logger.debug('Subscribing to timeline entries', { feature: 'TimelineService', userId, bossId });
+  logger.debug('Subscribing to timeline entries', { feature: 'TimelineService', userId });
   
-  const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
+  const entriesRef = collection(db, 'users', userId, 'entries');
   const q = query(entriesRef, orderBy('timestamp', 'desc'));
   
   return onSnapshot(
@@ -50,11 +49,11 @@ export function subscribeToTimelineEntries(
         } as TimelineEntry);
       });
       
-      logger.debug('Timeline entries updated', { feature: 'TimelineService', bossId, count: entries.length });
+      logger.debug('Timeline entries updated', { feature: 'TimelineService', userId, count: entries.length });
       callback(entries);
     },
     (error) => {
-      logger.error('Error in timeline subscription', { feature: 'TimelineService', bossId, error });
+      logger.error('Error in timeline subscription', { feature: 'TimelineService', userId, error });
       callback([]);
     }
   );
@@ -64,19 +63,17 @@ export function subscribeToTimelineEntries(
  * Create a note entry in the timeline
  * 
  * @param userId - User ID
- * @param bossId - Boss ID
  * @param data - Note entry data (without id)
  * @returns Created entry ID
  */
 export async function createNoteEntry(
   userId: string,
-  bossId: string,
   data: Omit<NoteEntry, 'id'>
 ): Promise<string> {
   try {
-    logger.debug('Creating note entry', { feature: 'TimelineService', userId, bossId, subtype: data.subtype });
+    logger.debug('Creating note entry', { feature: 'TimelineService', userId, subtype: data.subtype });
     
-    const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
+    const entriesRef = collection(db, 'users', userId, 'entries');
     
     // TODO: Remove null filtering when icon picker is implemented
     // Filter out null/undefined values to avoid Firestore errors
@@ -96,11 +93,11 @@ export async function createNoteEntry(
     
     const docRef = await addDoc(entriesRef, entryData);
     
-    logger.info('Successfully created note entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id, subtype: data.subtype });
+    logger.info('Successfully created note entry', { feature: 'TimelineService', userId, entryId: docRef.id, subtype: data.subtype });
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    logger.error('Error creating note entry', { feature: 'TimelineService', userId, bossId, error: err });
+    logger.error('Error creating note entry', { feature: 'TimelineService', userId, error: err });
     throw error;
   }
 }
@@ -109,19 +106,17 @@ export async function createNoteEntry(
  * Create a fact entry in the timeline
  * 
  * @param userId - User ID
- * @param bossId - Boss ID
  * @param data - Fact entry data (without id)
  * @returns Created entry ID
  */
 export async function createFactEntry(
   userId: string,
-  bossId: string,
   data: Omit<FactEntry, 'id'>
 ): Promise<string> {
   try {
-    logger.debug('Creating fact entry', { feature: 'TimelineService', userId, bossId, factKey: data.factKey });
+    logger.debug('Creating fact entry', { feature: 'TimelineService', userId, factKey: data.factKey });
     
-    const entriesRef = collection(db, 'users', userId, 'bosses', bossId, 'entries');
+    const entriesRef = collection(db, 'users', userId, 'entries');
     
     // TODO: Remove null filtering when icon picker is implemented
     // Filter out null/undefined values to avoid Firestore errors
@@ -141,11 +136,11 @@ export async function createFactEntry(
     
     const docRef = await addDoc(entriesRef, entryData);
     
-    logger.info('Successfully created fact entry', { feature: 'TimelineService', userId, bossId, entryId: docRef.id, factKey: data.factKey });
+    logger.info('Successfully created fact entry', { feature: 'TimelineService', userId, entryId: docRef.id, factKey: data.factKey });
     return docRef.id;
   } catch (error) {
     const err = error as Error;
-    logger.error('Error creating fact entry', { feature: 'TimelineService', userId, bossId, error: err });
+    logger.error('Error creating fact entry', { feature: 'TimelineService', userId, error: err });
     throw error;
   }
 }
@@ -154,26 +149,40 @@ export async function createFactEntry(
  * Update a timeline entry
  * 
  * @param userId - User ID
- * @param bossId - Boss ID
  * @param entryId - Entry ID to update
  * @param updates - Partial entry data to update
  */
 export async function updateTimelineEntry(
   userId: string,
-  bossId: string,
   entryId: string,
   updates: Partial<Omit<TimelineEntry, 'id' | 'type'>>
 ): Promise<void> {
   try {
-    logger.debug('Updating timeline entry', { feature: 'TimelineService', userId, bossId, entryId });
+    logger.debug('Updating timeline entry', { feature: 'TimelineService', userId, entryId });
     
-    const entryRef = doc(db, 'users', userId, 'bosses', bossId, 'entries', entryId);
-    await updateDoc(entryRef, updates);
+    // Filter out undefined values and convert null to deleteField()
+    const cleanUpdates: any = {};
     
-    logger.info('Successfully updated timeline entry', { feature: 'TimelineService', userId, bossId, entryId });
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === undefined) {
+        // Skip undefined values - Firestore doesn't accept them
+        continue;
+      } else if (value === null) {
+        // Convert null to deleteField() - semantic meaning is to remove the field
+        cleanUpdates[key] = deleteField();
+      } else {
+        // All other values (including empty strings) are valid
+        cleanUpdates[key] = value;
+      }
+    }
+    
+    const entryRef = doc(db, 'users', userId, 'entries', entryId);
+    await updateDoc(entryRef, cleanUpdates);
+    
+    logger.info('Successfully updated timeline entry', { feature: 'TimelineService', userId, entryId });
   } catch (error) {
     const err = error as Error;
-    logger.error('Error updating timeline entry', { feature: 'TimelineService', userId, bossId, entryId, error: err });
+    logger.error('Error updating timeline entry', { feature: 'TimelineService', userId, entryId, error: err });
     throw error;
   }
 }
@@ -182,24 +191,22 @@ export async function updateTimelineEntry(
  * Delete a timeline entry
  * 
  * @param userId - User ID
- * @param bossId - Boss ID
  * @param entryId - Entry ID to delete
  */
 export async function deleteTimelineEntry(
   userId: string,
-  bossId: string,
   entryId: string
 ): Promise<void> {
   try {
-    logger.debug('Deleting timeline entry', { feature: 'TimelineService', userId, bossId, entryId });
+    logger.debug('Deleting timeline entry', { feature: 'TimelineService', userId, entryId });
     
-    const entryRef = doc(db, 'users', userId, 'bosses', bossId, 'entries', entryId);
+    const entryRef = doc(db, 'users', userId, 'entries', entryId);
     await deleteDoc(entryRef);
     
-    logger.info('Successfully deleted timeline entry', { feature: 'TimelineService', userId, bossId, entryId });
+    logger.info('Successfully deleted timeline entry', { feature: 'TimelineService', userId, entryId });
   } catch (error) {
     const err = error as Error;
-    logger.error('Error deleting timeline entry', { feature: 'TimelineService', userId, bossId, entryId, error: err });
+    logger.error('Error deleting timeline entry', { feature: 'TimelineService', userId, entryId, error: err });
     throw error;
   }
 }
