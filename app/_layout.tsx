@@ -17,6 +17,7 @@ import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import 'react-native-reanimated';
@@ -84,6 +85,28 @@ export default function RootLayout() {
 
         // Initialize Amplitude SDK (works on all platforms)
         await initializeAmplitude();
+
+        // Setup Android notification handler and channel
+        if (Platform.OS === 'android') {
+          // Set notification handler
+          Notifications.setNotificationHandler({
+            handleNotification: async () => ({
+              shouldShowAlert: true,
+              shouldPlaySound: true,
+              shouldSetBadge: true,
+            }),
+          });
+          
+          // Create default notification channel (required for Android 13+ permission dialog)
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'Default Notifications',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#8BC34A',
+          });
+
+          logger.info('Android notification handler and channel initialized', { feature: 'App' });
+        }
 
         // Check if this is the first launch
         const firstLaunch = await isFirstLaunch();

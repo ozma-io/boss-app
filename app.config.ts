@@ -60,6 +60,10 @@ const config: ExpoConfig = {
     package: 'com.ozmaio.bossapp',
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
+    permissions: [
+      'android.permission.POST_NOTIFICATIONS',
+      'android.permission.RECEIVE_BOOT_COMPLETED',
+    ],
     intentFilters: [
       {
         action: 'VIEW',
