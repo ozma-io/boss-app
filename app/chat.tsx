@@ -11,6 +11,7 @@ import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Only import on native platforms
 let Notifications: any = null;
@@ -19,6 +20,7 @@ if (Platform.OS !== 'web') {
 }
 
 export default function ChatScreen() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { sessionId } = useSession();
   const flatListRef = useRef<FlatList>(null);
@@ -290,7 +292,7 @@ export default function ChatScreen() {
         />
       )}
 
-      <View style={styles.inputContainer} testID="input-container">
+      <View style={[styles.inputContainer, { paddingBottom: 12 + insets.bottom }]} testID="input-container">
         <TextInput
           style={styles.input}
           placeholder="Lorem ipsum"
