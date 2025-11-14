@@ -1,4 +1,5 @@
 import { app } from '@/constants/firebase.config';
+import { DEFAULT_SUBSCRIPTION_PLANS } from '@/constants/subscriptionPlans';
 import { SubscriptionPlanConfig } from '@/types';
 import { fetchAndActivate, getRemoteConfig, getValue } from 'firebase/remote-config';
 import { logger } from './logger.service';
@@ -25,7 +26,7 @@ export async function initRemoteConfig(): Promise<void> {
 
 /**
  * Fetch subscription plans from Remote Config
- * Throws error if Remote Config unavailable or parsing fails
+ * Falls back to DEFAULT_SUBSCRIPTION_PLANS if Remote Config unavailable or parsing fails
  */
 export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]> {
   try {
@@ -38,8 +39,8 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     
     if (!plansJson) {
       const error = new Error('No subscription_plans parameter found in Remote Config');
-      logger.error('No subscription_plans parameter found', { feature: 'RemoteConfig', error });
-      throw error;
+      logger.error('No subscription_plans parameter found, using fallback constants', { feature: 'RemoteConfig', error });
+      return DEFAULT_SUBSCRIPTION_PLANS.filter(plan => plan.enabled);
     }
     
     // Parse JSON
@@ -48,15 +49,15 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
     // Validate structure
     if (!plansObject || typeof plansObject !== 'object') {
       const error = new Error('Invalid subscription plans structure in Remote Config');
-      logger.error('Invalid subscription plans structure', { feature: 'RemoteConfig', error });
-      throw error;
+      logger.error('Invalid subscription plans structure, using fallback constants', { feature: 'RemoteConfig', error });
+      return DEFAULT_SUBSCRIPTION_PLANS.filter(plan => plan.enabled);
     }
     
     logger.info('Successfully loaded subscription plans from Remote Config', { feature: 'RemoteConfig' });
     return flattenPlans(plansObject);
   } catch (error) {
-    logger.error('Error fetching subscription plans', { feature: 'RemoteConfig', error });
-    throw error;
+    logger.error('Error fetching subscription plans, using fallback constants', { feature: 'RemoteConfig', error });
+    return DEFAULT_SUBSCRIPTION_PLANS.filter(plan => plan.enabled);
   }
 }
 

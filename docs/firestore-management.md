@@ -687,11 +687,9 @@ The Boss App uses a scalable subscription system that supports multiple tiers an
 
 ### Current Plans
 
-All plans are for the 'basic' tier:
-- **Monthly**: $19/month
-- **Quarterly**: $53/3 months (save $4)
-- **Semiannual**: $99/6 months (save $15, 7 days trial)
-- **Annual**: $180/year (save $48, 7 days trial)
+All plans are for the 'basic' tier: Monthly, Quarterly, Semiannual, and Annual.
+
+> **Note:** For current pricing, billing periods, trial details, savings, and Product IDs, see `constants/subscriptionPlans.ts` or `remoteconfig.template.json`
 
 ### User Subscription Schema
 

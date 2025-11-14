@@ -48,7 +48,12 @@ export default function SubscriptionScreen() {
       // Only show Basic tier plans for now
       const basicPlans = fetchedPlans.filter(plan => plan.tier === 'basic');
       setPlans(basicPlans);
+      
+      // Note: fetchSubscriptionPlans() now includes fallback to DEFAULT_SUBSCRIPTION_PLANS
+      // so it will always return plans (either from Firebase or from constants)
     } catch (error) {
+      // This catch block should rarely execute now since fetchSubscriptionPlans() 
+      // falls back to constants instead of throwing
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Failed to load subscription plans', { feature: 'SubscriptionScreen', error: error instanceof Error ? error : new Error(errorMessage) });
       
