@@ -20,6 +20,8 @@
     "@intercom/intercom-react-native": "^9.3.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "^8.5.0",
+    "@react-native-firebase/app": "^23.5.0",
+    "@react-native-firebase/remote-config": "^23.5.0",
     "@react-navigation/native": "^7.1.8",
     "@sentry/cli": "^2.58.1",
     "@sentry/react-native": "^7.6.0",
