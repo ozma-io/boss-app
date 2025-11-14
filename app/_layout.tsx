@@ -216,7 +216,7 @@ function RootLayoutNav() {
     const inNotificationOnboarding = segments[0] === 'notification-onboarding';
     const inTrackingOnboarding = segments[0] === 'tracking-onboarding';
     const inTabs = segments[0] === '(tabs)';
-    const inRootScreen = ['personal-info', 'subscription', 'support', 'chat', 'entry-details'].includes(segments[0] as string);
+    const inRootScreen = ['personal-info', 'subscription', 'support', 'chat'].includes(segments[0] as string);
     
     // Determine where the user should be
     let targetPath: string | null = null;
@@ -352,26 +352,6 @@ function RootLayoutNav() {
             headerTitleAlign: 'center',
             headerStyle: {
               backgroundColor: '#F5F1E8',
-            },
-            headerTintColor: '#000',
-            headerTitleStyle: {
-              color: '#000',
-              fontSize: 16,
-              fontFamily: 'Manrope-Regular',
-            },
-            headerLeft: () => <HeaderBackButton />,
-          }} 
-        />
-        <Stack.Screen 
-          name="entry-details" 
-          options={{ 
-            headerShown: true, 
-            title: 'Entry Details',
-            headerBackTitle: '',
-            headerShadowVisible: false,
-            headerTitleAlign: 'center',
-            headerStyle: {
-              backgroundColor: '#FAF8F0',
             },
             headerTintColor: '#000',
             headerTitleStyle: {
