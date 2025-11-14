@@ -64,6 +64,7 @@ AI-powered chat feature with OpenAI GPT-5:
 - **Schema:** `firestore/schemas/chat.schema.ts` - OpenAI-compatible multimodal format
 - **Types:** `types/index.ts` + `functions/src/types/chat.types.ts`
 - **Config:** Message history window (24h), model selection in `functions/src/constants.ts`
+- **Unread Counter:** Firestore Trigger auto-increments `unreadCount` on AI messages, `FloatingChatButton` shows iOS-style badge, app icon badge syncs, `markChatAsRead()` resets on screen open
 
 ### [Magic Link Development](./magic-link-development.md)
 Development workflow for magic link authentication:

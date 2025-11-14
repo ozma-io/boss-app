@@ -146,6 +146,12 @@ export interface ChatThread {
   messageCount: number;
   assistantIsTyping: boolean;
   currentGenerationId?: string;
+  
+  // Unread message tracking
+  unreadCount: number;
+  lastReadAt: string | null;
+  lastMessageAt: string | null;
+  lastMessageRole: MessageRole | null;
 }
 
 export type MessageRole = 'user' | 'assistant' | 'system';

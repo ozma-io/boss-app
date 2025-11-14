@@ -1,6 +1,8 @@
+import { ChatBadge } from '@/components/ChatBadge';
 import { ChatIcon } from '@/components/icons/ChatIcon';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
 import { router } from 'expo-router';
-import { StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 
 interface FloatingChatButtonProps {
   style?: ViewStyle;
@@ -8,6 +10,8 @@ interface FloatingChatButtonProps {
 }
 
 export function FloatingChatButton({ style, testID = 'chat-button' }: FloatingChatButtonProps) {
+  const unreadCount = useUnreadCount();
+  
   const handleOpenChat = (): void => {
     router.push('/chat');
   };
@@ -19,7 +23,10 @@ export function FloatingChatButton({ style, testID = 'chat-button' }: FloatingCh
       activeOpacity={0.8}
       testID={testID}
     >
-      <ChatIcon size={28} color="white" testID="chat-icon" />
+      <View>
+        <ChatIcon size={28} color="white" testID="chat-icon" />
+        <ChatBadge count={unreadCount} testID="chat-button-badge" />
+      </View>
     </TouchableOpacity>
   );
 }

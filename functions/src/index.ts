@@ -15,7 +15,7 @@ import { onCall } from 'firebase-functions/v2/https';
 
 admin.initializeApp();
 
-export { generateChatResponse } from './chat';
+export { generateChatResponse, onChatMessageCreated } from './chat';
 export { sendFacebookConversionEvent } from './facebook';
 export { getIntercomJwt } from './intercom';
 

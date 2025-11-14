@@ -33,6 +33,12 @@ export interface ChatThreadSchema {
   messageCount: number; // Total number of messages in thread
   assistantIsTyping: boolean; // Whether AI is currently generating a response
   currentGenerationId?: string; // UUID of current response generation (for cancellation)
+  
+  // Unread message tracking
+  unreadCount: number; // Number of unread messages from assistant
+  lastReadAt: string | null; // ISO 8601 timestamp of last time user opened chat
+  lastMessageAt: string | null; // ISO 8601 timestamp of last message
+  lastMessageRole: MessageRole | null; // Role of last message sender
 }
 
 export type MessageRole = 'user' | 'assistant' | 'system';
@@ -63,6 +69,10 @@ export interface ChatMessageSchema {
 export const ChatThreadDefaults: Partial<ChatThreadSchema> = {
   messageCount: 0,
   assistantIsTyping: false,
+  unreadCount: 0,
+  lastReadAt: null,
+  lastMessageAt: null,
+  lastMessageRole: null,
 };
 
 /**

@@ -75,6 +75,10 @@ export async function getOrCreateThread(userId: string): Promise<string> {
           updatedAt: now,
           messageCount: 0,
           assistantIsTyping: false,
+          unreadCount: 0,
+          lastReadAt: null,
+          lastMessageAt: null,
+          lastMessageRole: null,
         };
         
         await setDoc(threadRef, newThread);
@@ -326,6 +330,49 @@ export async function generateAIResponse(
       messageId,
       error: err,
     });
+    throw error;
+  }
+}
+
+/**
+ * Mark chat as read by resetting unread counter
+ * Called when user opens the chat screen
+ * 
+ * @param userId - User ID
+ * @param threadId - Thread ID
+ */
+export async function markChatAsRead(
+  userId: string,
+  threadId: string
+): Promise<void> {
+  logger.debug('Marking chat as read', { feature: 'ChatService', userId, threadId });
+  
+  try {
+    await retryWithBackoff(async () => {
+      const threadRef = doc(db, 'users', userId, 'chatThreads', threadId);
+      
+      await updateDoc(threadRef, {
+        unreadCount: 0,
+        lastReadAt: new Date().toISOString(),
+      });
+      
+      logger.info('Chat marked as read', { feature: 'ChatService', userId, threadId });
+    }, 3, 500);
+  } catch (error) {
+    const err = error as Error;
+    const isOffline = isFirebaseOfflineError(err);
+    
+    if (isOffline) {
+      logger.warn('Failed to mark chat as read (offline)', {
+        feature: 'ChatService',
+        userId,
+        threadId,
+        retries: 3,
+      });
+    } else {
+      logger.error('Error marking chat as read', { feature: 'ChatService', userId, threadId, error: err });
+    }
+    
     throw error;
   }
 }

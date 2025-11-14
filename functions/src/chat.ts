@@ -7,6 +7,7 @@
 import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
 import { defineSecret } from 'firebase-functions/params';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { onCall } from 'firebase-functions/v2/https';
 import { observeOpenAI } from 'langfuse';
 import OpenAI from 'openai';
@@ -514,6 +515,146 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         'internal',
         'Failed to generate chat response. Please try again.'
       );
+    }
+  }
+);
+
+/**
+ * Firestore Trigger: Update unread count when new assistant message is created
+ * 
+ * Triggers on any new message creation and:
+ * 1. Checks if message is from assistant
+ * 2. Increments unreadCount in thread
+ * 3. Updates lastMessageAt and lastMessageRole
+ * 
+ * This handles all scenarios:
+ * - AI responses from generateChatResponse
+ * - Manual message additions in Firebase Console
+ * - Background processes adding messages
+ */
+export const onChatMessageCreated = onDocumentCreated(
+  {
+    document: 'users/{userId}/chatThreads/{threadId}/messages/{messageId}',
+    region: 'us-central1',
+  },
+  async (event) => {
+    const messageData = event.data?.data() as FirestoreChatMessage | undefined;
+    
+    if (!messageData) {
+      logger.warn('No message data in trigger', { eventId: event.id });
+      return;
+    }
+    
+    const { userId, threadId, messageId } = event.params;
+    
+    logger.debug('Message created trigger fired', {
+      userId,
+      threadId,
+      messageId,
+      role: messageData.role,
+    });
+    
+    // Only process assistant messages for unread counter
+    if (messageData.role !== 'assistant') {
+      logger.debug('Skipping non-assistant message', {
+        userId,
+        threadId,
+        messageId,
+        role: messageData.role,
+      });
+      return;
+    }
+    
+    const db = admin.firestore();
+    const threadRef = db.collection('users').doc(userId)
+      .collection('chatThreads').doc(threadId);
+    
+    try {
+      // Update thread with unread count and last message info
+      await threadRef.update({
+        unreadCount: admin.firestore.FieldValue.increment(1),
+        lastMessageAt: messageData.timestamp,
+        lastMessageRole: messageData.role,
+      });
+      
+      logger.info('Updated unread count for assistant message', {
+        userId,
+        threadId,
+        messageId,
+      });
+      
+      // Send push notification if user has FCM token
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      const fcmToken = userData?.fcmToken;
+      
+      if (fcmToken) {
+        // Extract text from message content
+        const messageText = messageData.content
+          .filter((item: ContentItem) => item.type === 'text' && item.text)
+          .map((item: ContentItem) => item.text)
+          .join(' ');
+        
+        // Truncate message for notification
+        const preview = messageText.length > 100 
+          ? messageText.substring(0, 97) + '...' 
+          : messageText;
+        
+        try {
+          await admin.messaging().send({
+            token: fcmToken,
+            notification: {
+              title: 'New message from AI Assistant',
+              body: preview,
+            },
+            data: {
+              type: 'chat_message',
+              threadId: threadId,
+              messageId: messageId,
+            },
+            apns: {
+              payload: {
+                aps: {
+                  badge: 1, // Will be updated by client with actual count
+                  sound: 'default',
+                },
+              },
+            },
+            android: {
+              notification: {
+                channelId: 'chat_messages',
+                priority: 'high',
+              },
+            },
+          });
+          
+          logger.info('Push notification sent', {
+            userId,
+            threadId,
+            messageId,
+          });
+        } catch (notificationError) {
+          logger.error('Failed to send push notification', {
+            userId,
+            threadId,
+            messageId,
+            error: notificationError,
+          });
+        }
+      } else {
+        logger.debug('No FCM token for user, skipping push notification', {
+          userId,
+          threadId,
+          messageId,
+        });
+      }
+    } catch (error) {
+      logger.error('Failed to update unread count', {
+        userId,
+        threadId,
+        messageId,
+        error,
+      });
     }
   }
 );

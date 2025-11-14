@@ -4,13 +4,19 @@ import { db } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSession } from '@/contexts/SessionContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { extractTextFromContent, generateAIResponse, getOrCreateThread, sendMessage, subscribeToMessages } from '@/services/chat.service';
+import { extractTextFromContent, generateAIResponse, getOrCreateThread, markChatAsRead, sendMessage, subscribeToMessages } from '@/services/chat.service';
 import { logger } from '@/services/logger.service';
 import { ChatMessage, ChatThread } from '@/types';
 import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+// Only import on native platforms
+let Notifications: any = null;
+if (Platform.OS !== 'web') {
+  Notifications = require('expo-notifications');
+}
 
 export default function ChatScreen() {
   const { user } = useAuth();
@@ -25,7 +31,21 @@ export default function ChatScreen() {
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('chat_screen_viewed');
-    }, [])
+      
+      // Mark chat as read when user opens the screen
+      if (user && threadId) {
+        markChatAsRead(user.id, threadId).catch((error) => {
+          logger.error('Failed to mark chat as read', { feature: 'ChatScreen', error });
+        });
+        
+        // Clear app icon badge
+        if (Platform.OS !== 'web' && Notifications) {
+          Notifications.setBadgeCountAsync(0).catch((error: Error) => {
+            logger.error('Failed to clear badge count', { feature: 'ChatScreen', error });
+          });
+        }
+      }
+    }, [user, threadId])
   );
 
   // Initialize thread on mount
