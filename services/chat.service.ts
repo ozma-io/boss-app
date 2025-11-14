@@ -2,16 +2,16 @@ import { db, functions } from '@/constants/firebase.config';
 import { ChatMessage, ChatThread, ContentItem, Unsubscribe } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
-    addDoc,
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    onSnapshot,
-    orderBy,
-    query,
-    setDoc,
-    updateDoc,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  orderBy,
+  query,
+  setDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { logger } from './logger.service';
@@ -278,22 +278,24 @@ export async function getMessages(
  * @param userId - User ID
  * @param threadId - Thread ID
  * @param messageId - ID of the user message to respond to
+ * @param sessionId - Optional app session ID for LangFuse grouping
  */
 export async function generateAIResponse(
   userId: string,
   threadId: string,
-  messageId: string
+  messageId: string,
+  sessionId?: string
 ): Promise<void> {
   logger.time('generateAIResponse');
-  logger.debug('Requesting AI response', { feature: 'ChatService', userId, threadId, messageId });
+  logger.debug('Requesting AI response', { feature: 'ChatService', userId, threadId, messageId, sessionId });
   
   try {
     const generateChatResponse = httpsCallable<
-      { userId: string; threadId: string; messageId: string },
+      { userId: string; threadId: string; messageId: string; sessionId?: string },
       { success: boolean; messageId?: string; error?: string }
     >(functions, 'generateChatResponse');
     
-    const result = await generateChatResponse({ userId, threadId, messageId });
+    const result = await generateChatResponse({ userId, threadId, messageId, sessionId });
     
     if (!result.data.success) {
       logger.warn('AI response generation was not successful', {

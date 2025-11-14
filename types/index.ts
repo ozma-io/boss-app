@@ -166,6 +166,14 @@ export interface ChatMessage {
   timestamp: string;
 }
 
+// Request data for generateChatResponse Cloud Function
+export interface GenerateChatResponseRequest {
+  userId: string;
+  threadId: string;
+  messageId: string;
+  sessionId?: string; // Optional app session ID for LangFuse grouping
+}
+
 // Subscription types (aligned with UserSchema)
 export type SubscriptionStatus = 'none' | 'active' | 'trial' | 'cancelled' | 'expired' | 'grace_period';
 export type SubscriptionTier = 'basic' | 'pro' | 'ultra' | 'enterprise';

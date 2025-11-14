@@ -44,6 +44,7 @@ export interface GenerateChatResponseRequest {
   userId: string;
   threadId: string;
   messageId: string;
+  sessionId?: string; // Optional app session ID for LangFuse grouping
 }
 
 /**

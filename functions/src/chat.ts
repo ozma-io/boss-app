@@ -258,7 +258,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
     secrets: [openaiApiKey, langfusePublicKey, langfuseSecretKey], // Declare the secrets
   },
   async (request) => {
-    const { userId, threadId, messageId } = request.data;
+    const { userId, threadId, messageId, sessionId } = request.data;
     
     // Initialize OpenAI client with LangFuse observability wrapper
     const openai = observeOpenAI(
@@ -267,9 +267,15 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       }),
       {
         generationName: 'chat-completion',
+        // Use sessionId for LangFuse session grouping (app visits)
+        // Fall back to threadId if sessionId is not provided
+        sessionId: sessionId || threadId,
+        // Use userId for LangFuse user grouping
+        userId: userId,
+        // Put threadId and messageId in metadata
         metadata: {
-          userId,
           threadId,
+          messageId,
         },
         clientInitParams: {
           publicKey: langfusePublicKey.value().trim(),

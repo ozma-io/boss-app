@@ -2,6 +2,7 @@ import { SendArrowIcon } from '@/components/icons/SendArrowIcon';
 import { TypingIndicator } from '@/components/TypingIndicator';
 import { db } from '@/constants/firebase.config';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from '@/contexts/SessionContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { extractTextFromContent, generateAIResponse, getOrCreateThread, sendMessage, subscribeToMessages } from '@/services/chat.service';
 import { logger } from '@/services/logger.service';
@@ -13,6 +14,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOp
 
 export default function ChatScreen() {
   const { user } = useAuth();
+  const { sessionId } = useSession();
   const scrollViewRef = useRef<ScrollView>(null);
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -101,7 +103,7 @@ export default function ChatScreen() {
 
       // Trigger AI response generation
       // The typing indicator will be managed by the Cloud Function
-      generateAIResponse(user.id, threadId, messageId).catch((error) => {
+      generateAIResponse(user.id, threadId, messageId, sessionId).catch((error) => {
         logger.error('Failed to generate AI response', { feature: 'ChatScreen', error });
         // Don't show error to user, just log it
         // The typing indicator will be reset by the Cloud Function

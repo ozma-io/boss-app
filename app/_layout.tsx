@@ -2,6 +2,7 @@ import { BackArrowIcon } from '@/components/icons/BackArrowIcon';
 import { AppColors } from '@/constants/Colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
+import { SessionProvider } from '@/contexts/SessionContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { initializeAmplitude } from '@/services/amplitude.service';
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
@@ -153,13 +154,15 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <TrackingOnboardingProvider>
-          <NotificationOnboardingProvider>
-            <RootLayoutNav />
-          </NotificationOnboardingProvider>
-        </TrackingOnboardingProvider>
-      </AuthProvider>
+      <SessionProvider>
+        <AuthProvider>
+          <TrackingOnboardingProvider>
+            <NotificationOnboardingProvider>
+              <RootLayoutNav />
+            </NotificationOnboardingProvider>
+          </TrackingOnboardingProvider>
+        </AuthProvider>
+      </SessionProvider>
     </SafeAreaProvider>
   );
 }
