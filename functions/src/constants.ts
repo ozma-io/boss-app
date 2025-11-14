@@ -87,3 +87,35 @@ export const CHAT_REMINDER_PROMPT = 'Remember: Focus on career coaching and prof
 // End of duplicated section
 // ============================================================================
 
+// ============================================================================
+// Apple App Store Configuration
+// ============================================================================
+
+/**
+ * Apple Bundle ID (public information, from App Store Connect)
+ */
+export const APPLE_BUNDLE_ID = 'com.ozmaio.bossup';
+
+/**
+ * Apple App ID (public information, from App Store Connect)
+ */
+export const APPLE_APP_ID = 6755306941;
+
+/**
+ * Apple App Store Connect API Key ID (not a secret, just an identifier)
+ */
+export const APPLE_APP_STORE_KEY_ID = '4X684CWU74';
+
+/**
+ * Apple App Store Connect API Issuer ID (not a secret, just an identifier)
+ */
+export const APPLE_APP_STORE_ISSUER_ID = '29d7d4fc-89d7-4680-aadb-0d17de4e941a';
+
+/**
+ * Apple Root CA certificates URLs for signature verification
+ */
+export const APPLE_ROOT_CA_URLS = [
+  'https://www.apple.com/certificateauthority/AppleRootCA-G3.cer',
+  'https://www.apple.com/certificateauthority/AppleRootCA-G2.cer',
+];
+

@@ -211,8 +211,9 @@ export interface UserSubscription {
   appleOriginalTransactionId?: string;
   appleTransactionId?: string;
   appleProductId?: string;
-  appleReceiptData?: string;
   appleEnvironment?: 'Sandbox' | 'Production';
+  appleRevocationDate?: string;
+  appleRevocationReason?: number;
   
   googlePlayPurchaseToken?: string;
   googlePlayProductId?: string;
@@ -246,5 +247,20 @@ export interface SubscriptionPlanConfig {
     days: number;
   };
   savings?: number;
+}
+
+// In-App Purchase types
+export interface IAPPurchaseResult {
+  success: boolean;
+  transactionId?: string;
+  error?: string;
+}
+
+export interface IAPProduct {
+  productId: string;
+  price: string;
+  currency: string;
+  title: string;
+  description: string;
 }
 

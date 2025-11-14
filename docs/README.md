@@ -66,6 +66,15 @@ AI-powered chat feature with OpenAI GPT-5:
 - **Config:** Message history window (24h), model selection in `functions/src/constants.ts`
 - **Unread Counter:** Firestore Trigger auto-increments `unreadCount` on AI messages, `FloatingChatButton` shows iOS-style badge, app icon badge syncs, `markChatAsRead()` resets on screen open
 
+### [Subscriptions & In-App Purchases](./subscriptions-iap.md)
+Apple and Google in-app purchase integration:
+- **Frontend:** `app/subscription.tsx` - subscription screen with plan selection
+- **Service:** `services/iap.service.ts` - IAP SDK integration, purchase flow
+- **Backend:** `functions/src/iap-verification.ts` - receipt verification with Apple/Google
+- **Platform Support:** iOS (active), Android (coming soon), Web uses Stripe
+- **Auto-Migration:** Stripe → IAP migration handled automatically in Cloud Functions
+- **Setup:** App Store Connect, Firebase secrets, testing with sandbox accounts
+
 ### [Magic Link Development](./magic-link-development.md)
 Development workflow for magic link authentication:
 - Testing magic links in iOS Simulator
@@ -115,6 +124,7 @@ docs/
 ├── firebase-deployment.md          # Firebase deployment guide
 ├── firestore-management.md         # Firestore database management
 ├── authentication.md               # Authentication system (magic links, Apple, Google)
+├── subscriptions-iap.md            # Subscriptions & In-App Purchases (IAP)
 ├── facebook-integration.md         # Facebook Attribution & Conversions API
 ├── tracking-and-attribution-flow.md # Tracking & Attribution flow scenarios
 ├── amplitude-integration.md        # Amplitude Analytics integration guide
@@ -130,6 +140,11 @@ Key files for AI Chat:
 ├── services/chat.service.ts        # Chat service
 ├── functions/src/chat.ts           # OpenAI Cloud Function
 └── firestore/schemas/chat.schema.ts # Chat data schema
+
+Key files for IAP:
+├── app/subscription.tsx            # Subscription UI
+├── services/iap.service.ts         # IAP service
+└── functions/src/iap-verification.ts # Receipt verification
 ```
 
 ---

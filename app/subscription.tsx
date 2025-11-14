@@ -1,4 +1,7 @@
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { checkAndSyncSubscription, endIAPConnection, initializeIAP, purchaseSubscription } from '@/services/iap.service';
+import { logger } from '@/services/logger.service';
 import { fetchSubscriptionPlans } from '@/services/remoteConfig.service';
 import {
   formatBillingPeriodLabel,
@@ -7,13 +10,11 @@ import {
   getBillingPeriodDescription,
   getSubscriptionDisplayInfo,
 } from '@/services/subscription.service';
-import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { logger } from '@/services/logger.service';
 import { SubscriptionPlanConfig } from '@/types';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SubscriptionScreen() {
@@ -23,9 +24,12 @@ export default function SubscriptionScreen() {
   const [plansLoading, setPlansLoading] = useState(true);
   const [plansError, setPlansError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const subscriptionInfo = getSubscriptionDisplayInfo(profile);
 
+  // Track screen views
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('subscription_screen_viewed', {
@@ -36,8 +40,34 @@ export default function SubscriptionScreen() {
     }, [subscriptionInfo.hasSubscription, subscriptionInfo.tier, subscriptionInfo.billingPeriod])
   );
 
+  // Auto-sync subscription on screen focus
+  useFocusEffect(
+    useCallback(() => {
+      if (profile?.id && Platform.OS === 'ios') {
+        syncSubscription();
+      }
+    }, [profile?.id])
+  );
+
+  // Initialize IAP
   useEffect(() => {
     loadPlans();
+    
+    // Initialize IAP connection
+    if (Platform.OS === 'ios') {
+      initializeIAP().catch((error) => {
+        logger.error('Failed to initialize IAP', { feature: 'SubscriptionScreen', error });
+      });
+    }
+
+    // Cleanup
+    return () => {
+      if (Platform.OS === 'ios') {
+        endIAPConnection().catch((error) => {
+          logger.error('Failed to end IAP connection', { feature: 'SubscriptionScreen', error });
+        });
+      }
+    };
   }, []);
 
   async function loadPlans() {
@@ -69,40 +99,174 @@ export default function SubscriptionScreen() {
     }
   }
 
-  const handleSubscribeOrChange = (): void => {
-    if (!selectedPlan) return;
+  async function syncSubscription() {
+    if (!profile?.id) return;
 
-    // TODO: Implement Apple/Google IAP integration
-    Alert.alert(
-      subscriptionInfo.hasSubscription ? 'Change Plan' : 'Subscribe',
-      'Apple/Google IAP integration coming soon.\n\nSelected plan: ' + selectedPlan,
-      [{ text: 'OK' }]
-    );
+    try {
+      setSyncing(true);
+      await checkAndSyncSubscription(profile.id);
+      // Profile will update automatically via real-time Firestore listener
+    } catch (error) {
+      logger.error('Failed to sync subscription', { feature: 'SubscriptionScreen', error });
+    } finally {
+      setSyncing(false);
+    }
+  }
 
+  const handleSubscribeOrChange = async (): Promise<void> => {
+    if (!selectedPlan || purchasing) return;
+
+    const action = subscriptionInfo.hasSubscription ? 'change_plan' : 'subscribe';
+
+    // Track button click
     trackAmplitudeEvent('subscription_button_clicked', {
-      action: subscriptionInfo.hasSubscription ? 'change_plan' : 'subscribe',
+      action,
       selectedPlan: selectedPlan,
       currentPlan: subscriptionInfo.billingPeriod,
     });
+
+    // Check platform
+    if (Platform.OS === 'android') {
+      Alert.alert(
+        'Coming Soon',
+        'Android in-app purchases are coming soon! Stay tuned.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    if (Platform.OS !== 'ios') {
+      Alert.alert(
+        'Not Available',
+        'Subscriptions are only available on iOS and Android. Please use the mobile app.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Find selected plan
+    const plan = plans.find(p => p.billingPeriod === selectedPlan);
+    if (!plan) {
+      Alert.alert('Error', 'Selected plan not found');
+      return;
+    }
+
+    try {
+      setPurchasing(true);
+
+      logger.info('Starting subscription purchase', {
+        feature: 'SubscriptionScreen',
+        productId: plan.appleProductId,
+        tier: plan.tier,
+        billingPeriod: plan.billingPeriod,
+      });
+
+      // Purchase subscription
+      const result = await purchaseSubscription(
+        plan.appleProductId,
+        plan.tier,
+        plan.billingPeriod
+      );
+
+      if (result.success) {
+        // Track success
+        trackAmplitudeEvent('subscription_purchase_success', {
+          action,
+          tier: plan.tier,
+          billingPeriod: plan.billingPeriod,
+          transactionId: result.transactionId,
+        });
+
+        // Profile will update automatically via real-time Firestore listener
+
+        // Show success message
+        Alert.alert(
+          'Success!',
+          action === 'change_plan' 
+            ? 'Your subscription plan has been changed successfully.' 
+            : 'Welcome to BossUp Premium! Your subscription is now active.',
+          [{ text: 'OK' }]
+        );
+
+        // Clear selection
+        setSelectedPlan(null);
+      } else {
+        // Track failure
+        trackAmplitudeEvent('subscription_purchase_failed', {
+          action,
+          tier: plan.tier,
+          billingPeriod: plan.billingPeriod,
+          error: result.error,
+        });
+
+        // Show error (unless user cancelled)
+        if (result.error !== 'Purchase cancelled') {
+          Alert.alert(
+            'Purchase Failed',
+            result.error || 'Unable to complete purchase. Please try again.',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    } catch (error) {
+      logger.error('Purchase error', { feature: 'SubscriptionScreen', error });
+      
+      trackAmplitudeEvent('subscription_purchase_error', {
+        action,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   const handleCancelSubscription = (): void => {
-    Alert.alert(
-      'Cancel Subscription',
-      'Are you sure you want to cancel your subscription?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: () => {
-            // TODO: Implement cancellation logic
-            logger.info('Subscription cancellation requested', { feature: 'SubscriptionScreen' });
-            trackAmplitudeEvent('subscription_cancel_clicked');
-          },
-        },
-      ]
-    );
+    const provider = profile?.subscription?.provider;
+
+    trackAmplitudeEvent('subscription_cancel_clicked', {
+      provider,
+    });
+
+    if (provider === 'apple') {
+      Alert.alert(
+        'Cancel Subscription',
+        'To cancel your Apple subscription, please go to:\n\nSettings → [Your Name] → Subscriptions → BossUp\n\nYou can cancel your subscription there.',
+        [
+          { text: 'OK' },
+        ]
+      );
+    } else if (provider === 'google') {
+      // TODO: Implement Google Play cancellation flow
+      Alert.alert(
+        'Cancel Subscription',
+        'To cancel your Google Play subscription, please visit the Google Play Store app and manage your subscriptions there.',
+        [
+          { text: 'OK' },
+        ]
+      );
+    } else if (provider === 'stripe') {
+      // TODO: Implement Stripe cancellation (web-based)
+      Alert.alert(
+        'Cancel Subscription',
+        'To cancel your subscription, please visit our website or contact support.',
+        [
+          { text: 'OK' },
+        ]
+      );
+      logger.info('Stripe subscription cancellation requested', { feature: 'SubscriptionScreen' });
+    } else {
+      Alert.alert(
+        'No Active Subscription',
+        'You don\'t have an active subscription to cancel.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const renderPlanCard = (plan: SubscriptionPlanConfig) => {
@@ -244,17 +408,28 @@ export default function SubscriptionScreen() {
         <Pressable
           style={({ pressed }) => [
             styles.changePlanButton,
-            !selectedPlan && styles.changePlanButtonDisabled,
-            pressed && selectedPlan && styles.buttonPressed
+            (!selectedPlan || purchasing) && styles.changePlanButtonDisabled,
+            pressed && selectedPlan && !purchasing && styles.buttonPressed
           ]}
-          onPress={selectedPlan ? handleSubscribeOrChange : undefined}
-          disabled={!selectedPlan}
+          onPress={selectedPlan && !purchasing ? handleSubscribeOrChange : undefined}
+          disabled={!selectedPlan || purchasing}
           testID="subscribe-change-button"
         >
-          <Text style={styles.changePlanButtonText} testID="subscribe-change-button-text">
-            {subscriptionInfo.buttonText}
-          </Text>
-          <FontAwesome name="arrow-right" size={16} color="#fff" testID="subscribe-change-arrow-icon" />
+          {purchasing ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" testID="subscribe-change-loading" />
+              <Text style={[styles.changePlanButtonText, { marginLeft: 8 }]} testID="subscribe-change-button-text">
+                Processing...
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.changePlanButtonText} testID="subscribe-change-button-text">
+                {subscriptionInfo.buttonText}
+              </Text>
+              <FontAwesome name="arrow-right" size={16} color="#fff" testID="subscribe-change-arrow-icon" />
+            </>
+          )}
         </Pressable>
 
         {subscriptionInfo.hasSubscription && (

@@ -49,7 +49,14 @@ Cloud Functions use **Firebase Secret Manager** for production. For detailed set
 
 1. **Production (Required):** Set secrets using Firebase CLI:
 ```bash
+# Facebook Conversions API
 firebase functions:secrets:set FACEBOOK_ACCESS_TOKEN
+
+# Apple In-App Purchase verification
+firebase functions:secrets:set APPLE_APP_STORE_PRIVATE_KEY
+
+# Stripe (for web subscriptions and Stripe-to-IAP migration)
+firebase functions:secrets:set STRIPE_SECRET_KEY
 ```
 
 2. **Local Development (Optional):** For emulator testing only:
@@ -71,6 +78,13 @@ cp functions/.env.example functions/.env
 - Supports various events (AppInstall, Purchase, etc.)
 - Handles PII hashing and deduplication
 - Requires `FACEBOOK_ACCESS_TOKEN` to be configured
+
+**IAP Verification (`verifyIAPPurchase`):**
+- Verifies Apple and Google Play in-app purchase receipts
+- Handles automatic Stripe-to-IAP migration
+- Updates user subscription status in Firestore
+- Requires Apple App Store API secrets (Key ID, Issuer ID, Private Key)
+- Requires `STRIPE_SECRET_KEY` for migration handling
 
 **Intercom JWT (`getIntercomJwt`):**
 - Generates secure JWT tokens for Intercom integration

@@ -97,12 +97,27 @@ npm install
 npm run build
 ```
 
+**IAP Setup (for subscription features):**
+```bash
+# Set Firebase secrets (required for IAP verification)
+firebase functions:secrets:set APPLE_APP_STORE_PRIVATE_KEY
+firebase functions:secrets:set STRIPE_SECRET_KEY
+```
+
 📖 **For detailed Firebase deployment instructions, see [docs/firebase-deployment.md](./docs/firebase-deployment.md)**
 
 This includes:
 - Service account permissions for Cloud Functions
 - Deploying rules and indexes
 - Multi-environment setup
+- Troubleshooting
+
+📖 **For IAP setup and testing, see [docs/subscriptions-iap.md](./docs/subscriptions-iap.md)**
+
+This includes:
+- App Store Connect configuration
+- Sandbox testing
+- Stripe-to-IAP migration
 - Troubleshooting
 
 ## 🏃 Running the App
@@ -196,6 +211,7 @@ npx expo install --fix
 - [Firebase Deployment Guide](./docs/firebase-deployment.md) - Deploy Cloud Functions, rules, indexes
 - [Firestore Management](./docs/firestore-management.md) - Schemas, migrations, security rules
 - [Authentication System](./docs/authentication.md) - Email links, Apple/Google sign-in
+- [Subscriptions & IAP](./docs/subscriptions-iap.md) - In-app purchases setup and testing
 - [Magic Link Development](./docs/magic-link-development.md) - Testing auth in development
 
 ### External Resources

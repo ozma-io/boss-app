@@ -20,8 +20,10 @@ initSentry();
 
 admin.initializeApp();
 
+export { appleServerNotification } from './apple-notifications';
 export { generateChatResponse, onChatMessageCreated } from './chat';
 export { sendFacebookConversionEvent } from './facebook';
+export { verifyIAPPurchase } from './iap-verification';
 export { getIntercomJwt } from './intercom';
 
 const TEST_EMAIL = 'test@test.test';

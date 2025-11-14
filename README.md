@@ -44,6 +44,7 @@ firebase deploy               # Deploy everything
 - **TypeScript** — required; improves type safety and developer experience
 - **Expo Router** — file-based routing and navigation (like Next.js)
 - **Expo Notifications** — receiving push notifications on the device
+- **react-native-iap** — Apple and Google in-app purchases (iOS implemented, Android coming soon)
 
 ### Backend / BaaS
 - **Firebase** — complete backend platform:
@@ -53,6 +54,8 @@ firebase deploy               # Deploy everything
   - **Firebase Cloud Functions** — serverless backend logic (scheduling, triggers, etc.)
   - **Firebase Security Rules** — per-user access control
 - **OpenAI API** — AI chat integration (GPT-5 via Cloud Functions)
+- **Apple App Store Server API** — IAP receipt verification (via Cloud Functions)
+- **Stripe API** — web subscriptions and migration handling (Cloud Functions only, not in app)
 
 ### Deployment
 - **Expo EAS Build** — cloud builds for iOS and Android
@@ -148,14 +151,17 @@ This project uses **Expo Development Build** for full native module support and 
 ```
 boss-app/
 ├── app/                    # Expo Router screens (file-based routing)
-│   └── chat.tsx           # AI chat screen
+│   ├── chat.tsx           # AI chat screen
+│   └── subscription.tsx   # Subscription/IAP screen
 ├── components/             # Reusable UI components
 ├── services/               # Firebase services (auth, firestore, notifications, chat)
-│   └── chat.service.ts    # Chat service (messages, AI response triggering)
+│   ├── chat.service.ts    # Chat service (messages, AI response triggering)
+│   └── iap.service.ts     # In-app purchase service (iOS/Android)
 ├── types/                  # TypeScript type definitions
 ├── functions/              # Firebase Cloud Functions
 │   └── src/
 │       ├── chat.ts        # OpenAI integration (GPT-5)
+│       ├── iap-verification.ts # IAP receipt verification (Apple/Google)
 │       └── types/chat.types.ts
 ├── firestore/              # Database tooling
 │   ├── schemas/           # TypeScript schemas (not deployed)
