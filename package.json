@@ -41,6 +41,7 @@
     "expo-updates": "~29.0.12",
     "expo-web-browser": "~15.0.9",
     "firebase": "^12.4.0",
+    "firebase-functions": "^7.0.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",

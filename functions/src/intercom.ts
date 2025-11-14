@@ -1,6 +1,7 @@
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import * as jwt from 'jsonwebtoken';
+import { logger } from './logger';
 
 const intercomSecret = defineSecret('INTERCOM_SECRET_KEY');
 
@@ -16,10 +17,10 @@ export const getIntercomJwt = onCall(
     secrets: [intercomSecret],
   },
   async (request) => {
-    console.log('[getIntercomJwt] Function called');
+    logger.debug('Intercom JWT function called', {});
     
     if (!request.auth) {
-      console.error('[getIntercomJwt] No auth in request');
+      logger.error('Intercom JWT no auth in request', {});
       throw new HttpsError('unauthenticated', 'User must be authenticated');
     }
     
@@ -28,20 +29,25 @@ export const getIntercomJwt = onCall(
     
     const secretValue = intercomSecret.value().trim();
     
-    console.log('[getIntercomJwt] User ID:', userId);
-    console.log('[getIntercomJwt] Email:', email);
-    console.log('[getIntercomJwt] Secret configured:', !!secretValue);
-    console.log('[getIntercomJwt] Secret length:', secretValue?.length);
-    console.log('[getIntercomJwt] Secret first 4 chars:', secretValue?.substring(0, 4));
-    console.log('[getIntercomJwt] Secret last 4 chars:', secretValue?.substring(secretValue.length - 4));
+    logger.debug('Intercom JWT processing', {
+      userId,
+      email,
+      hasSecret: !!secretValue,
+      secretLength: secretValue?.length,
+      secretFirst4: secretValue?.substring(0, 4),
+      secretLast4: secretValue?.substring(secretValue.length - 4),
+    });
     
     if (!secretValue) {
-      console.error('[getIntercomJwt] Intercom secret not configured');
+      logger.error('Intercom secret not configured', {});
       throw new HttpsError('internal', 'Intercom secret not configured');
     }
     
     if (secretValue.length !== 43) {
-      console.error('[getIntercomJwt] Secret length is unexpected:', secretValue.length, 'expected 43');
+      logger.warn('Intercom secret length unexpected', {
+        actualLength: secretValue.length,
+        expectedLength: 43,
+      });
     }
     
     // Intercom Messenger Security JWT payload
@@ -52,21 +58,21 @@ export const getIntercomJwt = onCall(
       email: email,
     };
     
-    console.log('[getIntercomJwt] Generating JWT with payload:', payload);
+    logger.debug('Intercom generating JWT with payload', { payload });
     // Set expiration to 1 hour (recommended minimum is 5 minutes)
     // Intercom docs: "Choose the minimum duration that is suitable for their application's behavior"
     const token = jwt.sign(payload, secretValue, { 
       algorithm: 'HS256',
       expiresIn: '1h'
     });
-    console.log('[getIntercomJwt] JWT generated successfully, length:', token.length);
+    logger.debug('Intercom JWT generated successfully', { tokenLength: token.length });
     
     // Verify the JWT with the secret to ensure it's valid
     try {
       jwt.verify(token, secretValue, { algorithms: ['HS256'] });
-      console.log('[getIntercomJwt] JWT verification successful');
+      logger.debug('Intercom JWT verification successful', {});
     } catch (verifyError) {
-      console.error('[getIntercomJwt] JWT verification FAILED:', verifyError);
+      logger.error('Intercom JWT verification failed', { verifyError });
       throw new HttpsError('internal', 'Failed to verify generated JWT');
     }
     

@@ -20,7 +20,10 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
   - Include context when helpful: `"main-profile-section"`, `"auth-email-input"`
   - In browser DevTools, testID appears as `data-testid` attribute
 - **Amplitude events** - all custom events MUST follow naming convention rules in `docs/amplitude-naming-convention.md` (snake_case, feature prefixes, specific names)
-- **Logging** - use `services/logger.service.ts` instead of console.log/error/warn/etc. But not in cloud functions because it will be running in the cloud. Our logger accepts two parameters: a message and a context object. The context object is optional and can be used to add additional information to the log.
+- **Logging**:
+  - **App code**: use `services/logger.service.ts` (not console.log/error/warn)
+  - **Cloud Functions**: use `functions/src/logger.ts` with Sentry integration (not console.log/error/warn)
+  - Logger accepts two parameters: message and context object
 
 ## Project Structure
 - `app/` - routing and screens

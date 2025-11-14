@@ -20,7 +20,7 @@ Quick links:
 - **[Firebase Deployment](./docs/firebase-deployment.md)** - Deploy Cloud Functions, rules, indexes
 - **[Firestore Management](./docs/firestore-management.md)** - Schemas, migrations, security
 - **[Authentication](./docs/authentication.md)** - Magic links, Apple/Google sign-in, Universal Links
-- **[Logging](./services/logger.service.ts)** - Use logger service instead of console.log
+- **Logging** - Use `services/logger.service.ts` in app code, `functions/src/logger.ts` (with Sentry) in Cloud Functions
 - **Pre-auth Permission Flows** - Custom screens + system prompts for notifications and ATT (see `NotificationOnboardingScreen` and `TrackingOnboardingScreen`)
 
 ## 🚢 Deploy to Firebase

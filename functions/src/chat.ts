@@ -13,6 +13,7 @@ import { observeOpenAI } from 'langfuse';
 import OpenAI from 'openai';
 import type { ChatCompletion } from 'openai/resources/chat';
 import { CHAT_MESSAGE_HISTORY_HOURS, CHAT_REMINDER_PROMPT, CHAT_SYSTEM_PROMPT, OPENAI_MODEL } from './constants';
+import { logger } from './logger';
 import type {
   ChatCompletionMessageParam,
   ContentItem,
@@ -31,24 +32,6 @@ const openaiApiKey = defineSecret('OPENAI_API_KEY');
  */
 const langfusePublicKey = defineSecret('LANGFUSE_PUBLIC_KEY');
 const langfuseSecretKey = defineSecret('LANGFUSE_SECRET_KEY');
-
-/**
- * Logger utility (mimics client logger service for Cloud Functions)
- */
-const logger = {
-  info: (message: string, context: Record<string, unknown>) => {
-    console.log(`[INFO] ${message}`, JSON.stringify(context));
-  },
-  error: (message: string, context: Record<string, unknown>) => {
-    console.error(`[ERROR] ${message}`, JSON.stringify(context));
-  },
-  warn: (message: string, context: Record<string, unknown>) => {
-    console.warn(`[WARN] ${message}`, JSON.stringify(context));
-  },
-  debug: (message: string, context: Record<string, unknown>) => {
-    console.log(`[DEBUG] ${message}`, JSON.stringify(context));
-  },
-};
 
 /**
  * Convert Firestore message to OpenAI format

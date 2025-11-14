@@ -12,6 +12,11 @@
 import * as admin from 'firebase-admin';
 import * as functions from 'firebase-functions';
 import { onCall } from 'firebase-functions/v2/https';
+import { logger } from './logger';
+import { initSentry } from './sentry';
+
+// Initialize Sentry for error monitoring
+initSentry();
 
 admin.initializeApp();
 
@@ -53,7 +58,7 @@ export const generateTestUserToken = onCall(
       try {
         const userRecord = await admin.auth().getUserByEmail(email);
         uid = userRecord.uid;
-        console.log(`Test user already exists with uid: ${uid}`);
+        logger.info('Test user already exists', { uid });
       } catch (error) {
         // User doesn't exist, create it
         const newUser = await admin.auth().createUser({
@@ -61,7 +66,7 @@ export const generateTestUserToken = onCall(
           emailVerified: true,
         });
         uid = newUser.uid;
-        console.log(`Created new test user with uid: ${uid}`);
+        logger.info('Created new test user', { uid });
       }
 
       // Generate custom token
@@ -71,7 +76,7 @@ export const generateTestUserToken = onCall(
 
       return { token: customToken };
     } catch (error) {
-      console.error('Error generating test user token:', error);
+      logger.error('Error generating test user token', { error });
       throw new functions.https.HttpsError(
         'internal',
         'Failed to generate authentication token'

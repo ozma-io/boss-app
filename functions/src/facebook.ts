@@ -10,6 +10,7 @@ import * as functions from 'firebase-functions';
 import { defineSecret } from 'firebase-functions/params';
 import { onCall } from 'firebase-functions/v2/https';
 import { FACEBOOK_API_VERSION, FACEBOOK_PIXEL_ID } from './constants';
+import { logger } from './logger';
 
 // Define the secret parameter
 const facebookAccessToken = defineSecret('FACEBOOK_ACCESS_TOKEN');
@@ -81,11 +82,14 @@ export const sendFacebookConversionEvent = onCall(
 
     // Get configuration (secrets from env, public constants from code)
     const pixelId = FACEBOOK_PIXEL_ID;
-    const accessToken = facebookAccessToken.value();
+    const accessToken = facebookAccessToken.value().trim();
     const apiVersion = FACEBOOK_API_VERSION;
 
     if (!pixelId || !accessToken) {
-      console.error('[Facebook] Missing configuration: FACEBOOK_PIXEL_ID or FACEBOOK_ACCESS_TOKEN');
+      logger.error('Facebook missing configuration', {
+        hasPixelId: !!pixelId,
+        hasAccessToken: !!accessToken,
+      });
       throw new functions.https.HttpsError(
         'failed-precondition',
         'Facebook API not configured'
@@ -169,7 +173,7 @@ export const sendFacebookConversionEvent = onCall(
         access_token: accessToken,
       };
 
-      console.log('[Facebook] Sending conversion event:', {
+      logger.info('Facebook sending conversion event', {
         eventName: eventData.eventName,
         eventId: eventData.eventId,
         hasUserData: Object.keys(userData).length > 0,
@@ -188,14 +192,14 @@ export const sendFacebookConversionEvent = onCall(
       const responseData = await response.json();
 
       if (!response.ok) {
-        console.error('[Facebook] Error from Conversions API:', responseData);
+        logger.error('Facebook Conversions API error', { responseData });
         throw new functions.https.HttpsError(
           'internal',
           'Failed to send event to Facebook'
         );
       }
 
-      console.log('[Facebook] Conversion event sent successfully:', responseData);
+      logger.info('Facebook conversion event sent successfully', { responseData });
 
       return {
         success: true,
@@ -203,7 +207,7 @@ export const sendFacebookConversionEvent = onCall(
         fbtrace_id: responseData.fbtrace_id,
       };
     } catch (error) {
-      console.error('[Facebook] Error sending conversion event:', error);
+      logger.error('Facebook error sending conversion event', { error });
       
       if (error instanceof functions.https.HttpsError) {
         throw error;
