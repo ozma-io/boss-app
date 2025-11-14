@@ -45,6 +45,9 @@ export interface GenerateChatResponseRequest {
   threadId: string;
   messageId: string;
   sessionId?: string; // Optional app session ID for LangFuse grouping
+  currentDateTimeUTC?: string; // Current date/time in UTC from user's device
+  currentDateTimeLocal?: string; // Current date/time with timezone offset from user's device
+  userTimezone?: string; // User's timezone name (e.g., "Europe/Moscow")
 }
 
 /**

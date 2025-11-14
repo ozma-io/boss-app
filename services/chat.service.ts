@@ -294,12 +294,49 @@ export async function generateAIResponse(
   logger.debug('Requesting AI response', { feature: 'ChatService', userId, threadId, messageId, sessionId });
   
   try {
+    // Capture current date/time from user's device
+    const now = new Date();
+    const currentDateTimeUTC = now.toISOString();
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Format local time with timezone offset (e.g., "2025-11-14T13:30:00+03:00")
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    
+    const offsetMinutes = -now.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const offsetMins = Math.abs(offsetMinutes) % 60;
+    const sign = offsetMinutes >= 0 ? '+' : '-';
+    const offset = `${sign}${String(offsetHours).padStart(2, '0')}:${String(offsetMins).padStart(2, '0')}`;
+    
+    const currentDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offset}`;
+    
     const generateChatResponse = httpsCallable<
-      { userId: string; threadId: string; messageId: string; sessionId?: string },
+      { 
+        userId: string; 
+        threadId: string; 
+        messageId: string; 
+        sessionId?: string;
+        currentDateTimeUTC?: string;
+        currentDateTimeLocal?: string;
+        userTimezone?: string;
+      },
       { success: boolean; messageId?: string; error?: string }
     >(functions, 'generateChatResponse');
     
-    const result = await generateChatResponse({ userId, threadId, messageId, sessionId });
+    const result = await generateChatResponse({ 
+      userId, 
+      threadId, 
+      messageId, 
+      sessionId,
+      currentDateTimeUTC,
+      currentDateTimeLocal,
+      userTimezone,
+    });
     
     if (!result.data.success) {
       logger.warn('AI response generation was not successful', {

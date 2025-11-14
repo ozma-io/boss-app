@@ -237,7 +237,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
     secrets: [openaiApiKey, langfusePublicKey, langfuseSecretKey], // Declare the secrets
   },
   async (request) => {
-    const { userId, threadId, messageId, sessionId } = request.data;
+    const { userId, threadId, messageId, sessionId, currentDateTimeUTC, currentDateTimeLocal } = request.data;
     
     // Initialize OpenAI client with LangFuse observability wrapper
     const openai = observeOpenAI(
@@ -384,11 +384,21 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         timestamp: new Date().toISOString(),
       };
       
+      const systemMessage4: FirestoreChatMessage = {
+        role: 'system',
+        content: [{
+          type: 'text',
+          text: `Current date and time (UTC): ${currentDateTimeUTC || 'not available'}\nCurrent date and time (user's timezone): ${currentDateTimeLocal || 'not available'}`,
+        }],
+        timestamp: new Date().toISOString(),
+      };
+      
       const messagesForOpenAI: ChatCompletionMessageParam[] = [
         toOpenAIMessage(systemMessage1),
         toOpenAIMessage(systemMessage2),
         ...recentMessages.map(toOpenAIMessage),
         toOpenAIMessage(systemMessage3),
+        toOpenAIMessage(systemMessage4),
       ];
       
       logger.info('Calling OpenAI API', {
@@ -396,7 +406,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         threadId,
         model: OPENAI_MODEL,
         messageCount: messagesForOpenAI.length,
-        systemMessagesCount: 3,
+        systemMessagesCount: 4,
         userMessagesCount: recentMessages.length,
       });
       
