@@ -6,9 +6,16 @@ import { logger } from './logger.service';
 
 // Platform-specific: Native uses React Native Firebase
 let nativeRemoteConfig: any = null;
+let nativeGetValue: any = null;
+let nativeSetConfigSettings: any = null;
+let nativeFetchAndActivate: any = null;
 if (Platform.OS !== 'web') {
-  // iOS/Android: use React Native Firebase
-  nativeRemoteConfig = require('@react-native-firebase/remote-config').default;
+  // iOS/Android: use React Native Firebase modular API
+  const remoteConfigModule = require('@react-native-firebase/remote-config');
+  nativeRemoteConfig = remoteConfigModule.default;
+  nativeGetValue = remoteConfigModule.getValue;
+  nativeSetConfigSettings = remoteConfigModule.setConfigSettings;
+  nativeFetchAndActivate = remoteConfigModule.fetchAndActivate;
 }
 
 /**
@@ -28,16 +35,16 @@ export async function initRemoteConfig(): Promise<void> {
         platform: 'web'
       });
     } else {
-      // iOS/Android: use React Native Firebase
+      // iOS/Android: use React Native Firebase modular API
       const config = nativeRemoteConfig();
       
       // Set config settings
-      await config.setConfigSettings({
+      await nativeSetConfigSettings(config, {
         minimumFetchIntervalMillis: __DEV__ ? 0 : 3600000,
       });
       
       // Fetch and activate
-      await config.fetchAndActivate();
+      await nativeFetchAndActivate(config);
       logger.info('Successfully fetched and activated Remote Config', { 
         feature: 'RemoteConfig',
         platform: Platform.OS
@@ -76,10 +83,11 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
       const plansValue = getValue(webRemoteConfig, 'subscription_plans');
       plansJson = plansValue.asString();
     } else {
-      // iOS/Android: use React Native Firebase
+      // iOS/Android: use React Native Firebase modular API
       const config = nativeRemoteConfig();
-      await config.fetchAndActivate();
-      plansJson = config.getValue('subscription_plans').asString();
+      await nativeFetchAndActivate(config);
+      const valueSnapshot = nativeGetValue(config, 'subscription_plans');
+      plansJson = valueSnapshot.asString();
     }
     
     if (!plansJson) {
