@@ -55,6 +55,9 @@ firebase functions:secrets:set FACEBOOK_ACCESS_TOKEN
 # Apple In-App Purchase verification
 firebase functions:secrets:set APPLE_APP_STORE_PRIVATE_KEY
 
+# Google Play In-App Purchase verification
+firebase functions:secrets:set GOOGLE_PLAY_SERVICE_ACCOUNT < path/to/service-account.json
+
 # Stripe (for web subscriptions and Stripe-to-IAP migration)
 firebase functions:secrets:set STRIPE_SECRET_KEY
 ```
@@ -84,6 +87,7 @@ cp functions/.env.example functions/.env
 - Handles automatic Stripe-to-IAP migration
 - Updates user subscription status in Firestore
 - Requires Apple App Store API secrets (Key ID, Issuer ID, Private Key)
+- Requires `GOOGLE_PLAY_SERVICE_ACCOUNT` secret (Service Account JSON key)
 - Requires `STRIPE_SECRET_KEY` for migration handling
 
 **Intercom JWT (`getIntercomJwt`):**
@@ -328,7 +332,11 @@ firebase emulators:start --only firestore,auth,functions
 4. Backup Firestore data (if modifying data)
 5. Review security rules changes
 6. Check Cloud Functions quota/pricing
-7. Verify environment variables are set correctly
+7. **Verify all required secrets are set in Firebase Secret Manager:**
+   - `FACEBOOK_ACCESS_TOKEN`
+   - `APPLE_APP_STORE_PRIVATE_KEY`
+   - `GOOGLE_PLAY_SERVICE_ACCOUNT` (for Android IAP)
+   - `STRIPE_SECRET_KEY`
 
 ### Deployment Steps
 
