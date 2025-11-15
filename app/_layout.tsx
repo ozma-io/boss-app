@@ -15,9 +15,9 @@ import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import 'react-native-reanimated';
@@ -94,6 +94,8 @@ export default function RootLayout() {
               shouldShowAlert: true,
               shouldPlaySound: true,
               shouldSetBadge: true,
+              shouldShowBanner: true,
+              shouldShowList: true,
             }),
           });
           
