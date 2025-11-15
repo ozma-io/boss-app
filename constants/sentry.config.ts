@@ -10,12 +10,8 @@
  * 
  * DSN is a public key and safe to commit to the repository.
  * It identifies where errors should be sent.
- * 
- * Environment variable allows overriding for different environments:
- * - EXPO_PUBLIC_SENTRY_DSN=https://... (for staging/testing environments)
- * - Default: production Sentry project
  */
-export const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN || 'https://f1a4dd0c3c892048c31d0f9752af4e0f@o4510351607136256.ingest.us.sentry.io/4510351607922689';
+export const SENTRY_DSN = 'https://f1a4dd0c3c892048c31d0f9752af4e0f@o4510351607136256.ingest.us.sentry.io/4510351607922689';
 
 // ============================================================================
 // ⚠️ DUPLICATED in app.config.ts - keep both in sync!
