@@ -157,6 +157,12 @@ const config: ExpoConfig = {
     '@react-native-firebase/app',
     './plugins/withFirebasePodfile',
     [
+      'react-native-iap',
+      {
+        paymentProvider: 'Play Store',
+      },
+    ],
+    [
       'expo-build-properties',
       {
         ios: {
