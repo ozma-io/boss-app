@@ -53,7 +53,7 @@
     "react-native-device-info": "^14.1.1",
     "react-native-fbsdk-next": "^13.4.1",
     "react-native-gesture-handler": "^2.29.1",
-    "react-native-iap": "^12.15.0",
+    "react-native-iap": "^14.4.44",
     "react-native-modal": "^14.0.0-rc.1",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "~5.6.0",
