@@ -10,8 +10,14 @@ import { IAPProduct, IAPPurchaseResult, UserProfile } from '@/types';
 import { doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
-import * as RNIap from 'react-native-iap';
 import { logger } from './logger.service';
+
+// Conditionally import react-native-iap only on native platforms
+let RNIap: typeof import('react-native-iap') | undefined;
+
+if (Platform.OS === 'ios' || Platform.OS === 'android') {
+  RNIap = require('react-native-iap');
+}
 
 let iapConnection: boolean = false;
 
@@ -21,6 +27,12 @@ let iapConnection: boolean = false;
  */
 export async function initializeIAP(): Promise<void> {
   if (iapConnection) {
+    return;
+  }
+
+  // Check if IAP is available on this platform
+  if (!RNIap) {
+    logger.info('IAP not available on this platform', { platform: Platform.OS });
     return;
   }
 
@@ -47,7 +59,7 @@ export async function initializeIAP(): Promise<void> {
  * Should be called on app shutdown
  */
 export async function endIAPConnection(): Promise<void> {
-  if (!iapConnection) {
+  if (!iapConnection || !RNIap) {
     return;
   }
 
@@ -64,7 +76,7 @@ export async function endIAPConnection(): Promise<void> {
  * Setup listener for purchase updates
  */
 function setupPurchaseListener(): void {
-  if (Platform.OS !== 'ios') {
+  if (Platform.OS !== 'ios' || !RNIap) {
     return;
   }
 
@@ -90,6 +102,10 @@ function setupPurchaseListener(): void {
  * @returns Array of available products with pricing
  */
 export async function getAvailableProducts(productIds: string[]): Promise<IAPProduct[]> {
+  if (!RNIap) {
+    return [];
+  }
+
   if (Platform.OS === 'ios') {
     try {
       if (!iapConnection) {
@@ -103,7 +119,7 @@ export async function getAvailableProducts(productIds: string[]): Promise<IAPPro
       }
 
       return products.map((product) => {
-        const iosProduct = product as RNIap.ProductSubscriptionIOS;
+        const iosProduct = product as import('react-native-iap').ProductSubscriptionIOS;
         return {
           productId: iosProduct.id,
           price: iosProduct.displayPrice,
@@ -139,6 +155,10 @@ export async function purchaseSubscription(
   tier: string,
   billingPeriod: string
 ): Promise<IAPPurchaseResult> {
+  if (!RNIap) {
+    throw new Error('IAP not supported on this platform');
+  }
+
   if (Platform.OS === 'ios') {
     try {
       if (!iapConnection) {
@@ -272,6 +292,10 @@ async function verifyPurchaseWithBackend(
  * @returns Updated subscription status
  */
 export async function checkAndSyncSubscription(userId: string): Promise<void> {
+  if (!RNIap) {
+    return;
+  }
+
   if (Platform.OS === 'ios') {
     try {
       if (!iapConnection) {
@@ -340,6 +364,10 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
  * Note: Not currently exposed in UI as auto-sync handles this
  */
 export async function restorePurchases(): Promise<IAPPurchaseResult> {
+  if (!RNIap) {
+    throw new Error('IAP not supported on this platform');
+  }
+
   if (Platform.OS === 'ios') {
     try {
       if (!iapConnection) {
