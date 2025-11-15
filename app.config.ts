@@ -33,7 +33,6 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'bossup',
-  userInterfaceStyle: 'light',
   newArchEnabled: true,
   splash: {
     image: './assets/images/splash-icon-ios.png',
@@ -55,6 +54,7 @@ const config: ExpoConfig = {
     bundleIdentifier: 'com.ozmaio.bossup',
     associatedDomains: ['applinks:boss-app.ozma.io', 'applinks:discovery.ozma.io'],
     googleServicesFile: './firebase/GoogleService-Info.plist',
+    userInterfaceStyle: 'light',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
       FacebookAppID: FACEBOOK_APP_ID,
@@ -70,6 +70,7 @@ const config: ExpoConfig = {
     },
     package: 'com.ozmaio.bossup',
     googleServicesFile: './firebase/google-services.json',
+    userInterfaceStyle: 'light',
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     permissions: [
@@ -114,6 +115,7 @@ const config: ExpoConfig = {
     'expo-updates',
     'expo-localization',
     'expo-web-browser',
+    'expo-system-ui',
     [
       'expo-notifications',
       {
