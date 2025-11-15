@@ -203,8 +203,18 @@ export default function SubscriptionScreen() {
       currentPlan: subscriptionInfo.billingPeriod,
     });
 
-    // Check platform
+    // Check platform - handle each case explicitly
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Not Available on Web',
+        'Sorry, this action is not possible on the web platform. Please use your iOS or Android app.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+    
     if (Platform.OS === 'android') {
+      // TODO: Implement Android support for subscription purchases
       Alert.alert(
         'Coming Soon',
         'Android in-app purchases are coming soon! Stay tuned.',
@@ -212,11 +222,14 @@ export default function SubscriptionScreen() {
       );
       return;
     }
-
-    if (Platform.OS !== 'ios') {
+    
+    if (Platform.OS === 'ios') {
+      // iOS is supported - continue with purchase flow
+    } else {
+      // Unsupported platform (Windows, macOS, Linux, etc.)
       Alert.alert(
         'Not Available',
-        'Subscriptions are only available on iOS and Android. Please use the mobile app.',
+        'Subscriptions are only available on iOS. Android support is coming soon.',
         [{ text: 'OK' }]
       );
       return;
