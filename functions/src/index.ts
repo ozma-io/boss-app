@@ -25,6 +25,7 @@ export { generateChatResponse, onChatMessageCreated } from './chat';
 export { sendFacebookConversionEvent } from './facebook';
 export { verifyIAPPurchase } from './iap-verification';
 export { getIntercomJwt } from './intercom';
+export { onUserCreated } from './user-triggers';
 
 const TEST_EMAIL = 'test@test.test';
 

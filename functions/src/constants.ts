@@ -29,6 +29,11 @@ export const CHAT_MESSAGE_HISTORY_HOURS = 24;
  */
 export const OPENAI_MODEL = 'gpt-5.1';
 
+/**
+ * Welcome message shown to new users when they first join
+ */
+export const CHAT_WELCOME_MESSAGE = 'Welcome to BossUp! I\'m your AI assistant here to help you manage your relationship with your boss. Feel free to ask me anything!';
+
 // ============================================================================
 // ⚠️ DUPLICATED in ../../remoteconfig.template.json - keep both in sync!
 // These constants are fallback values if Remote Config is unavailable.
