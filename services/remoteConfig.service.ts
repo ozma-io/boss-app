@@ -54,14 +54,15 @@ export async function initRemoteConfig(): Promise<void> {
       });
     } else {
       // iOS/Android: use React Native Firebase modular API
+      // Get remote config instance using modular API (not deprecated default())
       const config = nativeGetRemoteConfig();
       
-      // Set config settings
+      // Set config settings - modular API: setConfigSettings(config, settings)
       await nativeSetConfigSettings(config, {
         minimumFetchIntervalMillis: __DEV__ ? 0 : 3600000,
       });
       
-      // Fetch and activate
+      // Fetch and activate - modular API: fetchAndActivate(config)
       await nativeFetchAndActivate(config);
       logger.info('Successfully fetched and activated Remote Config', { 
         feature: 'RemoteConfig',
@@ -104,6 +105,9 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
       // iOS/Android: use React Native Firebase modular API
       const config = nativeGetRemoteConfig();
       await nativeFetchAndActivate(config);
+      // Get value using modular API: getValue(config, key) - sync, not async!
+      // OLD: config.getValue('subscription_plans').asString() ❌
+      // NEW: getValue(config, 'subscription_plans').asString() ✅
       const valueSnapshot = nativeGetValue(config, 'subscription_plans');
       plansJson = valueSnapshot.asString();
     }
