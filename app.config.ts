@@ -20,7 +20,7 @@ const FACEBOOK_APP_NAME = 'BossUp';
 // ⚠️ DUPLICATED in constants/sentry.config.ts - keep both in sync!
 // ============================================================================
 const SENTRY_ORG = 'ozma-inc';
-const SENTRY_PROJECT = 'bossup';
+const SENTRY_PROJECT = 'the-boss-app';
 // ============================================================================
 // End of duplicated section
 // ============================================================================
