@@ -63,6 +63,11 @@ firebase deploy               # Deploy everything
 - **Expo EAS Update** — over-the-air (OTA) updates for JS/TS code and assets (no store resubmission needed)
 - **Firebase Console / Hosting** — backend and data configuration
 
+**Build production releases for both iOS and Android:**
+```bash
+npx eas-cli@latest workflow:run create-production-builds.yml
+```
+
 *Note: Using direct production rollouts (100% immediately). Gradual rollouts postponed until product validation.*
 
 ---

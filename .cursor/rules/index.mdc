@@ -14,6 +14,13 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 - **TypeScript strict typing** - required for all code
 - **Functional components** with hooks
 
+## Build Production Releases
+**Build production releases for both iOS and Android:**
+```bash
+npx eas-cli@latest workflow:run create-production-builds.yml
+```
+
+
 ## Code Style
 - **testID attributes** - all UI elements must have testID attributes for easier debugging in browser DevTools
   - Use kebab-case naming: `"profile-section"`, `"sign-out-button"`, `"avatar-image"`
