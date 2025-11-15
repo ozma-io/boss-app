@@ -169,6 +169,10 @@ const config: ExpoConfig = {
         ios: {
           buildReactNativeFromSource: true,
         },
+        android: {
+          enableProguardInReleaseBuilds: true,
+          enableShrinkResourcesInReleaseBuilds: true,
+        },
       },
     ],
   ],
