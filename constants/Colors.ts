@@ -2,7 +2,7 @@ const tintColorLight = '#2f95dc';
 const tintColorDark = '#fff';
 
 export const AppColors = {
-  background: '#f5f5f5',
+  background: '#faf8f0',
   textSecondary: '#666',
   loaderColor: '#666',
 };
