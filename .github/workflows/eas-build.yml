@@ -35,14 +35,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # TODO: Change to production profile after setting up credentials
-      # iOS: Run locally once: eas build --platform ios --profile production
-      #      This will set up Distribution Certificate and Provisioning Profile on Expo servers
-      # Android: Run locally once: eas build --platform android --profile production
-      #          This will set up production keystore for signing
-      - name: Build preview for iOS
-        run: eas build --platform ios --profile preview --non-interactive --no-wait
-
-      - name: Build preview for Android
-        run: eas build --platform android --profile preview-device --non-interactive --no-wait
+      - name: Run production builds workflow
+        run: eas workflow:run create-production-builds.yml --non-interactive
 
