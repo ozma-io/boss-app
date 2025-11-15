@@ -52,11 +52,44 @@ export default function WelcomeScreen(): React.JSX.Element {
     try {
       await signInWithApple();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'unknown';
+      
       trackAmplitudeEvent('auth_signin_failed', {
         method: 'apple',
-        error_type: error instanceof Error ? error.message : 'unknown',
+        error_type: errorMessage,
       });
-      Alert.alert('Error', 'Apple Sign-In failed. Please try again.');
+      
+      // Check if user explicitly cancelled (they pressed Cancel button)
+      const isUserCancelled = 
+        errorMessage.toLowerCase().includes('cancel') ||
+        errorMessage.includes('1001'); // Explicit cancellation code
+      
+      if (isUserCancelled) {
+        // Silent fail - user knows they cancelled
+        return;
+      }
+      
+      // For system errors (not signed in to iCloud, etc.)
+      // Show friendly message AFTER Apple's system dialog closed
+      const isSystemAuthError = 
+        errorMessage.includes('7022') || // AKAuthenticationError
+        errorMessage.includes('1000') || // AuthorizationError (generic)
+        errorMessage.includes('unknown reason');
+      
+      if (isSystemAuthError) {
+        Alert.alert(
+          'Apple ID Required', 
+          'Please sign in to your Apple ID in Settings to use Sign in with Apple.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        // Unexpected technical error
+        Alert.alert(
+          'Something went wrong',
+          'Apple Sign-In failed. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
