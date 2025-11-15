@@ -25,6 +25,7 @@ export default function WelcomeScreen(): React.JSX.Element {
     setIsEmailModalVisible(true);
   };
 
+  // TODO: Test Google Sign-In flow thoroughly before production release
   const handleGoogleSignIn = async (): Promise<void> => {
     trackAmplitudeEvent('auth_signin_clicked', {
       method: 'google',

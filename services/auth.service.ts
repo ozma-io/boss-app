@@ -145,6 +145,15 @@ export async function signInWithGoogleCredential(idToken: string): Promise<User>
   return mapFirebaseUserToUser(userCredential.user);
 }
 
+// TODO: Test Google Sign-In flow end-to-end on all platforms (iOS, Android, Web)
+// TODO: Verify all required Google OAuth credentials are configured:
+//   - GOOGLE_WEB_CLIENT_ID in constants/google.config.ts
+//   - iOS Client ID in Firebase Console
+//   - Android Client ID in Firebase Console
+//   - OAuth consent screen is properly configured
+//   - Redirect URIs are whitelisted in Google Cloud Console
+// TODO: Test with real users to ensure token exchange works correctly
+// TODO: Verify Firebase Authentication is properly configured for Google provider
 export async function signInWithGoogle(): Promise<User> {
   try {
     const redirectUri = AuthSession.makeRedirectUri({
