@@ -274,12 +274,14 @@ export default function SubscriptionScreen() {
       profile?.subscription?.billingPeriod === plan.billingPeriod;
     const isSelected = selectedPlan === plan.billingPeriod;
     const planKey = `${plan.tier}_${plan.billingPeriod}`;
+    const isGridLayout = !subscriptionInfo.hasSubscription;
 
     return (
       <Pressable
         key={planKey}
         style={({ pressed }) => [
           styles.planCard,
+          isGridLayout && styles.planCardGrid,
           pressed && styles.buttonPressed,
         ]}
         onPress={() => {
@@ -391,7 +393,7 @@ export default function SubscriptionScreen() {
             </View>
           ) : plans.length === 0 ? (
             <Text style={styles.noPlansText}>No subscription plans available at the moment.</Text>
-          ) : (
+          ) : subscriptionInfo.hasSubscription ? (
             <ScrollView 
               horizontal 
               showsHorizontalScrollIndicator={false}
@@ -400,6 +402,10 @@ export default function SubscriptionScreen() {
             >
               {plans.map((plan) => renderPlanCard(plan))}
             </ScrollView>
+          ) : (
+            <View style={styles.plansGridContainer} testID="plans-grid-container">
+              {plans.map((plan) => renderPlanCard(plan))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -577,6 +583,11 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     gap: 12,
   },
+  plansGridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   planCard: {
     width: 170,
     minHeight: 160,
@@ -584,6 +595,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     position: 'relative',
+  },
+  planCardGrid: {
+    flexBasis: '48%',
+    width: undefined,
   },
   planHeader: {
     flexDirection: 'row',
