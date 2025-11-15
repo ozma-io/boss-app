@@ -36,9 +36,19 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
   newArchEnabled: true,
   splash: {
-    image: './assets/images/splash-icon.png',
+    image: './assets/images/splash-icon-ios.png',
     resizeMode: 'contain',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FAF8F0',
+    ios: {
+      image: './assets/images/splash-icon-ios.png',
+      resizeMode: 'contain',
+      backgroundColor: '#FAF8F0',
+    },
+    android: {
+      image: './assets/images/splash-icon-android.png',
+      resizeMode: 'contain',
+      backgroundColor: '#FAF8F0',
+    },
   },
   ios: {
     supportsTablet: true,
