@@ -59,7 +59,7 @@ const config: ExpoConfig = {
       ITSAppUsesNonExemptEncryption: false,
       FacebookAppID: FACEBOOK_APP_ID,
       FacebookDisplayName: FACEBOOK_APP_NAME,
-      LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api'],
+      LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api', 'googlechrome', 'googleauth'],
       NSUserTrackingUsageDescription: 'This identifier will be used to deliver personalized ads to you.',
     },
   },

@@ -6,6 +6,7 @@ import { SessionProvider } from '@/contexts/SessionContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { initializeAmplitude } from '@/services/amplitude.service';
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
+import { initializeGoogleSignIn } from '@/services/auth.service';
 import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
@@ -85,6 +86,9 @@ export default function RootLayout() {
 
         // Initialize Amplitude SDK (works on all platforms)
         await initializeAmplitude();
+
+        // Initialize Google Sign-In (iOS/Android only)
+        initializeGoogleSignIn();
 
         // Setup Android notification handler and channel
         if (Platform.OS === 'android') {

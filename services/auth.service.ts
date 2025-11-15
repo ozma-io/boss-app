@@ -1,7 +1,8 @@
 import { auth } from '@/constants/firebase.config';
-import { GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
+import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { User } from '@/types';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';
@@ -145,38 +146,82 @@ export async function signInWithGoogleCredential(idToken: string): Promise<User>
   return mapFirebaseUserToUser(userCredential.user);
 }
 
-// TODO: Test Google Sign-In flow end-to-end on all platforms (iOS, Android, Web)
-// TODO: Verify all required Google OAuth credentials are configured:
-//   - GOOGLE_WEB_CLIENT_ID in constants/google.config.ts
-//   - iOS Client ID in Firebase Console
-//   - Android Client ID in Firebase Console
-//   - OAuth consent screen is properly configured
-//   - Redirect URIs are whitelisted in Google Cloud Console
-// TODO: Test with real users to ensure token exchange works correctly
-// TODO: Verify Firebase Authentication is properly configured for Google provider
-export async function signInWithGoogle(): Promise<User> {
-  try {
-    const redirectUri = AuthSession.makeRedirectUri({
-      scheme: process.env.EXPO_PUBLIC_APP_SCHEME || 'bossup',
-    });
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
-      client_id: GOOGLE_WEB_CLIENT_ID,
-      redirect_uri: redirectUri,
-      response_type: 'id_token',
-      scope: 'openid profile email',
-      nonce: Math.random().toString(36).substring(7),
-    }).toString()}`;
-
-    const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-
-    if (result.type !== 'success') {
-      throw new Error('Google Sign-In was cancelled or failed');
+/**
+ * Initialize Google Sign-In configuration
+ * Should be called once during app initialization
+ */
+export function initializeGoogleSignIn(): void {
+  if (Platform.OS !== 'web') {
+    try {
+      GoogleSignin.configure({
+        webClientId: GOOGLE_WEB_CLIENT_ID,
+        iosClientId: GOOGLE_IOS_CLIENT_ID,
+        offlineAccess: false,
+      });
+      logger.info('Google Sign-In configured', { feature: 'AuthService', platform: Platform.OS });
+    } catch (error) {
+      logger.error('Failed to configure Google Sign-In', { feature: 'AuthService', error });
     }
+  }
+}
 
-    const url = result.url;
-    const params = new URLSearchParams(url.split('#')[1]);
-    const idToken = params.get('id_token');
+export async function signInWithGoogle(): Promise<User> {
+  // For web platform: use web-based OAuth flow
+  if (Platform.OS === 'web') {
+    try {
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: process.env.EXPO_PUBLIC_APP_SCHEME || 'bossup',
+      });
+
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${new URLSearchParams({
+        client_id: GOOGLE_WEB_CLIENT_ID,
+        redirect_uri: redirectUri,
+        response_type: 'id_token',
+        scope: 'openid profile email',
+        nonce: Math.random().toString(36).substring(7),
+      }).toString()}`;
+
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+      if (result.type !== 'success') {
+        throw new Error('Google Sign-In was cancelled or failed');
+      }
+
+      const url = result.url;
+      const params = new URLSearchParams(url.split('#')[1]);
+      const idToken = params.get('id_token');
+
+      if (!idToken) {
+        throw new Error('No ID token received from Google');
+      }
+
+      const user = await signInWithGoogleCredential(idToken);
+      
+      trackAmplitudeEvent('auth_signin_completed', {
+        method: 'google',
+        email: user.email,
+        platform: 'web',
+      });
+      
+      return user;
+    } catch (error) {
+      trackAmplitudeEvent('auth_signin_failed', {
+        method: 'google',
+        error_type: error instanceof Error ? error.message : 'unknown',
+        platform: 'web',
+      });
+      throw error;
+    }
+  }
+  
+  // For iOS/Android: use native Google Sign-In SDK
+  try {
+    // Check if Play Services are available (Android only, always true on iOS)
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    
+    // Perform native sign-in
+    const response = await GoogleSignin.signIn();
+    const idToken = response.data?.idToken;
 
     if (!idToken) {
       throw new Error('No ID token received from Google');
@@ -187,14 +232,38 @@ export async function signInWithGoogle(): Promise<User> {
     trackAmplitudeEvent('auth_signin_completed', {
       method: 'google',
       email: user.email,
+      platform: Platform.OS,
+      native: true,
     });
     
     return user;
   } catch (error) {
+    // Handle specific Google Sign-In errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      const errorCode = (error as { code: string }).code;
+      
+      // User cancelled sign-in
+      if (errorCode === 'SIGN_IN_CANCELLED' || errorCode === '-5') {
+        logger.info('Google Sign-In cancelled by user', { feature: 'AuthService' });
+        throw new Error('Google Sign-In was cancelled');
+      }
+      
+      // Play Services not available or outdated
+      if (errorCode === 'PLAY_SERVICES_NOT_AVAILABLE') {
+        logger.error('Google Play Services not available', { feature: 'AuthService' });
+        throw new Error('Google Play Services not available. Please update Google Play Services.');
+      }
+    }
+    
+    logger.error('Google Sign-In failed', { feature: 'AuthService', error });
+    
     trackAmplitudeEvent('auth_signin_failed', {
       method: 'google',
       error_type: error instanceof Error ? error.message : 'unknown',
+      platform: Platform.OS,
+      native: true,
     });
+    
     throw error;
   }
 }
