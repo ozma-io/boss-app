@@ -61,6 +61,7 @@ const config: ExpoConfig = {
       FacebookDisplayName: FACEBOOK_APP_NAME,
       LSApplicationQueriesSchemes: ['fbapi', 'fb-messenger-share-api', 'googlechrome', 'googleauth'],
       NSUserTrackingUsageDescription: 'This identifier will be used to deliver personalized ads to you.',
+      NSMicrophoneUsageDescription: 'We need access to your microphone to record voice messages in support chat.',
     },
   },
   android: {
