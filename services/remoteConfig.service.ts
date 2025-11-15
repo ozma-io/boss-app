@@ -5,6 +5,24 @@ import { Platform } from 'react-native';
 import { logger } from './logger.service';
 
 // Platform-specific: Native uses React Native Firebase
+//
+// MIGRATION NOTE: React Native Firebase v12+ Modular API
+// -------------------------------------------------------
+// ❌ OLD (deprecated namespace API - causes warnings):
+//    const remoteConfig = require('@react-native-firebase/remote-config').default;
+//    const config = remoteConfig(); // Uses deprecated .app() internally
+//    config.getValue('key')
+//    config.setConfigSettings(settings)
+//    config.fetchAndActivate()
+//
+// ✅ NEW (modular API - no warnings):
+//    const { getRemoteConfig, getValue, setConfigSettings, fetchAndActivate } = require('@react-native-firebase/remote-config');
+//    const config = getRemoteConfig()
+//    getValue(config, 'key')
+//    setConfigSettings(config, settings)
+//    fetchAndActivate(config)
+//
+// See migration guide: https://rnfirebase.io/migrating-to-v12
 let nativeGetRemoteConfig: any = null;
 let nativeGetValue: any = null;
 let nativeSetConfigSettings: any = null;
