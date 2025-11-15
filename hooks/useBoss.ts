@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { createBoss, getFirstBoss, subscribeToBoss, updateBoss as updateBossService } from '@/services/boss.service';
-import { Boss } from '@/types';
 import { logger } from '@/services/logger.service';
+import { Boss } from '@/types';
 import { useCallback, useEffect, useState } from 'react';
 
 /**
@@ -54,7 +54,9 @@ export function useBoss() {
         // Load first boss
         let firstBoss = await getFirstBoss(user.id);
 
-        // If no boss exists, create one automatically
+        // FALLBACK: If no boss exists, create one automatically
+        // Normally the boss is created by Cloud Function on user creation (onUserCreated trigger)
+        // This is a safety fallback in case the trigger fails or is delayed
         if (!firstBoss) {
           logger.info('No boss found, creating new boss automatically', { feature: 'useBoss', userId: user.id });
           const newBossId = await createBoss(user.id);

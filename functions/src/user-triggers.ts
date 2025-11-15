@@ -6,7 +6,7 @@
 
 import * as admin from 'firebase-admin';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
-import { CHAT_WELCOME_MESSAGE } from './constants';
+import { CHAT_WELCOME_MESSAGE, DEFAULT_BOSS_NAME, DEFAULT_BOSS_POSITION } from './constants';
 import { logger } from './logger';
 import type { ContentItem, FirestoreChatMessage } from './types/chat.types';
 
@@ -75,12 +75,32 @@ export const onUserCreated = onDocumentCreated(
         threadId,
         messageId: messageRef.id,
       });
+      
+      // Create default boss for new user
+      const bossesRef = db.collection('users').doc(userId).collection('bosses');
+      const bossData = {
+        name: DEFAULT_BOSS_NAME,
+        position: DEFAULT_BOSS_POSITION,
+        birthday: '',
+        managementStyle: '',
+        startedAt: now,
+        createdAt: now,
+        updatedAt: now,
+        _fieldsMeta: {},
+      };
+      
+      const bossRef = await bossesRef.add(bossData);
+      
+      logger.info('Default boss created successfully', {
+        userId,
+        bossId: bossRef.id,
+      });
     } catch (error) {
-      logger.error('Failed to create welcome message for new user', {
+      logger.error('Failed to initialize new user data (chat or boss)', {
         userId,
         error,
       });
-      // Don't throw - we don't want user creation to fail if chat setup fails
+      // Don't throw - we don't want user creation to fail if chat/boss setup fails
     }
   }
 );

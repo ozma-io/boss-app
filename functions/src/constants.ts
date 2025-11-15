@@ -34,6 +34,12 @@ export const OPENAI_MODEL = 'gpt-5.1';
  */
 export const CHAT_WELCOME_MESSAGE = 'Welcome to BossUp! I\'m your AI assistant here to help you manage your relationship with your boss. Feel free to ask me anything!';
 
+/**
+ * Default boss data for new users
+ */
+export const DEFAULT_BOSS_NAME = 'My Boss';
+export const DEFAULT_BOSS_POSITION = 'Manager';
+
 // ============================================================================
 // ⚠️ DUPLICATED in ../../remoteconfig.template.json - keep both in sync!
 // These constants are fallback values if Remote Config is unavailable.

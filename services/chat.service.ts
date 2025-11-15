@@ -2,18 +2,18 @@ import { db, functions } from '@/constants/firebase.config';
 import { ChatMessage, ChatThread, ContentItem, LoadMessagesResult, Unsubscribe } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  setDoc,
-  startAt,
-  updateDoc,
+    addDoc,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    limit,
+    onSnapshot,
+    orderBy,
+    query,
+    setDoc,
+    startAt,
+    updateDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { logger } from './logger.service';
@@ -70,7 +70,9 @@ export async function getOrCreateThread(userId: string): Promise<string> {
       const threadDoc = await getDoc(threadRef);
       
       if (!threadDoc.exists()) {
-        // Create new thread
+        // FALLBACK: Create new thread if it doesn't exist
+        // Normally the thread is created by Cloud Function on user creation (onUserCreated trigger)
+        // This is a safety fallback in case the trigger fails or is delayed
         const now = new Date().toISOString();
         const newThread: ChatThread = {
           createdAt: now,
