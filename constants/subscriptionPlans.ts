@@ -25,7 +25,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlanConfig[] = [
     priceCurrency: 'USD',
     billingCycleMonths: 1,
     appleProductId: 'com.ozmaio.bossup.basic.monthly',
-    googlePlayProductId: 'play_basic_monthly',
+    googlePlayProductId: 'play_basic:monthly',
     stripeProductId: 'price_basic_monthly',
     enabled: true,
   },
@@ -36,7 +36,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlanConfig[] = [
     priceCurrency: 'USD',
     billingCycleMonths: 3,
     appleProductId: 'com.ozmaio.bossup.basic.quarterly',
-    googlePlayProductId: 'play_basic_quarterly',
+    googlePlayProductId: 'play_basic:quarterly',
     stripeProductId: 'price_basic_quarterly',
     enabled: true,
     trial: {
@@ -51,7 +51,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlanConfig[] = [
     priceCurrency: 'USD',
     billingCycleMonths: 6,
     appleProductId: 'com.ozmaio.bossup.basic.semiannual',
-    googlePlayProductId: 'play_basic_semiannual',
+    googlePlayProductId: 'play_basic:semiannual',
     stripeProductId: 'price_basic_semiannual',
     enabled: true,
     trial: {
@@ -66,7 +66,7 @@ export const DEFAULT_SUBSCRIPTION_PLANS: SubscriptionPlanConfig[] = [
     priceCurrency: 'USD',
     billingCycleMonths: 12,
     appleProductId: 'com.ozmaio.bossup.basic.annual',
-    googlePlayProductId: 'play_basic_annual',
+    googlePlayProductId: 'play_basic:annual',
     stripeProductId: 'price_basic_annual',
     enabled: true,
     trial: {
