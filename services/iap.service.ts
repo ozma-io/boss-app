@@ -96,13 +96,17 @@ export async function getAvailableProducts(productIds: string[]): Promise<IAPPro
         await initializeIAP();
       }
 
-      const products = await RNIap.getSubscriptions({ skus: productIds });
+      const products = await RNIap.fetchProducts({ skus: productIds, type: 'subs' });
 
-      return products.map(product => {
-        const iosProduct = product as RNIap.SubscriptionIOS;
+      if (!products) {
+        return [];
+      }
+
+      return products.map((product) => {
+        const iosProduct = product as RNIap.ProductSubscriptionIOS;
         return {
-          productId: iosProduct.productId,
-          price: iosProduct.localizedPrice,
+          productId: iosProduct.id,
+          price: iosProduct.displayPrice,
           currency: iosProduct.currency,
           title: iosProduct.title,
           description: iosProduct.description,
@@ -144,8 +148,13 @@ export async function purchaseSubscription(
       logger.info('Starting subscription purchase', { productId, tier, billingPeriod });
 
       // Request subscription
-      const purchaseResult = await RNIap.requestSubscription({
-        sku: productId,
+      const purchaseResult = await RNIap.requestPurchase({
+        type: 'subs',
+        request: {
+          ios: {
+            sku: productId,
+          },
+        },
       });
 
       if (!purchaseResult) {
@@ -164,8 +173,8 @@ export async function purchaseSubscription(
         productId: purchase.productId,
       });
 
-      // Get receipt
-      const receipt = purchase.transactionReceipt || '';
+      // Get receipt (purchaseToken contains JWS for iOS, purchase token for Android)
+      const receipt = purchase.purchaseToken || '';
 
       // Verify with backend
       const verificationResult = await verifyPurchaseWithBackend(
@@ -180,12 +189,12 @@ export async function purchaseSubscription(
         await RNIap.finishTransaction({ purchase, isConsumable: false });
 
         logger.info('Purchase verified and completed', { 
-          transactionId: purchase.transactionId,
+          transactionId: purchase.transactionId || purchase.id,
         });
 
         return {
           success: true,
-          transactionId: purchase.transactionId,
+          transactionId: purchase.transactionId || purchase.id,
         };
       } else {
         logger.error('Purchase verification failed', { error: verificationResult.error });

@@ -35,8 +35,8 @@ BossUp uses native in-app purchases for subscriptions on mobile platforms:
 **Flow:**
 ```
 User taps "Subscribe" 
-  → requestSubscription() via react-native-iap
-  → Get receipt
+  → requestPurchase() via react-native-iap
+  → Get receipt (purchaseToken/JWS)
   → Call Cloud Function verifyIAPPurchase()
   → Update Firestore
   → Show success/error
