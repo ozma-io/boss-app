@@ -358,15 +358,16 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         timestamp: new Date().toISOString(),
       };
       
-      // Calculate time since last user message
+      // Calculate time since previous user message (not the current one that triggered this function)
       const userMessages = recentMessages.filter((m) => m.role === 'user');
       let timeSinceLastMessageText = '';
       
-      if (userMessages.length > 0) {
-        const lastUserMessage = userMessages[userMessages.length - 1];
-        const lastMessageTime = new Date(lastUserMessage.timestamp);
+      if (userMessages.length >= 2) {
+        // Take the second-to-last message (the one before the current message that triggered this function)
+        const previousUserMessage = userMessages[userMessages.length - 2];
+        const previousMessageTime = new Date(previousUserMessage.timestamp);
         const currentTime = new Date(currentDateTimeUTC || new Date().toISOString());
-        const diffMs = currentTime.getTime() - lastMessageTime.getTime();
+        const diffMs = currentTime.getTime() - previousMessageTime.getTime();
         const diffMinutes = Math.floor(diffMs / (1000 * 60));
         
         // Only add time info if more than 30 minutes passed
@@ -376,12 +377,12 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
           
           if (days > 0) {
             const remainingHours = hours % 24;
-            timeSinceLastMessageText = `Time since last user message: ${days} day${days > 1 ? 's' : ''}${remainingHours > 0 ? ` ${remainingHours} hour${remainingHours > 1 ? 's' : ''}` : ''}\n`;
+            timeSinceLastMessageText = `Time since user's previous message (before the current one): ${days} day${days > 1 ? 's' : ''}${remainingHours > 0 ? ` ${remainingHours} hour${remainingHours > 1 ? 's' : ''}` : ''}\n`;
           } else if (hours > 0) {
             const remainingMinutes = diffMinutes % 60;
-            timeSinceLastMessageText = `Time since last user message: ${hours} hour${hours > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}` : ''}\n`;
+            timeSinceLastMessageText = `Time since user's previous message (before the current one): ${hours} hour${hours > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}` : ''}\n`;
           } else {
-            timeSinceLastMessageText = `Time since last user message: ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}\n`;
+            timeSinceLastMessageText = `Time since user's previous message (before the current one): ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}\n`;
           }
         }
       }
