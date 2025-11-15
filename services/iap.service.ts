@@ -5,14 +5,13 @@
  * Manages subscription verification and synchronization
  */
 
+import { functions } from '@/constants/firebase.config';
+import { IAPProduct, IAPPurchaseResult, UserProfile } from '@/types';
+import { doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
 import * as RNIap from 'react-native-iap';
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/constants/firebase.config';
 import { logger } from './logger.service';
-import { IAPPurchaseResult, IAPProduct, UserProfile } from '@/types';
-import { getAuth } from 'firebase/auth';
-import { doc, getDoc, updateDoc, getFirestore } from 'firebase/firestore';
 
 let iapConnection: boolean = false;
 
@@ -99,13 +98,16 @@ export async function getAvailableProducts(productIds: string[]): Promise<IAPPro
 
       const products = await RNIap.getSubscriptions({ skus: productIds });
 
-      return products.map(product => ({
-        productId: product.productId,
-        price: product.localizedPrice,
-        currency: product.currency,
-        title: product.title,
-        description: product.description,
-      }));
+      return products.map(product => {
+        const iosProduct = product as RNIap.SubscriptionIOS;
+        return {
+          productId: iosProduct.productId,
+          price: iosProduct.localizedPrice,
+          currency: iosProduct.currency,
+          title: iosProduct.title,
+          description: iosProduct.description,
+        };
+      });
     } catch (error) {
       logger.error('Failed to get available products', { error, productIds });
       return [];
@@ -142,12 +144,19 @@ export async function purchaseSubscription(
       logger.info('Starting subscription purchase', { productId, tier, billingPeriod });
 
       // Request subscription
-      const purchase = await RNIap.requestSubscription({
+      const purchaseResult = await RNIap.requestSubscription({
         sku: productId,
       });
 
-      if (!purchase) {
+      if (!purchaseResult) {
         throw new Error('Purchase failed - no purchase object returned');
+      }
+
+      // Handle both single purchase and array (iOS returns single purchase)
+      const purchase = Array.isArray(purchaseResult) ? purchaseResult[0] : purchaseResult;
+
+      if (!purchase) {
+        throw new Error('Purchase failed - empty purchase result');
       }
 
       logger.info('Purchase completed, verifying with backend', { 
