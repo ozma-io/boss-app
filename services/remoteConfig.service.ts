@@ -5,14 +5,14 @@ import { Platform } from 'react-native';
 import { logger } from './logger.service';
 
 // Platform-specific: Native uses React Native Firebase
-let nativeRemoteConfig: any = null;
+let nativeGetRemoteConfig: any = null;
 let nativeGetValue: any = null;
 let nativeSetConfigSettings: any = null;
 let nativeFetchAndActivate: any = null;
 if (Platform.OS !== 'web') {
   // iOS/Android: use React Native Firebase modular API
   const remoteConfigModule = require('@react-native-firebase/remote-config');
-  nativeRemoteConfig = remoteConfigModule.default;
+  nativeGetRemoteConfig = remoteConfigModule.getRemoteConfig;
   nativeGetValue = remoteConfigModule.getValue;
   nativeSetConfigSettings = remoteConfigModule.setConfigSettings;
   nativeFetchAndActivate = remoteConfigModule.fetchAndActivate;
@@ -36,7 +36,7 @@ export async function initRemoteConfig(): Promise<void> {
       });
     } else {
       // iOS/Android: use React Native Firebase modular API
-      const config = nativeRemoteConfig();
+      const config = nativeGetRemoteConfig();
       
       // Set config settings
       await nativeSetConfigSettings(config, {
@@ -84,7 +84,7 @@ export async function fetchSubscriptionPlans(): Promise<SubscriptionPlanConfig[]
       plansJson = plansValue.asString();
     } else {
       // iOS/Android: use React Native Firebase modular API
-      const config = nativeRemoteConfig();
+      const config = nativeGetRemoteConfig();
       await nativeFetchAndActivate(config);
       const valueSnapshot = nativeGetValue(config, 'subscription_plans');
       plansJson = valueSnapshot.asString();
