@@ -1,6 +1,6 @@
-import { ConfigPlugin, withDangerousMod } from '@expo/config-plugins';
-import * as fs from 'fs';
-import * as path from 'path';
+const { withDangerousMod } = require('@expo/config-plugins');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Config plugin to automatically modify iOS Podfile for Firebase compatibility.
@@ -12,7 +12,7 @@ import * as path from 'path';
  * These modifications are required for Swift Firebase pods to work properly
  * with React Native as static libraries.
  */
-const withFirebasePodfile: ConfigPlugin = (config) => {
+const withFirebasePodfile = (config) => {
   return withDangerousMod(config, [
     'ios',
     async (config) => {
@@ -63,9 +63,9 @@ const withFirebasePodfile: ConfigPlugin = (config) => {
 
       // Only add if not already present
       if (!contents.includes("config.build_settings['DEFINES_MODULE'] = 'YES'")) {
-        // Insert before the last 'end' statement in post_install block
+        // Insert after react_native_post_install call, before the closing 'end'
         contents = contents.replace(
-          /(post_install do \|installer\|.*?react_native_post_install\([^)]+\))/s,
+          /(react_native_post_install\([^)]+\s+\))/s,
           (match) => `${match}\n    ${postInstallSnippet.trim()}`
         );
       }
@@ -76,5 +76,5 @@ const withFirebasePodfile: ConfigPlugin = (config) => {
   ]);
 };
 
-export default withFirebasePodfile;
+module.exports = withFirebasePodfile;
 

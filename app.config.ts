@@ -143,6 +143,15 @@ const config: ExpoConfig = {
       },
     ],
     '@react-native-firebase/app',
+    './plugins/withFirebasePodfile',
+    [
+      'expo-build-properties',
+      {
+        ios: {
+          buildReactNativeFromSource: true,
+        },
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
