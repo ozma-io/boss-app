@@ -23,7 +23,7 @@ admin.initializeApp();
 export { appleServerNotification } from './apple-notifications';
 export { generateChatResponse, onChatMessageCreated } from './chat';
 export { sendFacebookConversionEvent } from './facebook';
-export { verifyIAPPurchase } from './iap-verification';
+export { cancelSubscription, verifyIAPPurchase } from './iap-verification';
 export { getIntercomJwt } from './intercom';
 export { onUserCreated } from './user-triggers';
 

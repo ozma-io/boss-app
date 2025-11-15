@@ -203,6 +203,7 @@ export interface UserSubscription {
   currentPeriodEnd?: string;
   trialEnd?: string;
   cancelledAt?: string;
+  cancellationReason?: 'migration' | 'user_request';
   
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
@@ -262,5 +263,12 @@ export interface IAPProduct {
   currency: string;
   title: string;
   description: string;
+}
+
+// Response from cancelSubscription Cloud Function
+export interface CancelSubscriptionResponse {
+  success: boolean;
+  currentPeriodEnd?: string;
+  error?: string;
 }
 

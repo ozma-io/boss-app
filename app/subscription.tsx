@@ -1,3 +1,4 @@
+import { functions } from '@/constants/firebase.config';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { checkAndSyncSubscription, endIAPConnection, initializeIAP, purchaseSubscription } from '@/services/iap.service';
@@ -10,9 +11,10 @@ import {
   getBillingPeriodDescription,
   getSubscriptionDisplayInfo,
 } from '@/services/subscription.service';
-import { SubscriptionPlanConfig } from '@/types';
+import { CancelSubscriptionResponse, SubscriptionPlanConfig } from '@/types';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
+import { httpsCallable } from 'firebase/functions';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +28,7 @@ export default function SubscriptionScreen() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const subscriptionInfo = getSubscriptionDisplayInfo(profile);
 
@@ -112,6 +115,81 @@ export default function SubscriptionScreen() {
       setSyncing(false);
     }
   }
+
+  const executeSubscriptionCancellation = async (): Promise<void> => {
+    if (cancelling) return;
+
+    try {
+      setCancelling(true);
+
+      logger.info('Executing subscription cancellation', { 
+        feature: 'SubscriptionScreen',
+        provider: profile?.subscription?.provider 
+      });
+
+      // Call Cloud Function to cancel subscription
+      const cancelSubscriptionFn = httpsCallable<{}, CancelSubscriptionResponse>(
+        functions, 
+        'cancelSubscription'
+      );
+
+      const result = await cancelSubscriptionFn({});
+      const data = result.data;
+
+      if (data.success) {
+        // Track success
+        trackAmplitudeEvent('subscription_cancel_success', {
+          provider: profile?.subscription?.provider,
+          currentPeriodEnd: data.currentPeriodEnd,
+        });
+
+        // Format end date for display
+        const endDate = data.currentPeriodEnd 
+          ? formatNextPaymentDate(data.currentPeriodEnd)
+          : 'the end of your billing period';
+
+        // Show success message
+        Alert.alert(
+          'Subscription Cancelled',
+          `Your subscription has been cancelled. You will continue to have access until ${endDate}.`,
+          [{ text: 'OK' }]
+        );
+
+        // Profile will update automatically via real-time Firestore listener
+      } else {
+        // Track failure
+        trackAmplitudeEvent('subscription_cancel_failed', {
+          provider: profile?.subscription?.provider,
+          error: data.error,
+        });
+
+        // Show error message
+        Alert.alert(
+          'Cancellation Failed',
+          data.error || 'Unable to cancel subscription. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      logger.error('Subscription cancellation error', { 
+        feature: 'SubscriptionScreen', 
+        error 
+      });
+
+      trackAmplitudeEvent('subscription_cancel_error', {
+        provider: profile?.subscription?.provider,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred. Please try again or contact support.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const handleSubscribeOrChange = async (): Promise<void> => {
     if (!selectedPlan || purchasing) return;
@@ -233,6 +311,7 @@ export default function SubscriptionScreen() {
       provider,
     });
 
+    // Apple and Google must be cancelled through native Settings
     if (provider === 'apple') {
       Alert.alert(
         'Cancel Subscription',
@@ -250,16 +329,32 @@ export default function SubscriptionScreen() {
           { text: 'OK' },
         ]
       );
-    } else if (provider === 'stripe') {
-      // TODO: Implement Stripe cancellation (web-based)
+    } else if (provider && provider !== 'none') {
+      // For all other providers (handled on server side)
+      trackAmplitudeEvent('subscription_cancel_confirmed', {
+        provider,
+      });
+
       Alert.alert(
-        'Cancel Subscription',
-        'To cancel your subscription, please visit our website or contact support.',
+        'Cancel Subscription?',
+        'Your subscription will remain active until the end of the current billing period. You can resubscribe at any time.',
         [
-          { text: 'OK' },
+          { 
+            text: 'Keep Subscription', 
+            style: 'cancel',
+            onPress: () => {
+              trackAmplitudeEvent('subscription_cancel_dismissed', {
+                provider,
+              });
+            }
+          },
+          { 
+            text: 'Cancel Subscription', 
+            style: 'destructive',
+            onPress: executeSubscriptionCancellation
+          },
         ]
       );
-      logger.info('Stripe subscription cancellation requested', { feature: 'SubscriptionScreen' });
     } else {
       Alert.alert(
         'No Active Subscription',

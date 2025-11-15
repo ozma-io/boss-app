@@ -88,6 +88,12 @@ interface VerifyIAPResponse {
   migrated?: boolean;
 }
 
+interface CancelSubscriptionResponse {
+  success: boolean;
+  currentPeriodEnd?: string;
+  error?: string;
+}
+
 /**
  * Verify Apple In-App Purchase receipt
  */
@@ -338,6 +344,95 @@ async function verifyGooglePlayPurchase(
 }
 
 /**
+ * Shared function to cancel a Stripe subscription
+ * Used for both manual cancellation and auto-migration
+ */
+async function cancelStripeSubscription(
+  stripeSubscriptionId: string,
+  userId: string,
+  reason: 'migration' | 'user_request'
+): Promise<{ success: boolean; currentPeriodEnd?: string; error?: string }> {
+  try {
+    const stripeKey = stripeSecretKey.value().trim();
+    
+    if (!stripeKey) {
+      const error = 'Stripe secret key not configured';
+      logger.warn(error, { userId });
+      return { success: false, error };
+    }
+
+    // Initialize Stripe with latest API version
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: '2025-10-29.clover',
+    });
+
+    // Retrieve subscription status from Stripe first
+    let stripeSubscription: Stripe.Subscription;
+    try {
+      stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+    } catch (error) {
+      logger.warn('Failed to retrieve Stripe subscription', {
+        error,
+        userId,
+        stripeSubscriptionId,
+      });
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to retrieve subscription'
+      };
+    }
+
+    // Only cancel if subscription is in a cancellable state
+    if (stripeSubscription.status === 'active' || stripeSubscription.status === 'trialing') {
+      // Cancel Stripe subscription with proration (refund unused time)
+      await stripe.subscriptions.cancel(stripeSubscriptionId, {
+        prorate: true,
+      });
+
+      const currentPeriodEnd = (stripeSubscription as any).current_period_end 
+        ? new Date((stripeSubscription as any).current_period_end * 1000).toISOString()
+        : undefined;
+
+      logger.info(`Cancelled Stripe subscription - reason: ${reason}`, {
+        userId,
+        stripeSubscriptionId,
+        previousStatus: stripeSubscription.status,
+        prorate: true,
+        reason,
+      });
+
+      // Update Firestore with cancellation metadata
+      await admin.firestore().collection('users').doc(userId).update({
+        'subscription.status': 'cancelled',
+        'subscription.cancelledAt': admin.firestore.FieldValue.serverTimestamp(),
+        'subscription.cancellationReason': reason,
+        'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return { success: true, currentPeriodEnd };
+    } else {
+      // Subscription already in final state, no need to cancel
+      logger.info('Stripe subscription already in final state, skipping cancellation', {
+        userId,
+        stripeSubscriptionId,
+        status: stripeSubscription.status,
+      });
+      
+      return { 
+        success: false, 
+        error: `Subscription is already ${stripeSubscription.status}`
+      };
+    }
+  } catch (error) {
+    logger.error('Failed to cancel Stripe subscription', { error, userId, reason });
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+/**
  * Cancel existing Stripe subscription if user is migrating
  */
 async function cancelStripeSubscriptionIfExists(userId: string): Promise<boolean> {
@@ -370,51 +465,11 @@ async function cancelStripeSubscriptionIfExists(userId: string): Promise<boolean
       return false;
     }
 
-    // Initialize Stripe with latest API version
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: '2025-10-29.clover',
-    });
-
-    // Retrieve subscription status from Stripe first
-    let stripeSubscription;
-    try {
-      stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-    } catch (error) {
-      logger.warn('Failed to retrieve Stripe subscription', {
-        error,
-        userId,
-        stripeSubscriptionId,
-      });
-      return false;
-    }
-
-    // Only cancel if subscription is in a cancellable state
-    if (stripeSubscription.status === 'active' || stripeSubscription.status === 'trialing') {
-      // Cancel Stripe subscription with proration (refund unused time)
-      await stripe.subscriptions.cancel(stripeSubscriptionId, {
-        prorate: true,
-      });
-
-      logger.info('Cancelled Stripe subscription for user migrating to Apple IAP', {
-        userId,
-        stripeSubscriptionId,
-        previousStatus: stripeSubscription.status,
-        prorate: true,
-      });
-
-      return true;
-    } else {
-      // Subscription already in final state, no need to cancel
-      logger.info('Stripe subscription already in final state, skipping cancellation', {
-        userId,
-        stripeSubscriptionId,
-        status: stripeSubscription.status,
-      });
-      
-      return false;
-    }
+    // Use shared cancellation logic
+    const result = await cancelStripeSubscription(stripeSubscriptionId, userId, 'migration');
+    return result.success;
   } catch (error) {
-    logger.error('Failed to cancel Stripe subscription', { error, userId });
+    logger.error('Failed to check and cancel Stripe subscription', { error, userId });
     // Don't throw - we still want to process the Apple purchase
     return false;
   }
@@ -565,6 +620,105 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
       throw new HttpsError(
         'internal',
         error instanceof Error ? error.message : 'Failed to verify purchase'
+      );
+    }
+  }
+);
+
+/**
+ * Cloud Function: Cancel Subscription
+ * 
+ * Allows users to manually cancel their Stripe subscription
+ * Apple/Google subscriptions must be cancelled through native Settings
+ */
+export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>>(
+  {
+    region: 'us-central1',
+    secrets: [stripeSecretKey],
+  },
+  async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const userId = request.auth.uid;
+
+    logger.info('Manual subscription cancellation requested', { userId });
+
+    try {
+      // Get user's current subscription
+      const userDoc = await admin.firestore().collection('users').doc(userId).get();
+      
+      if (!userDoc.exists) {
+        throw new HttpsError('not-found', 'User not found');
+      }
+
+      const userData = userDoc.data();
+
+      if (!userData?.subscription) {
+        return {
+          success: false,
+          error: 'No active subscription found',
+        };
+      }
+
+      const subscription = userData.subscription;
+
+      // Only allow cancellation of Stripe subscriptions
+      // Apple/Google must be cancelled through native Settings
+      if (subscription.provider === 'apple' || subscription.provider === 'google') {
+        throw new HttpsError(
+          'failed-precondition',
+          'Apple and Google subscriptions must be cancelled through your device Settings'
+        );
+      }
+
+      if (subscription.provider !== 'stripe') {
+        return {
+          success: false,
+          error: 'No subscription provider found',
+        };
+      }
+
+      // Check if already cancelled or expired
+      if (subscription.status === 'cancelled' || subscription.status === 'expired') {
+        return {
+          success: false,
+          error: `Subscription is already ${subscription.status}`,
+        };
+      }
+
+      const stripeSubscriptionId = subscription.stripeSubscriptionId;
+
+      if (!stripeSubscriptionId) {
+        return {
+          success: false,
+          error: 'No Stripe subscription ID found',
+        };
+      }
+
+      // Use shared cancellation logic
+      const result = await cancelStripeSubscription(stripeSubscriptionId, userId, 'user_request');
+
+      if (result.success) {
+        logger.info('Successfully cancelled subscription', { 
+          userId, 
+          currentPeriodEnd: result.currentPeriodEnd 
+        });
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Subscription cancellation failed', { error, userId });
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+
+      throw new HttpsError(
+        'internal',
+        error instanceof Error ? error.message : 'Failed to cancel subscription'
       );
     }
   }

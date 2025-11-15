@@ -239,6 +239,60 @@ When a user with an active Stripe subscription purchases via Apple IAP:
 
 ---
 
+## ❌ Manual Subscription Cancellation
+
+**Overview:**
+
+Users can manually cancel their subscriptions from the Subscription screen. The cancellation flow differs by provider:
+
+### Apple & Google Subscriptions
+
+- **Method:** Redirect to native Settings
+- **Apple:** Settings → [Your Name] → Subscriptions → BossUp
+- **Google:** Google Play Store app → Subscriptions
+- **Reason:** Required by Apple/Google store policies - must use native cancellation
+
+### Stripe Subscriptions
+
+- **Method:** In-app cancellation via Cloud Function
+- **Flow:**
+  1. User taps "Cancel Subscription" button
+  2. Confirmation dialog appears (no mention of "Stripe" for compliance)
+  3. User confirms cancellation
+  4. `cancelSubscription` Cloud Function is called
+  5. Subscription status updated to 'cancelled' in Firestore
+  6. User retains access until current period ends
+
+**Cloud Function:** `cancelSubscription`
+- **Location:** `functions/src/iap-verification.ts`
+- **Authentication:** Required (user must be authenticated)
+- **Permissions:** User can only cancel their own subscription
+- **Response:** `{ success: boolean, currentPeriodEnd?: string, error?: string }`
+
+**Firestore Updates:**
+```
+/users/{userId}/subscription
+  - status: "cancelled"
+  - cancelledAt: timestamp
+  - cancellationReason: "user_request"
+  - updatedAt: timestamp
+```
+
+**Compliance Notes:**
+- No mention of "Stripe" in user-facing UI on mobile platforms
+- Generic terminology: "your subscription", "billing period"
+- Stripe references only in logs and analytics (not visible to Apple/Google)
+
+**Amplitude Events:**
+- `subscription_cancel_clicked` - Cancel button tapped
+- `subscription_cancel_confirmed` - Confirmation dialog shown (Stripe only)
+- `subscription_cancel_dismissed` - User chose to keep subscription
+- `subscription_cancel_success` - Cancellation completed successfully
+- `subscription_cancel_failed` - Cancellation failed (error)
+- `subscription_cancel_error` - Unexpected error occurred
+
+---
+
 ## 📱 Platform Support
 
 ### iOS (Active)
@@ -299,17 +353,21 @@ When a user with an active Stripe subscription purchases via Apple IAP:
 ## 📊 Key Files
 
 **Frontend:**
-- `app/subscription.tsx` - Subscription screen UI
+- `app/subscription.tsx` - Subscription screen UI (includes cancellation)
 - `services/iap.service.ts` - IAP SDK integration
 - `types/index.ts` - TypeScript types
 
 **Backend:**
-- `functions/src/iap-verification.ts` - Receipt verification
-- `functions/src/index.ts` - Export Cloud Function
+- `functions/src/iap-verification.ts` - Receipt verification & cancellation
+- `functions/src/index.ts` - Export Cloud Functions
 
 **Config:**
 - `constants/subscriptionPlans.ts` - Plan definitions
 - `remoteconfig.template.json` - Remote Config template
+
+**Cloud Functions:**
+- `verifyIAPPurchase` - Verify Apple/Google receipts
+- `cancelSubscription` - Cancel Stripe subscriptions manually
 
 ---
 
