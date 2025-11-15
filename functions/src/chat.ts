@@ -195,30 +195,6 @@ async function fetchUserContext(userId: string): Promise<string> {
   return contextParts.join('\n');
 }
 
-/**
- * Fetch system prompts from Remote Config
- * Falls back to constants if Remote Config is not available
- */
-async function getSystemPrompts(): Promise<{ mainPrompt: string; reminderPrompt: string }> {
-  try {
-    const remoteConfig = admin.remoteConfig();
-    const template = await remoteConfig.getTemplate();
-    
-    const chatSystemPromptParam = template.parameters?.chat_system_prompt;
-    const chatReminderPromptParam = template.parameters?.chat_reminder_prompt;
-    
-    const mainPrompt = (chatSystemPromptParam?.defaultValue as any)?.value || CHAT_SYSTEM_PROMPT;
-    const reminderPrompt = (chatReminderPromptParam?.defaultValue as any)?.value || CHAT_REMINDER_PROMPT;
-    
-    return { mainPrompt, reminderPrompt };
-  } catch (error) {
-    logger.warn('Failed to fetch prompts from Remote Config, using constants', { error });
-    return {
-      mainPrompt: CHAT_SYSTEM_PROMPT,
-      reminderPrompt: CHAT_REMINDER_PROMPT,
-    };
-  }
-}
 
 /**
  * Generate AI chat response
@@ -346,9 +322,6 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         };
       }
       
-      // Fetch system prompts from Remote Config
-      const { mainPrompt, reminderPrompt } = await getSystemPrompts();
-      
       logger.debug('Fetching user context', { userId, threadId });
       
       // Fetch user context
@@ -369,7 +342,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       
       const systemMessageMain: FirestoreChatMessage = {
         role: 'system',
-        content: [{ type: 'text', text: mainPrompt }],
+        content: [{ type: 'text', text: CHAT_SYSTEM_PROMPT }],
         timestamp: new Date().toISOString(),
       };
       
@@ -381,7 +354,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       
       const systemMessageReminder: FirestoreChatMessage = {
         role: 'system',
-        content: [{ type: 'text', text: reminderPrompt }],
+        content: [{ type: 'text', text: CHAT_REMINDER_PROMPT }],
         timestamp: new Date().toISOString(),
       };
       

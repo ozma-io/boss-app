@@ -40,16 +40,8 @@ export const CHAT_WELCOME_MESSAGE = 'Welcome to BossUp! I\'m your AI assistant h
 export const DEFAULT_BOSS_NAME = 'My Boss';
 export const DEFAULT_BOSS_POSITION = 'Manager';
 
-// ============================================================================
-// ⚠️ DUPLICATED in ../../remoteconfig.template.json - keep both in sync!
-// These constants are fallback values if Remote Config is unavailable.
-// Primary source: Firebase Remote Config (remoteconfig.template.json)
-// Update BOTH places when changing prompts!
-// ============================================================================
-
 /**
  * System prompt for the AI assistant
- * This is the fallback if Remote Config is not available
  */
 export const CHAT_SYSTEM_PROMPT = `You are an AI career coach designed to help professionals navigate their workplace relationships and career development. Your role is to:
 
@@ -90,13 +82,8 @@ Communication Style (CRITICAL):
 
 /**
  * Reminder prompt to keep AI focused on career coaching
- * This is the fallback if Remote Config is not available
  */
 export const CHAT_REMINDER_PROMPT = 'Remember: Focus on career coaching and professional development. Stay on topic and provide helpful, actionable guidance. IMPORTANT: Reference specific details from the user\'s profile, their goal, bosses, and timeline entries. Avoid generic advice - always make your recommendations concrete and personalized to their actual situation. CRITICAL: Keep response to 1-2 paragraphs (3 max), 2-3 sentences per paragraph. If asking questions, ask ONLY ONE question, never multiple. Write like chatting with a friend - short, natural, conversational. Plain text only.';
-
-// ============================================================================
-// End of duplicated section
-// ============================================================================
 
 // ============================================================================
 // Apple App Store Configuration
