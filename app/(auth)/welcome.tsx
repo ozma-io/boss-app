@@ -37,7 +37,6 @@ function getAuthButtonsConfig(): AuthButtonConfig[] {
   return [
     { type: 'google', variant: 'primary' },
     { type: 'email', variant: 'secondary' },
-    { type: 'apple', variant: 'secondary' },
   ];
 }
 
