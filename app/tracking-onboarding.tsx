@@ -2,13 +2,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { getAttributionData, isFirstLaunch } from '@/services/attribution.service';
-import { logAppInstallEvent, sendAppInstallEvent } from '@/services/facebook.service';
-import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
+import { sendFirstLaunchEvents } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
+import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TrackingOnboardingScreen(): React.JSX.Element {
   const router = useRouter();
@@ -40,37 +40,27 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
         await updateTrackingPermissionStatus(user.id, status);
       }
       
-      // Check if this is first launch - if yes, send AppInstall events to Facebook
+      // Check if this is first launch - if yes, send first launch events to Facebook
       const firstLaunch = await isFirstLaunch();
       if (firstLaunch) {
-        logger.info('First launch detected, sending AppInstall events to Facebook', { feature: 'TrackingOnboarding' });
+        logger.info('First launch detected, sending first launch events to Facebook', { feature: 'TrackingOnboarding' });
         
         try {
           const attributionData = await getAttributionData();
           
           if (attributionData) {
-            // Send AppInstall event to Facebook (client-side)
-            // Only if we're not on web platform
-            if (Platform.OS !== 'web') {
-              await logAppInstallEvent(attributionData);
-            }
-            
-            // Send AppInstall event to Facebook (server-side via Cloud Function)
-            await sendAppInstallEvent(
-              attributionData.email ? { email: attributionData.email } : undefined,
-              attributionData
-            );
-            
-            logger.info('AppInstall events sent successfully', { feature: 'TrackingOnboarding' });
+            // Send first launch events (App Install + App Launch)
+            await sendFirstLaunchEvents(attributionData);
+            logger.info('First launch events sent successfully', { feature: 'TrackingOnboarding' });
           } else {
-            logger.info('No attribution data found, skipping AppInstall events', { feature: 'TrackingOnboarding' });
+            logger.info('No attribution data found, skipping first launch events', { feature: 'TrackingOnboarding' });
           }
         } catch (fbError) {
-          logger.error('Failed to send AppInstall events to Facebook', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
+          logger.error('Failed to send first launch events', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
           // Don't block user flow on FB error
         }
       } else {
-        logger.info('Not first launch, skipping AppInstall events', { feature: 'TrackingOnboarding' });
+        logger.info('Not first launch, skipping first launch events', { feature: 'TrackingOnboarding' });
       }
       
       // Mark tracking onboarding as completed

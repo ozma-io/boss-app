@@ -1,6 +1,6 @@
 import { auth } from '@/constants/firebase.config';
 import { resetAmplitudeUser, setAmplitudeUserId } from '@/services/amplitude.service';
-import { clearAttributionData, getAttributionData } from '@/services/attribution.service';
+import { getAttributionData } from '@/services/attribution.service';
 import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { logoutIntercomUser, registerIntercomUser } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
@@ -93,9 +93,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               logger.info('Linking attribution data to user', { feature: 'AuthContext', userId: newUser.id });
               try {
                 await updateUserAttribution(newUser.id, attributionData);
-                // Clear attribution data after successfully linking to user
-                await clearAttributionData();
-                logger.info('Attribution data linked and cleared from storage', { feature: 'AuthContext' });
+                // Keep attribution data in AsyncStorage for future App Launch events
+                logger.info('Attribution data linked to user (kept in storage)', { feature: 'AuthContext' });
               } catch (error) {
                 logger.error('Error linking attribution data', { feature: 'AuthContext', error });
               }

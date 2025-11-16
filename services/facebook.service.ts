@@ -118,19 +118,6 @@ export async function logAppInstallEvent(attributionData: AttributionData): Prom
     logger.info('Skipping AppInstall event (web or SDK not available)', { feature: 'Facebook' });
     return;
   }
-  
-  // Get tracking permission status - on iOS we need explicit permission
-  let canTrack = true;
-  if (Platform.OS === 'ios') {
-    const { getTrackingPermissionStatus } = await import('@/services/tracking.service');
-    const status = await getTrackingPermissionStatus();
-    canTrack = status === 'authorized';
-    
-    if (!canTrack) {
-      logger.info('Skipping AppInstall event (tracking permission not granted)', { feature: 'Facebook' });
-      return;
-    }
-  }
 
   try {
     const eventParams: Record<string, string> = {};
@@ -152,12 +139,33 @@ export async function logAppInstallEvent(attributionData: AttributionData): Prom
       eventParams.email = attributionData.email;
     }
     
-    // Log the event
+    // Log the event - SDK will handle advertiserTrackingEnabled flag automatically
     AppEventsLogger.logEvent('fb_mobile_activate_app', eventParams);
     
     logger.info('AppInstall event logged to Facebook', { feature: 'Facebook', eventParams });
   } catch (error) {
     logger.error('Error logging AppInstall event', { feature: 'Facebook', error });
+    throw error;
+  }
+}
+
+/**
+ * Log AppLaunch event to Facebook (client-side)
+ */
+export async function logAppLaunchEvent(): Promise<void> {
+  // Skip on web or if SDK not available
+  if (Platform.OS === 'web' || !AppEventsLogger) {
+    logger.info('Skipping AppLaunch event (web or SDK not available)', { feature: 'Facebook' });
+    return;
+  }
+
+  try {
+    // Log the event - SDK will handle advertiserTrackingEnabled flag automatically
+    AppEventsLogger.logEvent('fb_mobile_app_launch');
+    
+    logger.info('AppLaunch event logged to Facebook', { feature: 'Facebook' });
+  } catch (error) {
+    logger.error('Error logging AppLaunch event', { feature: 'Facebook', error });
     throw error;
   }
 }
@@ -174,21 +182,9 @@ export async function logCustomEvent(
     logger.info('Skipping custom event (web or SDK not available)', { feature: 'Facebook', eventName });
     return;
   }
-  
-  // Get tracking permission status - on iOS we need explicit permission
-  let canTrack = true;
-  if (Platform.OS === 'ios') {
-    const { getTrackingPermissionStatus } = await import('@/services/tracking.service');
-    const status = await getTrackingPermissionStatus();
-    canTrack = status === 'authorized';
-    
-    if (!canTrack) {
-      logger.info('Skipping custom event (tracking permission not granted)', { feature: 'Facebook', eventName });
-      return;
-    }
-  }
 
   try {
+    // Log the event - SDK will handle advertiserTrackingEnabled flag automatically
     if (parameters) {
       AppEventsLogger.logEvent(eventName, parameters);
     } else {
@@ -295,6 +291,56 @@ export async function sendAppInstallEvent(
     logger.info('AppInstall event sent successfully', { feature: 'Facebook' });
   } catch (error) {
     logger.error('Error sending AppInstall event', { feature: 'Facebook', error });
+    throw error;
+  }
+}
+
+/**
+ * Send AppLaunch event to Facebook (Server-Side via Cloud Function)
+ * Should be called on every app launch
+ */
+export async function sendAppLaunchEvent(
+  userData?: {
+    email?: string;
+  },
+  attributionData?: AttributionData
+): Promise<void> {
+  try {
+    await sendConversionEvent('AppLaunch', userData, undefined, attributionData);
+    logger.info('AppLaunch event sent successfully', { 
+      feature: 'Facebook', 
+      hasUserData: !!userData,
+      hasAttribution: !!attributionData
+    });
+  } catch (error) {
+    logger.error('Error sending AppLaunch event', { feature: 'Facebook', error });
+    throw error;
+  }
+}
+
+/**
+ * Send first launch events (App Install + App Launch)
+ * Should be called only on first app launch with attribution data
+ */
+export async function sendFirstLaunchEvents(attributionData: AttributionData): Promise<void> {
+  try {
+    // Send App Install events
+    await logAppInstallEvent(attributionData);
+    await sendAppInstallEvent(
+      attributionData.email ? { email: attributionData.email } : undefined,
+      attributionData
+    );
+    logger.info('App Install events sent', { feature: 'Facebook' });
+    
+    // Send App Launch events immediately after
+    await logAppLaunchEvent();
+    await sendAppLaunchEvent(
+      attributionData.email ? { email: attributionData.email } : undefined,
+      attributionData
+    );
+    logger.info('App Launch events sent', { feature: 'Facebook' });
+  } catch (error) {
+    logger.error('Error sending first launch events', { feature: 'Facebook', error });
     throw error;
   }
 }

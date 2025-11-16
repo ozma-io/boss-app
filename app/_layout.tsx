@@ -5,9 +5,9 @@ import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/con
 import { SessionProvider } from '@/contexts/SessionContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { initializeAmplitude } from '@/services/amplitude.service';
-import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
-import { initializeGoogleSignIn } from '@/services/auth.service';
-import { initializeFacebookSdk, logAppInstallEvent, parseDeepLinkParams, sendAppInstallEvent } from '@/services/facebook.service';
+import { getAttributionData, getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
+import { getCurrentUser, initializeGoogleSignIn } from '@/services/auth.service';
+import { initializeFacebookSdk, logAppLaunchEvent, parseDeepLinkParams, sendAppLaunchEvent, sendFirstLaunchEvents } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
@@ -66,6 +66,29 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  // Helper: Send app launch events for returning users
+  const sendAppLaunchEventsForReturningUser = async (): Promise<void> => {
+    try {
+      const currentUser = getCurrentUser();
+      const attributionData = await getAttributionData();
+      
+      await logAppLaunchEvent();
+      await sendAppLaunchEvent(
+        currentUser?.email ? { email: currentUser.email } : undefined,
+        attributionData || undefined
+      );
+      
+      logger.info('App Launch events sent', { 
+        feature: 'App', 
+        hasUserEmail: !!currentUser?.email,
+        hasAttribution: !!attributionData
+      });
+    } catch (error) {
+      logger.error('Failed to send App Launch events', { feature: 'App', error: error instanceof Error ? error : new Error(String(error)) });
+      throw error;
+    }
+  };
 
   // Initialize Sentry, Facebook SDK, Intercom, Amplitude and handle attribution on first launch
   useEffect(() => {
@@ -136,28 +159,13 @@ export default function RootLayout() {
             const hasFbAttribution = hasFacebookAttribution(attributionData);
             
             if (hasFbAttribution) {
-              // On iOS: tracking onboarding will handle permission request and event sending
               if (Platform.OS === 'ios') {
-                logger.info('iOS: Attribution data saved, tracking onboarding will handle permission and events', { feature: 'App' });
-              } 
-              // On Android: send events immediately (no ATT permission needed)
-              else if (Platform.OS === 'android') {
-                logger.info('Android: Sending AppInstall events immediately', { feature: 'App' });
-                
-                try {
-                  // Send AppInstall event to Facebook (client-side)
-                  await logAppInstallEvent(attributionData);
-                  
-                  // Send AppInstall event to Facebook (server-side via Cloud Function)
-                  await sendAppInstallEvent(
-                    attributionData.email ? { email: attributionData.email } : undefined,
-                    attributionData
-                  );
-                  
-                  logger.info('Android: AppInstall events sent successfully', { feature: 'App' });
-                } catch (fbError) {
-                  logger.error('Android: Failed to send AppInstall events', { feature: 'App', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
-                }
+                // iOS: tracking onboarding will handle permission request and event sending
+                logger.info('iOS: Attribution data saved, tracking onboarding will handle events', { feature: 'App' });
+              } else {
+                // Android: send first launch events immediately (no ATT permission needed)
+                logger.info('Android: Sending first launch events', { feature: 'App' });
+                await sendFirstLaunchEvents(attributionData);
               }
             } else {
               logger.info('No Facebook attribution detected', { feature: 'App' });
@@ -166,6 +174,12 @@ export default function RootLayout() {
           
           // Mark app as launched
           await markAppAsLaunched();
+        } else {
+          // Not first launch - send App Launch events for returning user
+          if (Platform.OS !== 'web') {
+            logger.info('Subsequent launch detected', { feature: 'App' });
+            await sendAppLaunchEventsForReturningUser();
+          }
         }
       } catch (initError) {
         logger.error('Failed to initialize Facebook SDK or attribution', { feature: 'App', error: initError instanceof Error ? initError : new Error(String(initError)) });
