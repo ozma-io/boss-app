@@ -7,7 +7,7 @@ import { useBoss } from '@/hooks/useBoss';
 import { useTimelineEntries } from '@/hooks/useTimelineEntries';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { logger } from '@/services/logger.service';
-import { createFactEntry, createNoteEntry, deleteTimelineEntry, updateTimelineEntry } from '@/services/timeline.service';
+import { createNoteEntry, deleteTimelineEntry, updateTimelineEntry } from '@/services/timeline.service';
 import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { groupTimelineEntries } from '@/utils/timelineHelpers';
@@ -54,59 +54,36 @@ export default function TimelineScreen() {
     setEntryToEdit(undefined);
   };
 
-  const handleAddEntry = async (entryData: any): Promise<void> => {
+  const handleCreateEmptyEntry = async (): Promise<string> => {
     if (!user) {
-      showAlert('Error', 'Unable to add entry. Please try again.');
-      return;
+      throw new Error('User not authenticated');
     }
 
     try {
-      if (entryData.type === 'note') {
-        await createNoteEntry(user.id, {
-          type: 'note',
-          subtype: entryData.subtype,
-          title: entryData.title,
-          content: entryData.content,
-          icon: entryData.icon,
-          timestamp: entryData.timestamp,
-        });
+      // Create empty note entry (default type)
+      const entryId = await createNoteEntry(user.id, {
+        type: 'note',
+        subtype: 'note',
+        title: '',
+        content: '',
+        timestamp: new Date().toISOString(),
+      });
 
-        trackAmplitudeEvent('timeline_entry_created', {
-          entryType: 'note',
-          subtype: entryData.subtype,
-          bossId: boss?.id,
-        });
+      trackAmplitudeEvent('timeline_entry_created', {
+        entryType: 'note',
+        subtype: 'note',
+        bossId: boss?.id,
+      });
 
-        logger.info('Timeline note entry created', {
-          feature: 'TimelineScreen',
-          bossId: boss?.id,
-          subtype: entryData.subtype,
-        });
-      } else if (entryData.type === 'fact') {
-        await createFactEntry(user.id, {
-          type: 'fact',
-          title: entryData.title,
-          content: entryData.content,
-          factKey: entryData.factKey,
-          value: entryData.value,
-          icon: entryData.icon,
-          timestamp: entryData.timestamp,
-        });
+      logger.info('Timeline empty entry created', {
+        feature: 'TimelineScreen',
+        bossId: boss?.id,
+        entryId,
+      });
 
-        trackAmplitudeEvent('timeline_entry_created', {
-          entryType: 'fact',
-          factKey: entryData.factKey,
-          bossId: boss?.id,
-        });
-
-        logger.info('Timeline fact entry created', {
-          feature: 'TimelineScreen',
-          bossId: boss?.id,
-          factKey: entryData.factKey,
-        });
-      }
+      return entryId;
     } catch (err) {
-      logger.error('Failed to create timeline entry', {
+      logger.error('Failed to create empty timeline entry', {
         feature: 'TimelineScreen',
         bossId: boss?.id,
         error: err instanceof Error ? err : new Error(String(err)),
@@ -246,7 +223,7 @@ export default function TimelineScreen() {
         <AddTimelineEntryModal
           isVisible={isAddModalVisible}
           onClose={handleCloseModal}
-          onAdd={handleAddEntry}
+          onCreateEmpty={handleCreateEmptyEntry}
           onUpdate={handleUpdateEntry}
           entryToEdit={entryToEdit}
         />

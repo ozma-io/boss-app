@@ -2,24 +2,23 @@ import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import Modal from 'react-native-modal';
 
 interface AddTimelineEntryModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onAdd?: (entryData: NoteEntryData | FactEntryData) => Promise<void>;
+  onCreateEmpty?: () => Promise<string>;
   onUpdate?: (entryId: string, updates: Partial<TimelineEntry>) => Promise<void>;
   entryToEdit?: TimelineEntry;
 }
@@ -62,10 +61,10 @@ const NOTE_SUBTYPES: Array<{ value: NoteSubtype; label: string }> = [
 
 /**
  * Modal for adding or editing a timeline entry
- * Allows user to select entry type (Note or Metric) and fill in type-specific fields
- * In edit mode, entry type is locked and cannot be changed
+ * Creates empty entry immediately on open, auto-saves all changes
+ * Entry type can be changed anytime with field state preservation
  */
-export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, entryToEdit }: AddTimelineEntryModalProps) {
+export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpdate, entryToEdit }: AddTimelineEntryModalProps) {
   const isEditMode = !!entryToEdit;
   
   const [entryType, setEntryType] = useState<EntryType>('note');
@@ -78,11 +77,28 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
+  
+  // State preservation for type switching
+  const [savedNoteFields, setSavedNoteFields] = useState<{
+    title: string;
+    content: string;
+    subtype: NoteSubtype;
+  } | null>(null);
+  const [savedFactFields, setSavedFactFields] = useState<{
+    title: string;
+    content: string;
+    factKey: string;
+    factValue: string;
+  } | null>(null);
 
-  // Populate fields when editing
+  // Create empty entry or populate fields when editing
   useEffect(() => {
+    if (!isVisible) return;
+    
     if (entryToEdit) {
+      // Edit mode: populate fields
+      setCurrentEntryId(entryToEdit.id);
       setEntryType(entryToEdit.type);
       setTitle(entryToEdit.title);
       setContent(entryToEdit.content || '');
@@ -96,7 +112,23 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
         setFactValue(String(entryToEdit.value));
       }
     } else {
-      // Reset to defaults when not editing
+      // Create mode: create empty entry immediately
+      const createEmpty = async (): Promise<void> => {
+        if (onCreateEmpty && !currentEntryId) {
+          try {
+            const newEntryId = await onCreateEmpty();
+            setCurrentEntryId(newEntryId);
+          } catch (error) {
+            showAlert(
+              'Something went wrong',
+              'We couldn\'t create this entry right now. Our team has been notified and is working on it. Please try again later.'
+            );
+            onClose();
+          }
+        }
+      };
+      
+      // Reset to defaults
       setEntryType('note');
       setTitle('');
       setContent('');
@@ -105,78 +137,122 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
       setFactKey('');
       setFactValue('');
       setSelectedDate(new Date());
+      setSavedNoteFields(null);
+      setSavedFactFields(null);
+      
+      createEmpty();
     }
-  }, [entryToEdit, isVisible]);
+  }, [entryToEdit, isVisible, onCreateEmpty, onClose]);
+  
+  // Reset currentEntryId when modal closes
+  useEffect(() => {
+    if (!isVisible) {
+      setCurrentEntryId(null);
+    }
+  }, [isVisible]);
 
   const handleClose = (): void => {
-    if (!isSubmitting) {
-      onClose();
-    }
+    onClose();
   };
-
-  const handleSubmit = async (): Promise<void> => {
-    setIsSubmitting(true);
+  
+  // Debounce timer refs
+  const titleDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const factKeyDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const factValueDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Auto-save function
+  const autoSave = useCallback(async (updates: Partial<TimelineEntry>): Promise<void> => {
+    if (!currentEntryId || !onUpdate) return;
+    
     try {
-      if (isEditMode && entryToEdit && onUpdate) {
-        // Update existing entry
-        const updates: any = {
-          title: title.trim(),
-          content: content.trim(),
-          icon: icon.trim() || undefined,
-          timestamp: selectedDate.toISOString(),
-        };
-        
-        if (entryType === 'note') {
-          updates.subtype = noteSubtype;
-        } else if (entryType === 'fact') {
-          updates.factKey = factKey.trim();
-          updates.value = factValue.trim();
-        }
-        
-        await onUpdate(entryToEdit.id, updates);
-      } else if (onAdd) {
-        // Create new entry
-        if (entryType === 'note') {
-          const entryData: NoteEntryData = {
-            type: 'note',
-            subtype: noteSubtype,
-            title: title.trim(),
-            content: content.trim(),
-            icon: icon.trim() || undefined,
-            timestamp: selectedDate.toISOString(),
-          };
-          await onAdd(entryData);
-        } else {
-          const entryData: FactEntryData = {
-            type: 'fact',
-            title: title.trim(),
-            content: content.trim(),
-            factKey: factKey.trim(),
-            value: factValue.trim(),
-            icon: icon.trim() || undefined,
-            timestamp: selectedDate.toISOString(),
-          };
-          await onAdd(entryData);
-        }
-      }
-      handleClose();
+      await onUpdate(currentEntryId, updates);
     } catch (error) {
-      showAlert(
-        'Something went wrong',
-        isEditMode 
-          ? 'We couldn\'t update this entry right now. Our team has been notified and is working on it. Please try again later.'
-          : 'We couldn\'t add this entry right now. Our team has been notified and is working on it. Please try again later.'
-      );
-    } finally {
-      setIsSubmitting(false);
+      // Silent fail - user can retry by changing field again
     }
-  };
-
-  const isFormValid = (): boolean => {
-    if (!title.trim()) return false;
-    if (entryType === 'fact' && (!factKey.trim() || !factValue.trim())) return false;
-    return true;
-  };
+  }, [currentEntryId, onUpdate]);
+  
+  // Debounced auto-save for title
+  useEffect(() => {
+    if (!currentEntryId) return;
+    
+    if (titleDebounceTimer.current) {
+      clearTimeout(titleDebounceTimer.current);
+    }
+    
+    titleDebounceTimer.current = setTimeout(() => {
+      autoSave({ title });
+    }, 500);
+    
+    return () => {
+      if (titleDebounceTimer.current) {
+        clearTimeout(titleDebounceTimer.current);
+      }
+    };
+  }, [title, currentEntryId, autoSave]);
+  
+  // Debounced auto-save for content
+  useEffect(() => {
+    if (!currentEntryId) return;
+    
+    if (contentDebounceTimer.current) {
+      clearTimeout(contentDebounceTimer.current);
+    }
+    
+    contentDebounceTimer.current = setTimeout(() => {
+      autoSave({ content });
+    }, 500);
+    
+    return () => {
+      if (contentDebounceTimer.current) {
+        clearTimeout(contentDebounceTimer.current);
+      }
+    };
+  }, [content, currentEntryId, autoSave]);
+  
+  // Debounced auto-save for factKey
+  useEffect(() => {
+    if (!currentEntryId || entryType !== 'fact') return;
+    
+    if (factKeyDebounceTimer.current) {
+      clearTimeout(factKeyDebounceTimer.current);
+    }
+    
+    factKeyDebounceTimer.current = setTimeout(() => {
+      autoSave({ factKey } as any);
+    }, 500);
+    
+    return () => {
+      if (factKeyDebounceTimer.current) {
+        clearTimeout(factKeyDebounceTimer.current);
+      }
+    };
+  }, [factKey, currentEntryId, entryType, autoSave]);
+  
+  // Debounced auto-save for factValue
+  useEffect(() => {
+    if (!currentEntryId || entryType !== 'fact') return;
+    
+    if (factValueDebounceTimer.current) {
+      clearTimeout(factValueDebounceTimer.current);
+    }
+    
+    factValueDebounceTimer.current = setTimeout(() => {
+      autoSave({ value: factValue } as any);
+    }, 500);
+    
+    return () => {
+      if (factValueDebounceTimer.current) {
+        clearTimeout(factValueDebounceTimer.current);
+      }
+    };
+  }, [factValue, currentEntryId, entryType, autoSave]);
+  
+  // Immediate auto-save for noteSubtype
+  useEffect(() => {
+    if (!currentEntryId || entryType !== 'note') return;
+    autoSave({ subtype: noteSubtype } as any);
+  }, [noteSubtype, currentEntryId, entryType, autoSave]);
 
   const handleDateChange = (event: any, date?: Date): void => {
     setShowDatePicker(false);
@@ -189,6 +265,65 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
     setShowTimePicker(false);
     if (date) {
       setSelectedDate(date);
+    }
+  };
+  
+  // Immediate auto-save for timestamp (date/time)
+  useEffect(() => {
+    if (!currentEntryId) return;
+    autoSave({ timestamp: selectedDate.toISOString() });
+  }, [selectedDate, currentEntryId, autoSave]);
+  
+  // Handle entry type switching with state preservation
+  const handleEntryTypeChange = (newType: EntryType): void => {
+    if (newType === entryType) return;
+    
+    // Save current fields before switching
+    if (entryType === 'note') {
+      setSavedNoteFields({
+        title,
+        content,
+        subtype: noteSubtype,
+      });
+    } else if (entryType === 'fact') {
+      setSavedFactFields({
+        title,
+        content,
+        factKey,
+        factValue,
+      });
+    }
+    
+    // Switch type
+    const oldType = entryType;
+    setEntryType(newType);
+    
+    // Restore saved fields or set defaults
+    if (newType === 'note') {
+      if (savedNoteFields) {
+        setTitle(savedNoteFields.title);
+        setContent(savedNoteFields.content);
+        setNoteSubtype(savedNoteFields.subtype);
+      } else {
+        // Keep title and content, reset note-specific fields
+        setNoteSubtype('note');
+      }
+    } else if (newType === 'fact') {
+      if (savedFactFields) {
+        setTitle(savedFactFields.title);
+        setContent(savedFactFields.content);
+        setFactKey(savedFactFields.factKey);
+        setFactValue(savedFactFields.factValue);
+      } else {
+        // Keep title and content, reset fact-specific fields
+        setFactKey('');
+        setFactValue('');
+      }
+    }
+    
+    // Update entry type in database
+    if (currentEntryId && onUpdate) {
+      onUpdate(currentEntryId, { type: newType } as any);
     }
   };
 
@@ -270,18 +405,8 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
                     style={[
                       styles.typeCard,
                       entryType === type.value && styles.typeCardSelected,
-                      isEditMode && styles.typeCardDisabled,
                     ]}
-                    onPress={() => {
-                      if (isEditMode) {
-                        showAlert(
-                          'Cannot Change Entry Type',
-                          'Unfortunately, changing the entry type is not possible yet. This feature will be available in future versions. For now, you can delete this entry and create a new one.'
-                        );
-                      } else {
-                        setEntryType(type.value);
-                      }
-                    }}
+                    onPress={() => handleEntryTypeChange(type.value)}
                     testID={`entry-type-${type.value}`}
                   >
                     <Ionicons
@@ -335,7 +460,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
 
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel} testID="title-section-label">
-                    Title *
+                    Title
                   </Text>
                   <TextInput
                     style={[styles.input, { outlineStyle: 'none' } as any]}
@@ -386,7 +511,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
               <>
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel} testID="title-section-label">
-                    Title *
+                    Title
                   </Text>
                   <TextInput
                     style={[styles.input, { outlineStyle: 'none' } as any]}
@@ -402,7 +527,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
                 <View style={styles.section}>
                   <View style={styles.labelWithInfo}>
                     <Text style={styles.sectionLabel} testID="fact-key-section-label">
-                      Fact Key *
+                      Fact Key
                     </Text>
                     <Pressable
                       onPress={() =>
@@ -428,7 +553,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
 
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel} testID="value-section-label">
-                    Value *
+                    Value
                   </Text>
                   <TextInput
                     style={[styles.input, { outlineStyle: 'none' } as any]}
@@ -473,34 +598,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onAdd, onUpdate, ent
               </>
             )}
           </ScrollView>
-
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={isSubmitting}
-              testID="cancel-button"
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.addButton,
-                (isSubmitting || !isFormValid()) && styles.buttonDisabled
-              ]}
-              onPress={handleSubmit}
-              disabled={isSubmitting || !isFormValid()}
-              testID="add-entry-button"
-            >
-              <Text style={styles.addButtonText}>
-                {isSubmitting 
-                  ? (isEditMode ? 'Saving...' : 'Adding...') 
-                  : (isEditMode ? 'Save Changes' : 'Add Entry')}
-              </Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Date Picker */}
           {showDatePicker && (
@@ -615,9 +712,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f9e6',
     borderColor: '#B8E986',
   },
-  typeCardDisabled: {
-    opacity: 0.5,
-  },
   typeLabel: {
     fontSize: 14,
     fontFamily: 'Manrope-Regular',
@@ -674,38 +768,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Manrope-Regular',
     color: '#000',
-  },
-  footer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f8f8f8',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontFamily: 'Manrope-SemiBold',
-    color: '#666',
-  },
-  addButton: {
-    backgroundColor: '#B8E986',
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontFamily: 'Manrope-SemiBold',
-    color: '#000',
-  },
-  buttonDisabled: {
-    opacity: 0.3,
   },
 });
 
