@@ -1,6 +1,7 @@
 import { AddCustomFieldButton } from '@/components/AddCustomFieldButton';
 import { AddCustomFieldModal } from '@/components/AddCustomFieldModal';
 import { FloatingChatButton } from '@/components/FloatingChatButton';
+import { InlineEditableHeading } from '@/components/InlineEditableHeading';
 import { SwipeableCustomFieldRow } from '@/components/SwipeableCustomFieldRow';
 import { useAuth } from '@/contexts/AuthContext';
 import { isUserFieldRequired } from '@/firestore/schemas/field-presets';
@@ -32,9 +33,6 @@ export default function ProfileScreen() {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [position, setPosition] = useState('');
   const [isEditingPosition, setIsEditingPosition] = useState(false);
-  
-  const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [username, setUsername] = useState('');
   
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -111,25 +109,6 @@ export default function ProfileScreen() {
         });
       } catch (err) {
         logger.error('Failed to update position', { feature: 'ProfileScreen', error: err instanceof Error ? err : new Error(String(err)) });
-      }
-    }
-  };
-
-  const handleEditUsername = (): void => {
-    setUsername(profile?.displayName || '');
-    setIsEditingUsername(true);
-  };
-
-  const handleBlurUsername = async (): Promise<void> => {
-    setIsEditingUsername(false);
-    if (username !== profile?.displayName) {
-      try {
-        await updateProfile({ displayName: username });
-        trackAmplitudeEvent('profile_field_edited', {
-          field: 'displayName',
-        });
-      } catch (err) {
-        logger.error('Failed to update username', { feature: 'ProfileScreen', error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -335,24 +314,18 @@ export default function ProfileScreen() {
               testID="avatar-image"
             />
           </View>
-          <Pressable 
-            onPress={isEditingUsername ? undefined : handleEditUsername}
-            testID="username-pressable"
-          >
-            {isEditingUsername ? (
-              <TextInput
-                style={[styles.username, styles.usernameInput, { outlineStyle: 'none' } as any]}
-                value={username}
-                onChangeText={setUsername}
-                onBlur={handleBlurUsername}
-                autoFocus
-                placeholder="Enter your name"
-                testID="username-input"
-              />
-            ) : (
-              <Text style={styles.username} testID="username-text">{profile.displayName || 'User'}</Text>
-            )}
-          </Pressable>
+          <InlineEditableHeading
+            value={profile.displayName || 'User'}
+            onSave={async (newName) => {
+              await updateProfile({ displayName: newName });
+              trackAmplitudeEvent('profile_field_edited', {
+                field: 'displayName',
+              });
+            }}
+            placeholder="Enter your name"
+            testID="username"
+            style={styles.username}
+          />
           <Text style={styles.email} testID="email-text">{profile.email}</Text>
         </View>
 
@@ -605,12 +578,6 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 4,
     fontFamily: 'Manrope-Bold',
-  },
-  usernameInput: {
-    padding: 0,
-    margin: 0,
-    borderWidth: 0,
-    textAlign: 'center',
   },
   email: {
     fontSize: 14,
