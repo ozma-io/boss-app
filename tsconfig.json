@@ -15,7 +15,12 @@
     "expo-env.d.ts"
   ],
   "exclude": [
-    "functions"
+    "node_modules",
+    "dist",
+    "build",
+    ".expo",
+    "functions",
+    "coverage"
   ],
   "references": [
     { "path": "./functions" }
