@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.ozmaio.bossup",
+      "sha256_cert_fingerprints": [
+        "EF:D6:4C:7C:D6:6C:B9:93:B7:01:61:9C:93:E8:46:77:4A:3C:28:06:C0:A3:F5:93:F5:76:44:80:F5:EE:EC:5C"
+      ]
+    }
+  }
+]
+

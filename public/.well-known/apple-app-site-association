@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "M936884QNW.com.ozmaio.bossup",
+        "paths": [
+          "/__/auth/*",
+          "/*"
+        ]
+      }
+    ]
+  }
+}
+
