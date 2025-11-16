@@ -18,6 +18,7 @@ export function InlineEditableHeading({
 }: InlineEditableHeadingProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState('');
+  const [localValue, setLocalValue] = useState<string | null>(null);
 
   const handleEdit = (): void => {
     setText(value);
@@ -27,9 +28,13 @@ export function InlineEditableHeading({
   const handleBlur = async (): Promise<void> => {
     setIsEditing(false);
     if (text !== value) {
+      setLocalValue(text);
       await onSave(text);
+      setLocalValue(null);
     }
   };
+
+  const displayValue = localValue ?? value;
 
   return (
     <Pressable 
@@ -47,7 +52,7 @@ export function InlineEditableHeading({
           testID={`${testID}-input`}
         />
       ) : (
-        <Text style={[styles.defaultText, style]} testID={`${testID}-text`}>{value}</Text>
+        <Text style={[styles.defaultText, style]} testID={`${testID}-text`}>{displayValue}</Text>
       )}
     </Pressable>
   );
