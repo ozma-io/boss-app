@@ -611,6 +611,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
               testID="date-picker-overlay"
             >
               <Pressable
+                style={styles.pickerContainer}
                 onPress={(e) => e.stopPropagation()}
                 testID="date-picker-container"
               >
@@ -633,6 +634,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
               testID="time-picker-overlay"
             >
               <Pressable
+                style={styles.pickerContainer}
                 onPress={(e) => e.stopPropagation()}
                 testID="time-picker-container"
               >
@@ -805,6 +807,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
   },
 });
 

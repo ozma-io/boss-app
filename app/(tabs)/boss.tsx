@@ -430,6 +430,7 @@ export default function BossScreen() {
           testID="started-at-picker-overlay"
         >
           <Pressable
+            style={styles.pickerContainer}
             onPress={(e) => e.stopPropagation()}
             testID="started-at-picker-container"
           >
@@ -452,6 +453,7 @@ export default function BossScreen() {
           testID="birthday-picker-overlay"
         >
           <Pressable
+            style={styles.pickerContainer}
             onPress={(e) => e.stopPropagation()}
             testID="birthday-picker-container"
           >
@@ -708,5 +710,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 20,
   },
 });
