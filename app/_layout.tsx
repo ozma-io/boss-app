@@ -223,8 +223,8 @@ function RootLayoutNav() {
         try {
           const attributionEmail = await getAttributionEmail();
           if (attributionEmail) {
-            logger.info('Attribution email found, setting redirect to email-input', { feature: 'App', attributionEmail });
-            setRedirectPath(`/(auth)/email-input?email=${encodeURIComponent(attributionEmail)}`);
+            logger.info('Attribution email found, setting redirect to welcome', { feature: 'App', attributionEmail });
+            setRedirectPath(`/(auth)/welcome?email=${encodeURIComponent(attributionEmail)}`);
           }
         } catch (error) {
           logger.error('Failed to check attribution email', { feature: 'App', error: error instanceof Error ? error : new Error(String(error)) });

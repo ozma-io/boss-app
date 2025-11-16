@@ -22,23 +22,38 @@ import Modal from 'react-native-modal';
 
 const TEST_EMAIL = 'test@test.test';
 
+// Check if email matches test[+.*]@ozma.io pattern
+const isTestOzmaEmail = (email: string): boolean => {
+  const testOzmaPattern = /^test(\+.*)?@ozma\.io$/;
+  return testOzmaPattern.test(email);
+};
+
 interface EmailAuthModalProps {
   isVisible: boolean;
   onClose: () => void;
+  initialEmail?: string;
 }
 
 type ScreenType = 'email-input' | 'email-confirm';
 
-export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): React.JSX.Element {
+export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthModalProps): React.JSX.Element {
   const router = useRouter();
   const { setUser } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('email-input');
-  const [email, setEmail] = useState<string>('');
+  const [email, setEmail] = useState<string>(initialEmail || '');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [resendTimer, setResendTimer] = useState<number>(60);
   const [canResend, setCanResend] = useState<boolean>(false);
   const [showDebugInput, setShowDebugInput] = useState<boolean>(false);
   const [debugLinkInput, setDebugLinkInput] = useState<string>('');
+
+  // Update email when initialEmail prop changes
+  useEffect(() => {
+    if (initialEmail) {
+      logger.info('Pre-filling email from props', { feature: 'EmailAuthModal', email: initialEmail });
+      setEmail(initialEmail);
+    }
+  }, [initialEmail]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -140,8 +155,19 @@ export function EmailAuthModal({ isVisible, onClose }: EmailAuthModalProps): Rea
 
     setIsLoading(true);
     try {
-      if (email === TEST_EMAIL) {
-        logger.info('Test email detected, bypassing magic link', { feature: 'EmailAuthModal' });
+      // Check if this is a test email (test@test.test or test[+.*]@ozma.io)
+      const isTestEmailMatch = email === TEST_EMAIL;
+      const isOzmaTestEmail = isTestOzmaEmail(email);
+      
+      logger.info('Email auth check', { 
+        feature: 'EmailAuthModal', 
+        email, 
+        isTestEmailMatch, 
+        isOzmaTestEmail 
+      });
+      
+      if (isTestEmailMatch || isOzmaTestEmail) {
+        logger.info('Test email detected, bypassing magic link', { feature: 'EmailAuthModal', email });
         const user = await signInWithTestEmail(email);
         setUser(user);
         onClose();

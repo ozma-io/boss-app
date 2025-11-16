@@ -3,9 +3,10 @@ import { EmailAuthModal } from '@/components/auth/EmailAuthModal';
 import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signInWithApple, signInWithGoogle } from '@/services/auth.service';
+import { logger } from '@/services/logger.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
-import { useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type AuthButtonType = 'email' | 'google' | 'apple';
@@ -41,7 +42,18 @@ function getAuthButtonsConfig(): AuthButtonConfig[] {
 }
 
 export default function WelcomeScreen(): React.JSX.Element {
+  const params = useLocalSearchParams<{ email?: string }>();
   const [isEmailModalVisible, setIsEmailModalVisible] = useState<boolean>(false);
+  const [prefillEmail, setPrefillEmail] = useState<string | undefined>(undefined);
+
+  // Auto-open modal with pre-filled email from attribution
+  useEffect(() => {
+    if (params.email && typeof params.email === 'string') {
+      logger.info('Attribution email detected, auto-opening modal', { feature: 'Welcome', email: params.email });
+      setPrefillEmail(params.email);
+      setIsEmailModalVisible(true);
+    }
+  }, [params.email]);
 
   useFocusEffect(
     useCallback(() => {
@@ -175,6 +187,7 @@ export default function WelcomeScreen(): React.JSX.Element {
       <EmailAuthModal
         isVisible={isEmailModalVisible}
         onClose={() => setIsEmailModalVisible(false)}
+        initialEmail={prefillEmail}
       />
     </View>
   );

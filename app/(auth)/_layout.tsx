@@ -9,8 +9,6 @@ export default function AuthLayout(): React.JSX.Element {
       }}
     >
       <Stack.Screen name="welcome" />
-      <Stack.Screen name="email-input" />
-      <Stack.Screen name="email-confirm" />
     </Stack>
   );
 }
