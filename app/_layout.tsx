@@ -398,6 +398,8 @@ function RootLayoutNav() {
               fontFamily: 'Manrope-Regular',
             },
             headerLeft: () => <HeaderBackButton />,
+            headerTransparent: false,
+            headerBlurEffect: 'none',
           }} 
         />
         <Stack.Screen 
@@ -418,6 +420,8 @@ function RootLayoutNav() {
               fontFamily: 'Manrope-Regular',
             },
             headerLeft: () => <HeaderBackButton />,
+            headerTransparent: false,
+            headerBlurEffect: 'none',
           }} 
         />
         <Stack.Screen 
@@ -438,6 +442,8 @@ function RootLayoutNav() {
               fontFamily: 'Manrope-Regular',
             },
             headerLeft: () => <HeaderBackButton />,
+            headerTransparent: false,
+            headerBlurEffect: 'none',
           }} 
         />
       </Stack>
