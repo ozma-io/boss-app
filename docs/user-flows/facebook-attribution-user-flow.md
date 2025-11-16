@@ -323,5 +323,13 @@ Firestore user document now contains:
 
 ---
 
+## TODO: Internal Testing Release
+
+**Goal:** Enable internal testers to test the app on their devices (iOS TestFlight + Android Internal Testing) without submitting to App Store/Google Play review.
+
+**Status:** 🔄 In Progress
+
+---
+
 **Last Updated:** 2025-11-10
 
