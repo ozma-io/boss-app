@@ -157,6 +157,7 @@ const config: ExpoConfig = {
     ],
     '@react-native-firebase/app',
     './plugins/withFirebasePodfile',
+    '@react-native-google-signin/google-signin',
     [
       'react-native-iap',
       {

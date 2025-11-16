@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "289257148619-0ftkkrrlcc6852938inkn95tlmmhedpo.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ozmaio.bossup",
+            "certificate_hash": "4e80c1f8b9ff5ffd29dabbc7fd3994e0614d3cb6"
+          }
+        },
+        {
+          "client_id": "289257148619-5s6skjgcs1bi0lemfdusn3j1f8mlnl9m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ozmaio.bossup",
+            "certificate_hash": "248c992cb40afb2535819a044d96231da0db15d8"
+          }
+        },
+        {
           "client_id": "289257148619-ii1e62trmovpcl7m02goj9ccm3cpn4eu.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -29,6 +45,13 @@
             {
               "client_id": "289257148619-ii1e62trmovpcl7m02goj9ccm3cpn4eu.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "289257148619-6t09g0t7tjf536eoea3tnku6beid1kc6.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ozmaio.bossup"
+              }
             }
           ]
         }
