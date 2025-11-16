@@ -59,7 +59,8 @@ User installs app
 
 **TODO:**
 - Add app logo/icon before publication
-- After app publication, visit [Facebook Advanced Settings](https://developers.facebook.com/apps/853405190716887/settings/advanced/?business_id=2178506568838763) and configure all required IDs for both iOS and Android devices to ensure proper attribution tracking
+- After app publication, configure Facebook settings with platform-specific IDs (required for attribution tracking)
+- See credentials in `../temp/facebook-app-credentials.md`
 
 **Next:** → Welcome Screen
 
