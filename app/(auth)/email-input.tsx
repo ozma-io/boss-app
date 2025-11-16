@@ -183,8 +183,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     fontSize: 16,
     color: '#000',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
     fontFamily: 'Manrope-Regular',
   },
   continueButton: {
