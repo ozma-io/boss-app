@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   timelineContent: {
-    padding: 16,
+    padding: 12,
     paddingBottom: 70,
   },
   timelineTitle: {
@@ -329,9 +329,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 70,
     bottom: 70,
-    left: 11,
-    width: 2,
-    backgroundColor: '#D1D5DB',
+    left: 4.5,
+    width: 1,
+    backgroundColor: '#E1DFD8',
     zIndex: 1,
   },
   timelineItems: {
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     color: '#999',
     opacity: 0.8,
     marginBottom: 8,
-    marginLeft: 46,
+    marginLeft: 18,
     fontFamily: 'Manrope-SemiBold',
   },
   timelineItemContainer: {

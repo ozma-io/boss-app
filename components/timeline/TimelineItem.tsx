@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   timelineIndicator: {
-    width: 24,
+    width: 10,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
