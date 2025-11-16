@@ -40,4 +40,22 @@ body {
   body {
     background-color: #000;
   }
+}
+* {
+  outline: none !important;
+}
+*:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+*:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+input:focus,
+textarea:focus,
+button:focus,
+a:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }`;
