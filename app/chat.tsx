@@ -306,7 +306,7 @@ export default function ChatScreen() {
         <TextInput
           style={styles.input}
           placeholder="Message"
-          placeholderTextColor="rgba(0, 0, 0, 0.7)"
+          placeholderTextColor="rgba(0, 0, 0, 0.4)"
           value={inputText}
           onChangeText={setInputText}
           testID="message-input"
