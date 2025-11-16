@@ -49,12 +49,12 @@ export default function TimelineScreen() {
     setIsAddModalVisible(true);
   };
 
-  const handleCloseModal = (): void => {
+  const handleCloseModal = useCallback((): void => {
     setIsAddModalVisible(false);
     setEntryToEdit(undefined);
-  };
+  }, []);
 
-  const handleCreateEmptyEntry = async (): Promise<string> => {
+  const handleCreateEmptyEntry = useCallback(async (): Promise<string> => {
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -90,7 +90,7 @@ export default function TimelineScreen() {
       });
       throw err;
     }
-  };
+  }, [user, boss?.id]);
 
   const handleUpdateEntry = async (entryId: string, updates: Partial<TimelineEntry>): Promise<void> => {
     if (!user) {
