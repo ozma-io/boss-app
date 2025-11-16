@@ -53,6 +53,7 @@ export default function BossScreen() {
   );
 
   const handleEditBirthday = (): void => {
+    setShowStartedAtPicker(false);
     if (boss?.birthday) {
       setBirthday(new Date(boss.birthday));
     } else {
@@ -62,8 +63,6 @@ export default function BossScreen() {
   };
 
   const handleBirthdayChange = async (event: any, selectedDate?: Date): Promise<void> => {
-    setShowBirthdayPicker(Platform.OS === 'ios');
-    
     if (selectedDate && boss) {
       setBirthday(selectedDate);
       try {
@@ -99,6 +98,7 @@ export default function BossScreen() {
   };
 
   const handleEditStartedAt = (): void => {
+    setShowBirthdayPicker(false);
     if (boss?.startedAt) {
       setStartedAt(new Date(boss.startedAt));
     } else {
@@ -108,8 +108,6 @@ export default function BossScreen() {
   };
 
   const handleStartedAtChange = async (event: any, selectedDate?: Date): Promise<void> => {
-    setShowStartedAtPicker(Platform.OS === 'ios');
-    
     if (selectedDate && boss) {
       setStartedAt(selectedDate);
       try {
@@ -413,24 +411,46 @@ export default function BossScreen() {
 
       {/* Date Picker for Started At */}
       {showStartedAtPicker && (
-        <DateTimePicker
-          value={startedAt}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleStartedAtChange}
-          testID="started-at-date-picker"
-        />
+        <Pressable
+          style={styles.pickerOverlay}
+          onPress={() => setShowStartedAtPicker(false)}
+          testID="started-at-picker-overlay"
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            testID="started-at-picker-container"
+          >
+            <DateTimePicker
+              value={startedAt}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleStartedAtChange}
+              testID="started-at-date-picker"
+            />
+          </Pressable>
+        </Pressable>
       )}
 
       {/* Date Picker for Birthday */}
       {showBirthdayPicker && (
-        <DateTimePicker
-          value={birthday}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleBirthdayChange}
-          testID="birthday-date-picker"
-        />
+        <Pressable
+          style={styles.pickerOverlay}
+          onPress={() => setShowBirthdayPicker(false)}
+          testID="birthday-picker-overlay"
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            testID="birthday-picker-container"
+          >
+            <DateTimePicker
+              value={birthday}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleBirthdayChange}
+              testID="birthday-date-picker"
+            />
+          </Pressable>
+        </Pressable>
       )}
 
       <FloatingChatButton />
@@ -664,5 +684,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
+  },
+  pickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 });
