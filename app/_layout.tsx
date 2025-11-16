@@ -383,7 +383,8 @@ function RootLayoutNav() {
         <Stack.Screen 
           name="chat" 
           options={{ 
-            headerShown: true, 
+            headerShown: true,
+            presentation: 'card',
             title: 'BossUp',
             headerBackTitle: '',
             headerShadowVisible: false,
@@ -405,7 +406,8 @@ function RootLayoutNav() {
         <Stack.Screen 
           name="personal-info" 
           options={{ 
-            headerShown: true, 
+            headerShown: true,
+            presentation: 'card',
             title: 'Personal information',
             headerBackTitle: '',
             headerShadowVisible: false,
@@ -427,7 +429,8 @@ function RootLayoutNav() {
         <Stack.Screen 
           name="subscription" 
           options={{ 
-            headerShown: true, 
+            headerShown: true,
+            presentation: 'card',
             title: 'Subscription',
             headerBackTitle: '',
             headerShadowVisible: false,
