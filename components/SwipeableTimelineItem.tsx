@@ -2,9 +2,9 @@ import { TimelineItem } from '@/components/timeline/TimelineItem';
 import { TimelineEntry } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Swipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Animated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
+import Animated, { SharedValue, useAnimatedStyle } from 'react-native-reanimated';
 
 interface SwipeableTimelineItemProps {
   entry: TimelineEntry;
@@ -59,32 +59,19 @@ export function SwipeableTimelineItem({
     );
   };
 
-  const animatedChildren = (
-    progress: SharedValue<number>,
-    drag: SharedValue<number>
-  ) => {
-    // Animated style for content - shrink width as user swipes left
-    const contentStyle = useAnimatedStyle(() => {
-      // drag.value is negative when swiping left
-      // Reduce width by the drag amount (max 96px for delete button + margin)
-      const reduction = Math.max(0, Math.min(96, Math.abs(drag.value)));
-      return {
-        width: `${100 - (reduction / 4)}%`,
-        marginRight: reduction,
-      };
-    });
-
+  // On web, render non-swipeable version (gesture-handler has limited web support)
+  if (Platform.OS === 'web') {
     return (
-      <Animated.View style={contentStyle}>
+      <View testID={`swipeable-timeline-${entry.id}`}>
         <TimelineItem
           entry={entry}
-          onPress={isSwiping ? undefined : onPress}
+          onPress={onPress}
           testID={testID}
           isLastInGroup={isLastInGroup}
         />
-      </Animated.View>
+      </View>
     );
-  };
+  }
 
   return (
     <Swipeable
@@ -96,7 +83,12 @@ export function SwipeableTimelineItem({
       onSwipeableClose={() => setIsSwiping(false)}
       testID={`swipeable-timeline-${entry.id}`}
     >
-      {animatedChildren}
+      <TimelineItem
+        entry={entry}
+        onPress={isSwiping ? undefined : onPress}
+        testID={testID}
+        isLastInGroup={isLastInGroup}
+      />
     </Swipeable>
   );
 }

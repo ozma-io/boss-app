@@ -320,11 +320,11 @@ const styles = StyleSheet.create({
   },
   groupTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#999',
+    fontWeight: '400',
+    color: 'rgba(0, 0, 0, 0.2)',
     opacity: 0.8,
     marginBottom: 8,
-    marginLeft: 18,
+    marginLeft: 38,
     fontFamily: 'Manrope-SemiBold',
   },
   timelineItemContainer: {
