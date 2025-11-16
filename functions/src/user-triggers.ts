@@ -64,7 +64,7 @@ export const onUserCreated = onDocumentCreated(
         updatedAt: now,
         messageCount: 1,
         assistantIsTyping: false,
-        unreadCount: 1, // Mark as unread so user sees notification badge
+        unreadCount: 0, // Let the onChatMessageCreated trigger increment it to 1
         lastReadAt: null,
         lastMessageAt: now,
         lastMessageRole: 'assistant',
