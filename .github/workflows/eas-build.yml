@@ -36,5 +36,5 @@ jobs:
         run: npm ci
 
       - name: Run production builds workflow
-        run: eas workflow:run create-production-builds.yml --non-interactive
+        run: eas workflow:run create-production-builds.yml --non-interactive --no-wait
 
