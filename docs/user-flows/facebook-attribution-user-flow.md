@@ -329,6 +329,8 @@ Firestore user document now contains:
 
 **Status:** 🔄 In Progress
 
+- Update Google Play JSON settings in repository for automatic deployment after build and review
+
 ---
 
 **Last Updated:** 2025-11-10
