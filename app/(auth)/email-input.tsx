@@ -10,6 +10,12 @@ import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, Tou
 
 const TEST_EMAIL = 'test@test.test';
 
+// Check if email matches test[+.*]@ozma.io pattern
+const isTestOzmaEmail = (email: string): boolean => {
+  const testOzmaPattern = /^test(\+.*)?@ozma\.io$/;
+  return testOzmaPattern.test(email);
+};
+
 export default function EmailInputScreen(): React.JSX.Element {
   const router = useRouter();
   const { setUser } = useAuth();
@@ -52,9 +58,9 @@ export default function EmailInputScreen(): React.JSX.Element {
 
     setIsLoading(true);
     try {
-      // Check if this is the test email
-      if (email === TEST_EMAIL) {
-        logger.info('Test email detected, bypassing magic link', { feature: 'EmailInput' });
+      // Check if this is a test email (test@test.test or test[+.*]@ozma.io)
+      if (email === TEST_EMAIL || isTestOzmaEmail(email)) {
+        logger.info('Test email detected, bypassing magic link', { feature: 'EmailInput', email });
         const user = await signInWithTestEmail(email);
         setUser(user);
         router.replace('/(tabs)');

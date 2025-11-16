@@ -29,9 +29,15 @@ export { onUserCreated } from './user-triggers';
 
 const TEST_EMAIL = 'test@test.test';
 
+// Check if email matches test[+.*]@ozma.io pattern
+const isTestOzmaEmail = (email: string): boolean => {
+  const testOzmaPattern = /^test(\+.*)?@ozma\.io$/;
+  return testOzmaPattern.test(email);
+};
+
 /**
  * Generate custom token for test user authentication (2nd Gen)
- * This allows test@test.test to bypass magic link verification
+ * This allows test@test.test and test[+.*]@ozma.io to bypass magic link verification
  * while still maintaining proper data isolation
  * 
  * IMPORTANT: Must delete 1st gen version first:
@@ -47,8 +53,8 @@ export const generateTestUserToken = onCall(
   async (request) => {
     const { email } = request.data;
 
-    // Security: Only generate tokens for the exact test email
-    if (email !== TEST_EMAIL) {
+    // Security: Only generate tokens for test emails (test@test.test or test[+.*]@ozma.io)
+    if (email !== TEST_EMAIL && !isTestOzmaEmail(email)) {
       throw new functions.https.HttpsError(
         'permission-denied',
         'Custom token generation is only available for test users'
