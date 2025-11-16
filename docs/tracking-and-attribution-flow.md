@@ -63,19 +63,13 @@ The app implements a sophisticated attribution tracking system that:
    ```
 
 5. **Send Facebook Events**
-   - **Client-side event:**
+   - **Dual-send (client + server):**
      ```typescript
-     logAppInstallEvent(attributionData)
-     // Uses Facebook SDK AppEventsLogger
-     ```
-   
-   - **Server-side event:**
-     ```typescript
-     sendAppInstallEvent({
-       email: attributionData.email,
-       attributionData: attributionData
-     })
-     // Sends to Cloud Function with:
+     sendFirstLaunchEvents(attributionData)
+     // Sends both AppInstall and AppLaunch events
+     // - Client-side: via Facebook SDK AppEventsLogger
+     // - Server-side: via Cloud Function to Conversions API
+     // - Uses shared eventId for deduplication
      // - advertiserTrackingEnabled: true/false (based on user choice)
      // - applicationTrackingEnabled: true
      // - extinfo: [16-element device info array]
@@ -116,19 +110,15 @@ The app implements a sophisticated attribution tracking system that:
 2. **Send Facebook Events Immediately**
    - No permission prompt needed (Android doesn't have ATT)
    
-   - **Client-side event:**
+   - **Dual-send (client + server):**
      ```typescript
-     logAppInstallEvent(attributionData)
-     ```
-   
-   - **Server-side event:**
-     ```typescript
-     sendAppInstallEvent({
-       email: attributionData.email,
-       attributionData: attributionData
-     })
-     // advertiserTrackingEnabled: true (always on Android)
-     // applicationTrackingEnabled: true
+     sendFirstLaunchEvents(attributionData)
+     // Sends both AppInstall and AppLaunch events
+     // - Client-side: via Facebook SDK AppEventsLogger
+     // - Server-side: via Cloud Function to Conversions API
+     // - Uses shared eventId for deduplication
+     // - advertiserTrackingEnabled: true (always on Android)
+     // - applicationTrackingEnabled: true
      ```
 
 3. **No Onboarding Screen**
@@ -255,9 +245,10 @@ The app implements a sophisticated attribution tracking system that:
 
 - **`services/facebook.service.ts`**
   - `parseDeepLinkParams()` - Extracts attribution from URL
-  - `logAppInstallEvent()` - Client-side FB SDK event
-  - `sendAppInstallEvent()` - Server-side event via Cloud Function
-  - `sendConversionEvent()` - Prepares all required fields
+  - `sendFirstLaunchEvents()` - Sends AppInstall and AppLaunch events (dual-send)
+  - `sendAppInstallEventDual()` - Dual-send AppInstall event (client + server)
+  - `sendAppLaunchEventDual()` - Dual-send AppLaunch event (client + server)
+  - `sendConversionEvent()` - Prepares all required fields for server-side events
 
 - **`services/tracking.service.ts`**
   - `shouldShowFirstLaunchTracking()` - iOS first launch check

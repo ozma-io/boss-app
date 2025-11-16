@@ -111,10 +111,11 @@ export function parseDeepLinkParams(url: string): AttributionData {
 
 /**
  * Log AppInstall event to Facebook (client-side)
+ * INTERNAL USE ONLY - Use sendAppInstallEventDual() instead
  * @param attributionData - Attribution data from deep link
  * @param eventId - Event ID for deduplication between client and server
  */
-export async function logAppInstallEvent(
+async function logAppInstallEvent(
   attributionData: AttributionData,
   eventId: string
 ): Promise<void> {
@@ -159,9 +160,10 @@ export async function logAppInstallEvent(
 
 /**
  * Log AppLaunch event to Facebook (client-side)
+ * INTERNAL USE ONLY - Use sendAppLaunchEventDual() instead
  * @param eventId - Event ID for deduplication between client and server
  */
-export async function logAppLaunchEvent(eventId: string): Promise<void> {
+async function logAppLaunchEvent(eventId: string): Promise<void> {
   // Skip on web or if SDK not available
   if (Platform.OS === 'web' || !AppEventsLogger) {
     logger.info('Skipping AppLaunch event (web or SDK not available)', { feature: 'Facebook' });
@@ -295,12 +297,12 @@ export async function sendConversionEvent(
 
 /**
  * Send AppInstall event to Facebook (Server-Side via Cloud Function)
- * Should be called on first app launch after attribution is collected
+ * INTERNAL USE ONLY - Use sendAppInstallEventDual() instead
  * @param eventId - Event ID for deduplication between client and server
  * @param userData - User data for the event
  * @param attributionData - Attribution data from deep link
  */
-export async function sendAppInstallEvent(
+async function sendAppInstallEvent(
   eventId: string,
   userData?: {
     email?: string;
@@ -318,12 +320,12 @@ export async function sendAppInstallEvent(
 
 /**
  * Send AppLaunch event to Facebook (Server-Side via Cloud Function)
- * Should be called on every app launch
+ * INTERNAL USE ONLY - Use sendAppLaunchEventDual() instead
  * @param eventId - Event ID for deduplication between client and server
  * @param userData - User data for the event
  * @param attributionData - Attribution data from deep link
  */
-export async function sendAppLaunchEvent(
+async function sendAppLaunchEvent(
   eventId: string,
   userData?: {
     email?: string;
