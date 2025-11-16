@@ -9,10 +9,11 @@ import { logger } from '@/services/logger.service';
 import { showAlert } from '@/utils/alert';
 import { sanitizeFieldKey, validateFieldKey } from '@/utils/customFieldHelpers';
 import { getCustomFields } from '@/utils/fieldHelpers';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from 'expo-router';
 import { deleteField } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,14 +24,14 @@ export default function BossScreen() {
   const { boss, loading, error, updateBoss } = useBoss();
   
   // Editing states for fixed layout fields
-  const [isEditingBirthday, setIsEditingBirthday] = useState(false);
-  const [birthday, setBirthday] = useState('');
+  const [birthday, setBirthday] = useState<Date>(new Date());
+  const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
   
   const [isEditingPosition, setIsEditingPosition] = useState(false);
   const [position, setPosition] = useState('');
   
-  const [isEditingStartedAt, setIsEditingStartedAt] = useState(false);
-  const [startedAt, setStartedAt] = useState('');
+  const [startedAt, setStartedAt] = useState<Date>(new Date());
+  const [showStartedAtPicker, setShowStartedAtPicker] = useState(false);
   
   const [isEditingManagementStyle, setIsEditingManagementStyle] = useState(false);
   const [managementStyle, setManagementStyle] = useState('');
@@ -52,15 +53,21 @@ export default function BossScreen() {
   );
 
   const handleEditBirthday = (): void => {
-    setBirthday(boss?.birthday || '');
-    setIsEditingBirthday(true);
+    if (boss?.birthday) {
+      setBirthday(new Date(boss.birthday));
+    } else {
+      setBirthday(new Date());
+    }
+    setShowBirthdayPicker(true);
   };
 
-  const handleBlurBirthday = async (): Promise<void> => {
-    setIsEditingBirthday(false);
-    if (birthday !== boss?.birthday && boss) {
+  const handleBirthdayChange = async (event: any, selectedDate?: Date): Promise<void> => {
+    setShowBirthdayPicker(Platform.OS === 'ios');
+    
+    if (selectedDate && boss) {
+      setBirthday(selectedDate);
       try {
-        await updateBoss({ birthday });
+        await updateBoss({ birthday: selectedDate.toISOString() });
         trackAmplitudeEvent('boss_field_edited', {
           field: 'birthday',
           bossId: boss.id,
@@ -92,15 +99,21 @@ export default function BossScreen() {
   };
 
   const handleEditStartedAt = (): void => {
-    setStartedAt(boss?.startedAt ? new Date(boss.startedAt).toLocaleDateString() : '');
-    setIsEditingStartedAt(true);
+    if (boss?.startedAt) {
+      setStartedAt(new Date(boss.startedAt));
+    } else {
+      setStartedAt(new Date());
+    }
+    setShowStartedAtPicker(true);
   };
 
-  const handleBlurStartedAt = async (): Promise<void> => {
-    setIsEditingStartedAt(false);
-    if (startedAt !== boss?.startedAt && boss) {
+  const handleStartedAtChange = async (event: any, selectedDate?: Date): Promise<void> => {
+    setShowStartedAtPicker(Platform.OS === 'ios');
+    
+    if (selectedDate && boss) {
+      setStartedAt(selectedDate);
       try {
-        await updateBoss({ startedAt });
+        await updateBoss({ startedAt: selectedDate.toISOString() });
         trackAmplitudeEvent('boss_field_edited', {
           field: 'startedAt',
           bossId: boss.id,
@@ -297,50 +310,28 @@ export default function BossScreen() {
           <Pressable 
             style={styles.infoCard} 
             testID="started-at-card"
-            onPress={isEditingStartedAt ? undefined : handleEditStartedAt}
+            onPress={handleEditStartedAt}
           >
             <Text style={styles.cardIcon} testID="started-at-icon">📅</Text>
             <View style={styles.cardContent}>
               <Text style={styles.cardLabel} testID="started-at-label">Started at</Text>
-              {isEditingStartedAt ? (
-                <TextInput
-                  style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                  value={startedAt}
-                  onChangeText={setStartedAt}
-                  onBlur={handleBlurStartedAt}
-                  autoFocus
-                  placeholder="Enter started date"
-                  testID="started-at-input"
-                />
-              ) : (
-                <Text style={[styles.cardValue, !boss.startedAt && { opacity: 0.5 }]} testID="started-at-value">
-                  {boss.startedAt ? new Date(boss.startedAt).toLocaleDateString() : 'Not set'}
-                </Text>
-              )}
+              <Text style={[styles.cardValue, !boss.startedAt && { opacity: 0.5 }]} testID="started-at-value">
+                {boss.startedAt ? new Date(boss.startedAt).toLocaleDateString() : 'Not set'}
+              </Text>
             </View>
           </Pressable>
 
           <Pressable 
             style={styles.infoCard} 
             testID="birthday-card"
-            onPress={isEditingBirthday ? undefined : handleEditBirthday}
+            onPress={handleEditBirthday}
           >
             <Text style={styles.cardIcon} testID="birthday-icon">🎂</Text>
             <View style={styles.cardContent}>
               <Text style={styles.cardLabel} testID="birthday-label">Birthday</Text>
-              {isEditingBirthday ? (
-                <TextInput
-                  style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                  value={birthday}
-                  onChangeText={setBirthday}
-                  onBlur={handleBlurBirthday}
-                  autoFocus
-                  placeholder="Enter birthday"
-                  testID="birthday-input"
-                />
-              ) : (
-                <Text style={[styles.cardValue, !boss.birthday && { opacity: 0.5 }]} testID="birthday-value">{boss.birthday || 'Not set'}</Text>
-              )}
+              <Text style={[styles.cardValue, !boss.birthday && { opacity: 0.5 }]} testID="birthday-value">
+                {boss.birthday ? new Date(boss.birthday).toLocaleDateString() : 'Not set'}
+              </Text>
             </View>
           </Pressable>
         </View>
@@ -418,6 +409,28 @@ export default function BossScreen() {
           <AddCustomFieldButton onPress={() => setIsAddModalVisible(true)} />
         </View>
       </ScrollView>
+      )}
+
+      {/* Date Picker for Started At */}
+      {showStartedAtPicker && (
+        <DateTimePicker
+          value={startedAt}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleStartedAtChange}
+          testID="started-at-date-picker"
+        />
+      )}
+
+      {/* Date Picker for Birthday */}
+      {showBirthdayPicker && (
+        <DateTimePicker
+          value={birthday}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleBirthdayChange}
+          testID="birthday-date-picker"
+        />
       )}
 
       <FloatingChatButton />
