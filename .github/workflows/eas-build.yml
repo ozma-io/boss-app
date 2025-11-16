@@ -36,11 +36,5 @@ jobs:
         run: npm ci
 
       - name: Run production builds workflow
-        run: eas workflow:run create-production-builds.yml --non-interactive --wait
-
-      - name: Submit to App Store
-        run: eas submit --platform ios --profile production --latest --non-interactive
-
-      - name: Submit to Google Play
-        run: eas submit --platform android --profile production --latest --non-interactive
+        run: eas workflow:run create-production-builds.yml --non-interactive
 
