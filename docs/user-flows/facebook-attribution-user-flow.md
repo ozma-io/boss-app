@@ -57,8 +57,10 @@ User installs app
 
 **Status:** ✅ **Ready** (Screen implemented, Facebook App ID & Client Token configured)
 
+**Completed:**
+- ✅ App logo/icon ready (all required sizes: 1024×1024)
+
 **TODO:**
-- Add app logo/icon before publication
 - After app publication, configure Facebook settings with platform-specific IDs (required for attribution tracking)
 - See credentials in `../temp/facebook-app-credentials.md`
 
@@ -84,9 +86,9 @@ User installs app
 
 **User action:** Taps "Continue with Email"
 
-**TODO:**
-- Configure Apple Sign-In in Firebase Console when Apple Developer account is ready (requires Services ID, Team ID, Private Key, Key ID)
-- Add SHA-1 fingerprints (debug + production release signing key) to Firebase for Android Google Sign-In
+**Completed:**
+- ✅ Apple Sign-In configured in Firebase Console (Services ID, Team ID, Private Key, Key ID)
+- ✅ SHA-1 fingerprints added to Firebase for Android Google Sign-In (debug + production)
 
 **Next:** 
 - If email in attribution → **SKIP** to Email Input Screen (pre-filled)
