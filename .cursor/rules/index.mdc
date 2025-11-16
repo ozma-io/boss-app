@@ -74,6 +74,9 @@ npx eas-cli@latest workflow:run create-production-builds.yml
 - **Rebuild Android**: `npx expo run:android`
 - Type all props, state, and function returns
 - Handle authentication state properly
+- **Version updates**: When bumping version, ALWAYS update in BOTH files:
+  - `package.json` (version field)
+  - `app.config.ts` (version field in config object)
 
 ## Find Details In
 - **Tech stack & data model**: `README.md`
