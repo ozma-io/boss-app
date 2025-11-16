@@ -323,15 +323,44 @@ Firestore user document now contains:
 
 ---
 
-## TODO: Internal Testing Release
+## Release Status
+
+### Internal Testing Release
 
 **Goal:** Enable internal testers to test the app on their devices (iOS TestFlight + Android Internal Testing) without submitting to App Store/Google Play review.
 
-**Status:** 🔄 In Progress
+**Status:** ✅ **Completed** (2025-11-16)
 
-- Update Google Play JSON settings in repository for automatic deployment after build and review
+**Completed:**
+- ✅ Android build submitted to Google Play Console → Internal Testing track
+- ✅ iOS build submitted to App Store Connect → TestFlight
+- ✅ Service accounts configured:
+  - `expo-google-play` for Play Store submissions
+  - `firebase-iap-verifier` for FCM V1 push notifications
+  - `firebase-iap-verifier` for IAP verification in backend
+- ✅ EAS credentials configured with proper separation of concerns
+- ✅ `eas.json` updated with `internal` submit profile
+
+**Remaining:**
+- [ ] Update Google Play JSON settings in repository for automatic deployment after build and review
+
+### Next: Public Testing Release
+
+**Goal:** Release app for public beta testing via Facebook Business Manager attribution tracking.
+
+**Status:** 📋 **Planned**
+
+**Platforms:**
+- iOS TestFlight (Public Beta)
+- Android Open Testing track
+
+**Requirements:**
+- Configure Facebook Business Manager with App Store/Google Play IDs
+- Update Facebook App Settings with published app platform credentials
+- Set up conversion tracking for public beta installs
+- Test attribution flow with real Facebook ads
 
 ---
 
-**Last Updated:** 2025-11-10
+**Last Updated:** 2025-11-16
 
