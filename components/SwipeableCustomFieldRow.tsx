@@ -1,7 +1,7 @@
 import { CustomFieldRow } from '@/components/CustomFieldRow';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Swipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated from 'react-native-reanimated';
 
@@ -59,28 +59,34 @@ export function SwipeableCustomFieldRow({
   );
 
   return (
-    <Swipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      rightThreshold={40}
-      overshootRight={false}
-      onSwipeableWillOpen={() => setIsSwiping(true)}
-      onSwipeableClose={() => setIsSwiping(false)}
-      testID={`swipeable-${fieldKey.replace('custom_', '')}`}
-    >
-      <CustomFieldRow
-        fieldKey={fieldKey}
-        fieldValue={fieldValue}
-        metadata={metadata}
-        onUpdate={onUpdate}
-        variant={variant}
-        disabled={isSwiping}
-      />
-    </Swipeable>
+    <View style={styles.swipeableContainer}>
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        rightThreshold={40}
+        overshootRight={false}
+        onSwipeableWillOpen={() => setIsSwiping(true)}
+        onSwipeableClose={() => setIsSwiping(false)}
+        testID={`swipeable-${fieldKey.replace('custom_', '')}`}
+      >
+        <CustomFieldRow
+          fieldKey={fieldKey}
+          fieldValue={fieldValue}
+          metadata={metadata}
+          onUpdate={onUpdate}
+          variant={variant}
+          disabled={isSwiping}
+        />
+      </Swipeable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  swipeableContainer: {
+    zIndex: 999,
+    elevation: 5,
+  },
   deleteButtonContainer: {
     height: '100%',
     paddingBottom: 8,

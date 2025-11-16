@@ -2,7 +2,7 @@ import { TimelineItem } from '@/components/timeline/TimelineItem';
 import { TimelineEntry } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Swipeable, { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated from 'react-native-reanimated';
 
@@ -48,26 +48,32 @@ export function SwipeableTimelineItem({
   );
 
   return (
-    <Swipeable
-      ref={swipeableRef}
-      renderRightActions={renderRightActions}
-      rightThreshold={40}
-      overshootRight={false}
-      onSwipeableWillOpen={() => setIsSwiping(true)}
-      onSwipeableClose={() => setIsSwiping(false)}
-      testID={`swipeable-timeline-${entry.id}`}
-    >
-      <TimelineItem
-        entry={entry}
-        onPress={isSwiping ? undefined : onPress}
-        testID={testID}
-        isLastInGroup={isLastInGroup}
-      />
-    </Swipeable>
+    <View style={styles.swipeableContainer}>
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        rightThreshold={40}
+        overshootRight={false}
+        onSwipeableWillOpen={() => setIsSwiping(true)}
+        onSwipeableClose={() => setIsSwiping(false)}
+        testID={`swipeable-timeline-${entry.id}`}
+      >
+        <TimelineItem
+          entry={entry}
+          onPress={isSwiping ? undefined : onPress}
+          testID={testID}
+          isLastInGroup={isLastInGroup}
+        />
+      </Swipeable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  swipeableContainer: {
+    zIndex: 999,
+    elevation: 5,
+  },
   deleteButtonContainer: {
     height: '100%',
     paddingBottom: 8,
