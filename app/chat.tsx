@@ -87,6 +87,11 @@ export default function ChatScreen() {
       setMessages(newMessages);
       setLoading(false);
       
+      // Mark messages as read when receiving updates (handles messages arriving while screen is visible)
+      markChatAsRead(user.id, threadId).catch((error) => {
+        logger.error('Failed to mark chat as read on message update', { feature: 'ChatScreen', error });
+      });
+      
       // On first load, set pagination state
       if (newMessages.length > 0) {
         // Messages are in DESC order (newest first)
