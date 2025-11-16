@@ -1,11 +1,25 @@
 name: Create Production Builds
 
 jobs:
+  update_preview:
+    type: update
+    params:
+      branch: preview
+      message: "Update from main branch"
+
+  update_production:
+    type: update
+    params:
+      branch: production
+      message: "Update from main branch"
+
   build_android:
     type: build
     params:
       platform: android
       profile: production
+    needs:
+      - update_production
 
   submit_android:
     type: submit
@@ -20,6 +34,8 @@ jobs:
     params:
       platform: ios
       profile: production
+    needs:
+      - update_production
 
   submit_ios:
     type: submit

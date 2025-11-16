@@ -28,9 +28,6 @@ jobs:
           eas-version: latest
           token: ${{ env.EXPO_TOKEN }}
 
-      - name: Run production updates workflow
-        run: eas workflow:run create-production-updates.yml --non-interactive --no-wait
-
       - name: Run production builds workflow
         run: eas workflow:run create-production-builds.yml --non-interactive --no-wait
 
