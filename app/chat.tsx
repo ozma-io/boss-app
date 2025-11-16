@@ -305,8 +305,8 @@ export default function ChatScreen() {
       <View style={styles.inputContainer} testID="input-container">
         <TextInput
           style={styles.input}
-          placeholder="Lorem ipsum"
-          placeholderTextColor="#999"
+          placeholder="Message"
+          placeholderTextColor="rgba(0, 0, 0, 0.7)"
           value={inputText}
           onChangeText={setInputText}
           testID="message-input"
