@@ -255,14 +255,12 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
   }, [noteSubtype, currentEntryId, entryType, autoSave]);
 
   const handleDateChange = (event: any, date?: Date): void => {
-    setShowDatePicker(false);
     if (date) {
       setSelectedDate(date);
     }
   };
 
   const handleTimeChange = (event: any, date?: Date): void => {
-    setShowTimePicker(false);
     if (date) {
       setSelectedDate(date);
     }
@@ -376,7 +374,10 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
               <View style={styles.dateTimeRow}>
                 <Pressable
                   style={styles.dateTimeButton}
-                  onPress={() => setShowDatePicker(true)}
+                  onPress={() => {
+                    setShowTimePicker(false);
+                    setShowDatePicker(true);
+                  }}
                   testID="date-picker-button"
                 >
                   <Ionicons name="calendar-outline" size={20} color="#666" />
@@ -384,7 +385,10 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
                 </Pressable>
                 <Pressable
                   style={styles.dateTimeButton}
-                  onPress={() => setShowTimePicker(true)}
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setShowTimePicker(true);
+                  }}
                   testID="time-picker-button"
                 >
                   <Ionicons name="time-outline" size={20} color="#666" />
@@ -601,24 +605,46 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
 
           {/* Date Picker */}
           {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleDateChange}
-              testID="date-picker"
-            />
+            <Pressable
+              style={styles.pickerOverlay}
+              onPress={() => setShowDatePicker(false)}
+              testID="date-picker-overlay"
+            >
+              <Pressable
+                onPress={(e) => e.stopPropagation()}
+                testID="date-picker-container"
+              >
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleDateChange}
+                  testID="date-picker"
+                />
+              </Pressable>
+            </Pressable>
           )}
 
           {/* Time Picker */}
           {showTimePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleTimeChange}
-              testID="time-picker"
-            />
+            <Pressable
+              style={styles.pickerOverlay}
+              onPress={() => setShowTimePicker(false)}
+              testID="time-picker-overlay"
+            >
+              <Pressable
+                onPress={(e) => e.stopPropagation()}
+                testID="time-picker-container"
+              >
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleTimeChange}
+                  testID="time-picker"
+                />
+              </Pressable>
+            </Pressable>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -768,6 +794,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Manrope-Regular',
     color: '#000',
+  },
+  pickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 });
 
