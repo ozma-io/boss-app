@@ -65,9 +65,9 @@ The app implements a sophisticated attribution tracking system that:
 5. **Send Facebook Events**
    - **Dual-send (client + server):**
      ```typescript
-     sendFirstLaunchEvents(attributionData)
-     // Sends both AppInstall and AppLaunch events
-     // - Client-side: via Facebook SDK AppEventsLogger
+     sendAppInstallEventDual(attributionData, userData)
+     // Sends AppInstall event only (not AppLaunch)
+     // - Client-side: via Facebook SDK (fb_mobile_activate_app)
      // - Server-side: via Cloud Function to Conversions API
      // - Uses shared eventId for deduplication
      // - advertiserTrackingEnabled: true/false (based on user choice)
@@ -112,9 +112,9 @@ The app implements a sophisticated attribution tracking system that:
    
    - **Dual-send (client + server):**
      ```typescript
-     sendFirstLaunchEvents(attributionData)
-     // Sends both AppInstall and AppLaunch events
-     // - Client-side: via Facebook SDK AppEventsLogger
+     sendAppInstallEventDual(attributionData, userData)
+     // Sends AppInstall event only (not AppLaunch)
+     // - Client-side: via Facebook SDK (fb_mobile_activate_app)
      // - Server-side: via Cloud Function to Conversions API
      // - Uses shared eventId for deduplication
      // - advertiserTrackingEnabled: true (always on Android)
@@ -245,9 +245,8 @@ The app implements a sophisticated attribution tracking system that:
 
 - **`services/facebook.service.ts`**
   - `parseDeepLinkParams()` - Extracts attribution from URL
-  - `sendFirstLaunchEvents()` - Sends AppInstall and AppLaunch events (dual-send)
-  - `sendAppInstallEventDual()` - Dual-send AppInstall event (client + server)
-  - `sendAppLaunchEventDual()` - Dual-send AppLaunch event (client + server)
+  - `sendAppInstallEventDual()` - Dual-send AppInstall event (client + server, first launch only)
+  - `sendAppLaunchEventDual()` - Dual-send AppLaunch event (client + server, subsequent launches)
   - `sendConversionEvent()` - Prepares all required fields for server-side events
 
 - **`services/tracking.service.ts`**

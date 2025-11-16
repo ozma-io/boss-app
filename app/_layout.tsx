@@ -7,7 +7,7 @@ import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/Tr
 import { initializeAmplitude } from '@/services/amplitude.service';
 import { getAttributionData, getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
 import { getCurrentUser, initializeGoogleSignIn } from '@/services/auth.service';
-import { initializeFacebookSdk, parseDeepLinkParams, sendAppLaunchEventDual, sendFirstLaunchEvents } from '@/services/facebook.service';
+import { initializeFacebookSdk, parseDeepLinkParams, sendAppInstallEventDual, sendAppLaunchEventDual } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
@@ -66,29 +66,6 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
-
-  // Helper: Send app launch events for returning users
-  const sendAppLaunchEventsForReturningUser = async (): Promise<void> => {
-    try {
-      const currentUser = getCurrentUser();
-      const attributionData = await getAttributionData();
-      
-      // Use dual-send approach with proper event deduplication
-      await sendAppLaunchEventDual(
-        attributionData || undefined,
-        currentUser?.email ? { email: currentUser.email } : undefined
-      );
-      
-      logger.info('App Launch events sent', { 
-        feature: 'App', 
-        hasUserEmail: !!currentUser?.email,
-        hasAttribution: !!attributionData
-      });
-    } catch (error) {
-      logger.error('Failed to send App Launch events', { feature: 'App', error: error instanceof Error ? error : new Error(String(error)) });
-      throw error;
-    }
-  };
 
   // Initialize Sentry, Facebook SDK, Intercom, Amplitude and handle attribution on first launch
   useEffect(() => {
@@ -163,9 +140,12 @@ export default function RootLayout() {
                 // iOS: tracking onboarding will handle permission request and event sending
                 logger.info('iOS: Attribution data saved, tracking onboarding will handle events', { feature: 'App' });
               } else {
-                // Android: send first launch events immediately (no ATT permission needed)
-                logger.info('Android: Sending first launch events', { feature: 'App' });
-                await sendFirstLaunchEvents(attributionData);
+                // Android: send install event immediately (no ATT permission needed, tracking assumed enabled)
+                logger.info('Android: Sending app install event', { feature: 'App' });
+                await sendAppInstallEventDual(
+                  attributionData,
+                  attributionData.email ? { email: attributionData.email } : undefined
+                );
               }
             } else {
               logger.info('No Facebook attribution detected', { feature: 'App' });
@@ -175,10 +155,29 @@ export default function RootLayout() {
           // Mark app as launched
           await markAppAsLaunched();
         } else {
-          // Not first launch - send App Launch events for returning user
+          // Not first launch - send App Launch event for returning user
           if (Platform.OS !== 'web') {
             logger.info('Subsequent launch detected', { feature: 'App' });
-            await sendAppLaunchEventsForReturningUser();
+            
+            try {
+              const currentUser = getCurrentUser();
+              const attributionData = await getAttributionData();
+              
+              // Send app launch event (client + server with event deduplication)
+              await sendAppLaunchEventDual(
+                attributionData || undefined,
+                currentUser?.email ? { email: currentUser.email } : undefined
+              );
+              
+              logger.info('App Launch event sent', { 
+                feature: 'App', 
+                hasUserEmail: !!currentUser?.email,
+                hasAttribution: !!attributionData
+              });
+            } catch (launchError) {
+              logger.error('Failed to send App Launch event', { feature: 'App', error: launchError instanceof Error ? launchError : new Error(String(launchError)) });
+              // Don't block app initialization
+            }
           }
         }
       } catch (initError) {

@@ -161,7 +161,7 @@ Attribution data is stored in Firestore at `/users/{userId}/attribution`:
 
 ```typescript
 import { isFirstLaunch, markAppAsLaunched, getAttributionData } from '@/services/attribution.service';
-import { sendFirstLaunchEvents } from '@/services/facebook.service';
+import { sendAppInstallEventDual } from '@/services/facebook.service';
 
 async function handleFirstLaunch() {
   const firstLaunch = await isFirstLaunch();
@@ -170,12 +170,34 @@ async function handleFirstLaunch() {
     const attributionData = await getAttributionData();
     
     if (attributionData) {
-      // Sends both AppInstall and AppLaunch events using dual-send approach
-      await sendFirstLaunchEvents(attributionData);
+      // Send AppInstall event (client + server) using dual-send approach
+      await sendAppInstallEventDual(
+        attributionData,
+        attributionData.email ? { email: attributionData.email } : undefined
+      );
     }
     
     await markAppAsLaunched();
   }
+}
+```
+
+### Send AppLaunch Event (Subsequent Launches)
+
+```typescript
+import { getAttributionData } from '@/services/attribution.service';
+import { getCurrentUser } from '@/services/auth.service';
+import { sendAppLaunchEventDual } from '@/services/facebook.service';
+
+async function handleAppLaunch() {
+  const currentUser = getCurrentUser();
+  const attributionData = await getAttributionData();
+  
+  // Send AppLaunch event (client + server) using dual-send approach
+  await sendAppLaunchEventDual(
+    attributionData || undefined,
+    currentUser?.email ? { email: currentUser.email } : undefined
+  );
 }
 ```
 

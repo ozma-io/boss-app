@@ -587,30 +587,3 @@ export async function sendAppLaunchEventDual(
     async () => sendAppLaunchEvent(eventId, userData, attributionData)
   );
 }
-
-/**
- * Send first launch events (App Install + App Launch)
- * Should be called only on first app launch with attribution data
- * Uses dual-send approach with proper event deduplication
- */
-export async function sendFirstLaunchEvents(attributionData: AttributionData): Promise<void> {
-  try {
-    // Send App Install events (client + server with shared event ID)
-    await sendAppInstallEventDual(
-      attributionData,
-      attributionData.email ? { email: attributionData.email } : undefined
-    );
-    logger.info('App Install events sent', { feature: 'Facebook' });
-    
-    // Send App Launch events immediately after (client + server with shared event ID)
-    await sendAppLaunchEventDual(
-      attributionData,
-      attributionData.email ? { email: attributionData.email } : undefined
-    );
-    logger.info('App Launch events sent', { feature: 'Facebook' });
-  } catch (error) {
-    logger.error('Error sending first launch events', { feature: 'Facebook', error });
-    throw error;
-  }
-}
-

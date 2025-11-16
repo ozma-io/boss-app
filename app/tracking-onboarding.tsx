@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { getAttributionData, isFirstLaunch } from '@/services/attribution.service';
-import { sendFirstLaunchEvents } from '@/services/facebook.service';
+import { sendAppInstallEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
 import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -40,27 +40,31 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
         await updateTrackingPermissionStatus(user.id, status);
       }
       
-      // Check if this is first launch - if yes, send first launch events to Facebook
+      // Check if this is first launch - if yes, send app install event to Facebook
+      // iOS: This happens AFTER ATT permission request, so tracking flag will be correct
       const firstLaunch = await isFirstLaunch();
       if (firstLaunch) {
-        logger.info('First launch detected, sending first launch events to Facebook', { feature: 'TrackingOnboarding' });
+        logger.info('First launch detected, sending app install event to Facebook', { feature: 'TrackingOnboarding' });
         
         try {
           const attributionData = await getAttributionData();
           
           if (attributionData) {
-            // Send first launch events (App Install + App Launch)
-            await sendFirstLaunchEvents(attributionData);
-            logger.info('First launch events sent successfully', { feature: 'TrackingOnboarding' });
+            // Send app install event (client + server) with correct ATT permission status
+            await sendAppInstallEventDual(
+              attributionData,
+              attributionData.email ? { email: attributionData.email } : undefined
+            );
+            logger.info('App install event sent successfully', { feature: 'TrackingOnboarding' });
           } else {
-            logger.info('No attribution data found, skipping first launch events', { feature: 'TrackingOnboarding' });
+            logger.info('No attribution data found, skipping app install event', { feature: 'TrackingOnboarding' });
           }
         } catch (fbError) {
-          logger.error('Failed to send first launch events', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
+          logger.error('Failed to send app install event', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
           // Don't block user flow on FB error
         }
       } else {
-        logger.info('Not first launch, skipping first launch events', { feature: 'TrackingOnboarding' });
+        logger.info('Not first launch, skipping app install event', { feature: 'TrackingOnboarding' });
       }
       
       // Mark tracking onboarding as completed
