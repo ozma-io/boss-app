@@ -1,12 +1,15 @@
 import { auth } from '@/constants/firebase.config';
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { clearTrackingAfterAuth, isFirstLaunch, markAppAsLaunched, needsTrackingAfterAuth } from '@/services/attribution.service';
+import { sendAppInstallEventDual } from '@/services/facebook.service';
 import { User } from '@/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
 import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
+import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
   User as FirebaseUser,
@@ -107,6 +110,55 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
       email: email,
     });
     
+    // ============================================================
+    // MAIN FLOW: Post-Login Tracking for Organic Users
+    // ============================================================
+    //
+    // This is the PRIMARY tracking flow for most users:
+    // 1. User installs app organically (App Store, friend referral, etc)
+    // 2. User explores app, decides to sign up
+    // 3. User logs in with email → WE ARE HERE
+    // 4. Request tracking permission (iOS ATT prompt)
+    // 5. Send Facebook events with email for attribution
+    //
+    // SPECIAL CASE: Users with Facebook attribution already sent
+    // events at first launch (see app/_layout.tsx lines 154-171)
+    //
+    // ============================================================
+    
+    const needsTracking = await needsTrackingAfterAuth();
+    const isFirst = await isFirstLaunch();
+    
+    if (needsTracking && isFirst) {
+      logger.info('MAIN FLOW: Organic user logged in, triggering post-login tracking', {
+        feature: 'AuthService',
+        email,
+        platform: Platform.OS
+      });
+      
+      if (Platform.OS === 'ios') {
+        // iOS: Navigate to tracking onboarding screen
+        // User will see ATT prompt, then we send events with email
+        // Note: We don't mark app as launched yet - tracking screen will do it
+        router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
+      } else if (Platform.OS === 'android') {
+        // Android: Send events immediately (no prompt needed)
+        try {
+          await sendAppInstallEventDual(
+            {}, // No attribution data (organic user)
+            { email }
+          );
+          await clearTrackingAfterAuth();
+          await markAppAsLaunched();
+          logger.info('MAIN FLOW: Android tracking completed', { feature: 'AuthService' });
+        } catch (fbError) {
+          logger.error('MAIN FLOW: Failed to send tracking events', { feature: 'AuthService', error: fbError });
+          // Don't block user flow on Facebook error
+          await clearTrackingAfterAuth();
+        }
+      }
+    }
+    
     return user;
   } catch (error) {
     trackAmplitudeEvent('auth_signin_failed', {
@@ -136,6 +188,31 @@ export async function signInWithTestEmail(email: string): Promise<User> {
     email: email,
     is_test: true,
   });
+  
+  // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
+  const needsTracking = await needsTrackingAfterAuth();
+  const isFirst = await isFirstLaunch();
+  
+  if (needsTracking && isFirst) {
+    logger.info('MAIN FLOW: Test user logged in, triggering post-login tracking', {
+      feature: 'AuthService',
+      email,
+      platform: Platform.OS
+    });
+    
+    if (Platform.OS === 'ios') {
+      router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
+    } else if (Platform.OS === 'android') {
+      try {
+        await sendAppInstallEventDual({}, { email });
+        await clearTrackingAfterAuth();
+        await markAppAsLaunched();
+      } catch (fbError) {
+        logger.error('MAIN FLOW: Failed to send tracking events', { feature: 'AuthService', error: fbError });
+        await clearTrackingAfterAuth();
+      }
+    }
+  }
   
   return user;
 }
@@ -203,6 +280,23 @@ export async function signInWithGoogle(): Promise<User> {
         platform: 'web',
       });
       
+      // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
+      const needsTracking = await needsTrackingAfterAuth();
+      const isFirst = await isFirstLaunch();
+      
+      if (needsTracking && isFirst) {
+        logger.info('MAIN FLOW: Google user logged in (web), triggering post-login tracking', {
+          feature: 'AuthService',
+          email: user.email,
+          platform: 'web'
+        });
+        
+        // Web platform: tracking not typically needed (no ATT on web)
+        // But we clear the flag to avoid confusion
+        await clearTrackingAfterAuth();
+        logger.info('MAIN FLOW: Web platform - cleared tracking flag', { feature: 'AuthService' });
+      }
+      
       return user;
     } catch (error) {
       trackAmplitudeEvent('auth_signin_failed', {
@@ -235,6 +329,31 @@ export async function signInWithGoogle(): Promise<User> {
       platform: Platform.OS,
       native: true,
     });
+    
+    // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
+    const needsTracking = await needsTrackingAfterAuth();
+    const isFirst = await isFirstLaunch();
+    
+    if (needsTracking && isFirst) {
+      logger.info('MAIN FLOW: Google user logged in (native), triggering post-login tracking', {
+        feature: 'AuthService',
+        email: user.email,
+        platform: Platform.OS
+      });
+      
+      if (Platform.OS === 'ios') {
+        router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
+      } else if (Platform.OS === 'android') {
+        try {
+          await sendAppInstallEventDual({}, { email: user.email });
+          await clearTrackingAfterAuth();
+          await markAppAsLaunched();
+        } catch (fbError) {
+          logger.error('MAIN FLOW: Failed to send tracking events', { feature: 'AuthService', error: fbError });
+          await clearTrackingAfterAuth();
+        }
+      }
+    }
     
     return user;
   } catch (error) {
@@ -295,6 +414,31 @@ export async function signInWithApple(): Promise<User> {
       method: 'apple',
       email: user.email,
     });
+    
+    // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
+    const needsTracking = await needsTrackingAfterAuth();
+    const isFirst = await isFirstLaunch();
+    
+    if (needsTracking && isFirst) {
+      logger.info('MAIN FLOW: Apple user logged in, triggering post-login tracking', {
+        feature: 'AuthService',
+        email: user.email,
+        platform: Platform.OS
+      });
+      
+      if (Platform.OS === 'ios') {
+        router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
+      } else if (Platform.OS === 'android') {
+        try {
+          await sendAppInstallEventDual({}, { email: user.email });
+          await clearTrackingAfterAuth();
+          await markAppAsLaunched();
+        } catch (fbError) {
+          logger.error('MAIN FLOW: Failed to send tracking events', { feature: 'AuthService', error: fbError });
+          await clearTrackingAfterAuth();
+        }
+      }
+    }
     
     return user;
   } catch (error) {

@@ -1,10 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '@/constants/firebase.config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { doc, updateDoc } from 'firebase/firestore';
 import { logger } from './logger.service';
 
 const ATTRIBUTION_STORAGE_KEY = '@boss_app_attribution_data';
 const FIRST_LAUNCH_KEY = '@boss_app_first_launch';
+const NEEDS_TRACKING_AFTER_AUTH_KEY = '@boss_app_needs_tracking_after_auth';
 
 export interface AttributionData {
   fbclid?: string | null;
@@ -120,6 +121,62 @@ export async function getAttributionEmail(): Promise<string | null> {
   } catch (error) {
     logger.error('Error getting attribution email', { feature: 'AttributionService', error });
     return null;
+  }
+}
+
+/**
+ * Set flag that user needs tracking after authentication (MAIN FLOW)
+ * 
+ * This is used for organic users who install the app without Facebook attribution.
+ * We wait for them to log in, then show tracking onboarding and send events with email.
+ * 
+ * @param value - true if user needs tracking after auth, false otherwise
+ */
+export async function setNeedsTrackingAfterAuth(value: boolean): Promise<void> {
+  try {
+    if (value) {
+      await AsyncStorage.setItem(NEEDS_TRACKING_AFTER_AUTH_KEY, 'true');
+      logger.info('Set needs tracking after auth flag', { feature: 'AttributionService' });
+    } else {
+      await AsyncStorage.removeItem(NEEDS_TRACKING_AFTER_AUTH_KEY);
+      logger.info('Cleared needs tracking after auth flag', { feature: 'AttributionService' });
+    }
+  } catch (error) {
+    logger.error('Error setting needs tracking after auth', { feature: 'AttributionService', error });
+    throw error;
+  }
+}
+
+/**
+ * Check if user needs tracking after authentication (MAIN FLOW)
+ * 
+ * Returns true if this is an organic user who needs to be prompted for tracking
+ * after they log in with their email.
+ * 
+ * @returns true if tracking should be shown after login
+ */
+export async function needsTrackingAfterAuth(): Promise<boolean> {
+  try {
+    const value = await AsyncStorage.getItem(NEEDS_TRACKING_AFTER_AUTH_KEY);
+    return value === 'true';
+  } catch (error) {
+    logger.error('Error checking needs tracking after auth', { feature: 'AttributionService', error });
+    return false;
+  }
+}
+
+/**
+ * Clear the tracking after auth flag (MAIN FLOW)
+ * 
+ * Called after tracking has been completed for organic users.
+ */
+export async function clearTrackingAfterAuth(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(NEEDS_TRACKING_AFTER_AUTH_KEY);
+    logger.info('Cleared tracking after auth flag', { feature: 'AttributionService' });
+  } catch (error) {
+    logger.error('Error clearing tracking after auth', { feature: 'AttributionService', error });
+    throw error;
   }
 }
 

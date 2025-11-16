@@ -1,12 +1,12 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { getAttributionData, isFirstLaunch } from '@/services/attribution.service';
+import { clearTrackingAfterAuth, getAttributionData, isFirstLaunch, markAppAsLaunched } from '@/services/attribution.service';
 import { sendAppInstallEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
-import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
+import { hasFacebookAttribution, recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -15,6 +15,10 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
   const { user, authState } = useAuth();
   const { setShouldShowOnboarding } = useTrackingOnboarding();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Get email from route params (MAIN FLOW) or will use attribution data (SPECIAL CASE)
+  const params = useLocalSearchParams();
+  const emailParam = typeof params.email === 'string' ? params.email : undefined;
 
   useFocusEffect(
     useCallback(() => {
@@ -40,31 +44,64 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
         await updateTrackingPermissionStatus(user.id, status);
       }
       
-      // Check if this is first launch - if yes, send app install event to Facebook
-      // iOS: This happens AFTER ATT permission request, so tracking flag will be correct
+      // ============================================================
+      // TRACKING FLOW: Determine which flow we're in
+      // ============================================================
+      
       const firstLaunch = await isFirstLaunch();
       if (firstLaunch) {
-        logger.info('First launch detected, sending app install event to Facebook', { feature: 'TrackingOnboarding' });
-        
         try {
           const attributionData = await getAttributionData();
+          const hasAttribution = hasFacebookAttribution(attributionData || {});
           
-          if (attributionData) {
-            // Send app install event (client + server) with correct ATT permission status
+          // Determine email: from params (MAIN FLOW) or attribution (SPECIAL CASE)
+          const email = emailParam || attributionData?.email;
+          
+          if (hasAttribution) {
+            // ============================================================
+            // SPECIAL CASE: Facebook Attribution Flow
+            // ============================================================
+            // User came from Facebook ad, send events with full attribution
+            // See: app/_layout.tsx lines 154-171 for where this flow starts
+            
+            logger.info('SPECIAL CASE: Facebook attribution detected, sending install event with attribution', {
+              feature: 'TrackingOnboarding',
+              hasEmail: !!email
+            });
+            
             await sendAppInstallEventDual(
-              attributionData,
-              attributionData.email ? { email: attributionData.email } : undefined
+              attributionData || {},
+              email ? { email } : undefined
             );
-            logger.info('App install event sent successfully', { feature: 'TrackingOnboarding' });
+            await markAppAsLaunched();
+            logger.info('SPECIAL CASE: Install event sent successfully', { feature: 'TrackingOnboarding' });
           } else {
-            logger.info('No attribution data found, skipping app install event', { feature: 'TrackingOnboarding' });
+            // ============================================================
+            // MAIN FLOW: Organic User Flow
+            // ============================================================
+            // User installed organically, send events with email only
+            // See: services/auth.service.ts for where this flow starts (post-login)
+            
+            logger.info('MAIN FLOW: Organic user, sending install event with email', {
+              feature: 'TrackingOnboarding',
+              hasEmail: !!email
+            });
+            
+            await sendAppInstallEventDual(
+              {}, // No attribution data (organic user)
+              email ? { email } : undefined
+            );
+            await clearTrackingAfterAuth();
+            await markAppAsLaunched();
+            logger.info('MAIN FLOW: Install event sent successfully', { feature: 'TrackingOnboarding' });
           }
         } catch (fbError) {
-          logger.error('Failed to send app install event', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
+          logger.error('Failed to send install event', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
           // Don't block user flow on FB error
+          await clearTrackingAfterAuth();
         }
       } else {
-        logger.info('Not first launch, skipping app install event', { feature: 'TrackingOnboarding' });
+        logger.info('Not first launch, skipping install event', { feature: 'TrackingOnboarding' });
       }
       
       // Mark tracking onboarding as completed

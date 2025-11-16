@@ -5,7 +5,7 @@ import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/con
 import { SessionProvider } from '@/contexts/SessionContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { initializeAmplitude } from '@/services/amplitude.service';
-import { getAttributionData, getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
+import { getAttributionData, getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData, setNeedsTrackingAfterAuth } from '@/services/attribution.service';
 import { getCurrentUser, initializeGoogleSignIn } from '@/services/auth.service';
 import { initializeFacebookSdk, parseDeepLinkParams, sendAppInstallEventDual, sendAppLaunchEventDual } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
@@ -120,6 +120,22 @@ export default function RootLayout() {
         if (firstLaunch) {
           logger.info('First launch detected, checking for attribution data', { feature: 'App' });
           
+          // ============================================================
+          // TRACKING FLOW DECISION POINT
+          // ============================================================
+          //
+          // SPECIAL CASE: Facebook Attribution (paid acquisition)
+          //   → Request tracking IMMEDIATELY (before login)
+          //   → Send events with attribution data (fbclid, utm params)
+          //   → Implemented below for iOS/Android
+          //
+          // MAIN FLOW: Organic Users (App Store, referrals, etc)
+          //   → Set flag to request tracking AFTER LOGIN
+          //   → Send events with email after authentication
+          //   → Implemented in services/auth.service.ts (all login methods)
+          //
+          // ============================================================
+          
           // Get the initial URL (deep link)
           const initialUrl = await Linking.getInitialURL();
           
@@ -136,20 +152,44 @@ export default function RootLayout() {
             const hasFbAttribution = hasFacebookAttribution(attributionData);
             
             if (hasFbAttribution) {
+              // ============================================================
+              // SPECIAL CASE: Facebook Attribution Flow
+              // ============================================================
+              // User came from Facebook ad with attribution data (fbclid, utm params)
+              // Show tracking onboarding immediately and send events with attribution
+              
               if (Platform.OS === 'ios') {
                 // iOS: tracking onboarding will handle permission request and event sending
-                logger.info('iOS: Attribution data saved, tracking onboarding will handle events', { feature: 'App' });
+                logger.info('iOS: Facebook attribution detected, tracking onboarding will handle events', { feature: 'App' });
               } else {
                 // Android: send install event immediately (no ATT permission needed, tracking assumed enabled)
-                logger.info('Android: Sending app install event', { feature: 'App' });
+                logger.info('Android: Facebook attribution detected, sending app install event', { feature: 'App' });
                 await sendAppInstallEventDual(
                   attributionData,
                   attributionData.email ? { email: attributionData.email } : undefined
                 );
               }
             } else {
-              logger.info('No Facebook attribution detected', { feature: 'App' });
+              // ============================================================
+              // MAIN FLOW: Organic User Flow
+              // ============================================================
+              // User installed organically (no Facebook attribution)
+              // Wait for them to log in, then show tracking onboarding
+              // See: services/auth.service.ts for post-login tracking implementation
+              
+              logger.info('No Facebook attribution detected (organic install), will show tracking after login', { feature: 'App' });
+              await setNeedsTrackingAfterAuth(true);
             }
+          } else {
+            // ============================================================
+            // MAIN FLOW: No deep link (organic install)
+            // ============================================================
+            // User opened app directly without any deep link
+            // Wait for them to log in, then show tracking onboarding
+            // See: services/auth.service.ts for post-login tracking implementation
+            
+            logger.info('No initial URL detected (organic install), will show tracking after login', { feature: 'App' });
+            await setNeedsTrackingAfterAuth(true);
           }
           
           // Mark app as launched
