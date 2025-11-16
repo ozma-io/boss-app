@@ -1,0 +1,16 @@
+name: Create Production Updates
+
+jobs:
+  update_preview:
+    type: update
+    params:
+      branch: preview
+      message: "Update from main branch"
+
+  update_production:
+    type: update
+    params:
+      branch: production
+      message: "Update from main branch"
+
+
