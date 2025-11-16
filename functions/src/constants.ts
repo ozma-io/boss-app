@@ -32,7 +32,13 @@ export const OPENAI_MODEL = 'gpt-5.1';
 /**
  * Welcome message shown to new users when they first join
  */
-export const CHAT_WELCOME_MESSAGE = 'Welcome to BossUp! I\'m your AI assistant here to help you manage your relationship with your boss. Feel free to ask me anything!';
+export const CHAT_WELCOME_MESSAGE = `Welcome to BossUp! I'm your AI assistant ready to help you manage your relationship with your boss.
+
+I can answer your questions anytime, and I'll sometimes reach out to you proactively with helpful insights. Make sure to enable notifications so you don't miss my messages!
+
+I have access to all your data in the app, so I can provide personalized advice and support. Feel free to ask me anything!
+
+Let's build your career together! 🚀`;
 
 /**
  * Default boss data for new users
