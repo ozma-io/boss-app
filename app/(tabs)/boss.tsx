@@ -36,6 +36,9 @@ export default function BossScreen() {
   const [isEditingManagementStyle, setIsEditingManagementStyle] = useState(false);
   const [managementStyle, setManagementStyle] = useState('');
   
+  const [isEditingBossName, setIsEditingBossName] = useState(false);
+  const [bossName, setBossName] = useState('');
+  
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
@@ -138,6 +141,26 @@ export default function BossScreen() {
         });
       } catch (err) {
         logger.error('Failed to update management style', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
+      }
+    }
+  };
+
+  const handleEditBossName = (): void => {
+    setBossName(boss?.name || '');
+    setIsEditingBossName(true);
+  };
+
+  const handleBlurBossName = async (): Promise<void> => {
+    setIsEditingBossName(false);
+    if (bossName !== boss?.name && boss) {
+      try {
+        await updateBoss({ name: bossName });
+        trackAmplitudeEvent('boss_field_edited', {
+          field: 'name',
+          bossId: boss.id,
+        });
+      } catch (err) {
+        logger.error('Failed to update boss name', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
       }
     }
   };
@@ -301,7 +324,24 @@ export default function BossScreen() {
               testID="boss-avatar-image"
             />
           </View>
-          <Text style={styles.bossName} testID="boss-name">{boss.name}</Text>
+          <Pressable 
+            onPress={isEditingBossName ? undefined : handleEditBossName}
+            testID="boss-name-pressable"
+          >
+            {isEditingBossName ? (
+              <TextInput
+                style={[styles.bossName, styles.bossNameInput, { outlineStyle: 'none' } as any]}
+                value={bossName}
+                onChangeText={setBossName}
+                onBlur={handleBlurBossName}
+                autoFocus
+                placeholder="Enter boss name"
+                testID="boss-name-input"
+              />
+            ) : (
+              <Text style={styles.bossName} testID="boss-name">{boss.name}</Text>
+            )}
+          </Pressable>
         </View>
 
         <View style={styles.cardsRow} testID="cards-row">
@@ -567,6 +607,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     fontFamily: 'Manrope-Bold',
+  },
+  bossNameInput: {
+    padding: 0,
+    margin: 0,
+    borderWidth: 0,
+    textAlign: 'center',
   },
   cardsRow: {
     flexDirection: 'row',
