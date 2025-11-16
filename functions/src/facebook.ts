@@ -146,6 +146,15 @@ export const sendFacebookConversionEvent = onCall(
         userData.country = hashData(eventData.userData.country);
       }
 
+      // Event name validation: We expect Facebook standard events
+      // Common mobile app events: fb_mobile_activate_app, fb_mobile_purchase, 
+      // fb_mobile_complete_registration, fb_mobile_add_to_cart, etc.
+      // See: https://developers.facebook.com/docs/app-events/reference
+      logger.info('Facebook processing event', {
+        eventName: eventData.eventName,
+        isStandardMobileEvent: eventData.eventName.startsWith('fb_mobile_'),
+      });
+
       // Build event payload
       const eventPayload = {
         event_name: eventData.eventName,

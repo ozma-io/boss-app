@@ -8,7 +8,7 @@ Complete guide for Facebook Attribution tracking and Conversions API integration
 
 The app integrates with Facebook for:
 - **Attribution tracking** - Track app installs from Meta ads with deep links
-- **Conversions API** - Server-side event tracking (AppInstall, Purchase, etc.)
+- **Conversions API** - Server-side event tracking (fb_mobile_activate_app, fb_mobile_purchase, etc.)
 - **Email pre-filling** - Auto-fill email from attribution data
 
 ---
@@ -170,7 +170,8 @@ async function handleFirstLaunch() {
     const attributionData = await getAttributionData();
     
     if (attributionData) {
-      // Send AppInstall event (client + server) using dual-send approach
+      // Send fb_mobile_activate_app event (client + server) using dual-send approach
+      // Facebook identifies this as an install based on attribution data context
       await sendAppInstallEventDual(
         attributionData,
         attributionData.email ? { email: attributionData.email } : undefined
@@ -193,7 +194,8 @@ async function handleAppLaunch() {
   const currentUser = getCurrentUser();
   const attributionData = await getAttributionData();
   
-  // Send AppLaunch event (client + server) using dual-send approach
+  // Send fb_mobile_activate_app event (client + server) using dual-send approach
+  // Same event as install, but for subsequent launches
   await sendAppLaunchEventDual(
     attributionData || undefined,
     currentUser?.email ? { email: currentUser.email } : undefined
@@ -207,12 +209,12 @@ async function handleAppLaunch() {
 import { sendConversionEvent } from '@/services/facebook.service';
 import { getAttributionData } from '@/services/attribution.service';
 
-// Purchase event
+// Purchase event (standard Facebook event)
 async function handlePurchase(amount: number, currency: string) {
   const attributionData = await getAttributionData();
   
   await sendConversionEvent(
-    'Purchase',
+    'fb_mobile_purchase', // Standard Facebook event name
     {
       email: user.email,
       firstName: user.firstName,
@@ -226,14 +228,14 @@ async function handlePurchase(amount: number, currency: string) {
   );
 }
 
-// Lead event
-async function handleLeadSubmit() {
+// Complete Registration event (standard Facebook event)
+async function handleRegistrationComplete() {
   const attributionData = await getAttributionData();
   
   await sendConversionEvent(
-    'Lead',
+    'fb_mobile_complete_registration', // Standard Facebook event name
     { email: user.email },
-    { lead_type: 'contact_form' },
+    { registration_method: 'email' },
     attributionData || undefined
   );
 }

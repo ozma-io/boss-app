@@ -487,6 +487,9 @@ export async function sendConversionEvent(
 /**
  * Send AppInstall event to Facebook (Server-Side via Cloud Function)
  * 
+ * Uses Facebook standard event 'fb_mobile_activate_app' with attribution data.
+ * Facebook automatically identifies this as an install event based on context.
+ * 
  * Simplified wrapper that uses sendServerEvent() helper.
  * Delegates server-side event sending with standardized error handling.
  * 
@@ -503,12 +506,15 @@ async function sendAppInstallEvent(
   },
   attributionData?: AttributionData
 ): Promise<void> {
-  // Delegate to generic server event sender
-  await sendServerEvent('AppInstall', eventId, userData, undefined, attributionData);
+  // Delegate to generic server event sender with standard Facebook event name
+  await sendServerEvent(FB_MOBILE_ACTIVATE_APP, eventId, userData, undefined, attributionData);
 }
 
 /**
  * Send AppLaunch event to Facebook (Server-Side via Cloud Function)
+ * 
+ * Uses Facebook standard event 'fb_mobile_activate_app' for app launches.
+ * Same event as install, but without attribution data (subsequent launches).
  * 
  * Simplified wrapper that uses sendServerEvent() helper.
  * Delegates server-side event sending with standardized error handling.
@@ -526,8 +532,8 @@ async function sendAppLaunchEvent(
   },
   attributionData?: AttributionData
 ): Promise<void> {
-  // Delegate to generic server event sender
-  await sendServerEvent('AppLaunch', eventId, userData, undefined, attributionData);
+  // Delegate to generic server event sender with standard Facebook event name
+  await sendServerEvent(FB_MOBILE_ACTIVATE_APP, eventId, userData, undefined, attributionData);
 }
 
 /**
