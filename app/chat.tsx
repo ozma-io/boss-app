@@ -10,7 +10,7 @@ import { ChatMessage, ChatThread } from '@/types';
 import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Only import on native platforms
@@ -258,7 +258,12 @@ export default function ChatScreen() {
   }
 
   return (
-    <View style={styles.container} testID="chat-container">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      testID="chat-container"
+    >
       {loading ? (
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color="#000" testID="loading-indicator" />
@@ -319,7 +324,7 @@ export default function ChatScreen() {
         ) : null}
         {/* TODO: Implement voice input (microphone button hidden for MVP) */}
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
