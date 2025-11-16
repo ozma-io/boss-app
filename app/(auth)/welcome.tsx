@@ -99,7 +99,7 @@ export default function WelcomeScreen(): React.JSX.Element {
         <Image
           source={require('@/assets/images/emoji-faces.png')}
           style={styles.emojiImage}
-          resizeMode="cover"
+          resizeMode="contain"
           testID="emoji-image"
         />
       </View>
@@ -143,11 +143,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   emojiContainer: {
-    height: 200,
     width: '100%',
+    aspectRatio: 1572 / 869,
     marginBottom: 30,
-    marginHorizontal: 0,
-    paddingHorizontal: 0,
   },
   emojiImage: {
     width: '100%',
