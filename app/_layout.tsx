@@ -330,7 +330,6 @@ function RootLayoutNav() {
             title: '',
           }} 
         />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         <Stack.Screen 
           name="chat" 
           options={{ 
