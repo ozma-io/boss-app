@@ -473,7 +473,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
                     placeholder="e.g., Weekly 1-on-1 Meeting"
                     placeholderTextColor="rgba(0, 0, 0, 0.3)"
                     testID="title-input"
-                    autoFocus
                   />
                 </View>
 
@@ -524,7 +523,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
                     placeholder="e.g., Weekly 1-on-1 Meeting"
                     placeholderTextColor="rgba(0, 0, 0, 0.3)"
                     testID="title-input"
-                    autoFocus
                   />
                 </View>
 
