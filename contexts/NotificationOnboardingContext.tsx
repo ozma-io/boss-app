@@ -1,8 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { shouldShowNotificationOnboarding } from '@/services/user.service';
 import { logger } from '@/services/logger.service';
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { shouldShowNotificationOnboarding } from '@/services/user.service';
+import React, { createContext, useContext, useState } from 'react';
 
 interface NotificationOnboardingContextType {
   shouldShowOnboarding: boolean;
@@ -16,10 +15,8 @@ interface NotificationOnboardingProviderProps {
 }
 
 export function NotificationOnboardingProvider({ children }: NotificationOnboardingProviderProps): React.JSX.Element {
-  const { user, authState } = useAuth();
+  const { user } = useAuth();
   const [shouldShowOnboarding, setShouldShowOnboarding] = useState(false);
-  const appState = useRef(AppState.currentState);
-  const [hasCheckedOnboarding, setHasCheckedOnboarding] = useState(false);
 
   const checkShouldShowOnboarding = async (): Promise<void> => {
     if (!user) {
@@ -40,30 +37,32 @@ export function NotificationOnboardingProvider({ children }: NotificationOnboard
     }
   };
 
-  useEffect(() => {
-    if (authState === 'authenticated' && user && !hasCheckedOnboarding) {
-      checkShouldShowOnboarding();
-      setHasCheckedOnboarding(true);
-    } else if (authState === 'unauthenticated') {
-      setShouldShowOnboarding(false);
-      setHasCheckedOnboarding(false);
-    }
-  }, [authState, user, hasCheckedOnboarding]);
+  // Automatic check after login removed - notification onboarding now triggered by chat button
+  // useEffect(() => {
+  //   if (authState === 'authenticated' && user && !hasCheckedOnboarding) {
+  //     checkShouldShowOnboarding();
+  //     setHasCheckedOnboarding(true);
+  //   } else if (authState === 'unauthenticated') {
+  //     setShouldShowOnboarding(false);
+  //     setHasCheckedOnboarding(false);
+  //   }
+  // }, [authState, user, hasCheckedOnboarding]);
 
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        if (authState === 'authenticated' && user) {
-          checkShouldShowOnboarding();
-        }
-      }
-      appState.current = nextAppState;
-    });
+  // AppState listener removed - notification onboarding now triggered by chat button
+  // useEffect(() => {
+  //   const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+  //     if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+  //       if (authState === 'authenticated' && user) {
+  //         checkShouldShowOnboarding();
+  //       }
+  //     }
+  //     appState.current = nextAppState;
+  //   });
 
-    return () => {
-      subscription.remove();
-    };
-  }, [authState, user]);
+  //   return () => {
+  //     subscription.remove();
+  //   };
+  // }, [authState, user]);
 
   return (
     <NotificationOnboardingContext.Provider value={{ shouldShowOnboarding, setShouldShowOnboarding }}>

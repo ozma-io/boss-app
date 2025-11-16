@@ -5,7 +5,7 @@ import { logger } from '@/services/logger.service';
 import { requestNotificationPermissions } from '@/services/notification.service';
 import { recordNotificationPromptShown, updateNotificationPermissionStatus } from '@/services/user.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -14,6 +14,10 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
   const { user } = useAuth();
   const { setShouldShowOnboarding } = useNotificationOnboarding();
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Get return path from params (e.g., 'chat')
+  const params = useLocalSearchParams();
+  const returnTo = typeof params.returnTo === 'string' ? params.returnTo : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -37,11 +41,22 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
       
       setShouldShowOnboarding(false);
       
-      router.replace('/(tabs)');
+      // Navigate to return path if specified, otherwise go to tabs
+      if (returnTo === 'chat') {
+        router.replace('/chat');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error) {
       logger.error('Failed to handle notification permission', { feature: 'NotificationOnboarding', error: error instanceof Error ? error : new Error(String(error)) });
       setShouldShowOnboarding(false);
-      router.replace('/(tabs)');
+      
+      // Navigate to return path if specified, otherwise go to tabs
+      if (returnTo === 'chat') {
+        router.replace('/chat');
+      } else {
+        router.replace('/(tabs)');
+      }
     } finally {
       setIsLoading(false);
     }

@@ -312,11 +312,8 @@ function RootLayoutNav() {
     }
     // Second priority: authenticated user flow
     else if (authState === 'authenticated') {
-      if (shouldShowNotificationOnboarding) {
-        if (!inNotificationOnboarding) {
-          targetPath = '/notification-onboarding';
-        }
-      } else if (!inTabs && !inNotificationOnboarding && !inRootScreen) {
+      // Notification onboarding now triggered by chat button, not automatically after login
+      if (!inTabs && !inNotificationOnboarding && !inRootScreen) {
         // Only redirect to tabs if not already there, in notification onboarding, or in a root screen
         targetPath = '/(tabs)';
       }
@@ -340,7 +337,7 @@ function RootLayoutNav() {
       logger.info('Routing to new screen', { feature: 'App', targetPath, from: segments[0] || 'root' });
       router.replace(targetPath as any);
     }
-  }, [authState, segments, shouldShowNotificationOnboarding, shouldShowTrackingOnboarding, redirectPath]);
+  }, [authState, segments, shouldShowTrackingOnboarding, redirectPath]);
 
   if (authState === 'loading') {
     return (
