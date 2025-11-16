@@ -42,7 +42,7 @@ jobs:
           }
 
       - name: Publish update to preview
-        run: eas update --branch preview --message "Update from main branch" --non-interactive --no-wait
+        run: eas update --branch preview --message "Update from main branch" --non-interactive
         env:
           EXPO_PUBLIC_FIREBASE_API_KEY: ${{ secrets.EXPO_PUBLIC_FIREBASE_API_KEY }}
           EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
@@ -52,7 +52,7 @@ jobs:
           EXPO_PUBLIC_FIREBASE_APP_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_APP_ID }}
 
       - name: Publish update to production
-        run: eas update --branch production --message "Update from main branch" --non-interactive --no-wait
+        run: eas update --branch production --message "Update from main branch" --non-interactive
         env:
           EXPO_PUBLIC_FIREBASE_API_KEY: ${{ secrets.EXPO_PUBLIC_FIREBASE_API_KEY }}
           EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
