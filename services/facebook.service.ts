@@ -111,8 +111,13 @@ export function parseDeepLinkParams(url: string): AttributionData {
 
 /**
  * Log AppInstall event to Facebook (client-side)
+ * @param attributionData - Attribution data from deep link
+ * @param eventId - Event ID for deduplication between client and server
  */
-export async function logAppInstallEvent(attributionData: AttributionData): Promise<void> {
+export async function logAppInstallEvent(
+  attributionData: AttributionData,
+  eventId: string
+): Promise<void> {
   // Skip on web or if SDK not available
   if (Platform.OS === 'web' || !AppEventsLogger) {
     logger.info('Skipping AppInstall event (web or SDK not available)', { feature: 'Facebook' });
@@ -121,6 +126,9 @@ export async function logAppInstallEvent(attributionData: AttributionData): Prom
 
   try {
     const eventParams: Record<string, string> = {};
+    
+    // Add event ID for deduplication between client and server
+    eventParams._eventId = eventId;
     
     // Add attribution data to event parameters
     if (attributionData.fbclid) {
@@ -142,7 +150,7 @@ export async function logAppInstallEvent(attributionData: AttributionData): Prom
     // Log the event - SDK will handle advertiserTrackingEnabled flag automatically
     AppEventsLogger.logEvent('fb_mobile_activate_app', eventParams);
     
-    logger.info('AppInstall event logged to Facebook', { feature: 'Facebook', eventParams });
+    logger.info('AppInstall event logged to Facebook', { feature: 'Facebook', eventParams, eventId });
   } catch (error) {
     logger.error('Error logging AppInstall event', { feature: 'Facebook', error });
     throw error;
@@ -151,8 +159,9 @@ export async function logAppInstallEvent(attributionData: AttributionData): Prom
 
 /**
  * Log AppLaunch event to Facebook (client-side)
+ * @param eventId - Event ID for deduplication between client and server
  */
-export async function logAppLaunchEvent(): Promise<void> {
+export async function logAppLaunchEvent(eventId: string): Promise<void> {
   // Skip on web or if SDK not available
   if (Platform.OS === 'web' || !AppEventsLogger) {
     logger.info('Skipping AppLaunch event (web or SDK not available)', { feature: 'Facebook' });
@@ -160,10 +169,15 @@ export async function logAppLaunchEvent(): Promise<void> {
   }
 
   try {
-    // Log the event - SDK will handle advertiserTrackingEnabled flag automatically
-    AppEventsLogger.logEvent('fb_mobile_app_launch');
+    // Add event ID for deduplication between client and server
+    const eventParams: Record<string, string> = {
+      _eventId: eventId
+    };
     
-    logger.info('AppLaunch event logged to Facebook', { feature: 'Facebook' });
+    // Log the event - SDK will handle advertiserTrackingEnabled flag automatically
+    AppEventsLogger.logEvent('fb_mobile_app_launch', eventParams);
+    
+    logger.info('AppLaunch event logged to Facebook', { feature: 'Facebook', eventId });
   } catch (error) {
     logger.error('Error logging AppLaunch event', { feature: 'Facebook', error });
     throw error;
@@ -208,8 +222,14 @@ export function generateEventId(): string {
 /**
  * Send conversion event to Facebook via Cloud Function (Server-Side)
  * This provides more reliable tracking compared to client-side only
+ * @param eventId - Event ID for deduplication between client and server
+ * @param eventName - Name of the event (e.g., 'AppInstall', 'AppLaunch')
+ * @param userData - User data for the event
+ * @param customData - Custom event data
+ * @param attributionData - Attribution data from deep link
  */
 export async function sendConversionEvent(
+  eventId: string,
   eventName: string,
   userData?: {
     email?: string;
@@ -240,9 +260,6 @@ export async function sendConversionEvent(
     // Application tracking is whether we have user's consent to track in the app
     // We use the synchronous version here as this function is already async
     const applicationTrackingEnabled = getApplicationTrackingEnabledSync();
-    
-    // Generate unique event ID for deduplication
-    const eventId = generateEventId();
     
     // Prepare event data
     const eventData = {
@@ -279,16 +296,20 @@ export async function sendConversionEvent(
 /**
  * Send AppInstall event to Facebook (Server-Side via Cloud Function)
  * Should be called on first app launch after attribution is collected
+ * @param eventId - Event ID for deduplication between client and server
+ * @param userData - User data for the event
+ * @param attributionData - Attribution data from deep link
  */
 export async function sendAppInstallEvent(
+  eventId: string,
   userData?: {
     email?: string;
   },
   attributionData?: AttributionData
 ): Promise<void> {
   try {
-    await sendConversionEvent('AppInstall', userData, undefined, attributionData);
-    logger.info('AppInstall event sent successfully', { feature: 'Facebook' });
+    await sendConversionEvent(eventId, 'AppInstall', userData, undefined, attributionData);
+    logger.info('AppInstall event sent successfully', { feature: 'Facebook', eventId });
   } catch (error) {
     logger.error('Error sending AppInstall event', { feature: 'Facebook', error });
     throw error;
@@ -298,17 +319,22 @@ export async function sendAppInstallEvent(
 /**
  * Send AppLaunch event to Facebook (Server-Side via Cloud Function)
  * Should be called on every app launch
+ * @param eventId - Event ID for deduplication between client and server
+ * @param userData - User data for the event
+ * @param attributionData - Attribution data from deep link
  */
 export async function sendAppLaunchEvent(
+  eventId: string,
   userData?: {
     email?: string;
   },
   attributionData?: AttributionData
 ): Promise<void> {
   try {
-    await sendConversionEvent('AppLaunch', userData, undefined, attributionData);
+    await sendConversionEvent(eventId, 'AppLaunch', userData, undefined, attributionData);
     logger.info('AppLaunch event sent successfully', { 
-      feature: 'Facebook', 
+      feature: 'Facebook',
+      eventId,
       hasUserData: !!userData,
       hasAttribution: !!attributionData
     });
@@ -319,24 +345,159 @@ export async function sendAppLaunchEvent(
 }
 
 /**
+ * Send AppInstall event to both client and server with shared event ID for deduplication
+ * This is the recommended way to send AppInstall events as it ensures proper deduplication
+ */
+export async function sendAppInstallEventDual(
+  attributionData: AttributionData,
+  userData?: {
+    email?: string;
+  }
+): Promise<void> {
+  // Generate single event ID for both client and server
+  const eventId = generateEventId();
+  
+  logger.info('Sending AppInstall event (dual-send)', { 
+    feature: 'Facebook', 
+    eventId,
+    hasUserData: !!userData,
+    hasAttribution: !!attributionData
+  });
+  
+  // Send to both client and server in parallel
+  const results = await Promise.allSettled([
+    logAppInstallEvent(attributionData, eventId),
+    sendAppInstallEvent(eventId, userData, attributionData)
+  ]);
+  
+  // Check results
+  const clientResult = results[0];
+  const serverResult = results[1];
+  
+  const clientSuccess = clientResult.status === 'fulfilled';
+  const serverSuccess = serverResult.status === 'fulfilled';
+  
+  // Log individual results
+  if (clientSuccess) {
+    logger.info('AppInstall client-side event sent successfully', { feature: 'Facebook', eventId });
+  } else {
+    logger.warn('AppInstall client-side event failed', { 
+      feature: 'Facebook', 
+      eventId,
+      error: clientResult.reason 
+    });
+  }
+  
+  if (serverSuccess) {
+    logger.info('AppInstall server-side event sent successfully', { feature: 'Facebook', eventId });
+  } else {
+    logger.error('AppInstall server-side event failed', { 
+      feature: 'Facebook', 
+      eventId,
+      error: serverResult.reason 
+    });
+  }
+  
+  // Throw error only if both failed
+  if (!clientSuccess && !serverSuccess) {
+    throw new Error('Both client and server AppInstall events failed');
+  }
+  
+  // If only client failed but server succeeded, that's acceptable (server is more reliable)
+  logger.info('AppInstall dual-send completed', { 
+    feature: 'Facebook', 
+    eventId,
+    clientSuccess,
+    serverSuccess
+  });
+}
+
+/**
+ * Send AppLaunch event to both client and server with shared event ID for deduplication
+ * This is the recommended way to send AppLaunch events as it ensures proper deduplication
+ */
+export async function sendAppLaunchEventDual(
+  attributionData?: AttributionData,
+  userData?: {
+    email?: string;
+  }
+): Promise<void> {
+  // Generate single event ID for both client and server
+  const eventId = generateEventId();
+  
+  logger.info('Sending AppLaunch event (dual-send)', { 
+    feature: 'Facebook', 
+    eventId,
+    hasUserData: !!userData,
+    hasAttribution: !!attributionData
+  });
+  
+  // Send to both client and server in parallel
+  const results = await Promise.allSettled([
+    logAppLaunchEvent(eventId),
+    sendAppLaunchEvent(eventId, userData, attributionData)
+  ]);
+  
+  // Check results
+  const clientResult = results[0];
+  const serverResult = results[1];
+  
+  const clientSuccess = clientResult.status === 'fulfilled';
+  const serverSuccess = serverResult.status === 'fulfilled';
+  
+  // Log individual results
+  if (clientSuccess) {
+    logger.info('AppLaunch client-side event sent successfully', { feature: 'Facebook', eventId });
+  } else {
+    logger.warn('AppLaunch client-side event failed', { 
+      feature: 'Facebook', 
+      eventId,
+      error: clientResult.reason 
+    });
+  }
+  
+  if (serverSuccess) {
+    logger.info('AppLaunch server-side event sent successfully', { feature: 'Facebook', eventId });
+  } else {
+    logger.error('AppLaunch server-side event failed', { 
+      feature: 'Facebook', 
+      eventId,
+      error: serverResult.reason 
+    });
+  }
+  
+  // Throw error only if both failed
+  if (!clientSuccess && !serverSuccess) {
+    throw new Error('Both client and server AppLaunch events failed');
+  }
+  
+  // If only client failed but server succeeded, that's acceptable (server is more reliable)
+  logger.info('AppLaunch dual-send completed', { 
+    feature: 'Facebook', 
+    eventId,
+    clientSuccess,
+    serverSuccess
+  });
+}
+
+/**
  * Send first launch events (App Install + App Launch)
  * Should be called only on first app launch with attribution data
+ * Uses dual-send approach with proper event deduplication
  */
 export async function sendFirstLaunchEvents(attributionData: AttributionData): Promise<void> {
   try {
-    // Send App Install events
-    await logAppInstallEvent(attributionData);
-    await sendAppInstallEvent(
-      attributionData.email ? { email: attributionData.email } : undefined,
-      attributionData
+    // Send App Install events (client + server with shared event ID)
+    await sendAppInstallEventDual(
+      attributionData,
+      attributionData.email ? { email: attributionData.email } : undefined
     );
     logger.info('App Install events sent', { feature: 'Facebook' });
     
-    // Send App Launch events immediately after
-    await logAppLaunchEvent();
-    await sendAppLaunchEvent(
-      attributionData.email ? { email: attributionData.email } : undefined,
-      attributionData
+    // Send App Launch events immediately after (client + server with shared event ID)
+    await sendAppLaunchEventDual(
+      attributionData,
+      attributionData.email ? { email: attributionData.email } : undefined
     );
     logger.info('App Launch events sent', { feature: 'Facebook' });
   } catch (error) {

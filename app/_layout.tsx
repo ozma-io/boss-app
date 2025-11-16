@@ -7,7 +7,7 @@ import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/Tr
 import { initializeAmplitude } from '@/services/amplitude.service';
 import { getAttributionData, getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData } from '@/services/attribution.service';
 import { getCurrentUser, initializeGoogleSignIn } from '@/services/auth.service';
-import { initializeFacebookSdk, logAppLaunchEvent, parseDeepLinkParams, sendAppLaunchEvent, sendFirstLaunchEvents } from '@/services/facebook.service';
+import { initializeFacebookSdk, parseDeepLinkParams, sendAppLaunchEventDual, sendFirstLaunchEvents } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
@@ -73,10 +73,10 @@ export default function RootLayout() {
       const currentUser = getCurrentUser();
       const attributionData = await getAttributionData();
       
-      await logAppLaunchEvent();
-      await sendAppLaunchEvent(
-        currentUser?.email ? { email: currentUser.email } : undefined,
-        attributionData || undefined
+      // Use dual-send approach with proper event deduplication
+      await sendAppLaunchEventDual(
+        attributionData || undefined,
+        currentUser?.email ? { email: currentUser.email } : undefined
       );
       
       logger.info('App Launch events sent', { 
