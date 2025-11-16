@@ -302,7 +302,7 @@ export default function ChatScreen() {
         />
       )}
 
-      <View style={[styles.inputContainer, { paddingBottom: 12 }]} testID="input-container">
+      <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]} testID="input-container">
         <TextInput
           style={styles.input}
           placeholder="Message"
