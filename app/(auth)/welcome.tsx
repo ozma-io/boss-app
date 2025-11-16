@@ -6,7 +6,39 @@ import { signInWithApple, signInWithGoogle } from '@/services/auth.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+type AuthButtonType = 'email' | 'google' | 'apple';
+
+interface AuthButtonConfig {
+  type: AuthButtonType;
+  variant: 'primary' | 'secondary';
+}
+
+function getAuthButtonsConfig(): AuthButtonConfig[] {
+  if (Platform.OS === 'web') {
+    return [
+      { type: 'email', variant: 'primary' },
+      { type: 'apple', variant: 'secondary' },
+      { type: 'google', variant: 'secondary' },
+    ];
+  }
+  
+  if (Platform.OS === 'ios') {
+    return [
+      { type: 'apple', variant: 'primary' },
+      { type: 'google', variant: 'secondary' },
+      { type: 'email', variant: 'secondary' },
+    ];
+  }
+  
+  // Android
+  return [
+    { type: 'google', variant: 'primary' },
+    { type: 'email', variant: 'secondary' },
+    { type: 'apple', variant: 'secondary' },
+  ];
+}
 
 export default function WelcomeScreen(): React.JSX.Element {
   const [isEmailModalVisible, setIsEmailModalVisible] = useState<boolean>(false);
@@ -113,9 +145,22 @@ export default function WelcomeScreen(): React.JSX.Element {
       </View>
 
       <View style={styles.buttonContainer} testID="button-container">
-        <AuthButton type="email" onPress={handleEmailSignIn} testID="auth-button-email" />
-        <AuthButton type="google" onPress={handleGoogleSignIn} testID="auth-button-google" />
-        <AuthButton type="apple" onPress={handleAppleSignIn} testID="auth-button-apple" />
+        {getAuthButtonsConfig().map((buttonConfig) => {
+          const handlePress = 
+            buttonConfig.type === 'email' ? handleEmailSignIn :
+            buttonConfig.type === 'google' ? handleGoogleSignIn :
+            handleAppleSignIn;
+          
+          return (
+            <AuthButton
+              key={buttonConfig.type}
+              type={buttonConfig.type}
+              variant={buttonConfig.variant}
+              onPress={handlePress}
+              testID={`auth-button-${buttonConfig.type}`}
+            />
+          );
+        })}
       </View>
 
       <View style={styles.footer} testID="welcome-footer">

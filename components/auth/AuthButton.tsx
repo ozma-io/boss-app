@@ -9,17 +9,18 @@ interface AuthButtonProps {
   onPress: () => void;
   disabled?: boolean;
   testID?: string;
+  variant: 'primary' | 'secondary';
 }
 
-const buttonConfig: Record<AuthButtonType, { icon: keyof typeof Ionicons.glyphMap; label: string; style: 'primary' | 'secondary' }> = {
-  email: { icon: 'mail-outline', label: 'Sign in with Email', style: 'primary' },
-  google: { icon: 'logo-google', label: 'Continue with Google', style: 'secondary' },
-  apple: { icon: 'logo-apple', label: 'Continue with Apple', style: 'secondary' },
+const buttonConfig: Record<AuthButtonType, { icon: keyof typeof Ionicons.glyphMap; label: string }> = {
+  email: { icon: 'mail-outline', label: 'Sign in with Email' },
+  google: { icon: 'logo-google', label: 'Continue with Google' },
+  apple: { icon: 'logo-apple', label: 'Continue with Apple' },
 };
 
-export function AuthButton({ type, onPress, disabled, testID }: AuthButtonProps): React.JSX.Element {
+export function AuthButton({ type, onPress, disabled, testID, variant }: AuthButtonProps): React.JSX.Element {
   const config = buttonConfig[type];
-  const isPrimary = config.style === 'primary';
+  const isPrimary = variant === 'primary';
 
   return (
     <TouchableOpacity
