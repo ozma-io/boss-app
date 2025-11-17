@@ -19,9 +19,6 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
