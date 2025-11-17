@@ -2,10 +2,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
-import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { logger } from '@/services/logger.service';
+import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import Constants from 'expo-constants';
 import { useFocusEffect } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -165,6 +167,36 @@ export default function PersonalInfoScreen() {
             </View>
           </View>
 
+          <View style={styles.versionBlock} testID="version-block">
+            <View style={styles.versionItem} testID="version-item-app">
+              <Text style={styles.versionLabel} testID="version-label-app">App Version</Text>
+              <Text style={styles.versionValue} testID="version-value-app">
+                {Constants.expoConfig?.version || '1.0.0'}
+              </Text>
+            </View>
+            
+            <View style={styles.versionItem} testID="version-item-channel">
+              <Text style={styles.versionLabel} testID="version-label-channel">Channel</Text>
+              <Text style={styles.versionValue} testID="version-value-channel">
+                {Updates.channel || 'none'}
+              </Text>
+            </View>
+            
+            <View style={styles.versionItem} testID="version-item-update">
+              <Text style={styles.versionLabel} testID="version-label-update">Update ID</Text>
+              <Text style={styles.versionValue} testID="version-value-update">
+                {Updates.updateId ? Updates.updateId.substring(0, 12) + '...' : 'embedded'}
+              </Text>
+            </View>
+            
+            <View style={[styles.versionItem, styles.lastVersionItem]} testID="version-item-runtime">
+              <Text style={styles.versionLabel} testID="version-label-runtime">Runtime Version</Text>
+              <Text style={styles.versionValue} testID="version-value-runtime">
+                {Updates.runtimeVersion || 'unknown'}
+              </Text>
+            </View>
+          </View>
+
           <Pressable
             style={({ pressed }) => [
               styles.signOutButton,
@@ -302,6 +334,34 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     color: '#666',
+    fontFamily: 'Manrope-Regular',
+  },
+  versionBlock: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 24,
+  },
+  versionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  lastVersionItem: {
+    borderBottomWidth: 0,
+  },
+  versionLabel: {
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'Manrope-Regular',
+  },
+  versionValue: {
+    fontSize: 16,
+    color: '#999',
     fontFamily: 'Manrope-Regular',
   },
 });
