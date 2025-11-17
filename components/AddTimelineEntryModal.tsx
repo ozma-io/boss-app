@@ -409,26 +409,26 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
               <Text style={styles.sectionLabel} testID="type-section-label">
                 Entry Type
               </Text>
-              <View style={styles.typeGrid}>
+              <View style={styles.typeButtons}>
                 {ENTRY_TYPES.map((type) => (
                   <Pressable
                     key={type.value}
                     style={[
-                      styles.typeCard,
-                      entryType === type.value && styles.typeCardSelected,
+                      styles.typeButton,
+                      entryType === type.value && styles.typeButtonSelected,
                     ]}
                     onPress={() => handleEntryTypeChange(type.value)}
                     testID={`entry-type-${type.value}`}
                   >
                     <Ionicons
                       name={type.icon as any}
-                      size={24}
+                      size={20}
                       color={entryType === type.value ? '#B8E986' : '#666'}
                     />
                     <Text
                       style={[
-                        styles.typeLabel,
-                        entryType === type.value && styles.typeLabelSelected,
+                        styles.typeButtonText,
+                        entryType === type.value && styles.typeButtonTextSelected,
                       ]}
                     >
                       {type.label}
@@ -733,33 +733,32 @@ const styles = StyleSheet.create({
     minHeight: 100,
     textAlignVertical: 'top',
   },
-  typeGrid: {
+  typeButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
-  typeCard: {
-    flex: 1,
-    minWidth: '45%',
+  typeButton: {
     backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
+    gap: 8,
+    borderWidth: 1,
     borderColor: '#e8e8e8',
   },
-  typeCardSelected: {
+  typeButtonSelected: {
     backgroundColor: '#f0f9e6',
     borderColor: '#B8E986',
   },
-  typeLabel: {
+  typeButtonText: {
     fontSize: 14,
     fontFamily: 'Manrope-Regular',
     color: '#666',
-    marginTop: 8,
-    textAlign: 'center',
   },
-  typeLabelSelected: {
+  typeButtonTextSelected: {
     color: '#000',
     fontFamily: 'Manrope-SemiBold',
   },
