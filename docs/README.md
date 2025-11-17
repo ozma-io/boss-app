@@ -127,6 +127,14 @@ End-to-end user experience flows:
 
 ---
 
+## 📋 Templates
+
+Documentation templates and checklists:
+
+- **[What to Test](./templates/what-to-test.md)** - Critical features to test before release
+
+---
+
 ## 🎯 Documentation Structure
 
 ```
@@ -144,6 +152,8 @@ docs/
 ├── vercel-deployment.md            # Vercel web deployment
 ├── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)
 ├── troubleshooting-ios-pod-install.md # iOS CocoaPods troubleshooting
+├── templates/                      # Templates and checklists
+│   └── what-to-test.md             # Testing checklist
 └── user-flows/                     # User journey documentation
     └── facebook-attribution-user-flow.md
 
