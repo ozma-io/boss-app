@@ -29,7 +29,7 @@ const config: ExpoConfig = {
   name: 'BossUp',
   slug: 'boss-app',
   owner: 'ozma-io',
-  version: '1.2.0',
+  version: '1.2.1',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'bossup',
