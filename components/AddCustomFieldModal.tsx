@@ -2,14 +2,14 @@ import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from 'react-native';
 import Modal from 'react-native-modal';
 
@@ -202,27 +202,27 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
               <Text style={styles.sectionLabel} testID="type-section-label">
                 Field Type
               </Text>
-              <View style={styles.typeGrid}>
+              <View style={styles.typeButtons}>
                 {FIELD_TYPES.map((type) => (
                   <Pressable
                     key={type.value}
                     style={[
-                      styles.typeCard,
-                      selectedType === type.value && styles.typeCardSelected,
-                      !type.enabled && styles.typeCardDisabled,
+                      styles.typeButton,
+                      selectedType === type.value && styles.typeButtonSelected,
+                      !type.enabled && styles.typeButtonDisabled,
                     ]}
                     onPress={() => handleTypePress(type)}
                     testID={`type-option-${type.value}`}
                   >
                     <Ionicons
                       name={type.icon as any}
-                      size={24}
+                      size={20}
                       color={selectedType === type.value ? '#B8E986' : '#666'}
                     />
                     <Text
                       style={[
-                        styles.typeLabel,
-                        selectedType === type.value && styles.typeLabelSelected,
+                        styles.typeButtonText,
+                        selectedType === type.value && styles.typeButtonTextSelected,
                       ]}
                     >
                       {type.label}
@@ -319,36 +319,35 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
-  typeGrid: {
+  typeButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 8,
   },
-  typeCard: {
-    flex: 1,
-    minWidth: '45%',
+  typeButton: {
     backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
+    gap: 8,
+    borderWidth: 1,
     borderColor: '#e8e8e8',
   },
-  typeCardSelected: {
+  typeButtonSelected: {
     backgroundColor: '#f0f9e6',
     borderColor: '#B8E986',
   },
-  typeCardDisabled: {
+  typeButtonDisabled: {
     opacity: 0.5,
   },
-  typeLabel: {
+  typeButtonText: {
     fontSize: 14,
     fontFamily: 'Manrope-Regular',
     color: '#666',
-    marginTop: 8,
-    textAlign: 'center',
   },
-  typeLabelSelected: {
+  typeButtonTextSelected: {
     color: '#000',
     fontFamily: 'Manrope-SemiBold',
   },
