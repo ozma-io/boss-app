@@ -14,6 +14,7 @@ on:
       - '.vercel/**'
       - 'package-lock.json'
       - 'package.json'  # Version bumps are part of full releases (via tags), dependency changes trigger via code changes
+      - 'app.config.ts'  # Native config changes require full builds, not OTA updates
       - '__tests__/**'
       - 'scripts/**'
       - 'credentials/**'
