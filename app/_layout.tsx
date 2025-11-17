@@ -385,7 +385,7 @@ function RootLayoutNav() {
     }
   }, [authState, segments, shouldShowTrackingOnboarding, redirectPath]);
 
-  // Handle notification tap - redirect to chat
+  // Handle notification tap - redirect to chat (when app is in foreground)
   useEffect(() => {
     if (Platform.OS === 'web' || !Notifications) return;
 
@@ -405,6 +405,35 @@ function RootLayoutNav() {
     });
 
     return () => subscription.remove();
+  }, [router]);
+
+  // Handle notification that opened the app from quit/background state
+  useEffect(() => {
+    if (Platform.OS === 'web' || !Notifications) return;
+
+    // Check if app was opened by notification tap
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (!response) return;
+        
+        const data = response.notification.request.content.data;
+        
+        if (data?.type === 'chat_message') {
+          logger.info('App opened from chat notification', { 
+            feature: 'RootLayout', 
+            threadId: data.threadId 
+          });
+          
+          // Navigate to chat screen
+          router.push('/chat');
+        }
+      })
+      .catch((error) => {
+        logger.error('Error checking initial notification', { 
+          feature: 'RootLayout', 
+          error 
+        });
+      });
   }, [router]);
 
   if (authState === 'loading') {
