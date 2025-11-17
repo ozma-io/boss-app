@@ -4,13 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
 
 interface AddCustomFieldModalProps {
@@ -207,7 +206,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
             </Pressable>
           </View>
 
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bottomOffset={40}>
             <View style={styles.section}>
               <Text style={styles.sectionLabel} testID="label-section-label">
                 Field Label
@@ -275,7 +274,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
                 testID="initial-value-input"
               />
             </View>
-          </ScrollView>
+          </KeyboardAwareScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>

@@ -5,13 +5,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
 import { DateTimePickerModal } from './DateTimePickerModal';
 
@@ -372,7 +371,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
             </Pressable>
           </View>
 
-          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bottomOffset={40}>
             {/* Date/Time Pickers - First */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel} testID="timestamp-section-label">
@@ -606,7 +605,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
                 */}
               </>
             )}
-          </ScrollView>
+          </KeyboardAwareScrollView>
 
           {/* Date Picker */}
           <DateTimePickerModal

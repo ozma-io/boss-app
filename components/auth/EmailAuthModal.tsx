@@ -250,47 +250,48 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
       backdropOpacity={0.35}
     >
       <View style={styles.modalContent}>
-        {currentScreen === 'email-input' ? (
-          <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-              <Ionicons name="close" size={28} color="#000" />
-            </TouchableOpacity>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          {currentScreen === 'email-input' ? (
+            <>
+              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                <Ionicons name="close" size={28} color="#000" />
+              </TouchableOpacity>
 
-            <View style={styles.content}>
-              <Text style={styles.title}>What's your Email?</Text>
-              <Text style={styles.subtitle}>
-                We'll email you a link to sign in.{'\n'}No password needed.
-              </Text>
+              <View style={styles.content}>
+                <Text style={styles.title}>What's your Email?</Text>
+                <Text style={styles.subtitle}>
+                  We'll email you a link to sign in.{'\n'}No password needed.
+                </Text>
 
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="your.email@example.com"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoFocus
-              />
-            </View>
+                <TextInput
+                  style={styles.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="your.email@example.com"
+                  placeholderTextColor="#999"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoFocus
+                />
+              </View>
 
-            <TouchableOpacity
-              style={[
-                styles.continueButton,
-                (!email || !validateEmail(email) || isLoading) && styles.continueButtonDisabled,
-              ]}
-              onPress={handleContinue}
-              disabled={!email || !validateEmail(email) || isLoading}
-            >
-              <Text style={styles.continueButtonText}>{isLoading ? 'Sending...' : 'Continue'}</Text>
-            </TouchableOpacity>
-          </KeyboardAvoidingView>
-        ) : (
-          <View style={styles.container}>
+              <TouchableOpacity
+                style={[
+                  styles.continueButton,
+                  (!email || !validateEmail(email) || isLoading) && styles.continueButtonDisabled,
+                ]}
+                onPress={handleContinue}
+                disabled={!email || !validateEmail(email) || isLoading}
+              >
+                <Text style={styles.continueButtonText}>{isLoading ? 'Sending...' : 'Continue'}</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Ionicons name="arrow-back" size={28} color="#000" />
             </TouchableOpacity>
@@ -362,8 +363,9 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
                 <Text style={styles.loadingText}>Verifying...</Text>
               </View>
             )}
-          </View>
-        )}
+            </>
+          )}
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
