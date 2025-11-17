@@ -1,0 +1,143 @@
+Play Store Listing - BossUp
+
+Google Play Console:
+https://play.google.com/console/u/2/developers/7534134468065800880/app/4975793867903543177/main-store-listing
+
+================================================================================
+APP NAME (6/30 characters)
+================================================================================
+
+BossUp: AI Career Assistant
+(27 chars - emphasizes AI and career help)
+
+Alternative options:
+- BossUp: Career Development (27 chars - broader, professional focus)
+- BossUp: Manager Relationship (30 chars - unique differentiator, uses full limit)
+- BossUp: Career Growth (21 chars - simple and direct)
+- BossUp (6 chars - brand only, simple and memorable)
+
+Format: "Brand: Keywords" (1-2 keywords describing functionality)
+Examples from top apps: "Spotify: Music & Podcasts", "Booking.com: Hotels and more"
+
+Best practices:
+✅ Use colon or dash separator between brand and keywords
+✅ Include 1-2 keywords that help search discoverability
+✅ Keep it memorable and pronounceable
+❌ Avoid: "best", "#1", "top", emojis, action words like "download now"
+
+================================================================================
+SHORT DESCRIPTION (30/80 characters)
+================================================================================
+
+Proactive AI assistant for workplace situations and career growth
+(73 chars - emphasizes proactivity and workplace focus)
+
+Alternative options:
+- Navigate workplace challenges with AI guidance based on your context (76 chars - problem-solving focused)
+- Document interactions, get AI career advice, receive growth reminders (78 chars - covers key features)
+- AI assistant for career growth (30 chars - concise but generic)
+
+Best practices:
+✅ Describe core value proposition and benefits
+✅ Use different keywords than in App Name (avoid duplication)
+✅ Keep natural and user-friendly
+✅ Can include soft call-to-action
+❌ Avoid: keyword stuffing, #1/best claims, excessive caps
+
+================================================================================
+FULL DESCRIPTION (optimized for first 250 chars visibility)
+================================================================================
+
+Your AI career assistant that helps you navigate workplace situations and proactively reminds you to advance your career. Get specific guidance for real professional challenges based on your documented experiences with your manager.
+
+What BossUp Does
+
+BossUp is your proactive career development assistant. Document interactions with your manager, track feedback and achievements, then receive personalized AI guidance when you need it most.
+
+The app doesn't just wait for your questions - it actively reminds you to work on your career growth and suggests next steps based on your situation.
+
+Track Your Professional Context
+
+Store key information about your manager:
+• Communication style and preferences
+• Management approach and expectations
+• Working dynamics and relationship patterns
+• Custom fields for what matters in your workplace
+
+Document important interactions:
+• Meeting notes and conversations
+• Feedback received from your manager
+• Achievements and completed projects
+• Challenges you faced and solved
+• Performance review preparation
+
+AI Assistant for Real Workplace Situations
+
+Ask specific questions about your professional challenges and get personalized recommendations based on your actual documented context - not generic career advice.
+
+"How should I approach my manager about a promotion?"
+"What's the best way to discuss this project setback?"
+"How do I prepare for my upcoming performance review?"
+
+The assistant understands your manager's style, your track record, and your career goals. You get guidance that actually fits your unique situation.
+
+Proactive Career Reminders
+
+BossUp actively helps you stay on track with your career development. Get timely reminders to:
+• Document important interactions before you forget
+• Follow up on feedback and commitments
+• Prepare for upcoming performance discussions
+• Take action on career development goals
+
+Why BossUp Works
+
+Generic career advice ignores your reality. Your manager's style, your company culture, your specific goals - these matter. BossUp learns from your documented experiences to provide context-aware guidance for your actual workplace scenarios.
+
+Download BossUp and get an AI assistant that proactively helps you advance your career with personalized guidance based on your real professional context.
+
+================================================================================
+FORMATTING REQUIREMENTS
+================================================================================
+
+Technical Requirements:
+- App name: max 30 characters
+- Short description: max 80 characters
+- Full description: max 4000 characters (optimal: 1000-2500)
+- First 250 characters shown without "Read more" button - make them count!
+
+Supported Formatting (Plain Text Only):
+✅ Line breaks and paragraphs (keep paragraphs 3-4 lines)
+✅ Short lists (bulleted or numbered)
+✅ Bold text emphasis (use sparingly)
+✅ Simple structure with clear sections
+
+NOT Supported / NOT Recommended:
+❌ HTML tags
+❌ Markdown syntax
+❌ ALL CAPS text - perceived as unprofessional and may deter users
+   ✅ Exception: Acronyms (AI, CEO, API) and official brand names only
+   ✅ Use Title Case for section headers instead: "Why Choose BossUp"
+❌ Repeated special characters
+❌ Emojis/emoticons (restricted by policy)
+❌ Price information
+❌ Competitor comparisons
+❌ Unverified user testimonials
+❌ Excessive keyword repetition
+
+Best Practices:
+- Use relevant keywords naturally throughout text
+- Start with clear value proposition in first 250 chars
+- Keep language simple and understandable
+- Include call-to-action at the end
+- Write unique content (no copying from other sources)
+- Ensure proper grammar and spelling
+- Align with Google Play's Metadata policy
+
+Sources:
+- https://android-developers.googleblog.com/2021/04/updated-guidance-to-improve-your-app.html
+- https://appradar.com/academy/app-title
+- https://www.apptweak.com/en/aso-blog/app-name-guidelines-and-best-practices
+- https://storage.googleapis.com/support-kms-prod/uT1riUZ5jETGOohlbu9jae0teaMykOSMkOLD
+- https://asoworld.com/ru/blog/how-to-optimize-your-google-play-description-for-higher-ranking/
+- https://www.businessofapps.com/guide/app-store-optimization-for-google-play/
+
