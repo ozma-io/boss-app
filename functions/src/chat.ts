@@ -629,13 +629,26 @@ export const onChatMessageCreated = onDocumentCreated(
             threadId,
             messageId,
           });
-        } catch (notificationError) {
+        } catch (notificationError: any) {
           logger.error('Failed to send push notification', {
             userId,
             threadId,
             messageId,
             error: notificationError,
           });
+          
+          // Remove invalid FCM token from Firestore
+          if (notificationError.code === 'messaging/invalid-registration-token' ||
+              notificationError.code === 'messaging/registration-token-not-registered') {
+            logger.info('Removing invalid FCM token', { userId });
+            try {
+              await db.collection('users').doc(userId).update({
+                fcmToken: null,
+              });
+            } catch (updateError) {
+              logger.error('Failed to remove invalid FCM token', { userId, error: updateError });
+            }
+          }
         }
       } else {
         logger.debug('No FCM token for user, skipping push notification', {

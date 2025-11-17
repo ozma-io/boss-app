@@ -96,3 +96,88 @@ export async function getNotificationPermissionStatus(): Promise<NotificationPer
   return 'not_asked';
 }
 
+// Import Firebase Messaging (native only)
+let FirebaseMessaging: any = null;
+if (Platform.OS !== 'web') {
+  FirebaseMessaging = require('@react-native-firebase/messaging').default;
+}
+
+/**
+ * Get FCM token from Firebase and save it to Firestore
+ * Should be called after notification permission is granted
+ */
+export async function registerFCMToken(userId: string): Promise<void> {
+  if (Platform.OS === 'web' || !FirebaseMessaging) {
+    logger.debug('FCM token registration not available on web', { feature: 'NotificationService' });
+    return;
+  }
+
+  try {
+    // Request permission first (required for iOS)
+    const authStatus = await FirebaseMessaging.requestPermission();
+    const enabled =
+      authStatus === FirebaseMessaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === FirebaseMessaging.AuthorizationStatus.PROVISIONAL;
+
+    if (!enabled) {
+      logger.warn('Firebase Messaging permission not granted', { feature: 'NotificationService' });
+      return;
+    }
+
+    // Get FCM token
+    const fcmToken = await FirebaseMessaging.getToken();
+    
+    if (!fcmToken) {
+      logger.warn('Failed to get FCM token', { feature: 'NotificationService' });
+      return;
+    }
+
+    logger.info('Got FCM token', { feature: 'NotificationService', userId });
+
+    // Save to Firestore
+    const { db } = await import('@/constants/firebase.config');
+    const { doc, updateDoc } = await import('firebase/firestore');
+    
+    const userDocRef = doc(db, 'users', userId);
+    await updateDoc(userDocRef, {
+      fcmToken: fcmToken,
+    });
+
+    logger.info('FCM token saved to Firestore', { feature: 'NotificationService', userId });
+  } catch (error) {
+    logger.error('Error registering FCM token', { feature: 'NotificationService', error });
+    throw error;
+  }
+}
+
+/**
+ * Setup FCM token refresh listener
+ * Call this once when app starts to handle token updates
+ */
+export function setupFCMTokenRefreshListener(userId: string): (() => void) | null {
+  if (Platform.OS === 'web' || !FirebaseMessaging) {
+    return null;
+  }
+
+  // Listen for token refresh
+  const unsubscribe = FirebaseMessaging.onTokenRefresh(async (fcmToken: string) => {
+    logger.info('FCM token refreshed', { feature: 'NotificationService', userId });
+    
+    try {
+      const { db } = await import('@/constants/firebase.config');
+      const { doc, updateDoc } = await import('firebase/firestore');
+      
+      const userDocRef = doc(db, 'users', userId);
+      await updateDoc(userDocRef, {
+        fcmToken: fcmToken,
+      });
+      
+      logger.info('Refreshed FCM token saved to Firestore', { feature: 'NotificationService', userId });
+    } catch (error) {
+      logger.error('Error saving refreshed FCM token', { feature: 'NotificationService', error });
+    }
+  });
+
+  return unsubscribe;
+}
+

@@ -39,6 +39,17 @@ export default function NotificationOnboardingScreen(): React.JSX.Element {
       
       await updateNotificationPermissionStatus(user.id, status);
       
+      // Register FCM token if permission granted
+      if (status === 'granted') {
+        try {
+          const { registerFCMToken } = await import('@/services/notification.service');
+          await registerFCMToken(user.id);
+        } catch (error) {
+          // Don't block user flow if FCM registration fails
+          logger.error('Failed to register FCM token', { feature: 'NotificationOnboarding', error });
+        }
+      }
+      
       setShouldShowOnboarding(false);
       
       // Navigate to return path if specified, otherwise go to tabs

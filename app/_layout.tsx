@@ -112,7 +112,17 @@ export default function RootLayout() {
             lightColor: '#8BC34A',
           });
 
-          logger.info('Android notification handler and channel initialized', { feature: 'App' });
+          // Create chat messages notification channel (for FCM push notifications)
+          await Notifications.setNotificationChannelAsync('chat_messages', {
+            name: 'Chat Messages',
+            importance: Notifications.AndroidImportance.HIGH,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#8BC34A',
+            sound: 'default',
+            enableVibrate: true,
+          });
+
+          logger.info('Android notification handler and channels initialized', { feature: 'App' });
         }
 
         // Check if this is the first launch
@@ -269,6 +279,40 @@ function RootLayoutNav() {
     }
   }, [authState, user]);
 
+  // Register FCM token on app start if permission is granted
+  useEffect(() => {
+    if (!user) return;
+
+    const registerToken = async () => {
+      try {
+        const { getNotificationPermissionStatus, registerFCMToken, setupFCMTokenRefreshListener } = 
+          await import('@/services/notification.service');
+        
+        const status = await getNotificationPermissionStatus();
+        if (status === 'granted') {
+          await registerFCMToken(user.id);
+          
+          // Setup listener for token refresh
+          const unsubscribe = setupFCMTokenRefreshListener(user.id);
+          return unsubscribe;
+        }
+      } catch (error) {
+        logger.error('Failed to register FCM token on app start', { feature: 'RootLayout', error });
+      }
+      return null;
+    };
+
+    const unsubscribePromise = registerToken();
+
+    return () => {
+      unsubscribePromise.then((unsubscribe) => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      });
+    };
+  }, [user]);
+
   // Check for attribution email (only once when unauthenticated and not showing tracking onboarding)
   useEffect(() => {
     if (authState === 'unauthenticated' && !hasCheckedAttribution.current && !shouldShowTrackingOnboarding) {
@@ -340,6 +384,28 @@ function RootLayoutNav() {
       router.replace(targetPath as any);
     }
   }, [authState, segments, shouldShowTrackingOnboarding, redirectPath]);
+
+  // Handle notification tap - redirect to chat
+  useEffect(() => {
+    if (Platform.OS === 'web' || !Notifications) return;
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      
+      // Check if it's a chat message notification
+      if (data?.type === 'chat_message') {
+        logger.info('User tapped on chat notification', { 
+          feature: 'RootLayout', 
+          threadId: data.threadId 
+        });
+        
+        // Navigate to chat screen
+        router.push('/chat');
+      }
+    });
+
+    return () => subscription.remove();
+  }, [router]);
 
   if (authState === 'loading') {
     return (
