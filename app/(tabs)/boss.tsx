@@ -14,8 +14,9 @@ import { getCustomFields } from '@/utils/fieldHelpers';
 import { useFocusEffect } from 'expo-router';
 import { deleteField } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BossScreen() {
@@ -333,7 +334,7 @@ export default function BossScreen() {
           <Text style={styles.emptyHint}>Add a boss to get started</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="boss-scroll">
+        <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} bottomOffset={20} testID="boss-scroll">
         <View style={styles.greenCircle} />
         <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="boss-header">
           <Text style={styles.headerTitle} testID="header-title">BossUp</Text>
@@ -465,7 +466,7 @@ export default function BossScreen() {
           {/* Add custom field button */}
           <AddCustomFieldButton onPress={() => setIsAddModalVisible(true)} />
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       )}
 
       {/* Date Picker for Started At */}

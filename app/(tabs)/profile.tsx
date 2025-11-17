@@ -17,8 +17,9 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
 import { deleteField } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileScreen() {
@@ -344,7 +345,7 @@ export default function ProfileScreen() {
           <Text style={styles.emptyHint}>Please try signing in again</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} testID="profile-scroll-view">
+        <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} bottomOffset={20} testID="profile-scroll-view">
         <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="profile-header">
           <Text style={styles.headerTitle} testID="header-title">BossUp</Text>
         </View>
@@ -519,7 +520,7 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       )}
 
       <FloatingChatButton />
