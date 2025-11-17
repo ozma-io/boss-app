@@ -1,0 +1,245 @@
+App Store Listing - BossUp (iOS)
+
+App Store Connect:
+https://appstoreconnect.apple.com/apps/6755306941/distribution/ios/version/inflight
+
+================================================================================
+APP NAME (30 characters max)
+================================================================================
+
+BossUp: AI Career Assistant
+(27 chars)
+
+Alternative options:
+- BossUp: Career Development (27 chars)
+- BossUp: Manager Relationship (30 chars)
+- BossUp: Career Growth (21 chars)
+- BossUp (6 chars)
+
+Best practices:
+✅ Maximum 30 characters
+✅ Can include brand name + keywords separated by colon or dash
+✅ Appears in search results and on App Store
+✅ Keep memorable and pronounceable
+❌ Avoid: special characters, emojis, "best", "#1", "download now"
+
+================================================================================
+SUBTITLE (30 characters max, iOS 11+)
+================================================================================
+
+AI for workplace & career
+(25 chars)
+
+Alternative options:
+- Proactive career assistant (27 chars)
+- Navigate workplace with AI (27 chars)
+- Your career growth partner (27 chars)
+
+Best practices:
+✅ Appears below app name on App Store
+✅ Summarizes your app in a concise phrase
+✅ Different keywords from app name for better ASO
+✅ Keep short and impactful
+
+================================================================================
+PROMOTIONAL TEXT (170 characters max)
+================================================================================
+
+Get proactive reminders to advance your career. Ask AI questions about real workplace situations. Receive personalized guidance based on your manager's style.
+
+Alternative options:
+- Never miss career opportunities. BossUp proactively reminds you to document interactions, follow up on feedback, and prepare for important conversations with your manager.
+
+Best practices:
+✅ Can be updated anytime WITHOUT new app version
+✅ Appears above description on App Store
+✅ Use for announcements, new features, limited offers
+✅ Optional field - leave empty if not needed
+✅ Focus on timely, promotional content
+
+================================================================================
+DESCRIPTION (4,000 characters max)
+================================================================================
+
+Your AI career assistant that helps you navigate workplace situations and proactively reminds you to advance your career. Get specific guidance for real professional challenges based on your documented experiences with your manager.
+
+What BossUp Does
+
+BossUp is your proactive career development assistant. Document interactions with your manager, track feedback and achievements, then receive personalized AI guidance when you need it most.
+
+The app doesn't just wait for your questions - it actively reminds you to work on your career growth and suggests next steps based on your situation.
+
+Track Your Professional Context
+
+Store key information about your manager:
+• Communication style and preferences
+• Management approach and expectations
+• Working dynamics and relationship patterns
+• Custom fields for what matters in your workplace
+
+Document important interactions:
+• Meeting notes and conversations
+• Feedback received from your manager
+• Achievements and completed projects
+• Challenges you faced and solved
+• Performance review preparation
+
+AI Assistant for Real Workplace Situations
+
+Ask specific questions about your professional challenges and get personalized recommendations based on your actual documented context - not generic career advice.
+
+"How should I approach my manager about a promotion?"
+"What's the best way to discuss this project setback?"
+"How do I prepare for my upcoming performance review?"
+
+The assistant understands your manager's style, your track record, and your career goals. You get guidance that actually fits your unique situation.
+
+Proactive Career Reminders
+
+BossUp actively helps you stay on track with your career development. Get timely reminders to:
+• Document important interactions before you forget
+• Follow up on feedback and commitments
+• Prepare for upcoming performance discussions
+• Take action on career development goals
+
+Why BossUp Works
+
+Generic career advice ignores your reality. Your manager's style, your company culture, your specific goals - these matter. BossUp learns from your documented experiences to provide context-aware guidance for your actual workplace scenarios.
+
+Download BossUp and get an AI assistant that proactively helps you advance your career with personalized guidance based on your real professional context.
+
+================================================================================
+KEYWORDS (100 characters max, comma-separated)
+================================================================================
+
+career,manager,workplace,professional,development,AI,assistant,growth,feedback,job,promotion,review
+
+Alternative approaches:
+- career growth,manager relationship,workplace assistant,professional development,AI guidance,job success
+- career coach,manager feedback,workplace guidance,job promotion,professional growth,AI career help
+
+Best practices:
+✅ Comma-separated, no spaces after commas
+✅ Keywords are NOT visible to users
+✅ Used for App Store search algorithm
+✅ Focus on how users search for your app
+✅ Include both primary and long-tail keywords
+✅ Test different combinations over time
+❌ Avoid: repeated keywords, brand name, category name, inappropriate terms
+
+Tips:
+- Research competitor keywords
+- Think about user search intent
+- Use singular forms (Apple pluralizes automatically)
+- Prioritize most important keywords first
+- Can update with each version submission
+
+================================================================================
+SUPPORT URL (required)
+================================================================================
+
+https://bossup.app/support
+
+or
+https://yourdomain.com/support
+
+Best practices:
+✅ Must be a valid, accessible URL
+✅ Should provide user support, FAQs, contact information
+✅ Can be updated anytime WITHOUT new app version
+✅ Required field for app submission
+
+================================================================================
+MARKETING URL (optional)
+================================================================================
+
+https://bossup.app
+
+or
+https://yourdomain.com
+
+Best practices:
+✅ Your main website or landing page
+✅ Optional field
+✅ Can be updated anytime WITHOUT new app version
+✅ Appears as "Developer Website" on App Store
+
+================================================================================
+COPYRIGHT (200 characters max)
+================================================================================
+
+2024 Ozma Inc.
+
+or
+© 2024 Ozma Inc. All rights reserved.
+
+Best practices:
+✅ Format: Year + Company Name
+✅ Can include copyright symbol ©
+✅ Usually just "YYYY Company Name" is sufficient
+✅ Cannot be changed after submission without new version
+
+================================================================================
+VERSION
+================================================================================
+
+1.0
+
+Best practices:
+✅ Follow semantic versioning: MAJOR.MINOR.PATCH
+✅ First release: 1.0 or 1.0.0
+✅ Bug fixes: increment PATCH (1.0.1)
+✅ New features: increment MINOR (1.1.0)
+✅ Major changes: increment MAJOR (2.0.0)
+✅ Must match version in Xcode project
+
+================================================================================
+PRIVACY POLICY URL (required)
+================================================================================
+
+https://bossup.app/privacy
+
+Best practices:
+✅ Required for all apps
+✅ Must be valid and accessible
+✅ Should clearly explain data collection and usage
+✅ Can be updated anytime WITHOUT new app version
+
+================================================================================
+ADDITIONAL NOTES
+================================================================================
+
+App Store vs Google Play Differences:
+
+1. Subtitle field (iOS only):
+   - 30 chars, appears below app name
+   - Similar to but separate from Google Play short description
+
+2. Promotional Text (iOS only):
+   - 170 chars, updateable anytime
+   - Different from Google Play approach
+
+3. Keywords field (iOS only):
+   - 100 chars, comma-separated, NOT visible to users
+   - Google Play uses description text for search indexing
+
+4. App name + Subtitle = more characters for ASO than Google Play
+
+5. Screenshots requirements different:
+   - iOS: multiple sizes required for different devices
+   - Google Play: more flexible screenshot sizes
+
+App Store Review Guidelines:
+✅ Accurate description of features
+✅ Complete app functionality
+✅ No placeholder content
+✅ Working login credentials for review (if required)
+✅ Demo account or instructions for reviewers
+✅ Compliance with privacy requirements
+✅ Age rating accurately reflects content
+
+Sources:
+- https://developer.apple.com/app-store/product-page/
+- https://developer.apple.com/app-store/search/
+- https://developer.apple.com/app-store/review/guidelines/
+
