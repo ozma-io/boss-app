@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface FieldMetadata {
   label: string;
@@ -15,7 +14,7 @@ interface CustomFieldRowProps {
   fieldKey: string;
   fieldValue: any;
   metadata: FieldMetadata;
-  onUpdate: (fieldKey: string, value: any) => Promise<void>;
+  onPress: () => void;
   variant?: 'boss' | 'profile';
   disabled?: boolean;
 }
@@ -23,7 +22,8 @@ interface CustomFieldRowProps {
 /**
  * CustomFieldRow component
  * 
- * Renders a single custom field with inline editing capability.
+ * Renders a single custom field.
+ * Opens a modal for editing when clicked.
  * Supports text, select, date, multiline, and multiselect field types.
  * Uses the same styling as boss.tsx infoRow for consistency.
  */
@@ -31,25 +31,10 @@ export function CustomFieldRow({
   fieldKey,
   fieldValue,
   metadata,
-  onUpdate,
+  onPress,
   variant = 'boss',
   disabled = false,
 }: CustomFieldRowProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState('');
-
-  const handleEdit = (): void => {
-    if (disabled) return;
-    setValue(String(fieldValue || ''));
-    setIsEditing(true);
-  };
-
-  const handleBlur = async (): Promise<void> => {
-    setIsEditing(false);
-    if (value !== fieldValue) {
-      await onUpdate(fieldKey, value);
-    }
-  };
 
   // Generate testID from fieldKey (remove custom_ prefix for readability)
   const testIdBase = fieldKey.replace('custom_', '');
@@ -70,7 +55,7 @@ export function CustomFieldRow({
     <Pressable
       style={styles.infoRow}
       testID={`custom-field-${testIdBase}-row`}
-      onPress={isEditing ? undefined : handleEdit}
+      onPress={disabled ? undefined : onPress}
     >
       <Text style={styles.rowIconEmoji} testID={`custom-field-${testIdBase}-icon`}>
         📝
@@ -79,26 +64,12 @@ export function CustomFieldRow({
         <Text style={styles.rowLabel} testID={`custom-field-${testIdBase}-label`}>
           {metadata.label}
         </Text>
-        {isEditing ? (
-          <TextInput
-            style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-            value={value}
-            onChangeText={setValue}
-            onBlur={handleBlur}
-            autoFocus
-            placeholder={`Enter ${metadata.label.toLowerCase()}`}
-            testID={`custom-field-${testIdBase}-input`}
-            multiline={metadata.type === 'multiline'}
-            numberOfLines={metadata.type === 'multiline' ? 3 : 1}
-          />
-        ) : (
-          <Text
-            style={[styles.rowValue, !displayValue && { opacity: 0.5 }]}
-            testID={`custom-field-${testIdBase}-value`}
-          >
-            {displayValue || 'Not set'}
-          </Text>
-        )}
+        <Text
+          style={[styles.rowValue, !displayValue && { opacity: 0.5 }]}
+          testID={`custom-field-${testIdBase}-value`}
+        >
+          {displayValue || 'Not set'}
+        </Text>
       </View>
     </Pressable>
   );
@@ -133,14 +104,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontFamily: 'Manrope-Regular',
-  },
-  rowValueInput: {
-    fontSize: 16,
-    color: '#333',
-    fontFamily: 'Manrope-Regular',
-    padding: 0,
-    margin: 0,
-    borderWidth: 0,
   },
 });
 

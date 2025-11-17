@@ -19,7 +19,7 @@ interface SwipeableCustomFieldRowProps {
   fieldKey: string;
   fieldValue: any;
   metadata: FieldMetadata;
-  onUpdate: (fieldKey: string, value: any) => Promise<void>;
+  onPress: () => void;
   onDelete: (fieldKey: string) => void;
   variant?: 'boss' | 'profile';
 }
@@ -32,7 +32,7 @@ export function SwipeableCustomFieldRow({
   fieldKey,
   fieldValue,
   metadata,
-  onUpdate,
+  onPress,
   onDelete,
   variant = 'boss',
 }: SwipeableCustomFieldRowProps) {
@@ -78,7 +78,7 @@ export function SwipeableCustomFieldRow({
           fieldKey={fieldKey}
           fieldValue={fieldValue}
           metadata={metadata}
-          onUpdate={onUpdate}
+          onPress={onPress}
           variant={variant}
           disabled={false}
         />
@@ -100,7 +100,7 @@ export function SwipeableCustomFieldRow({
         fieldKey={fieldKey}
         fieldValue={fieldValue}
         metadata={metadata}
-        onUpdate={onUpdate}
+        onPress={onPress}
         variant={variant}
         disabled={isSwiping}
       />

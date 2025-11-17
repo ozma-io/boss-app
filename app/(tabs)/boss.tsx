@@ -40,6 +40,8 @@ export default function BossScreen() {
   
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [fieldKeyToEdit, setFieldKeyToEdit] = useState<string | null>(null);
+  const [fieldToEdit, setFieldToEdit] = useState<{label: string; value: any; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'} | null>(null);
 
   // Ref to always access latest boss value without affecting callback dependencies
   const bossRef = useRef(boss);
@@ -49,6 +51,8 @@ export default function BossScreen() {
 
   const handleCloseModal = useCallback((): void => {
     setIsAddModalVisible(false);
+    setFieldKeyToEdit(null);
+    setFieldToEdit(null);
   }, []);
 
   useFocusEffect(
@@ -216,7 +220,7 @@ export default function BossScreen() {
   // Handler for updating custom field metadata (label, type) or value
   const handleUpdateCustomField = useCallback(async (
     fieldKey: string,
-    updates: { label?: string; type?: 'text' | 'multiline' | 'select' | 'date'; value?: string }
+    updates: { label?: string; type?: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'; value?: string }
   ): Promise<void> => {
     const currentBoss = bossRef.current;
     if (!currentBoss) return;
@@ -309,6 +313,16 @@ export default function BossScreen() {
         },
       ]
     );
+  };
+
+  const handleEditCustomField = (field: { key: string; value: any; metadata: { label: string; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect' } }): void => {
+    setFieldKeyToEdit(field.key);
+    setFieldToEdit({
+      label: field.metadata.label,
+      value: field.value,
+      type: field.metadata.type,
+    });
+    setIsAddModalVisible(true);
   };
 
   // Get sorted custom fields
@@ -457,7 +471,7 @@ export default function BossScreen() {
               fieldKey={field.key}
               fieldValue={field.value}
               metadata={field.metadata}
-              onUpdate={handleCustomFieldUpdate}
+              onPress={() => handleEditCustomField(field)}
               onDelete={handleDeleteCustomField}
               variant="boss"
             />
@@ -495,8 +509,12 @@ export default function BossScreen() {
       <AddCustomFieldModal
         isVisible={isAddModalVisible}
         onClose={handleCloseModal}
-        onCreateEmpty={handleCreateEmptyCustomField}
+        onCreateEmpty={fieldKeyToEdit ? undefined : handleCreateEmptyCustomField}
         onUpdate={handleUpdateCustomField}
+        fieldKeyToEdit={fieldKeyToEdit || undefined}
+        initialLabel={fieldToEdit?.label}
+        initialValue={fieldToEdit?.value ? String(fieldToEdit.value) : undefined}
+        initialType={fieldToEdit?.type as 'text' | 'multiline' | 'select' | 'date' | 'multiselect' | undefined}
       />
     </GestureHandlerRootView>
   );

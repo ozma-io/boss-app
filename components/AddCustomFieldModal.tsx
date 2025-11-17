@@ -19,9 +19,12 @@ interface AddCustomFieldModalProps {
   onCreateEmpty?: () => Promise<string>;
   onUpdate?: (fieldKey: string, updates: { label?: string; type?: FieldType; value?: string }) => Promise<void>;
   fieldKeyToEdit?: string;
+  initialLabel?: string;
+  initialValue?: string;
+  initialType?: FieldType;
 }
 
-type FieldType = 'text' | 'multiline' | 'select' | 'date';
+type FieldType = 'text' | 'multiline' | 'select' | 'date' | 'multiselect';
 
 // TODO: Currently only 'text' type is fully implemented and enabled
 // TODO: Implement 'multiline' type - support for multiline text input with proper rendering
@@ -38,23 +41,37 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: string; enable
  * Modal for adding a new custom field
  * Creates empty field immediately on open, auto-saves all changes
  */
-export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdate, fieldKeyToEdit }: AddCustomFieldModalProps) {
+export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdate, fieldKeyToEdit, initialLabel, initialValue: initialValueProp, initialType }: AddCustomFieldModalProps) {
   const [label, setLabel] = useState<string>('');
   const [selectedType, setSelectedType] = useState<FieldType>('text');
-  const [initialValue, setInitialValue] = useState<string>('');
+  const [value, setValue] = useState<string>('');
   const [currentFieldKey, setCurrentFieldKey] = useState<string | null>(null);
 
   // Debounce timer refs
   const labelDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const valueDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Track if fields have been initialized to prevent re-initialization on parent re-renders
+  const hasInitializedFieldsRef = useRef<boolean>(false);
 
   // Create empty field or use existing fieldKey when editing
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible) {
+      // Reset initialization flag when modal closes
+      hasInitializedFieldsRef.current = false;
+      return;
+    }
+
+    // Only initialize once when modal opens
+    if (hasInitializedFieldsRef.current) return;
+    hasInitializedFieldsRef.current = true;
 
     if (fieldKeyToEdit) {
       // Edit mode: use existing fieldKey
       setCurrentFieldKey(fieldKeyToEdit);
+      setLabel(initialLabel || '');
+      setValue(initialValueProp || '');
+      setSelectedType(initialType || 'text');
     } else {
       // Create mode: create empty field immediately
       const createEmpty = async (): Promise<void> => {
@@ -75,7 +92,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
       // Reset to defaults
       setLabel('');
       setSelectedType('text');
-      setInitialValue('');
+      setValue('');
 
       createEmpty();
     }
@@ -122,7 +139,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
     };
   }, [label, currentFieldKey, autoSave]);
 
-  // Debounced auto-save for initial value
+  // Debounced auto-save for value
   useEffect(() => {
     if (!currentFieldKey) return;
 
@@ -131,7 +148,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
     }
 
     valueDebounceTimer.current = setTimeout(() => {
-      autoSave({ value: initialValue });
+      autoSave({ value });
     }, 500);
 
     return () => {
@@ -139,7 +156,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
         clearTimeout(valueDebounceTimer.current);
       }
     };
-  }, [initialValue, currentFieldKey, autoSave]);
+  }, [value, currentFieldKey, autoSave]);
 
   // Immediate auto-save for type
   useEffect(() => {
@@ -241,7 +258,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
 
             <View style={styles.section}>
               <Text style={styles.sectionLabel} testID="value-section-label">
-                Initial Value (Optional)
+                {fieldKeyToEdit ? 'Value' : 'Initial Value (Optional)'}
               </Text>
               <TextInput
                 style={[
@@ -249,9 +266,9 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
                   selectedType === 'multiline' && styles.multilineInput,
                   { outlineStyle: 'none' } as any,
                 ]}
-                value={initialValue}
-                onChangeText={setInitialValue}
-                placeholder="Enter initial value..."
+                value={value}
+                onChangeText={setValue}
+                placeholder="Enter value..."
                 placeholderTextColor="rgba(0, 0, 0, 0.3)"
                 multiline={selectedType === 'multiline'}
                 numberOfLines={selectedType === 'multiline' ? 3 : 1}

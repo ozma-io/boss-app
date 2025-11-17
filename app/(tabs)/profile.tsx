@@ -37,6 +37,8 @@ export default function ProfileScreen() {
   
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [fieldKeyToEdit, setFieldKeyToEdit] = useState<string | null>(null);
+  const [fieldToEdit, setFieldToEdit] = useState<{label: string; value: any; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'} | null>(null);
 
   // Ref to always access latest profile value without affecting callback dependencies
   const profileRef = useRef(profile);
@@ -46,6 +48,8 @@ export default function ProfileScreen() {
 
   const handleCloseModal = useCallback((): void => {
     setIsAddModalVisible(false);
+    setFieldKeyToEdit(null);
+    setFieldToEdit(null);
   }, []);
 
   // TODO: These metrics should be calculated dynamically based on:
@@ -182,7 +186,7 @@ export default function ProfileScreen() {
   // Handler for updating custom field metadata (label, type) or value
   const handleUpdateCustomField = useCallback(async (
     fieldKey: string,
-    updates: { label?: string; type?: 'text' | 'multiline' | 'select' | 'date'; value?: string }
+    updates: { label?: string; type?: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'; value?: string }
   ): Promise<void> => {
     const currentProfile = profileRef.current;
     if (!currentProfile) return;
@@ -270,6 +274,16 @@ export default function ProfileScreen() {
         },
       ]
     );
+  };
+
+  const handleEditCustomField = (field: { key: string; value: any; metadata: { label: string; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect' } }): void => {
+    setFieldKeyToEdit(field.key);
+    setFieldToEdit({
+      label: field.metadata.label,
+      value: field.value,
+      type: field.metadata.type,
+    });
+    setIsAddModalVisible(true);
   };
 
   // Get sorted custom fields
@@ -440,7 +454,7 @@ export default function ProfileScreen() {
                 fieldKey={field.key}
                 fieldValue={field.value}
                 metadata={field.metadata}
-                onUpdate={handleCustomFieldUpdate}
+                onPress={() => handleEditCustomField(field)}
                 onDelete={handleDeleteCustomField}
                 variant="profile"
               />
@@ -529,8 +543,12 @@ export default function ProfileScreen() {
       <AddCustomFieldModal
         isVisible={isAddModalVisible}
         onClose={handleCloseModal}
-        onCreateEmpty={handleCreateEmptyCustomField}
+        onCreateEmpty={fieldKeyToEdit ? undefined : handleCreateEmptyCustomField}
         onUpdate={handleUpdateCustomField}
+        fieldKeyToEdit={fieldKeyToEdit || undefined}
+        initialLabel={fieldToEdit?.label}
+        initialValue={fieldToEdit?.value ? String(fieldToEdit.value) : undefined}
+        initialType={fieldToEdit?.type as 'text' | 'multiline' | 'select' | 'date' | 'multiselect' | undefined}
       />
     </GestureHandlerRootView>
   );
