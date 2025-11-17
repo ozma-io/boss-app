@@ -4,13 +4,14 @@ import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { logger } from '@/services/logger.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
+import { showToast } from '@/utils/toast';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
 import { useFocusEffect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, ToastAndroid, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PersonalInfoScreen() {
@@ -32,6 +33,19 @@ export default function PersonalInfoScreen() {
       trackAmplitudeEvent('personal_info_screen_viewed');
     }, [])
   );
+
+  const handleCopyUpdateId = async (): Promise<void> => {
+    const updateId = Updates.updateId || 'embedded';
+    try {
+      await Clipboard.setStringAsync(updateId);
+      showToast('Update ID copied to clipboard');
+      trackAmplitudeEvent('personal_info_update_id_copied', {
+        updateId: updateId.substring(0, 12),
+      });
+    } catch (error) {
+      logger.error('Failed to copy update ID', { feature: 'PersonalInfoScreen', error: error instanceof Error ? error : new Error(String(error)) });
+    }
+  };
 
   const handleSignOut = async (): Promise<void> => {
     trackAmplitudeEvent('auth_signout_clicked', {
@@ -183,12 +197,16 @@ export default function PersonalInfoScreen() {
               </Text>
             </View>
             
-            <View style={styles.versionItem} testID="version-item-update">
+            <Pressable
+              style={styles.versionItem}
+              onPress={handleCopyUpdateId}
+              testID="version-item-update"
+            >
               <Text style={styles.versionLabel} testID="version-label-update">Update ID</Text>
               <Text style={styles.versionValue} testID="version-value-update">
                 {Updates.updateId ? Updates.updateId.substring(0, 12) + '...' : 'embedded'}
               </Text>
-            </View>
+            </Pressable>
             
             <View style={[styles.versionItem, styles.lastVersionItem]} testID="version-item-runtime">
               <Text style={styles.versionLabel} testID="version-label-runtime">Runtime Version</Text>

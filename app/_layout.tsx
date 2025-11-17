@@ -23,6 +23,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
@@ -245,6 +246,7 @@ export default function RootLayout() {
           </TrackingOnboardingProvider>
         </AuthProvider>
       </SessionProvider>
+      <Toast />
     </SafeAreaProvider>
   );
 }
