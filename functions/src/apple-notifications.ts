@@ -320,21 +320,56 @@ export const appleServerNotification = onRequest(
         throw new Error('Failed to download Apple root certificates');
       }
 
-      // Determine environment (will be validated from notification)
-      // Start with production as default for webhooks
-      const environment = Environment.PRODUCTION;
+      // Try to verify notification with Production environment first, 
+      // then fallback to Sandbox if that fails
+      // (Apple sends both Production and Sandbox notifications to the same webhook URL)
+      let decodedNotification;
+      let verifier: SignedDataVerifier;
+      let verificationEnvironment: string;
 
-      // Create verifier
-      const verifier = new SignedDataVerifier(
-        rootCAs,
-        true, // Enable online checks
-        environment,
-        APPLE_BUNDLE_ID,
-        APPLE_APP_ID
-      );
-
-      // Verify and decode the notification
-      const decodedNotification = await verifier.verifyAndDecodeNotification(signedPayload);
+      try {
+        // Try Production first
+        verifier = new SignedDataVerifier(
+          rootCAs,
+          true, // Enable online checks
+          Environment.PRODUCTION,
+          APPLE_BUNDLE_ID,
+          APPLE_APP_ID
+        );
+        
+        decodedNotification = await verifier.verifyAndDecodeNotification(signedPayload);
+        verificationEnvironment = 'Production';
+        
+        logger.info('Notification verified with Production environment', {});
+      } catch (productionError: any) {
+        // If Production verification failed, try Sandbox
+        logger.info('Production verification failed, trying Sandbox', { 
+          productionError: productionError.message,
+          status: productionError.status,
+        });
+        
+        try {
+          verifier = new SignedDataVerifier(
+            rootCAs,
+            true, // Enable online checks
+            Environment.SANDBOX,
+            APPLE_BUNDLE_ID,
+            APPLE_APP_ID
+          );
+          
+          decodedNotification = await verifier.verifyAndDecodeNotification(signedPayload);
+          verificationEnvironment = 'Sandbox';
+          
+          logger.info('Notification verified with Sandbox environment', {});
+        } catch (sandboxError: any) {
+          // Both verifications failed
+          logger.error('Failed to verify notification with both environments', {
+            productionStatus: productionError.status,
+            sandboxStatus: sandboxError.status,
+          });
+          throw new Error('Failed to verify notification with both Production and Sandbox environments');
+        }
+      }
 
       if (!decodedNotification) {
         throw new Error('Failed to decode notification');
@@ -343,6 +378,7 @@ export const appleServerNotification = onRequest(
       logger.info('Notification verified and decoded', {
         notificationType: decodedNotification.notificationType,
         subtype: decodedNotification.subtype,
+        environment: verificationEnvironment,
       });
 
       // Extract transaction info from the notification data
