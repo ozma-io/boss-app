@@ -7,10 +7,16 @@
 # 
 # Solution: Add tools:replace attribute to use our app's value instead of the library's default
 # 
-# This script runs as a prebuildCommand in eas.json after expo prebuild generates the manifest
+# This script runs via eas-build-post-install hook in package.json after expo prebuild
 # See docs/android-manifest-conflict.md for full explanation
 
 set -e  # Exit on error
+
+# Only run for Android builds
+if [[ "$EAS_BUILD_PLATFORM" != "android" ]]; then
+  echo "ℹ️  Skipping Android manifest fix (not an Android build)"
+  exit 0
+fi
 
 MANIFEST_FILE="android/app/src/main/AndroidManifest.xml"
 

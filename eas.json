@@ -7,34 +7,22 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development",
-      "android": {
-        "prebuildCommand": "npm run fix-android-manifest"
-      }
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": true
       },
-      "channel": "preview",
-      "android": {
-        "prebuildCommand": "npm run fix-android-manifest"
-      }
+      "channel": "preview"
     },
     "preview-device": {
       "distribution": "internal",
-      "channel": "preview",
-      "android": {
-        "prebuildCommand": "npm run fix-android-manifest"
-      }
+      "channel": "preview"
     },
     "production": {
       "channel": "production",
-      "autoIncrement": true,
-      "android": {
-        "prebuildCommand": "npm run fix-android-manifest"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {

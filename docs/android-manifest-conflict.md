@@ -73,46 +73,45 @@ The meta-data entries are added by `expo-notifications` plugin AFTER our plugin 
 
 **Files:** 
 - `.eas/build/fix-android-manifest.sh` (bash script)
-- `package.json` (npm script wrapper)
-- `eas.json` (build configuration)
+- `package.json` (EAS Build npm hook)
 
-A bash script that runs as a `prebuildCommand` in `eas.json` AFTER all prebuild steps complete, including meta-data generation.
+A bash script that runs via the `eas-build-post-install` npm hook AFTER all prebuild steps complete, including meta-data generation.
 
 **How it works:**
-1. EAS Build runs `npx expo prebuild` (generates manifest with meta-data)
-2. EAS executes the `prebuildCommand`: `npm run fix-android-manifest`
-3. The npm script calls the bash script to patch the manifest
-4. Gradle build continues with the patched manifest
+1. EAS Build installs dependencies (`npm install`)
+2. EAS Build runs `npx expo prebuild` (generates manifest with meta-data)
+3. EAS automatically executes the `eas-build-post-install` hook from `package.json`
+4. The hook runs the bash script to patch the manifest
+5. Gradle build continues with the patched manifest
 
 **Configuration in `package.json`:**
 ```json
 {
   "scripts": {
-    "fix-android-manifest": "bash .eas/build/fix-android-manifest.sh"
+    "eas-build-post-install": "bash .eas/build/fix-android-manifest.sh"
   }
 }
 ```
 
-**Configuration in `eas.json`:**
-```json
-{
-  "build": {
-    "production": {
-      "android": {
-        "prebuildCommand": "npm run fix-android-manifest"
-      }
-    }
-  }
-}
-```
+**Why use `eas-build-post-install` hook?**
+EAS Build provides [official npm hooks](https://docs.expo.dev/build-reference/npm-hooks/) for different build stages:
+- `eas-build-pre-install` - runs before dependencies are installed
+- **`eas-build-post-install`** - runs after dependencies are installed AND after prebuild
 
-**Why npm script?**
-EAS Build automatically prepends `npx expo` to any command in `prebuildCommand`. Using `npm run` allows the command to execute correctly as `npx expo npm run fix-android-manifest`, which properly delegates to our bash script.
+The `eas-build-post-install` hook is perfect for our use case because:
+- It runs AFTER `npm install` completes
+- It runs AFTER `expo prebuild` (manifest already exists with meta-data)
+- It runs BEFORE Gradle compilation (can still modify the manifest)
+- EAS doesn't add extra arguments like `--platform` to hooks (unlike `prebuildCommand`)
+
+**No configuration needed in `eas.json`** - EAS automatically detects and runs the hook!
 
 The bash script:
+- Checks `$EAS_BUILD_PLATFORM` environment variable (only runs for Android)
 - Adds `xmlns:tools="http://schemas.android.com/tools"` to manifest root
 - Adds `tools:replace="android:resource"` to the notification color meta-data
 - Handles errors gracefully and provides clear output
+- Skips execution on iOS builds (exits with code 0)
 
 ## Technical Details
 
@@ -141,8 +140,7 @@ From [Android documentation](https://developer.android.com/studio/build/manifest
 |------|---------|
 | `plugins/withNotificationManifestFix.js` | Config plugin for local development |
 | `.eas/build/fix-android-manifest.sh` | Bash script that fixes the manifest |
-| `package.json` | npm script wrapper for EAS Build |
-| `eas.json` | Configures prebuild hook for all Android profiles |
+| `package.json` | Contains `eas-build-pre-compile` hook for EAS Build |
 | `app.config.ts` | Includes the config plugin in plugins array |
 | `android/app/src/main/AndroidManifest.xml` | Generated file (not committed to git) |
 
