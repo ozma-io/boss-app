@@ -53,3 +53,33 @@ export function canDeleteField(documentType: 'user' | 'boss', fieldKey: string):
   return false;
 }
 
+/**
+ * Generate a random field key with custom_ prefix
+ * Uses 4 random alphanumeric characters (lowercase)
+ * Checks for uniqueness and retries if collision occurs
+ * 
+ * @param existingFields - Object containing existing fields
+ * @returns Unique field key with custom_ prefix
+ */
+export function generateUniqueFieldKey(existingFields: Record<string, any>): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const length = 4;
+  const maxAttempts = 10;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    let randomId = '';
+    for (let i = 0; i < length; i++) {
+      randomId += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    const fieldKey = `custom_${randomId}`;
+    
+    if (validateFieldKey(existingFields, fieldKey)) {
+      return fieldKey;
+    }
+  }
+  
+  // Fallback: use timestamp if somehow all attempts failed (extremely unlikely)
+  return `custom_${Date.now().toString(36)}`;
+}
+

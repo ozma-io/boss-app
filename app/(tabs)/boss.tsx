@@ -8,12 +8,12 @@ import { useBoss } from '@/hooks/useBoss';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { logger } from '@/services/logger.service';
 import { showAlert } from '@/utils/alert';
-import { sanitizeFieldKey, validateFieldKey } from '@/utils/customFieldHelpers';
+import { generateUniqueFieldKey } from '@/utils/customFieldHelpers';
 import { getCustomFields } from '@/utils/fieldHelpers';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from 'expo-router';
 import { deleteField } from 'firebase/firestore';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,6 +39,16 @@ export default function BossScreen() {
   
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+
+  // Ref to always access latest boss value without affecting callback dependencies
+  const bossRef = useRef(boss);
+  useEffect(() => {
+    bossRef.current = boss;
+  }, [boss]);
+
+  const handleCloseModal = useCallback((): void => {
+    setIsAddModalVisible(false);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -158,56 +168,92 @@ export default function BossScreen() {
     }
   };
 
-  // Handler for adding custom field
-  const handleAddCustomField = async (
-    label: string,
-    type: 'text' | 'multiline' | 'select' | 'date',
-    initialValue: string
-  ): Promise<void> => {
-    if (!boss) return;
-
-    const fieldKey = `custom_${sanitizeFieldKey(label)}`;
-
-    // Check if field already exists
-    if (!validateFieldKey(boss, fieldKey)) {
-      showAlert('Error', 'A field with this name already exists');
-      throw new Error('Field already exists');
+  // Handler for creating empty custom field
+  const handleCreateEmptyCustomField = useCallback(async (): Promise<string> => {
+    const currentBoss = bossRef.current;
+    if (!currentBoss) {
+      throw new Error('Boss not loaded');
     }
+
+    const fieldKey = generateUniqueFieldKey(currentBoss);
 
     try {
       await updateBoss({
-        [fieldKey]: initialValue || '',
+        [fieldKey]: '',
         [`_fieldsMeta.${fieldKey}`]: {
-          label,
-          type,
+          label: '',
+          type: 'text',
           source: 'user_added',
           createdAt: new Date().toISOString(),
-          displayOrder: Object.keys(boss._fieldsMeta || {}).length,
+          displayOrder: Object.keys(currentBoss._fieldsMeta || {}).length,
         },
       });
 
       trackAmplitudeEvent('boss_custom_field_added', {
         fieldKey,
-        type,
-        bossId: boss.id,
+        type: 'text',
+        bossId: currentBoss.id,
       });
 
-      logger.info('Custom field added', {
+      logger.info('Empty custom field created', {
         feature: 'BossScreen',
-        bossId: boss.id,
+        bossId: currentBoss.id,
         fieldKey,
-        type,
+      });
+
+      return fieldKey;
+    } catch (err) {
+      logger.error('Failed to create empty custom field', {
+        feature: 'BossScreen',
+        bossId: currentBoss.id,
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
+      throw err;
+    }
+  }, [updateBoss]);
+
+  // Handler for updating custom field metadata (label, type) or value
+  const handleUpdateCustomField = useCallback(async (
+    fieldKey: string,
+    updates: { label?: string; type?: 'text' | 'multiline' | 'select' | 'date'; value?: string }
+  ): Promise<void> => {
+    const currentBoss = bossRef.current;
+    if (!currentBoss) return;
+
+    try {
+      const updatePayload: Record<string, any> = {};
+
+      // Update value if provided
+      if (updates.value !== undefined) {
+        updatePayload[fieldKey] = updates.value;
+      }
+
+      // Update metadata if label or type provided
+      if (updates.label !== undefined) {
+        updatePayload[`_fieldsMeta.${fieldKey}.label`] = updates.label;
+      }
+      if (updates.type !== undefined) {
+        updatePayload[`_fieldsMeta.${fieldKey}.type`] = updates.type;
+      }
+
+      await updateBoss(updatePayload);
+
+      logger.debug('Custom field updated', {
+        feature: 'BossScreen',
+        bossId: currentBoss.id,
+        fieldKey,
+        updates,
       });
     } catch (err) {
-      logger.error('Failed to add custom field', {
+      logger.error('Failed to update custom field', {
         feature: 'BossScreen',
-        bossId: boss.id,
+        bossId: currentBoss.id,
         fieldKey,
         error: err instanceof Error ? err : new Error(String(err)),
       });
       throw err;
     }
-  };
+  }, [updateBoss]);
 
   // Handler for deleting custom field
   const handleDeleteCustomField = (fieldKey: string): void => {
@@ -473,8 +519,9 @@ export default function BossScreen() {
       {/* Add custom field modal */}
       <AddCustomFieldModal
         isVisible={isAddModalVisible}
-        onClose={() => setIsAddModalVisible(false)}
-        onAdd={handleAddCustomField}
+        onClose={handleCloseModal}
+        onCreateEmpty={handleCreateEmptyCustomField}
+        onUpdate={handleUpdateCustomField}
       />
     </GestureHandlerRootView>
   );

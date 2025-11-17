@@ -1,23 +1,24 @@
 import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from 'react-native';
 import Modal from 'react-native-modal';
 
 interface AddCustomFieldModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onAdd: (label: string, type: FieldType, initialValue: string) => Promise<void>;
+  onCreateEmpty?: () => Promise<string>;
+  onUpdate?: (fieldKey: string, updates: { label?: string; type?: FieldType; value?: string }) => Promise<void>;
+  fieldKeyToEdit?: string;
 }
 
 type FieldType = 'text' | 'multiline' | 'select' | 'date';
@@ -35,37 +36,116 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: string; enable
 
 /**
  * Modal for adding a new custom field
- * Allows user to input label, select field type, and optionally provide initial value
+ * Creates empty field immediately on open, auto-saves all changes
  */
-export function AddCustomFieldModal({ isVisible, onClose, onAdd }: AddCustomFieldModalProps) {
+export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdate, fieldKeyToEdit }: AddCustomFieldModalProps) {
   const [label, setLabel] = useState<string>('');
   const [selectedType, setSelectedType] = useState<FieldType>('text');
   const [initialValue, setInitialValue] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [currentFieldKey, setCurrentFieldKey] = useState<string | null>(null);
 
-  const handleClose = (): void => {
-    if (!isSubmitting) {
+  // Debounce timer refs
+  const labelDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const valueDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Create empty field or use existing fieldKey when editing
+  useEffect(() => {
+    if (!isVisible) return;
+
+    if (fieldKeyToEdit) {
+      // Edit mode: use existing fieldKey
+      setCurrentFieldKey(fieldKeyToEdit);
+    } else {
+      // Create mode: create empty field immediately
+      const createEmpty = async (): Promise<void> => {
+        if (onCreateEmpty && !currentFieldKey) {
+          try {
+            const newFieldKey = await onCreateEmpty();
+            setCurrentFieldKey(newFieldKey);
+          } catch (error) {
+            showAlert(
+              'Something went wrong',
+              'We couldn\'t create this field right now. Our team has been notified and is working on it. Please try again later.'
+            );
+            onClose();
+          }
+        }
+      };
+
+      // Reset to defaults
       setLabel('');
       setSelectedType('text');
       setInitialValue('');
-      onClose();
+
+      createEmpty();
     }
+  }, [fieldKeyToEdit, isVisible, onCreateEmpty, onClose]);
+
+  // Reset currentFieldKey when modal closes
+  useEffect(() => {
+    if (!isVisible) {
+      setCurrentFieldKey(null);
+    }
+  }, [isVisible]);
+
+  const handleClose = (): void => {
+    onClose();
   };
 
-  const handleAdd = async (): Promise<void> => {
-    setIsSubmitting(true);
+  // Auto-save function
+  const autoSave = useCallback(async (updates: { label?: string; type?: FieldType; value?: string }): Promise<void> => {
+    if (!currentFieldKey || !onUpdate) return;
+
     try {
-      await onAdd(label.trim(), selectedType, initialValue.trim());
-      handleClose();
+      await onUpdate(currentFieldKey, updates);
     } catch (error) {
-      showAlert(
-        'Something went wrong',
-        'We couldn\'t add this field right now. Our team has been notified and is working on it. Please try again later.'
-      );
-    } finally {
-      setIsSubmitting(false);
+      // Silent fail - user can retry by changing field again
     }
-  };
+  }, [currentFieldKey, onUpdate]);
+
+  // Debounced auto-save for label
+  useEffect(() => {
+    if (!currentFieldKey) return;
+
+    if (labelDebounceTimer.current) {
+      clearTimeout(labelDebounceTimer.current);
+    }
+
+    labelDebounceTimer.current = setTimeout(() => {
+      autoSave({ label });
+    }, 500);
+
+    return () => {
+      if (labelDebounceTimer.current) {
+        clearTimeout(labelDebounceTimer.current);
+      }
+    };
+  }, [label, currentFieldKey, autoSave]);
+
+  // Debounced auto-save for initial value
+  useEffect(() => {
+    if (!currentFieldKey) return;
+
+    if (valueDebounceTimer.current) {
+      clearTimeout(valueDebounceTimer.current);
+    }
+
+    valueDebounceTimer.current = setTimeout(() => {
+      autoSave({ value: initialValue });
+    }, 500);
+
+    return () => {
+      if (valueDebounceTimer.current) {
+        clearTimeout(valueDebounceTimer.current);
+      }
+    };
+  }, [initialValue, currentFieldKey, autoSave]);
+
+  // Immediate auto-save for type
+  useEffect(() => {
+    if (!currentFieldKey) return;
+    autoSave({ type: selectedType });
+  }, [selectedType, currentFieldKey, autoSave]);
 
   const handleTypePress = (type: { value: FieldType; label: string; icon: string; enabled: boolean }): void => {
     if (type.enabled) {
@@ -106,7 +186,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onAdd }: AddCustomFiel
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
             <View style={styles.section}>
               <Text style={styles.sectionLabel} testID="label-section-label">
-                Field Label *
+                Field Label
               </Text>
               <TextInput
                 style={[styles.input, { outlineStyle: 'none' } as any]}
@@ -115,7 +195,6 @@ export function AddCustomFieldModal({ isVisible, onClose, onAdd }: AddCustomFiel
                 placeholder="e.g., Pet Name, Favorite Color"
                 placeholderTextColor="rgba(0, 0, 0, 0.3)"
                 testID="field-label-input"
-                autoFocus
               />
             </View>
 
@@ -173,32 +252,6 @@ export function AddCustomFieldModal({ isVisible, onClose, onAdd }: AddCustomFiel
               />
             </View>
           </ScrollView>
-
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={handleClose}
-              disabled={isSubmitting}
-              testID="cancel-button"
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.addButton,
-                (isSubmitting || !label.trim()) && styles.buttonDisabled
-              ]}
-              onPress={handleAdd}
-              disabled={isSubmitting || !label.trim()}
-              testID="add-button"
-            >
-              <Text style={styles.addButtonText}>
-                {isSubmitting ? 'Adding...' : 'Add Field'}
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -298,38 +351,6 @@ const styles = StyleSheet.create({
   typeLabelSelected: {
     color: '#000',
     fontFamily: 'Manrope-SemiBold',
-  },
-  footer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    gap: 12,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f8f8f8',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontFamily: 'Manrope-SemiBold',
-    color: '#666',
-  },
-  addButton: {
-    backgroundColor: '#B8E986',
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontFamily: 'Manrope-SemiBold',
-    color: '#000',
-  },
-  buttonDisabled: {
-    opacity: 0.3,
   },
 });
 

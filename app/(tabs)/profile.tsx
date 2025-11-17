@@ -11,12 +11,12 @@ import { signOut } from '@/services/auth.service';
 import { showIntercomMessenger } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { showAlert } from '@/utils/alert';
-import { sanitizeFieldKey, validateFieldKey } from '@/utils/customFieldHelpers';
+import { generateUniqueFieldKey } from '@/utils/customFieldHelpers';
 import { getCustomFields } from '@/utils/fieldHelpers';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { router, useFocusEffect } from 'expo-router';
 import { deleteField } from 'firebase/firestore';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +36,16 @@ export default function ProfileScreen() {
   
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+
+  // Ref to always access latest profile value without affecting callback dependencies
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  const handleCloseModal = useCallback((): void => {
+    setIsAddModalVisible(false);
+  }, []);
 
   // TODO: These metrics should be calculated dynamically based on:
   // - Timeline entries (fact entries with stress/confidence assessments)
@@ -127,53 +137,87 @@ export default function ProfileScreen() {
     }
   };
 
-  // Handler for adding custom field
-  const handleAddCustomField = async (
-    label: string,
-    type: 'text' | 'multiline' | 'select' | 'date',
-    initialValue: string
-  ): Promise<void> => {
-    if (!profile) return;
-
-    const fieldKey = `custom_${sanitizeFieldKey(label)}`;
-
-    // Check if field already exists
-    if (!validateFieldKey(profile, fieldKey)) {
-      showAlert('Error', 'A field with this name already exists');
-      throw new Error('Field already exists');
+  // Handler for creating empty custom field
+  const handleCreateEmptyCustomField = useCallback(async (): Promise<string> => {
+    const currentProfile = profileRef.current;
+    if (!currentProfile) {
+      throw new Error('Profile not loaded');
     }
+
+    const fieldKey = generateUniqueFieldKey(currentProfile);
 
     try {
       await updateProfile({
-        [fieldKey]: initialValue || '',
+        [fieldKey]: '',
         [`_fieldsMeta.${fieldKey}`]: {
-          label,
-          type,
+          label: '',
+          type: 'text',
           source: 'user_added',
           createdAt: new Date().toISOString(),
-          displayOrder: Object.keys(profile._fieldsMeta || {}).length,
+          displayOrder: Object.keys(currentProfile._fieldsMeta || {}).length,
         },
       });
 
       trackAmplitudeEvent('profile_custom_field_added', {
         fieldKey,
-        type,
+        type: 'text',
       });
 
-      logger.info('Custom field added', {
+      logger.info('Empty custom field created', {
         feature: 'ProfileScreen',
         fieldKey,
-        type,
+      });
+
+      return fieldKey;
+    } catch (err) {
+      logger.error('Failed to create empty custom field', {
+        feature: 'ProfileScreen',
+        error: err instanceof Error ? err : new Error(String(err)),
+      });
+      throw err;
+    }
+  }, [updateProfile]);
+
+  // Handler for updating custom field metadata (label, type) or value
+  const handleUpdateCustomField = useCallback(async (
+    fieldKey: string,
+    updates: { label?: string; type?: 'text' | 'multiline' | 'select' | 'date'; value?: string }
+  ): Promise<void> => {
+    const currentProfile = profileRef.current;
+    if (!currentProfile) return;
+
+    try {
+      const updatePayload: Record<string, any> = {};
+
+      // Update value if provided
+      if (updates.value !== undefined) {
+        updatePayload[fieldKey] = updates.value;
+      }
+
+      // Update metadata if label or type provided
+      if (updates.label !== undefined) {
+        updatePayload[`_fieldsMeta.${fieldKey}.label`] = updates.label;
+      }
+      if (updates.type !== undefined) {
+        updatePayload[`_fieldsMeta.${fieldKey}.type`] = updates.type;
+      }
+
+      await updateProfile(updatePayload);
+
+      logger.debug('Custom field updated', {
+        feature: 'ProfileScreen',
+        fieldKey,
+        updates,
       });
     } catch (err) {
-      logger.error('Failed to add custom field', {
+      logger.error('Failed to update custom field', {
         feature: 'ProfileScreen',
         fieldKey,
         error: err instanceof Error ? err : new Error(String(err)),
       });
       throw err;
     }
-  };
+  }, [updateProfile]);
 
   // Handler for deleting custom field
   const handleDeleteCustomField = (fieldKey: string): void => {
@@ -483,8 +527,9 @@ export default function ProfileScreen() {
       {/* Add custom field modal */}
       <AddCustomFieldModal
         isVisible={isAddModalVisible}
-        onClose={() => setIsAddModalVisible(false)}
-        onAdd={handleAddCustomField}
+        onClose={handleCloseModal}
+        onCreateEmpty={handleCreateEmptyCustomField}
+        onUpdate={handleUpdateCustomField}
       />
     </GestureHandlerRootView>
   );
