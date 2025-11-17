@@ -112,7 +112,9 @@ export async function initializeAmplitude(): Promise<void> {
       });
       
       // Add Session Replay plugin
-      await amplitude.add(new SessionReplayPlugin());
+      await amplitude.add(new SessionReplayPlugin({
+        sampleRate: 1 // Record 100% of sessions (consistent with web config)
+      }));
       
       isInitialized = true;
       console.log('[Amplitude] Native SDK initialized successfully with Session Replay');
