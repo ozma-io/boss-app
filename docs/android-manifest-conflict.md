@@ -71,14 +71,27 @@ The meta-data entries are added by `expo-notifications` plugin AFTER our plugin 
 
 ### 2. EAS Build (Production & CI)
 
-**File:** `.eas/build/fix-android-manifest.sh`
+**Files:** 
+- `.eas/build/fix-android-manifest.sh` (bash script)
+- `package.json` (npm script wrapper)
+- `eas.json` (build configuration)
 
 A bash script that runs as a `prebuildCommand` in `eas.json` AFTER all prebuild steps complete, including meta-data generation.
 
 **How it works:**
 1. EAS Build runs `npx expo prebuild` (generates manifest with meta-data)
-2. Our script runs and patches the generated manifest file
-3. Gradle build continues with the patched manifest
+2. EAS executes the `prebuildCommand`: `npm run fix-android-manifest`
+3. The npm script calls the bash script to patch the manifest
+4. Gradle build continues with the patched manifest
+
+**Configuration in `package.json`:**
+```json
+{
+  "scripts": {
+    "fix-android-manifest": "bash .eas/build/fix-android-manifest.sh"
+  }
+}
+```
 
 **Configuration in `eas.json`:**
 ```json
@@ -86,14 +99,17 @@ A bash script that runs as a `prebuildCommand` in `eas.json` AFTER all prebuild 
   "build": {
     "production": {
       "android": {
-        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+        "prebuildCommand": "npm run fix-android-manifest"
       }
     }
   }
 }
 ```
 
-The script:
+**Why npm script?**
+EAS Build automatically prepends `npx expo` to any command in `prebuildCommand`. Using `npm run` allows the command to execute correctly as `npx expo npm run fix-android-manifest`, which properly delegates to our bash script.
+
+The bash script:
 - Adds `xmlns:tools="http://schemas.android.com/tools"` to manifest root
 - Adds `tools:replace="android:resource"` to the notification color meta-data
 - Handles errors gracefully and provides clear output
@@ -124,7 +140,8 @@ From [Android documentation](https://developer.android.com/studio/build/manifest
 | File | Purpose |
 |------|---------|
 | `plugins/withNotificationManifestFix.js` | Config plugin for local development |
-| `.eas/build/fix-android-manifest.sh` | Bash script for EAS Build |
+| `.eas/build/fix-android-manifest.sh` | Bash script that fixes the manifest |
+| `package.json` | npm script wrapper for EAS Build |
 | `eas.json` | Configures prebuild hook for all Android profiles |
 | `app.config.ts` | Includes the config plugin in plugins array |
 | `android/app/src/main/AndroidManifest.xml` | Generated file (not committed to git) |
