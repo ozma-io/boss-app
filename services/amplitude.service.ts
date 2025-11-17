@@ -107,11 +107,13 @@ export async function initializeAmplitude(): Promise<void> {
       console.log('[Amplitude] Initializing Native SDK with Session Replay');
       
       // Initialize Amplitude with API key (userId is undefined, config is 3rd param)
+      // defaultTracking ensures deviceId and sessionId are generated before adding plugins
       await amplitude.init(AMPLITUDE_API_KEY, undefined, {
         disableCookies: true,
+        defaultTracking: true,
       });
       
-      // Add Session Replay plugin
+      // Add Session Replay plugin AFTER init (deviceId and sessionId are now set in config)
       await amplitude.add(new SessionReplayPlugin({
         sampleRate: 1 // Record 100% of sessions (consistent with web config)
       }));
