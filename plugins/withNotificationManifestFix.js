@@ -7,6 +7,18 @@ const path = require('path');
  * Both packages define com.google.firebase.messaging.default_notification_color meta-data
  * This plugin adds tools:replace attribute to use our app's value instead of the library's default
  * 
+ * IMPORTANT: This plugin works for LOCAL DEVELOPMENT only (when running `npx expo prebuild` without --clean)
+ * 
+ * LIMITATION: Does NOT work for EAS Build because:
+ * - EAS Build always uses --clean flag
+ * - Meta-data is added AFTER withAndroidManifest and dangerousMod plugins run
+ * - The manifest file doesn't have meta-data entries when dangerousMod executes
+ * 
+ * FOR EAS BUILD: Use the prebuild hook script instead (.eas/build/fix-android-manifest.sh)
+ * configured in eas.json via prebuildCommand
+ * 
+ * See docs/android-manifest-conflict.md for full explanation
+ * 
  * Uses both withAndroidManifest (for tools namespace) and withDangerousMod (for meta-data modification)
  * because meta-data is added AFTER withAndroidManifest mods run
  * Must be placed AFTER expo-notifications in the plugins array

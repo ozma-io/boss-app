@@ -70,6 +70,14 @@ npx eas-cli@latest workflow:run create-production-builds.yml
 
 *Note: Using direct production rollouts (100% immediately). Gradual rollouts postponed until product validation.*
 
+### Android Manifest Conflict
+
+The Android build automatically resolves a manifest conflict between `expo-notifications` and `@react-native-firebase/messaging` (both define notification color). This is handled via:
+- **Local development:** Config plugin (`plugins/withNotificationManifestFix.js`)
+- **EAS Build:** Prebuild hook script (`.eas/build/fix-android-manifest.sh`)
+
+📖 **See [docs/android-manifest-conflict.md](./docs/android-manifest-conflict.md) for technical details**
+
 ---
 
 ## 🗃️ Firestore Data Structure

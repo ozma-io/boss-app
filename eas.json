@@ -7,22 +7,34 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development"
+      "channel": "development",
+      "android": {
+        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+      }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": true
       },
-      "channel": "preview"
+      "channel": "preview",
+      "android": {
+        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+      }
     },
     "preview-device": {
       "distribution": "internal",
-      "channel": "preview"
+      "channel": "preview",
+      "android": {
+        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+      }
     },
     "production": {
       "channel": "production",
-      "autoIncrement": true
+      "autoIncrement": true,
+      "android": {
+        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+      }
     }
   },
   "submit": {
