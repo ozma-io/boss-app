@@ -77,6 +77,8 @@ The meta-data entries are added by `expo-notifications` plugin AFTER our plugin 
 
 A bash script that runs via the `eas-build-post-install` npm hook AFTER all prebuild steps complete, including meta-data generation.
 
+> 📘 **Note:** This uses [EAS Build npm hooks](https://docs.expo.dev/build-reference/npm-hooks/), the official mechanism for running custom scripts during the build lifecycle.
+
 **How it works:**
 1. EAS Build installs dependencies (`npm install`)
 2. EAS Build runs `npx expo prebuild` (generates manifest with meta-data)
@@ -185,6 +187,7 @@ grep 'tools:replace="android:resource"' android/app/src/main/AndroidManifest.xml
 
 - [Android Manifest Merger Documentation](https://developer.android.com/studio/build/manifest-merge)
 - [Expo Config Plugins](https://docs.expo.dev/config-plugins/introduction/)
+- [EAS Build npm Hooks](https://docs.expo.dev/build-reference/npm-hooks/) - Official documentation for lifecycle hooks
 - [EAS Build Configuration](https://docs.expo.dev/build/eas-json/)
 - [Firebase Messaging Setup](https://rnfirebase.io/messaging/usage)
 - [Expo Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/)
