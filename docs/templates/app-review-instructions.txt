@@ -1,0 +1,22 @@
+App Review Information
+
+Sign-In Information:
+Username: test+apple@ozma.io
+Password: __no_pass_needed__
+
+This special test account does not require clicking a magic link. Simply enter the email address above and you will be automatically authenticated. No email verification needed for this test account.
+
+Contact Information:
+Name: Kirill Markin
+Phone: +1 (707) 653-6966
+Email: kmarkin@ozma.io
+
+Notes:
+
+To sign in:
+1. Launch the app
+2. Enter the email: test+apple@ozma.io
+3. You will be automatically signed in (no magic link required for this test account)
+
+The app normally uses magic link authentication via email, but this special test account bypasses email verification for easier review.
+

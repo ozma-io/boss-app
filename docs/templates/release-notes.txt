@@ -1,0 +1,14 @@
+## 15 (1.2.5) — Initial Release
+
+<en-US>
+Welcome to BossUp! Your personal assistant for building better relationships with your boss.
+
+• Track interactions, feedback, and achievements with timeline entries
+• Maintain detailed boss profiles with custom fields
+• Get personalized advice from AI-powered chat assistant
+• Stay on top of important follow-ups with smart notifications
+• Sign in securely with Apple, Google, or email
+• Cross-platform support with automatic data sync
+
+Thank you for choosing BossUp!
+</en-US>
