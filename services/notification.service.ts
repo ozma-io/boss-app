@@ -114,7 +114,7 @@ export async function registerFCMToken(userId: string): Promise<void> {
 
   try {
     // Request permission first (required for iOS)
-    const authStatus = await FirebaseMessaging.requestPermission();
+    const authStatus = await FirebaseMessaging().requestPermission();
     const enabled =
       authStatus === FirebaseMessaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === FirebaseMessaging.AuthorizationStatus.PROVISIONAL;
@@ -125,7 +125,7 @@ export async function registerFCMToken(userId: string): Promise<void> {
     }
 
     // Get FCM token
-    const fcmToken = await FirebaseMessaging.getToken();
+    const fcmToken = await FirebaseMessaging().getToken();
     
     if (!fcmToken) {
       logger.warn('Failed to get FCM token', { feature: 'NotificationService' });
@@ -160,7 +160,7 @@ export function setupFCMTokenRefreshListener(userId: string): (() => void) | nul
   }
 
   // Listen for token refresh
-  const unsubscribe = FirebaseMessaging.onTokenRefresh(async (fcmToken: string) => {
+  const unsubscribe = FirebaseMessaging().onTokenRefresh(async (fcmToken: string) => {
     logger.info('FCM token refreshed', { feature: 'NotificationService', userId });
     
     try {
