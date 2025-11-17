@@ -462,6 +462,5 @@ const headerStyles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 16,
   },
 });
