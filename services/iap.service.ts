@@ -10,6 +10,7 @@ import { IAPProduct, IAPPurchaseResult, UserProfile } from '@/types';
 import { doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
+import { trackAmplitudeEvent } from './amplitude.service';
 import { logger } from './logger.service';
 
 // Conditionally import react-native-iap only on native platforms
@@ -87,8 +88,19 @@ function setupPurchaseListener(): void {
     });
   });
 
-  const purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
-    logger.error('Purchase error', { error });
+  const purchaseErrorSubscription = RNIap.purchaseErrorListener((error: any) => {
+    // Check if user cancelled the purchase
+    if (error.code === 'E_USER_CANCELLED') {
+      // User cancellation is not an error - just track to Amplitude
+      logger.info('Purchase cancelled by user', { productId: error.productId });
+      trackAmplitudeEvent('iap_purchase_cancelled', {
+        product_id: error.productId || 'unknown',
+        platform: Platform.OS,
+      });
+    } else {
+      // Real error - log to Sentry
+      logger.error('Purchase error', { error });
+    }
   });
 
   // Note: These subscriptions should be cleaned up on app unmount
@@ -114,7 +126,8 @@ export async function getAvailableProducts(productIds: string[]): Promise<IAPPro
 
       const products = await RNIap.fetchProducts({ skus: productIds, type: 'subs' });
 
-      if (!products) {
+      if (!products || products.length === 0) {
+        logger.info('No products available from store', { productIds });
         return [];
       }
 
@@ -178,14 +191,34 @@ export async function purchaseSubscription(
       });
 
       if (!purchaseResult) {
-        throw new Error('Purchase failed - no purchase object returned');
+        logger.info('Purchase cancelled - no result returned', { productId });
+        trackAmplitudeEvent('iap_purchase_cancelled', {
+          product_id: productId,
+          platform: Platform.OS,
+          tier,
+          billing_period: billingPeriod,
+        });
+        return {
+          success: false,
+          error: 'Purchase cancelled',
+        };
       }
 
       // Handle both single purchase and array (iOS returns single purchase)
       const purchase = Array.isArray(purchaseResult) ? purchaseResult[0] : purchaseResult;
 
       if (!purchase) {
-        throw new Error('Purchase failed - empty purchase result');
+        logger.info('Purchase cancelled - empty result', { productId });
+        trackAmplitudeEvent('iap_purchase_cancelled', {
+          product_id: productId,
+          platform: Platform.OS,
+          tier,
+          billing_period: billingPeriod,
+        });
+        return {
+          success: false,
+          error: 'Purchase cancelled',
+        };
       }
 
       logger.info('Purchase completed, verifying with backend', { 
@@ -223,17 +256,25 @@ export async function purchaseSubscription(
           error: verificationResult.error || 'Verification failed',
         };
       }
-    } catch (error) {
-      logger.error('Purchase failed', { error, productId });
-      
+    } catch (error: any) {
       // Check if user cancelled
-      if (error instanceof Error && error.message.includes('cancelled')) {
+      if (error.code === 'E_USER_CANCELLED' || (error instanceof Error && error.message.includes('cancelled'))) {
+        logger.info('Purchase cancelled by user', { productId });
+        trackAmplitudeEvent('iap_purchase_cancelled', {
+          product_id: productId,
+          platform: Platform.OS,
+          tier,
+          billing_period: billingPeriod,
+        });
         return {
           success: false,
           error: 'Purchase cancelled',
         };
       }
 
+      // Real error - log to Sentry
+      logger.error('Purchase failed', { error, productId });
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Purchase failed',
