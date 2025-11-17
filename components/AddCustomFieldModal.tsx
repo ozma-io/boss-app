@@ -181,6 +181,13 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
             <Text style={styles.title} testID="modal-title">
               Add Custom Field
             </Text>
+            <Pressable
+              style={styles.closeButton}
+              onPress={handleClose}
+              testID="close-button"
+            >
+              <Ionicons name="close" size={28} color="#000" />
+            </Pressable>
           </View>
 
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -292,6 +299,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: 'Manrope-SemiBold',
     color: '#000',
+  },
+  closeButton: {
+    position: 'absolute',
+    right: 20,
+    top: 16,
+    padding: 8,
+    zIndex: 1,
   },
   scrollView: {
     paddingHorizontal: 20,
