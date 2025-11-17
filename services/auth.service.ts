@@ -12,14 +12,14 @@ import * as Crypto from 'expo-crypto';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-  User as FirebaseUser,
-  GoogleAuthProvider,
-  OAuthProvider,
-  onAuthStateChanged as firebaseOnAuthStateChanged,
-  sendSignInLinkToEmail,
-  signInWithCredential,
-  signInWithCustomToken,
-  signInWithEmailLink
+    User as FirebaseUser,
+    GoogleAuthProvider,
+    OAuthProvider,
+    onAuthStateChanged as firebaseOnAuthStateChanged,
+    sendSignInLinkToEmail,
+    signInWithCredential,
+    signInWithCustomToken,
+    signInWithEmailLink
 } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
@@ -318,7 +318,8 @@ export async function signInWithGoogle(): Promise<User> {
     const idToken = response.data?.idToken;
 
     if (!idToken) {
-      throw new Error('No ID token received from Google');
+      logger.info('Google Sign-In cancelled by user (no idToken)', { feature: 'AuthService' });
+      throw new Error('Google Sign-In was cancelled');
     }
 
     const user = await signInWithGoogleCredential(idToken);
@@ -372,6 +373,15 @@ export async function signInWithGoogle(): Promise<User> {
         logger.error('Google Play Services not available', { feature: 'AuthService' });
         throw new Error('Google Play Services not available. Please update Google Play Services.');
       }
+    }
+    
+    // Check if this is a cancellation error (either our message or original message)
+    if (error instanceof Error && (
+      error.message === 'Google Sign-In was cancelled' ||
+      error.message === 'No ID token received from Google'
+    )) {
+      // Already logged as info above, just re-throw without logging as error
+      throw error;
     }
     
     logger.error('Google Sign-In failed', { feature: 'AuthService', error });
