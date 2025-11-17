@@ -10,7 +10,7 @@ import { ChatMessage, ChatThread } from '@/types';
 import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Only import on native platforms
@@ -29,6 +29,7 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(true);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [appState, setAppState] = useState(AppState.currentState);
   
   // Pagination state
   const [oldestTimestamp, setOldestTimestamp] = useState<string | null>(null);
@@ -39,25 +40,45 @@ export default function ChatScreen() {
   // Typing indicator timeout management
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Unified function to reset unread count when chat is visible
+  const resetUnreadCountIfVisible = useCallback(() => {
+    if (user && threadId) {
+      markChatAsRead(user.id, threadId).catch((error) => {
+        logger.error('Failed to mark chat as read', { feature: 'ChatScreen', error });
+      });
+      
+      // Clear app icon badge
+      if (Platform.OS !== 'web' && Notifications) {
+        Notifications.setBadgeCountAsync(0).catch((error: Error) => {
+          logger.error('Failed to clear badge count', { feature: 'ChatScreen', error });
+        });
+      }
+    }
+  }, [user, threadId]);
+
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('chat_screen_viewed');
       
       // Mark chat as read when user opens the screen
-      if (user && threadId) {
-        markChatAsRead(user.id, threadId).catch((error) => {
-          logger.error('Failed to mark chat as read', { feature: 'ChatScreen', error });
-        });
-        
-        // Clear app icon badge
-        if (Platform.OS !== 'web' && Notifications) {
-          Notifications.setBadgeCountAsync(0).catch((error: Error) => {
-            logger.error('Failed to clear badge count', { feature: 'ChatScreen', error });
-          });
-        }
-      }
-    }, [user, threadId])
+      resetUnreadCountIfVisible();
+    }, [resetUnreadCountIfVisible])
   );
+
+  // Reset unread count when app comes to foreground (handles scenario where chat is already open)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      // When app comes to foreground and chat screen is mounted, reset counter
+      if (appState.match(/inactive|background/) && nextAppState === 'active') {
+        resetUnreadCountIfVisible();
+      }
+      setAppState(nextAppState);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [appState, resetUnreadCountIfVisible]);
 
   // Initialize thread on mount
   useEffect(() => {
