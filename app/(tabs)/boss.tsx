@@ -330,158 +330,160 @@ export default function BossScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      {loading ? (
-        <View style={[styles.centerContent, { flex: 1 }]} testID="boss-loading">
-          <ActivityIndicator size="large" color="#B6D95C" />
-          <Text style={styles.loadingText}>Loading boss data...</Text>
-        </View>
-      ) : error ? (
-        <View style={[styles.centerContent, { flex: 1 }]} testID="boss-error">
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
-        </View>
-      ) : !boss ? (
-        <View style={[styles.centerContent, { flex: 1 }]} testID="boss-empty">
-          <Text style={styles.emptyIcon}>👤</Text>
-          <Text style={styles.emptyText}>No boss found</Text>
-          <Text style={styles.emptyHint}>Add a boss to get started</Text>
-        </View>
-      ) : (
-        <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} bottomOffset={20} testID="boss-scroll">
-        <View style={styles.greenCircle} />
-        <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="boss-header">
-          <Text style={styles.headerTitle} testID="header-title">BossUp</Text>
-        </View>
-
-        <View style={styles.profileSection} testID="profile-section">
-          <View style={styles.avatarContainer} testID="avatar-container">
-            <Image 
-              source={require('@/assets/images/boss-avatar.png')} 
-              style={styles.avatar}
-              resizeMode="contain"
-              testID="boss-avatar-image"
-            />
+      <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} bottomOffset={100} testID="boss-scroll">
+        {loading ? (
+          <View style={[styles.centerContent, { flex: 1 }]} testID="boss-loading">
+            <ActivityIndicator size="large" color="#B6D95C" />
+            <Text style={styles.loadingText}>Loading boss data...</Text>
           </View>
-          <InlineEditableHeading
-            value={boss.name}
-            onSave={async (newName) => {
-              await updateBoss({ name: newName });
-              trackAmplitudeEvent('boss_field_edited', {
-                field: 'name',
-                bossId: boss.id,
-              });
-            }}
-            placeholder="Enter boss name"
-            testID="boss-name"
-            style={styles.bossName}
-          />
-        </View>
-
-        <View style={styles.cardsRow} testID="cards-row">
-          <Pressable 
-            style={styles.infoCard} 
-            testID="started-at-card"
-            onPress={handleEditStartedAt}
-          >
-            <Text style={styles.cardIcon} testID="started-at-icon">📅</Text>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardLabel} testID="started-at-label">Started at</Text>
-              <Text style={[styles.cardValue, !boss.startedAt && { opacity: 0.5 }]} testID="started-at-value">
-                {boss.startedAt ? new Date(boss.startedAt).toLocaleDateString() : 'Not set'}
-              </Text>
+        ) : error ? (
+          <View style={[styles.centerContent, { flex: 1 }]} testID="boss-error">
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
+          </View>
+        ) : !boss ? (
+          <View style={[styles.centerContent, { flex: 1 }]} testID="boss-empty">
+            <Text style={styles.emptyIcon}>👤</Text>
+            <Text style={styles.emptyText}>No boss found</Text>
+            <Text style={styles.emptyHint}>Add a boss to get started</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.greenCircle} />
+            <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="boss-header">
+              <Text style={styles.headerTitle} testID="header-title">BossUp</Text>
             </View>
-          </Pressable>
 
-          <Pressable 
-            style={styles.infoCard} 
-            testID="birthday-card"
-            onPress={handleEditBirthday}
-          >
-            <Text style={styles.cardIcon} testID="birthday-icon">🎂</Text>
-            <View style={styles.cardContent}>
-              <Text style={styles.cardLabel} testID="birthday-label">Birthday</Text>
-              <Text style={[styles.cardValue, !boss.birthday && { opacity: 0.5 }]} testID="birthday-value">
-                {boss.birthday ? new Date(boss.birthday).toLocaleDateString() : 'Not set'}
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-
-        <View style={styles.otherInfoSection} testID="other-info-section">
-          <Text style={styles.sectionTitle} testID="section-title">Other information</Text>
-
-          <Pressable 
-            style={styles.infoRow} 
-            testID="position-row"
-            onPress={isEditingPosition ? undefined : handleEditPosition}
-          >
-            <Image 
-              source={require('@/assets/images/briefcase-icon.png')} 
-              style={styles.rowIcon}
-              resizeMode="contain"
-              testID="position-icon"
-            />
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel} testID="position-label">Position</Text>
-              {isEditingPosition ? (
-                <TextInput
-                  style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                  value={position}
-                  onChangeText={setPosition}
-                  onBlur={handleBlurPosition}
-                  autoFocus
-                  placeholder="Enter position"
-                  testID="position-input"
+            <View style={styles.profileSection} testID="profile-section">
+              <View style={styles.avatarContainer} testID="avatar-container">
+                <Image 
+                  source={require('@/assets/images/boss-avatar.png')} 
+                  style={styles.avatar}
+                  resizeMode="contain"
+                  testID="boss-avatar-image"
                 />
-              ) : (
-                <Text style={styles.rowValue} testID="position-value">{boss.position}</Text>
-              )}
+              </View>
+              <InlineEditableHeading
+                value={boss.name}
+                onSave={async (newName) => {
+                  await updateBoss({ name: newName });
+                  trackAmplitudeEvent('boss_field_edited', {
+                    field: 'name',
+                    bossId: boss.id,
+                  });
+                }}
+                placeholder="Enter boss name"
+                testID="boss-name"
+                style={styles.bossName}
+              />
             </View>
-          </Pressable>
 
-          <Pressable 
-            style={styles.infoRow} 
-            testID="management-style-row"
-            onPress={isEditingManagementStyle ? undefined : handleEditManagementStyle}
-          >
-            <Text style={styles.rowIconEmoji} testID="management-style-icon">🤝</Text>
-            <View style={styles.rowContent}>
-              <Text style={styles.rowLabel} testID="management-style-label">Management style</Text>
-              {isEditingManagementStyle ? (
-                <TextInput
-                  style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                  value={managementStyle}
-                  onChangeText={setManagementStyle}
-                  onBlur={handleBlurManagementStyle}
-                  autoFocus
-                  placeholder="Enter management style"
-                  testID="management-style-input"
+            <View style={styles.cardsRow} testID="cards-row">
+              <Pressable 
+                style={styles.infoCard} 
+                testID="started-at-card"
+                onPress={handleEditStartedAt}
+              >
+                <Text style={styles.cardIcon} testID="started-at-icon">📅</Text>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardLabel} testID="started-at-label">Started at</Text>
+                  <Text style={[styles.cardValue, !boss.startedAt && { opacity: 0.5 }]} testID="started-at-value">
+                    {boss.startedAt ? new Date(boss.startedAt).toLocaleDateString() : 'Not set'}
+                  </Text>
+                </View>
+              </Pressable>
+
+              <Pressable 
+                style={styles.infoCard} 
+                testID="birthday-card"
+                onPress={handleEditBirthday}
+              >
+                <Text style={styles.cardIcon} testID="birthday-icon">🎂</Text>
+                <View style={styles.cardContent}>
+                  <Text style={styles.cardLabel} testID="birthday-label">Birthday</Text>
+                  <Text style={[styles.cardValue, !boss.birthday && { opacity: 0.5 }]} testID="birthday-value">
+                    {boss.birthday ? new Date(boss.birthday).toLocaleDateString() : 'Not set'}
+                  </Text>
+                </View>
+              </Pressable>
+            </View>
+
+            <View style={styles.otherInfoSection} testID="other-info-section">
+              <Text style={styles.sectionTitle} testID="section-title">Other information</Text>
+
+              <Pressable 
+                style={styles.infoRow} 
+                testID="position-row"
+                onPress={isEditingPosition ? undefined : handleEditPosition}
+              >
+                <Image 
+                  source={require('@/assets/images/briefcase-icon.png')} 
+                  style={styles.rowIcon}
+                  resizeMode="contain"
+                  testID="position-icon"
                 />
-              ) : (
-                <Text style={[styles.rowValue, !boss.managementStyle && { opacity: 0.5 }]} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
-              )}
-            </View>
-          </Pressable>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel} testID="position-label">Position</Text>
+                  {isEditingPosition ? (
+                    <TextInput
+                      style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
+                      value={position}
+                      onChangeText={setPosition}
+                      onBlur={handleBlurPosition}
+                      autoFocus
+                      placeholder="Enter position"
+                      testID="position-input"
+                    />
+                  ) : (
+                    <Text style={styles.rowValue} testID="position-value">{boss.position}</Text>
+                  )}
+                </View>
+              </Pressable>
 
-          {/* Render all custom fields dynamically */}
-          {customFields.map((field) => (
-            <SwipeableCustomFieldRow
-              key={field.key}
-              fieldKey={field.key}
-              fieldValue={field.value}
-              metadata={field.metadata}
-              onPress={() => handleEditCustomField(field)}
-              onDelete={handleDeleteCustomField}
-              variant="boss"
-            />
-          ))}
-          
-          {/* Add custom field button */}
-          <AddCustomFieldButton onPress={() => setIsAddModalVisible(true)} />
-        </View>
+              <Pressable 
+                style={styles.infoRow} 
+                testID="management-style-row"
+                onPress={isEditingManagementStyle ? undefined : handleEditManagementStyle}
+              >
+                <Text style={styles.rowIconEmoji} testID="management-style-icon">🤝</Text>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel} testID="management-style-label">Management style</Text>
+                  {isEditingManagementStyle ? (
+                    <TextInput
+                      style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
+                      value={managementStyle}
+                      onChangeText={setManagementStyle}
+                      onBlur={handleBlurManagementStyle}
+                      autoFocus
+                      placeholder="Enter management style"
+                      testID="management-style-input"
+                    />
+                  ) : (
+                    <Text style={[styles.rowValue, !boss.managementStyle && { opacity: 0.5 }]} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
+                  )}
+                </View>
+              </Pressable>
+
+              {/* Render all custom fields dynamically */}
+              {customFields.map((field) => (
+                <SwipeableCustomFieldRow
+                  key={field.key}
+                  fieldKey={field.key}
+                  fieldValue={field.value}
+                  metadata={field.metadata}
+                  onPress={() => handleEditCustomField(field)}
+                  onDelete={handleDeleteCustomField}
+                  variant="boss"
+                />
+              ))}
+              
+              {/* Add custom field button */}
+              <AddCustomFieldButton onPress={() => setIsAddModalVisible(true)} />
+            </View>
+          </>
+        )}
       </KeyboardAwareScrollView>
-      )}
 
       {/* Date Picker for Started At */}
       <DateTimePickerModal

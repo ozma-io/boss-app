@@ -341,201 +341,203 @@ export default function ProfileScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container} testID="profile-container">
-      {loading ? (
-        <View style={[styles.centerContent, { flex: 1 }]} testID="profile-loading">
-          <ActivityIndicator size="large" color="#B6D95C" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
-        </View>
-      ) : error ? (
-        <View style={[styles.centerContent, { flex: 1 }]} testID="profile-error">
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
-        </View>
-      ) : !profile ? (
-        <View style={[styles.centerContent, { flex: 1 }]} testID="profile-empty">
-          <Text style={styles.emptyIcon}>👤</Text>
-          <Text style={styles.emptyText}>Profile not found</Text>
-          <Text style={styles.emptyHint}>Please try signing in again</Text>
-        </View>
-      ) : (
-        <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} bottomOffset={20} testID="profile-scroll-view">
-        <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="profile-header">
-          <Text style={styles.headerTitle} testID="header-title">BossUp</Text>
-        </View>
-
-        <View style={styles.profileSection} testID="profile-section">
-          <View style={styles.avatarContainer} testID="avatar-container">
-            <Image 
-              source={require('@/assets/images/avatar.png')} 
-              style={styles.avatar}
-              resizeMode="contain"
-              testID="avatar-image"
-            />
+      <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} bottomOffset={100} testID="profile-scroll-view">
+        {loading ? (
+          <View style={[styles.centerContent, { flex: 1 }]} testID="profile-loading">
+            <ActivityIndicator size="large" color="#B6D95C" />
+            <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
-          <InlineEditableHeading
-            value={profile.displayName || 'User'}
-            onSave={async (newName) => {
-              await updateProfile({ displayName: newName });
-              trackAmplitudeEvent('profile_field_edited', {
-                field: 'displayName',
-              });
-            }}
-            placeholder="Enter your name"
-            testID="username"
-            style={styles.username}
-          />
-          <Text style={styles.email} testID="email-text">{profile.email}</Text>
-        </View>
-
-        <View style={styles.fieldsSection} testID="fields-section">
-          <Pressable 
-            style={styles.goalCard} 
-            testID="goal-card"
-            onPress={isEditingGoal ? undefined : handleEditGoal}
-          >
-            <Image 
-              source={require('@/assets/images/flag-icon.png')} 
-              style={styles.cardIcon}
-              resizeMode="contain"
-              testID="goal-flag-icon"
-            />
-            <View style={styles.cardContent} testID="goal-content">
-              <Text style={styles.cardLabel} testID="goal-label">Your Goal: </Text>
-              {isEditingGoal ? (
-                <TextInput
-                  style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                  value={goal}
-                  onChangeText={setGoal}
-                  onBlur={handleBlurGoal}
-                  autoFocus
-                  placeholder="Enter your goal"
-                  testID="goal-input"
-                />
-              ) : (
-                <Text style={[styles.cardValue, !profile.goal && { opacity: 0.5 }]} testID="goal-description">{profile.goal || 'Not set'}</Text>
-              )}
+        ) : error ? (
+          <View style={[styles.centerContent, { flex: 1 }]} testID="profile-error">
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
+          </View>
+        ) : !profile ? (
+          <View style={[styles.centerContent, { flex: 1 }]} testID="profile-empty">
+            <Text style={styles.emptyIcon}>👤</Text>
+            <Text style={styles.emptyText}>Profile not found</Text>
+            <Text style={styles.emptyHint}>Please try signing in again</Text>
+          </View>
+        ) : (
+          <>
+            <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="profile-header">
+              <Text style={styles.headerTitle} testID="header-title">BossUp</Text>
             </View>
-          </Pressable>
 
-          <Pressable 
-            style={styles.infoCard} 
-            testID="position-card"
-            onPress={isEditingPosition ? undefined : handleEditPosition}
-          >
-            <Image 
-              source={require('@/assets/images/briefcase-icon.png')} 
-              style={styles.cardIcon}
-              resizeMode="contain"
-              testID="position-briefcase-icon"
-            />
-            <View style={styles.cardContent} testID="position-content">
-              <Text style={styles.cardLabel} testID="position-label">Position: </Text>
-              {isEditingPosition ? (
-                <TextInput
-                  style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                  value={position}
-                  onChangeText={setPosition}
-                  onBlur={handleBlurPosition}
-                  autoFocus
-                  placeholder="Enter your position"
-                  testID="position-input"
+            <View style={styles.profileSection} testID="profile-section">
+              <View style={styles.avatarContainer} testID="avatar-container">
+                <Image 
+                  source={require('@/assets/images/avatar.png')} 
+                  style={styles.avatar}
+                  resizeMode="contain"
+                  testID="avatar-image"
                 />
-              ) : (
-                <Text style={[styles.cardValue, !profile.position && { opacity: 0.5 }]} testID="position-description">{profile.position || 'Not set'}</Text>
-              )}
-            </View>
-          </Pressable>
-
-          {/* Render all custom fields dynamically */}
-          {customFields.map((field) => (
-            <View key={field.key} style={styles.customFieldWrapper}>
-              <SwipeableCustomFieldRow
-                fieldKey={field.key}
-                fieldValue={field.value}
-                metadata={field.metadata}
-                onPress={() => handleEditCustomField(field)}
-                onDelete={handleDeleteCustomField}
-                variant="profile"
+              </View>
+              <InlineEditableHeading
+                value={profile.displayName || 'User'}
+                onSave={async (newName) => {
+                  await updateProfile({ displayName: newName });
+                  trackAmplitudeEvent('profile_field_edited', {
+                    field: 'displayName',
+                  });
+                }}
+                placeholder="Enter your name"
+                testID="username"
+                style={styles.username}
               />
+              <Text style={styles.email} testID="email-text">{profile.email}</Text>
             </View>
-          ))}
-          
-          {/* Add custom field button */}
-          <AddCustomFieldButton onPress={() => setIsAddModalVisible(true)} />
-        </View>
 
-        {/* TODO: This section uses mocked metrics data. Replace with real calculations based on timeline entries */}
-        {/* <View style={styles.metricsSection} testID="metrics-section">
-          <Text style={styles.sectionTitle} testID="metrics-title">Where You Now</Text>
+            <View style={styles.fieldsSection} testID="fields-section">
+              <Pressable 
+                style={styles.goalCard} 
+                testID="goal-card"
+                onPress={isEditingGoal ? undefined : handleEditGoal}
+              >
+                <Image 
+                  source={require('@/assets/images/flag-icon.png')} 
+                  style={styles.cardIcon}
+                  resizeMode="contain"
+                  testID="goal-flag-icon"
+                />
+                <View style={styles.cardContent} testID="goal-content">
+                  <Text style={styles.cardLabel} testID="goal-label">Your Goal: </Text>
+                  {isEditingGoal ? (
+                    <TextInput
+                      style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                      value={goal}
+                      onChangeText={setGoal}
+                      onBlur={handleBlurGoal}
+                      autoFocus
+                      placeholder="Enter your goal"
+                      testID="goal-input"
+                    />
+                  ) : (
+                    <Text style={[styles.cardValue, !profile.goal && { opacity: 0.5 }]} testID="goal-description">{profile.goal || 'Not set'}</Text>
+                  )}
+                </View>
+              </Pressable>
 
-          <View style={styles.metricItem} testID="metric-stress-level">
-            <View style={styles.metricHeader} testID="metric-stress-level-header">
-              <Text style={styles.metricLabel} testID="metric-stress-level-label">Your stress level</Text>
-              <Text style={styles.metricValue} testID="metric-stress-level-value">Higher than {Math.round(mockMetrics.stressLevel * 100)}%</Text>
+              <Pressable 
+                style={styles.infoCard} 
+                testID="position-card"
+                onPress={isEditingPosition ? undefined : handleEditPosition}
+              >
+                <Image 
+                  source={require('@/assets/images/briefcase-icon.png')} 
+                  style={styles.cardIcon}
+                  resizeMode="contain"
+                  testID="position-briefcase-icon"
+                />
+                <View style={styles.cardContent} testID="position-content">
+                  <Text style={styles.cardLabel} testID="position-label">Position: </Text>
+                  {isEditingPosition ? (
+                    <TextInput
+                      style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                      value={position}
+                      onChangeText={setPosition}
+                      onBlur={handleBlurPosition}
+                      autoFocus
+                      placeholder="Enter your position"
+                      testID="position-input"
+                    />
+                  ) : (
+                    <Text style={[styles.cardValue, !profile.position && { opacity: 0.5 }]} testID="position-description">{profile.position || 'Not set'}</Text>
+                  )}
+                </View>
+              </Pressable>
+
+              {/* Render all custom fields dynamically */}
+              {customFields.map((field) => (
+                <View key={field.key} style={styles.customFieldWrapper}>
+                  <SwipeableCustomFieldRow
+                    fieldKey={field.key}
+                    fieldValue={field.value}
+                    metadata={field.metadata}
+                    onPress={() => handleEditCustomField(field)}
+                    onDelete={handleDeleteCustomField}
+                    variant="profile"
+                  />
+                </View>
+              ))}
+              
+              {/* Add custom field button */}
+              <AddCustomFieldButton onPress={() => setIsAddModalVisible(true)} />
             </View>
-            {renderProgressBar(mockMetrics.stressLevel, '#B8E986', 'metric-stress-level-progress')}
-          </View>
 
-          <View style={styles.metricItem} testID="metric-boss-challenges">
-            <View style={styles.metricHeader} testID="metric-boss-challenges-header">
-              <Text style={styles.metricLabel} testID="metric-boss-challenges-label">Boss relationship challenges</Text>
-              <Text style={styles.metricValue} testID="metric-boss-challenges-value">More than {Math.round(mockMetrics.bossRelationshipChallenges * 100)}%</Text>
+            {/* TODO: This section uses mocked metrics data. Replace with real calculations based on timeline entries */}
+            {/* <View style={styles.metricsSection} testID="metrics-section">
+              <Text style={styles.sectionTitle} testID="metrics-title">Where You Now</Text>
+
+              <View style={styles.metricItem} testID="metric-stress-level">
+                <View style={styles.metricHeader} testID="metric-stress-level-header">
+                  <Text style={styles.metricLabel} testID="metric-stress-level-label">Your stress level</Text>
+                  <Text style={styles.metricValue} testID="metric-stress-level-value">Higher than {Math.round(mockMetrics.stressLevel * 100)}%</Text>
+                </View>
+                {renderProgressBar(mockMetrics.stressLevel, '#B8E986', 'metric-stress-level-progress')}
+              </View>
+
+              <View style={styles.metricItem} testID="metric-boss-challenges">
+                <View style={styles.metricHeader} testID="metric-boss-challenges-header">
+                  <Text style={styles.metricLabel} testID="metric-boss-challenges-label">Boss relationship challenges</Text>
+                  <Text style={styles.metricValue} testID="metric-boss-challenges-value">More than {Math.round(mockMetrics.bossRelationshipChallenges * 100)}%</Text>
+                </View>
+                {renderProgressBar(mockMetrics.bossRelationshipChallenges, '#FF6B6B', 'metric-boss-challenges-progress')}
+              </View>
+
+              <View style={styles.metricItem} testID="metric-confidence-gap">
+                <View style={styles.metricHeader} testID="metric-confidence-gap-header">
+                  <Text style={styles.metricLabel} testID="metric-confidence-gap-label">Self-doubt / confidence gap</Text>
+                  <Text style={styles.metricValue} testID="metric-confidence-gap-value">Higher than {Math.round(mockMetrics.selfDoubtConfidenceGap * 100)}%</Text>
+                </View>
+                {renderProgressBar(mockMetrics.selfDoubtConfidenceGap, '#B8E986', 'metric-confidence-gap-progress')}
+              </View>
+            </View> */}
+
+            <View style={styles.settingsSectionContainer} testID="settings-section-container">
+              <Text style={styles.sectionTitle} testID="settings-title">Settings</Text>
+              <View style={styles.settingsSection} testID="settings-section">
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.settingsItem,
+                    pressed && styles.settingsItemPressed
+                  ]}
+                  onPress={handleOpenPersonalInfo}
+                  testID="settings-personal-info-button"
+                >
+                  <Text style={styles.settingsItemText} testID="settings-personal-info-text">Personal information</Text>
+                  <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-personal-info-icon" />
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.settingsItem,
+                    pressed && styles.settingsItemPressed
+                  ]}
+                  onPress={handleOpenSubscription}
+                  testID="settings-subscription-button"
+                >
+                  <Text style={styles.settingsItemText} testID="settings-subscription-text">Subscription</Text>
+                  <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-subscription-icon" />
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.settingsItem,
+                    pressed && styles.settingsItemPressed
+                  ]}
+                  onPress={handleOpenSupport}
+                  testID="settings-support-button"
+                >
+                  <Text style={styles.settingsItemText} testID="settings-support-text">Support</Text>
+                  <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-support-icon" />
+                </Pressable>
+              </View>
             </View>
-            {renderProgressBar(mockMetrics.bossRelationshipChallenges, '#FF6B6B', 'metric-boss-challenges-progress')}
-          </View>
-
-          <View style={styles.metricItem} testID="metric-confidence-gap">
-            <View style={styles.metricHeader} testID="metric-confidence-gap-header">
-              <Text style={styles.metricLabel} testID="metric-confidence-gap-label">Self-doubt / confidence gap</Text>
-              <Text style={styles.metricValue} testID="metric-confidence-gap-value">Higher than {Math.round(mockMetrics.selfDoubtConfidenceGap * 100)}%</Text>
-            </View>
-            {renderProgressBar(mockMetrics.selfDoubtConfidenceGap, '#B8E986', 'metric-confidence-gap-progress')}
-          </View>
-        </View> */}
-
-        <View style={styles.settingsSectionContainer} testID="settings-section-container">
-          <Text style={styles.sectionTitle} testID="settings-title">Settings</Text>
-          <View style={styles.settingsSection} testID="settings-section">
-            <Pressable
-              style={({ pressed }) => [
-                styles.settingsItem,
-                pressed && styles.settingsItemPressed
-              ]}
-              onPress={handleOpenPersonalInfo}
-              testID="settings-personal-info-button"
-            >
-              <Text style={styles.settingsItemText} testID="settings-personal-info-text">Personal information</Text>
-              <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-personal-info-icon" />
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.settingsItem,
-                pressed && styles.settingsItemPressed
-              ]}
-              onPress={handleOpenSubscription}
-              testID="settings-subscription-button"
-            >
-              <Text style={styles.settingsItemText} testID="settings-subscription-text">Subscription</Text>
-              <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-subscription-icon" />
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.settingsItem,
-                pressed && styles.settingsItemPressed
-              ]}
-              onPress={handleOpenSupport}
-              testID="settings-support-button"
-            >
-              <Text style={styles.settingsItemText} testID="settings-support-text">Support</Text>
-              <FontAwesome name="chevron-right" size={16} color="#666" testID="settings-support-icon" />
-            </Pressable>
-          </View>
-        </View>
+          </>
+        )}
       </KeyboardAwareScrollView>
-      )}
 
       <FloatingChatButton />
       
