@@ -1,5 +1,6 @@
 import { AddCustomFieldButton } from '@/components/AddCustomFieldButton';
 import { AddCustomFieldModal } from '@/components/AddCustomFieldModal';
+import { DateTimePickerModal } from '@/components/DateTimePickerModal';
 import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { InlineEditableHeading } from '@/components/InlineEditableHeading';
 import { SwipeableCustomFieldRow } from '@/components/SwipeableCustomFieldRow';
@@ -10,11 +11,10 @@ import { logger } from '@/services/logger.service';
 import { showAlert } from '@/utils/alert';
 import { generateUniqueFieldKey } from '@/utils/customFieldHelpers';
 import { getCustomFields } from '@/utils/fieldHelpers';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect } from 'expo-router';
 import { deleteField } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -469,50 +469,24 @@ export default function BossScreen() {
       )}
 
       {/* Date Picker for Started At */}
-      {showStartedAtPicker && (
-        <Pressable
-          style={styles.pickerOverlay}
-          onPress={() => setShowStartedAtPicker(false)}
-          testID="started-at-picker-overlay"
-        >
-          <Pressable
-            style={styles.pickerContainer}
-            onPress={(e) => e.stopPropagation()}
-            testID="started-at-picker-container"
-          >
-            <DateTimePicker
-              value={startedAt}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleStartedAtChange}
-              testID="started-at-date-picker"
-            />
-          </Pressable>
-        </Pressable>
-      )}
+      <DateTimePickerModal
+        isVisible={showStartedAtPicker}
+        value={startedAt}
+        mode="date"
+        onChange={handleStartedAtChange}
+        onClose={() => setShowStartedAtPicker(false)}
+        testID="started-at-date-picker"
+      />
 
       {/* Date Picker for Birthday */}
-      {showBirthdayPicker && (
-        <Pressable
-          style={styles.pickerOverlay}
-          onPress={() => setShowBirthdayPicker(false)}
-          testID="birthday-picker-overlay"
-        >
-          <Pressable
-            style={styles.pickerContainer}
-            onPress={(e) => e.stopPropagation()}
-            testID="birthday-picker-container"
-          >
-            <DateTimePicker
-              value={birthday}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleBirthdayChange}
-              testID="birthday-date-picker"
-            />
-          </Pressable>
-        </Pressable>
-      )}
+      <DateTimePickerModal
+        isVisible={showBirthdayPicker}
+        value={birthday}
+        mode="date"
+        onChange={handleBirthdayChange}
+        onClose={() => setShowBirthdayPicker(false)}
+        testID="birthday-date-picker"
+      />
 
       <FloatingChatButton />
       
@@ -746,22 +720,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
-  },
-  pickerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  pickerContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 20,
   },
 });

@@ -1,7 +1,6 @@
 import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -14,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import Modal from 'react-native-modal';
+import { DateTimePickerModal } from './DateTimePickerModal';
 
 interface AddTimelineEntryModalProps {
   isVisible: boolean;
@@ -609,50 +609,24 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
           </ScrollView>
 
           {/* Date Picker */}
-          {showDatePicker && (
-            <Pressable
-              style={styles.pickerOverlay}
-              onPress={() => setShowDatePicker(false)}
-              testID="date-picker-overlay"
-            >
-              <Pressable
-                style={styles.pickerContainer}
-                onPress={(e) => e.stopPropagation()}
-                testID="date-picker-container"
-              >
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleDateChange}
-                  testID="date-picker"
-                />
-              </Pressable>
-            </Pressable>
-          )}
+          <DateTimePickerModal
+            isVisible={showDatePicker}
+            value={selectedDate}
+            mode="date"
+            onChange={handleDateChange}
+            onClose={() => setShowDatePicker(false)}
+            testID="date-picker"
+          />
 
           {/* Time Picker */}
-          {showTimePicker && (
-            <Pressable
-              style={styles.pickerOverlay}
-              onPress={() => setShowTimePicker(false)}
-              testID="time-picker-overlay"
-            >
-              <Pressable
-                style={styles.pickerContainer}
-                onPress={(e) => e.stopPropagation()}
-                testID="time-picker-container"
-              >
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleTimeChange}
-                  testID="time-picker"
-                />
-              </Pressable>
-            </Pressable>
-          )}
+          <DateTimePickerModal
+            isVisible={showTimePicker}
+            value={selectedDate}
+            mode="time"
+            onChange={handleTimeChange}
+            onClose={() => setShowTimePicker(false)}
+            testID="time-picker"
+          />
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -807,23 +781,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Manrope-Regular',
     color: '#000',
-  },
-  pickerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  pickerContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 20,
   },
 });
 
