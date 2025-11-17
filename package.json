@@ -1,7 +1,7 @@
 {
   "name": "boss-app",
   "main": "index.js",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "scripts": {
     "start": "expo start --dev-client",
     "dev": "expo start --dev-client",
