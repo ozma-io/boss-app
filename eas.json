@@ -9,7 +9,7 @@
       "distribution": "internal",
       "channel": "development",
       "android": {
-        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+        "prebuildCommand": "bash .eas/build/fix-android-manifest.sh"
       }
     },
     "preview": {
@@ -19,21 +19,21 @@
       },
       "channel": "preview",
       "android": {
-        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+        "prebuildCommand": "bash .eas/build/fix-android-manifest.sh"
       }
     },
     "preview-device": {
       "distribution": "internal",
       "channel": "preview",
       "android": {
-        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+        "prebuildCommand": "bash .eas/build/fix-android-manifest.sh"
       }
     },
     "production": {
       "channel": "production",
       "autoIncrement": true,
       "android": {
-        "prebuildCommand": ".eas/build/fix-android-manifest.sh"
+        "prebuildCommand": "bash .eas/build/fix-android-manifest.sh"
       }
     }
   },
