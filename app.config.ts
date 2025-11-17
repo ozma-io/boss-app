@@ -176,6 +176,8 @@ const config: ExpoConfig = {
         },
       },
     ],
+    // Must be last to modify manifest after all other plugins have run
+    './plugins/withNotificationManifestFix',
   ],
   experiments: {
     typedRoutes: true,
