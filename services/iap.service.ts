@@ -241,6 +241,15 @@ export async function purchaseSubscription(
         // Acknowledge purchase (iOS automatically acknowledges, but good practice)
         await RNIap.finishTransaction({ purchase, isConsumable: false });
 
+        // Track trial start if applicable
+        if (verificationResult.subscription?.status === 'trial') {
+          trackAmplitudeEvent('subscription_trial_started', {
+            tier,
+            billing_period: billingPeriod,
+            platform: Platform.OS,
+          });
+        }
+
         logger.info('Purchase verified and completed', { 
           transactionId: purchase.transactionId || purchase.id,
         });
@@ -296,7 +305,7 @@ async function verifyPurchaseWithBackend(
   productId: string,
   tier: string,
   billingPeriod: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; subscription?: { status: string } }> {
   try {
     const verifyIAP = httpsCallable(functions, 'verifyIAPPurchase');
 
@@ -313,6 +322,7 @@ async function verifyPurchaseWithBackend(
     return {
       success: data.success,
       error: data.error,
+      subscription: data.subscription,
     };
   } catch (error) {
     logger.error('Backend verification failed', { error });
