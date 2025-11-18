@@ -76,23 +76,29 @@ export async function initializeAmplitude(): Promise<void> {
         }
         
         // Initialize with full config (no serverZone for US - it's default)
-        webAmplitude.init(AMPLITUDE_API_KEY, {
-          fetchRemoteConfig: true,
-          autocapture: {
-            attribution: true,
-            fileDownloads: true,
-            formInteractions: true,
-            pageViews: true,
-            sessions: true,
-            elementInteractions: true,
-            networkTracking: true,
-            webVitals: true,
-            frustrationInteractions: true
-          }
-        });
-        
-        isInitialized = true;
-        console.log('[Amplitude] Web SDK initialized successfully with Session Replay');
+        // Note: networkTracking disabled due to unhandled promise rejections causing app crashes
+        try {
+          webAmplitude.init(AMPLITUDE_API_KEY, {
+            fetchRemoteConfig: true,
+            autocapture: {
+              attribution: true,
+              fileDownloads: true,
+              formInteractions: true,
+              pageViews: true,
+              sessions: true,
+              elementInteractions: true,
+              networkTracking: false,
+              webVitals: true,
+              frustrationInteractions: true
+            }
+          });
+          
+          isInitialized = true;
+          console.log('[Amplitude] Web SDK initialized successfully with Session Replay');
+        } catch (initError) {
+          console.error('[Amplitude] Failed to initialize web SDK', initError);
+          throw initError;
+        }
       } else {
         console.warn('[Amplitude] Web SDK script not loaded. Add script tag to index.html');
       }
