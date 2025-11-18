@@ -101,6 +101,55 @@ All use:
 - `/.well-known/apple-app-site-association` (iOS)
 - `/.well-known/assetlinks.json` (Android)
 
+### ⚠️ CRITICAL: linkDomain Parameter Required
+
+**Problem:** Magic links use `firebaseapp.com` domain instead of custom domain, breaking App Links.
+
+**Symptom:**
+- iOS: Works (Universal Links handle redirect)
+- Android: Opens in browser, stays in browser
+- Link structure:
+  ```
+  ❌ https://the-boss-app-e42b6.firebaseapp.com/__/auth/links?link=https://boss-app.ozma.io/__/auth/action?...
+  ```
+
+**Root Cause:** Firebase Console "Customize domain" setting is NOT enough for `sendSignInLinkToEmail()`.
+
+**Solution:** Add `linkDomain` parameter in `services/auth.service.ts`:
+
+```typescript
+const actionCodeSettings = {
+  url: `${redirectUrl}?email=${email}`,
+  handleCodeInApp: true,
+  iOS: { bundleId: 'com.ozmaio.bossup' },
+  android: { 
+    packageName: 'com.ozmaio.bossup',
+    installApp: true,
+  },
+  linkDomain: 'boss-app.ozma.io',  // ← THIS IS REQUIRED
+};
+```
+
+**Result:**
+```
+✅ https://boss-app.ozma.io/__/auth/links?link=https://boss-app.ozma.io/__/auth/action?...
+```
+
+**Verification:**
+1. Send magic link
+2. Check email — link must start with `boss-app.ozma.io`
+3. Click on Android → "Open in app" banner appears
+4. App opens directly
+
+**Firebase Console Steps (also required):**
+1. Authentication → Templates → Edit any template
+2. Click "Customize domain" (blue link)
+3. Enter `boss-app.ozma.io`
+4. Add DNS records for verification
+5. Click "Apply Custom Domain"
+
+Both Console setting AND code parameter are required.
+
 ### Security
 
 - Single-use, time-limited links
