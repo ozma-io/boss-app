@@ -108,6 +108,61 @@ export default function PersonalInfoScreen() {
     }
   };
 
+  // Format update created date with time
+  const formatUpdateCreatedAt = (date: Date | null): string => {
+    if (!date) {
+      return 'N/A';
+    }
+    try {
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  // Format relative time (e.g., "2 days ago", "5 hours ago")
+  const formatUpdateTimeAgo = (date: Date | null): string => {
+    if (!date) {
+      return 'N/A';
+    }
+    try {
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffSeconds = Math.floor(diffMs / 1000);
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      const diffHours = Math.floor(diffMinutes / 60);
+      const diffDays = Math.floor(diffHours / 24);
+      const diffWeeks = Math.floor(diffDays / 7);
+      const diffMonths = Math.floor(diffDays / 30);
+      const diffYears = Math.floor(diffDays / 365);
+
+      if (diffYears > 0) {
+        return diffYears === 1 ? '1 year ago' : `${diffYears} years ago`;
+      } else if (diffMonths > 0) {
+        return diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
+      } else if (diffWeeks > 0) {
+        return diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+      } else if (diffDays > 0) {
+        return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+      } else if (diffHours > 0) {
+        return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+      } else if (diffMinutes > 0) {
+        return diffMinutes === 1 ? '1 minute ago' : `${diffMinutes} minutes ago`;
+      } else {
+        return 'Just now';
+      }
+    } catch {
+      return 'N/A';
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -208,10 +263,17 @@ export default function PersonalInfoScreen() {
               </Text>
             </Pressable>
             
-            <View style={[styles.versionItem, styles.lastVersionItem]} testID="version-item-runtime">
-              <Text style={styles.versionLabel} testID="version-label-runtime">Runtime Version</Text>
-              <Text style={styles.versionValue} testID="version-value-runtime">
-                {Updates.runtimeVersion || 'unknown'}
+            <View style={styles.versionItem} testID="version-item-update-date">
+              <Text style={styles.versionLabel} testID="version-label-update-date">Update Created At</Text>
+              <Text style={styles.versionValue} testID="version-value-update-date">
+                {formatUpdateCreatedAt(Updates.createdAt)}
+              </Text>
+            </View>
+            
+            <View style={[styles.versionItem, styles.lastVersionItem]} testID="version-item-update-time-ago">
+              <Text style={styles.versionLabel} testID="version-label-update-time-ago">Update Time Ago</Text>
+              <Text style={styles.versionValue} testID="version-value-update-time-ago">
+                {formatUpdateTimeAgo(Updates.createdAt)}
               </Text>
             </View>
           </View>
