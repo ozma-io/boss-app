@@ -12,14 +12,14 @@ import * as Crypto from 'expo-crypto';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-    User as FirebaseUser,
-    GoogleAuthProvider,
-    OAuthProvider,
-    onAuthStateChanged as firebaseOnAuthStateChanged,
-    sendSignInLinkToEmail,
-    signInWithCredential,
-    signInWithCustomToken,
-    signInWithEmailLink
+  User as FirebaseUser,
+  GoogleAuthProvider,
+  OAuthProvider,
+  onAuthStateChanged as firebaseOnAuthStateChanged,
+  sendSignInLinkToEmail,
+  signInWithCredential,
+  signInWithCustomToken,
+  signInWithEmailLink
 } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
@@ -77,6 +77,7 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
       packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE || 'com.ozmaio.bossup',
       installApp: true,
     },
+    dynamicLinkDomain: 'boss-app.ozma.io',
   };
 
   logger.info('Sending sign-in link', {
