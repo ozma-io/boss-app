@@ -29,11 +29,9 @@ export default function ProfileScreen() {
   const { user } = useAuth();
   const { profile, loading, error, updateProfile } = useUserProfile();
   
-  // Editing states for fixed required fields
-  const [goal, setGoal] = useState('');
-  const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [position, setPosition] = useState('');
-  const [isEditingPosition, setIsEditingPosition] = useState(false);
+  // Local state for editing fields (to track changes before saving)
+  const [goalValue, setGoalValue] = useState('');
+  const [positionValue, setPositionValue] = useState('');
   
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -44,6 +42,14 @@ export default function ProfileScreen() {
   const profileRef = useRef(profile);
   useEffect(() => {
     profileRef.current = profile;
+  }, [profile]);
+
+  // Sync local state with profile data
+  useEffect(() => {
+    if (profile) {
+      setGoalValue(profile.goal || '');
+      setPositionValue(profile.position || '');
+    }
   }, [profile]);
 
   const handleCloseModal = useCallback((): void => {
@@ -90,40 +96,32 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleEditGoal = (): void => {
-    setGoal(profile?.goal || '');
-    setIsEditingGoal(true);
-  };
-
   const handleBlurGoal = async (): Promise<void> => {
-    setIsEditingGoal(false);
-    if (goal !== profile?.goal) {
+    if (goalValue !== profile?.goal) {
       try {
-        await updateProfile({ goal });
+        await updateProfile({ goal: goalValue });
         trackAmplitudeEvent('profile_field_edited', {
           field: 'goal',
         });
       } catch (err) {
         logger.error('Failed to update goal', { feature: 'ProfileScreen', error: err instanceof Error ? err : new Error(String(err)) });
+        // Revert to original value on error
+        setGoalValue(profile?.goal || '');
       }
     }
   };
 
-  const handleEditPosition = (): void => {
-    setPosition(profile?.position || '');
-    setIsEditingPosition(true);
-  };
-
   const handleBlurPosition = async (): Promise<void> => {
-    setIsEditingPosition(false);
-    if (position !== profile?.position) {
+    if (positionValue !== profile?.position) {
       try {
-        await updateProfile({ position });
+        await updateProfile({ position: positionValue });
         trackAmplitudeEvent('profile_field_edited', {
           field: 'position',
         });
       } catch (err) {
         logger.error('Failed to update position', { feature: 'ProfileScreen', error: err instanceof Error ? err : new Error(String(err)) });
+        // Revert to original value on error
+        setPositionValue(profile?.position || '');
       }
     }
   };
@@ -341,20 +339,26 @@ export default function ProfileScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container} testID="profile-container">
-      <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} bottomOffset={100} testID="profile-scroll-view">
+      <KeyboardAwareScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent} 
+        bottomOffset={150} 
+        extraKeyboardSpace={50}
+        testID="profile-scroll-view"
+      >
         {loading ? (
-          <View style={[styles.centerContent, { flex: 1 }]} testID="profile-loading">
+          <View style={styles.centerContent} testID="profile-loading">
             <ActivityIndicator size="large" color="#B6D95C" />
             <Text style={styles.loadingText}>Loading profile...</Text>
           </View>
         ) : error ? (
-          <View style={[styles.centerContent, { flex: 1 }]} testID="profile-error">
+          <View style={styles.centerContent} testID="profile-error">
             <Text style={styles.errorIcon}>⚠️</Text>
             <Text style={styles.errorText}>{error}</Text>
             <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
           </View>
         ) : !profile ? (
-          <View style={[styles.centerContent, { flex: 1 }]} testID="profile-empty">
+          <View style={styles.centerContent} testID="profile-empty">
             <Text style={styles.emptyIcon}>👤</Text>
             <Text style={styles.emptyText}>Profile not found</Text>
             <Text style={styles.emptyHint}>Please try signing in again</Text>
@@ -390,11 +394,7 @@ export default function ProfileScreen() {
             </View>
 
             <View style={styles.fieldsSection} testID="fields-section">
-              <Pressable 
-                style={styles.goalCard} 
-                testID="goal-card"
-                onPress={isEditingGoal ? undefined : handleEditGoal}
-              >
+              <View style={styles.goalCard} testID="goal-card">
                 <Image 
                   source={require('@/assets/images/flag-icon.png')} 
                   style={styles.cardIcon}
@@ -403,27 +403,19 @@ export default function ProfileScreen() {
                 />
                 <View style={styles.cardContent} testID="goal-content">
                   <Text style={styles.cardLabel} testID="goal-label">Your Goal: </Text>
-                  {isEditingGoal ? (
-                    <TextInput
-                      style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                      value={goal}
-                      onChangeText={setGoal}
-                      onBlur={handleBlurGoal}
-                      autoFocus
-                      placeholder="Enter your goal"
-                      testID="goal-input"
-                    />
-                  ) : (
-                    <Text style={[styles.cardValue, !profile.goal && { opacity: 0.5 }]} testID="goal-description">{profile.goal || 'Not set'}</Text>
-                  )}
+                  <TextInput
+                    style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                    value={goalValue}
+                    onChangeText={setGoalValue}
+                    onBlur={handleBlurGoal}
+                    placeholder="Enter your goal"
+                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
+                    testID="goal-input"
+                  />
                 </View>
-              </Pressable>
+              </View>
 
-              <Pressable 
-                style={styles.infoCard} 
-                testID="position-card"
-                onPress={isEditingPosition ? undefined : handleEditPosition}
-              >
+              <View style={styles.infoCard} testID="position-card">
                 <Image 
                   source={require('@/assets/images/briefcase-icon.png')} 
                   style={styles.cardIcon}
@@ -432,21 +424,17 @@ export default function ProfileScreen() {
                 />
                 <View style={styles.cardContent} testID="position-content">
                   <Text style={styles.cardLabel} testID="position-label">Position: </Text>
-                  {isEditingPosition ? (
-                    <TextInput
-                      style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
-                      value={position}
-                      onChangeText={setPosition}
-                      onBlur={handleBlurPosition}
-                      autoFocus
-                      placeholder="Enter your position"
-                      testID="position-input"
-                    />
-                  ) : (
-                    <Text style={[styles.cardValue, !profile.position && { opacity: 0.5 }]} testID="position-description">{profile.position || 'Not set'}</Text>
-                  )}
+                  <TextInput
+                    style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                    value={positionValue}
+                    onChangeText={setPositionValue}
+                    onBlur={handleBlurPosition}
+                    placeholder="Enter your position"
+                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
+                    testID="position-input"
+                  />
                 </View>
-              </Pressable>
+              </View>
 
               {/* Render all custom fields dynamically */}
               {customFields.map((field) => (
@@ -565,6 +553,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    minHeight: 600,
   },
   loadingText: {
     marginTop: 16,
@@ -613,6 +602,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 70,
+    flexGrow: 1,
   },
   header: {
     paddingBottom: 16,

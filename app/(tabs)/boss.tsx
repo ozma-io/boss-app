@@ -29,14 +29,12 @@ export default function BossScreen() {
   const [birthday, setBirthday] = useState<Date>(new Date());
   const [showBirthdayPicker, setShowBirthdayPicker] = useState(false);
   
-  const [isEditingPosition, setIsEditingPosition] = useState(false);
-  const [position, setPosition] = useState('');
+  const [positionValue, setPositionValue] = useState('');
   
   const [startedAt, setStartedAt] = useState<Date>(new Date());
   const [showStartedAtPicker, setShowStartedAtPicker] = useState(false);
   
-  const [isEditingManagementStyle, setIsEditingManagementStyle] = useState(false);
-  const [managementStyle, setManagementStyle] = useState('');
+  const [managementStyleValue, setManagementStyleValue] = useState('');
   
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -47,6 +45,14 @@ export default function BossScreen() {
   const bossRef = useRef(boss);
   useEffect(() => {
     bossRef.current = boss;
+  }, [boss]);
+
+  // Sync local state with boss data
+  useEffect(() => {
+    if (boss) {
+      setPositionValue(boss.position || '');
+      setManagementStyleValue(boss.managementStyle || '');
+    }
   }, [boss]);
 
   const handleCloseModal = useCallback((): void => {
@@ -93,22 +99,18 @@ export default function BossScreen() {
     }
   };
 
-  const handleEditPosition = (): void => {
-    setPosition(boss?.position || '');
-    setIsEditingPosition(true);
-  };
-
   const handleBlurPosition = async (): Promise<void> => {
-    setIsEditingPosition(false);
-    if (position !== boss?.position && boss) {
+    if (positionValue !== boss?.position && boss) {
       try {
-        await updateBoss({ position });
+        await updateBoss({ position: positionValue });
         trackAmplitudeEvent('boss_field_edited', {
           field: 'position',
           bossId: boss.id,
         });
       } catch (err) {
         logger.error('Failed to update position', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
+        // Revert to original value on error
+        setPositionValue(boss?.position || '');
       }
     }
   };
@@ -138,22 +140,18 @@ export default function BossScreen() {
     }
   };
 
-  const handleEditManagementStyle = (): void => {
-    setManagementStyle(boss?.managementStyle || '');
-    setIsEditingManagementStyle(true);
-  };
-
   const handleBlurManagementStyle = async (): Promise<void> => {
-    setIsEditingManagementStyle(false);
-    if (managementStyle !== boss?.managementStyle && boss) {
+    if (managementStyleValue !== boss?.managementStyle && boss) {
       try {
-        await updateBoss({ managementStyle });
+        await updateBoss({ managementStyle: managementStyleValue });
         trackAmplitudeEvent('boss_field_edited', {
           field: 'managementStyle',
           bossId: boss.id,
         });
       } catch (err) {
         logger.error('Failed to update management style', { feature: 'BossScreen', bossId: boss.id, error: err instanceof Error ? err : new Error(String(err)) });
+        // Revert to original value on error
+        setManagementStyleValue(boss?.managementStyle || '');
       }
     }
   };
@@ -330,20 +328,26 @@ export default function BossScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <KeyboardAwareScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} bottomOffset={100} testID="boss-scroll">
+      <KeyboardAwareScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent} 
+        bottomOffset={150} 
+        extraKeyboardSpace={50}
+        testID="boss-scroll"
+      >
         {loading ? (
-          <View style={[styles.centerContent, { flex: 1 }]} testID="boss-loading">
+          <View style={styles.centerContent} testID="boss-loading">
             <ActivityIndicator size="large" color="#B6D95C" />
             <Text style={styles.loadingText}>Loading boss data...</Text>
           </View>
         ) : error ? (
-          <View style={[styles.centerContent, { flex: 1 }]} testID="boss-error">
+          <View style={styles.centerContent} testID="boss-error">
             <Text style={styles.errorIcon}>⚠️</Text>
             <Text style={styles.errorText}>{error}</Text>
             <Text style={styles.errorHint}>Please check your connection or try again later.</Text>
           </View>
         ) : !boss ? (
-          <View style={[styles.centerContent, { flex: 1 }]} testID="boss-empty">
+          <View style={styles.centerContent} testID="boss-empty">
             <Text style={styles.emptyIcon}>👤</Text>
             <Text style={styles.emptyText}>No boss found</Text>
             <Text style={styles.emptyHint}>Add a boss to get started</Text>
@@ -412,11 +416,7 @@ export default function BossScreen() {
             <View style={styles.otherInfoSection} testID="other-info-section">
               <Text style={styles.sectionTitle} testID="section-title">Other information</Text>
 
-              <Pressable 
-                style={styles.infoRow} 
-                testID="position-row"
-                onPress={isEditingPosition ? undefined : handleEditPosition}
-              >
+              <View style={styles.infoRow} testID="position-row">
                 <Image 
                   source={require('@/assets/images/briefcase-icon.png')} 
                   style={styles.rowIcon}
@@ -425,45 +425,33 @@ export default function BossScreen() {
                 />
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel} testID="position-label">Position</Text>
-                  {isEditingPosition ? (
-                    <TextInput
-                      style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                      value={position}
-                      onChangeText={setPosition}
-                      onBlur={handleBlurPosition}
-                      autoFocus
-                      placeholder="Enter position"
-                      testID="position-input"
-                    />
-                  ) : (
-                    <Text style={styles.rowValue} testID="position-value">{boss.position}</Text>
-                  )}
+                  <TextInput
+                    style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
+                    value={positionValue}
+                    onChangeText={setPositionValue}
+                    onBlur={handleBlurPosition}
+                    placeholder="Enter position"
+                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
+                    testID="position-input"
+                  />
                 </View>
-              </Pressable>
+              </View>
 
-              <Pressable 
-                style={styles.infoRow} 
-                testID="management-style-row"
-                onPress={isEditingManagementStyle ? undefined : handleEditManagementStyle}
-              >
+              <View style={styles.infoRow} testID="management-style-row">
                 <Text style={styles.rowIconEmoji} testID="management-style-icon">🤝</Text>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel} testID="management-style-label">Management style</Text>
-                  {isEditingManagementStyle ? (
-                    <TextInput
-                      style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
-                      value={managementStyle}
-                      onChangeText={setManagementStyle}
-                      onBlur={handleBlurManagementStyle}
-                      autoFocus
-                      placeholder="Enter management style"
-                      testID="management-style-input"
-                    />
-                  ) : (
-                    <Text style={[styles.rowValue, !boss.managementStyle && { opacity: 0.5 }]} testID="management-style-value">{boss.managementStyle || 'Not set'}</Text>
-                  )}
+                  <TextInput
+                    style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
+                    value={managementStyleValue}
+                    onChangeText={setManagementStyleValue}
+                    onBlur={handleBlurManagementStyle}
+                    placeholder="Enter management style"
+                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
+                    testID="management-style-input"
+                  />
                 </View>
-              </Pressable>
+              </View>
 
               {/* Render all custom fields dynamically */}
               {customFields.map((field) => (
@@ -532,6 +520,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    minHeight: 600,
   },
   loadingText: {
     marginTop: 16,
@@ -592,6 +581,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 70,
     overflow: 'visible',
+    flexGrow: 1,
   },
   header: {
     paddingBottom: 16,

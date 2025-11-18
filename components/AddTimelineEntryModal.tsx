@@ -638,8 +638,6 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   keyboardView: {
-    flex: 1,
-    justifyContent: 'flex-end',
     maxHeight: '90%',
   },
   modalContent: {
@@ -647,6 +645,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 34,
+    flexGrow: 1,
   },
   header: {
     alignItems: 'center',
