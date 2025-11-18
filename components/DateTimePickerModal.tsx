@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 
 interface DateTimePickerModalProps {
@@ -19,31 +20,29 @@ export function DateTimePickerModal({
   onClose,
   testID,
 }: DateTimePickerModalProps) {
-  if (!isVisible) return null;
-
-  const handleChange = (event: any, date?: Date) => {
-    // On Android, the native dialog handles its own dismissal
-    // We need to close the picker after user interacts with it
-    if (Platform.OS === 'android') {
-      onClose();
+  // Android: Use imperative API (recommended approach)
+  useEffect(() => {
+    if (Platform.OS === 'android' && isVisible) {
+      DateTimePickerAndroid.open({
+        value,
+        mode,
+        onChange: (event: any, date?: Date) => {
+          onClose();
+          onChange(event, date);
+        },
+        testID,
+      });
     }
-    onChange(event, date);
-  };
+  }, [isVisible, value, mode, onChange, onClose, testID]);
 
-  // On Android, the native dialog appears on top, so we don't need the custom overlay
+  // On Android, imperative API handles everything - no component to render
   if (Platform.OS === 'android') {
-    return (
-      <DateTimePicker
-        value={value}
-        mode={mode}
-        display="default"
-        onChange={handleChange}
-        testID={testID}
-      />
-    );
+    return null;
   }
 
   // iOS: Show custom overlay with inline picker
+  if (!isVisible) return null;
+
   return (
     <Pressable
       style={styles.pickerOverlay}
