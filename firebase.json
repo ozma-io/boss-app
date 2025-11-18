@@ -29,6 +29,9 @@
       "firebase.json",
       "**/node_modules/**"
     ],
+    "predeploy": [
+      "npm run build:web"
+    ],
     "headers": [
       {
         "source": "/.well-known/**",
