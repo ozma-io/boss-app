@@ -21,6 +21,29 @@ export function DateTimePickerModal({
 }: DateTimePickerModalProps) {
   if (!isVisible) return null;
 
+  const handleChange = (event: any, date?: Date) => {
+    // On Android, the native dialog handles its own dismissal
+    // We need to close the picker after user interacts with it
+    if (Platform.OS === 'android') {
+      onClose();
+    }
+    onChange(event, date);
+  };
+
+  // On Android, the native dialog appears on top, so we don't need the custom overlay
+  if (Platform.OS === 'android') {
+    return (
+      <DateTimePicker
+        value={value}
+        mode={mode}
+        display="default"
+        onChange={handleChange}
+        testID={testID}
+      />
+    );
+  }
+
+  // iOS: Show custom overlay with inline picker
   return (
     <Pressable
       style={styles.pickerOverlay}
@@ -42,7 +65,7 @@ export function DateTimePickerModal({
         <DateTimePicker
           value={value}
           mode={mode}
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          display="spinner"
           onChange={onChange}
           testID={testID}
         />
