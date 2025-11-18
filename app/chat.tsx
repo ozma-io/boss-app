@@ -353,8 +353,8 @@ export default function ChatScreen() {
         />
       )}
 
-      <KeyboardStickyView offset={{ closed: insets.bottom, opened: 0 }}>
-        <View style={styles.inputContainer} testID="input-container">
+      <KeyboardStickyView offset={{ closed: 0, opened: 0 }} style={styles.stickyContainer}>
+        <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]} testID="input-container">
           <TextInput
             style={[styles.input, { height: inputHeight }]}
             placeholder="Message"
@@ -404,6 +404,9 @@ const styles = StyleSheet.create({
   loaderContainer: {
     paddingVertical: 16,
     alignItems: 'center',
+  },
+  stickyContainer: {
+    backgroundColor: '#F5F1E8',
   },
   messageContainer: {
     marginBottom: 12,
