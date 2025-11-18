@@ -30,20 +30,20 @@ export default function PersonalInfoScreen() {
     }
   }, [profile]);
 
-  // Load last app update time from device
+  // Load first install time from device
   useEffect(() => {
-    const loadLastUpdateTime = async (): Promise<void> => {
+    const loadFirstInstallTime = async (): Promise<void> => {
       try {
-        const timestamp = await DeviceInfo.getLastUpdateTime();
+        const timestamp = await DeviceInfo.getFirstInstallTime();
         setLastAppUpdateTime(timestamp);
       } catch (error) {
-        logger.error('Failed to get last update time', { 
+        logger.error('Failed to get first install time', { 
           feature: 'PersonalInfoScreen', 
           error: error instanceof Error ? error : new Error(String(error)) 
         });
       }
     };
-    loadLastUpdateTime();
+    loadFirstInstallTime();
   }, []);
 
   useFocusEffect(
@@ -126,25 +126,6 @@ export default function PersonalInfoScreen() {
     }
   };
 
-  // Format update created date with time
-  const formatUpdateCreatedAt = (date: Date | null): string => {
-    if (!date) {
-      return 'N/A';
-    }
-    try {
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-    } catch {
-      return 'N/A';
-    }
-  };
-
   // Format relative time (e.g., "2 days ago", "5 hours ago")
   const formatUpdateTimeAgo = (date: Date | null): string => {
     if (!date) {
@@ -181,28 +162,8 @@ export default function PersonalInfoScreen() {
     }
   };
 
-  // Format app version update time from timestamp
-  const formatAppUpdateTime = (timestamp: number | null): string => {
-    if (!timestamp) {
-      return 'N/A';
-    }
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-    } catch {
-      return 'N/A';
-    }
-  };
-
-  // Format app version update time as relative time
-  const formatAppUpdateTimeAgo = (timestamp: number | null): string => {
+  // Format app first install time as relative time
+  const formatAppInstallTimeAgo = (timestamp: number | null): string => {
     if (!timestamp) {
       return 'N/A';
     }
@@ -296,17 +257,10 @@ export default function PersonalInfoScreen() {
               </Text>
             </View>
             
-            <View style={styles.versionItem} testID="version-item-app-update-date">
-              <Text style={styles.versionLabel} testID="version-label-app-update-date">Version Updated At</Text>
-              <Text style={styles.versionValue} testID="version-value-app-update-date">
-                {formatAppUpdateTime(lastAppUpdateTime)}
-              </Text>
-            </View>
-            
-            <View style={styles.versionItem} testID="version-item-app-update-time-ago">
-              <Text style={styles.versionLabel} testID="version-label-app-update-time-ago">Version Updated Ago</Text>
-              <Text style={styles.versionValue} testID="version-value-app-update-time-ago">
-                {formatAppUpdateTimeAgo(lastAppUpdateTime)}
+            <View style={styles.versionItem} testID="version-item-app-install-time-ago">
+              <Text style={styles.versionLabel} testID="version-label-app-install-time-ago">App Installed</Text>
+              <Text style={styles.versionValue} testID="version-value-app-install-time-ago">
+                {formatAppInstallTimeAgo(lastAppUpdateTime)}
               </Text>
             </View>
             
@@ -328,15 +282,8 @@ export default function PersonalInfoScreen() {
               </Text>
             </Pressable>
             
-            <View style={styles.versionItem} testID="version-item-update-date">
-              <Text style={styles.versionLabel} testID="version-label-update-date">Update Created At</Text>
-              <Text style={styles.versionValue} testID="version-value-update-date">
-                {formatUpdateCreatedAt(Updates.createdAt)}
-              </Text>
-            </View>
-            
             <View style={[styles.versionItem, styles.lastVersionItem]} testID="version-item-update-time-ago">
-              <Text style={styles.versionLabel} testID="version-label-update-time-ago">Update Time Ago</Text>
+              <Text style={styles.versionLabel} testID="version-label-update-time-ago">Update Received</Text>
               <Text style={styles.versionValue} testID="version-value-update-time-ago">
                 {formatUpdateTimeAgo(Updates.createdAt)}
               </Text>
