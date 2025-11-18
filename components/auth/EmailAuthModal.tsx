@@ -244,14 +244,14 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
       swipeDirection={['down']}
       style={styles.modal}
       propagateSwipe
-      avoidKeyboard
       animationIn="slideInUp"
       animationOut="slideOutDown"
       backdropOpacity={0.35}
     >
       <KeyboardAvoidingView
         style={styles.modalContent}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        enabled
       >
         {currentScreen === 'email-input' ? (
           <View style={styles.container}>

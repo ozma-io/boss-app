@@ -181,7 +181,6 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
       swipeDirection={['down']}
       style={styles.modal}
       propagateSwipe
-      avoidKeyboard
       animationIn="slideInUp"
       animationOut="slideOutDown"
       backdropOpacity={0.35}

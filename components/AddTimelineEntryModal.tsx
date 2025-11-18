@@ -346,7 +346,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       swipeDirection={['down']}
       style={styles.modal}
       propagateSwipe
-      avoidKeyboard
       animationIn="slideInUp"
       animationOut="slideOutDown"
       backdropOpacity={0.35}
