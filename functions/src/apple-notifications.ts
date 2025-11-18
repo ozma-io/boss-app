@@ -50,6 +50,7 @@ async function handleDidRenew(
     await admin.firestore().collection('users').doc(userId).update({
       'subscription.status': 'active',
       'subscription.currentPeriodEnd': expiresDate,
+      'subscription.appleEnvironment': environment,
       'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp(),
       'subscription.lastVerifiedAt': admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -413,7 +414,7 @@ export const appleServerNotification = onRequest(
       // Process based on notification type
       switch (notificationType) {
         case 'DID_RENEW':
-          await handleDidRenew(originalTransactionId, transactionInfo, decodedNotification.data?.environment || 'Production');
+          await handleDidRenew(originalTransactionId, transactionInfo, verificationEnvironment);
           break;
 
         case 'EXPIRED':

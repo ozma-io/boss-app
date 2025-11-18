@@ -87,6 +87,7 @@ interface VerifyIAPResponse {
     revocationDate?: string;
     revocationReason?: number;
   };
+  environment?: 'Sandbox' | 'Production';
   error?: string;
   migrated?: boolean;
 }
@@ -319,6 +320,7 @@ async function verifyAppleReceipt(
         revocationDate: revocationDate?.toISOString(),
         revocationReason,
       },
+      environment: environment === Environment.SANDBOX ? 'Sandbox' : 'Production',
     };
   } catch (error) {
     logger.error('Apple receipt verification failed', { error });
@@ -748,9 +750,9 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
       const migrated = await cancelStripeSubscriptionIfExists(userId);
 
       // Update Firestore
-      // For iOS, environment is already determined in verifyAppleReceipt
-      // We pass a simplified environment string for Firestore storage
-      const environmentString = receipt.includes('Sandbox') ? 'Sandbox' : 'Production';
+      // For iOS, environment is returned from verifyAppleReceipt
+      // For Android, we don't have environment info
+      const environmentString = verificationResult.environment || 'Production';
       await updateUserSubscription(
         userId,
         verificationResult.subscription,
