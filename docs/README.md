@@ -56,6 +56,11 @@ Simple naming rules for custom Amplitude events:
 - Event categories and properties usage
 - When and what to track
 
+### Keyboard Handling
+- **Library:** `react-native-keyboard-controller` v1.19.5 - unified keyboard handling for all screens
+- **Approach:** `KeyboardAwareScrollView` for modals and forms, `renderScrollComponent` for FlatList integration
+- **No other keyboard libraries** - KeyboardAvoidingView from React Native is not used
+
 ### AI Chat Integration
 AI-powered chat feature with OpenAI GPT-5:
 - **Frontend:** `app/chat.tsx` - chat screen with typing indicator
