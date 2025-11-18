@@ -29,7 +29,7 @@ const config: ExpoConfig = {
   name: 'BossUp',
   slug: 'boss-app',
   owner: 'ozma-io',
-  version: '1.2.6',
+  version: '1.2.7',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'bossup',
@@ -72,6 +72,7 @@ const config: ExpoConfig = {
     package: 'com.ozmaio.bossup',
     googleServicesFile: './firebase/google-services.json',
     userInterfaceStyle: 'light',
+    softwareKeyboardLayoutMode: 'pan',
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     permissions: [
