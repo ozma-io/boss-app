@@ -12,8 +12,8 @@ import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { KeyboardStickyView } from 'react-native-keyboard-controller';
+import { ActivityIndicator, Animated, AppState, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardStickyView, useKeyboardAnimation } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Only import on native platforms
@@ -26,6 +26,7 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { sessionId } = useSession();
+  const { height: keyboardHeight } = useKeyboardAnimation();
   const flatListRef = useRef<FlatList>(null);
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -318,7 +319,7 @@ export default function ChatScreen() {
           <ActivityIndicator size="large" color="#000" testID="loading-indicator" />
         </View>
       ) : (
-        <FlatList
+        <Animated.FlatList
           ref={flatListRef}
           data={messages}
           inverted={true}
@@ -326,7 +327,10 @@ export default function ChatScreen() {
           renderItem={({ item, index }) => renderMessage(item, messages.length - 1 - index)}
           onEndReached={handleLoadOlder}
           onEndReachedThreshold={0.5}
-          contentContainerStyle={styles.messagesContent}
+          contentContainerStyle={[
+            styles.messagesContent,
+            { paddingBottom: Animated.add(16, keyboardHeight) as any },
+          ]}
           testID="messages-list"
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
