@@ -14,7 +14,6 @@ import { AMPLITUDE_API_KEY } from '@/constants/amplitude.config';
 import { Platform } from 'react-native';
 
 let amplitude: any = null;
-let SessionReplayPlugin: any = null;
 let webAmplitude: any = null;
 let isInitialized = false;
 
@@ -38,8 +37,6 @@ let eventQueue: QueuedEvent[] = [];
 if (Platform.OS !== 'web') {
   try {
     amplitude = require('@amplitude/analytics-react-native');
-    const sessionReplayModule = require('@amplitude/plugin-session-replay-react-native');
-    SessionReplayPlugin = sessionReplayModule.SessionReplayPlugin;
   } catch (error) {
     console.warn('[Amplitude] Native SDK packages not available', error);
   }
@@ -99,7 +96,7 @@ export async function initializeAmplitude(): Promise<void> {
       }
     } else {
       // Native platform: use React Native SDK
-      if (!amplitude || !SessionReplayPlugin) {
+      if (!amplitude) {
         console.warn('[Amplitude] Native SDK not available, skipping initialization');
         return;
       }
@@ -107,16 +104,14 @@ export async function initializeAmplitude(): Promise<void> {
       console.log('[Amplitude] Initializing Native SDK with Session Replay');
       
       // Initialize Amplitude with API key (userId is undefined, config is 3rd param)
-      // defaultTracking ensures deviceId and sessionId are generated before adding plugins
+      // sessionReplayTracking config enables Session Replay with proper sessionId handling
       await amplitude.init(AMPLITUDE_API_KEY, undefined, {
         disableCookies: true,
         defaultTracking: true,
+        sessionReplayTracking: {
+          sampleRate: 1, // Record 100% of sessions (consistent with web config)
+        },
       });
-      
-      // Add Session Replay plugin AFTER init (deviceId and sessionId are now set in config)
-      await amplitude.add(new SessionReplayPlugin({
-        sampleRate: 1 // Record 100% of sessions (consistent with web config)
-      }));
       
       isInitialized = true;
       console.log('[Amplitude] Native SDK initialized successfully with Session Replay');

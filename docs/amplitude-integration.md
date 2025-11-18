@@ -16,6 +16,22 @@ Configuration is centralized in `constants/amplitude.config.ts`:
 - **Session Replay**: enabled on all platforms
 - **Sample Rate**: 100% (all sessions are recorded)
 
+### Native (iOS/Android) Session Replay Setup
+
+Session Replay is enabled via `sessionReplayTracking` configuration during Amplitude initialization:
+
+```typescript
+await amplitude.init(AMPLITUDE_API_KEY, undefined, {
+  disableCookies: true,
+  defaultTracking: true,
+  sessionReplayTracking: {
+    sampleRate: 1, // Record 100% of sessions
+  },
+});
+```
+
+This approach ensures proper `sessionId` handling by the Session Replay plugin.
+
 ### Web Session Replay Setup
 
 For web platform, Session Replay requires:
