@@ -15,6 +15,7 @@ import { Platform } from 'react-native';
 
 let amplitude: any = null;
 let webAmplitude: any = null;
+let SessionReplayPlugin: any = null;
 let isInitialized = false;
 
 // Event queue for events tracked before SDK initialization
@@ -37,6 +38,7 @@ let eventQueue: QueuedEvent[] = [];
 if (Platform.OS !== 'web') {
   try {
     amplitude = require('@amplitude/analytics-react-native');
+    SessionReplayPlugin = require('@amplitude/plugin-session-replay-react-native').SessionReplayPlugin;
   } catch (error) {
     console.warn('[Amplitude] Native SDK packages not available', error);
   }
@@ -104,14 +106,24 @@ export async function initializeAmplitude(): Promise<void> {
       console.log('[Amplitude] Initializing Native SDK with Session Replay');
       
       // Initialize Amplitude with API key (userId is undefined, config is 3rd param)
-      // sessionReplayTracking config enables Session Replay with proper sessionId handling
       await amplitude.init(AMPLITUDE_API_KEY, undefined, {
         disableCookies: true,
         defaultTracking: true,
-        sessionReplayTracking: {
-          sampleRate: 1, // Record 100% of sessions (consistent with web config)
-        },
-      });
+      }).promise;
+      
+      // Add Session Replay plugin AFTER init (modern approach as per official docs)
+      if (SessionReplayPlugin) {
+        const sessionReplayConfig = {
+          enableRemoteConfig: true, // default: true
+          sampleRate: 1,            // Record 100% of sessions (consistent with web config)
+          autoStart: true,          // default: true
+        };
+        
+        await amplitude.add(new SessionReplayPlugin(sessionReplayConfig)).promise;
+        console.log('[Amplitude] Session Replay plugin added for native');
+      } else {
+        console.warn('[Amplitude] SessionReplayPlugin not available');
+      }
       
       isInitialized = true;
       console.log('[Amplitude] Native SDK initialized successfully with Session Replay');
