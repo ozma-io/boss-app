@@ -13,7 +13,7 @@ import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Only import on native platforms
@@ -328,7 +328,8 @@ export default function ChatScreen() {
           onEndReachedThreshold={0.5}
           contentContainerStyle={styles.messagesContent}
           testID="messages-list"
-          renderScrollComponent={(props) => <KeyboardAwareScrollView {...props} bottomOffset={90} />}
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
           ListFooterComponent={
             <>
               {isLoadingOlder && (
@@ -352,30 +353,32 @@ export default function ChatScreen() {
         />
       )}
 
-      <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]} testID="input-container">
-        <TextInput
-          style={[styles.input, { height: inputHeight }]}
-          placeholder="Message"
-          placeholderTextColor="rgba(0, 0, 0, 0.4)"
-          value={inputText}
-          onChangeText={handleTextChange}
-          onContentSizeChange={handleContentSizeChange}
-          testID="message-input"
-          editable={!loading}
-          multiline={true}
-        />
-        {inputText.trim() ? (
-          <TouchableOpacity 
-            style={styles.sendButton} 
-            onPress={handleSend} 
-            testID="send-button"
-            disabled={loading}
-          >
-            <SendArrowIcon size={20} color="#FFFFFF" testID="send-icon" />
-          </TouchableOpacity>
-        ) : null}
-        {/* TODO: Implement voice input (microphone button hidden for MVP) */}
-      </View>
+      <KeyboardStickyView offset={{ closed: insets.bottom, opened: 0 }}>
+        <View style={styles.inputContainer} testID="input-container">
+          <TextInput
+            style={[styles.input, { height: inputHeight }]}
+            placeholder="Message"
+            placeholderTextColor="rgba(0, 0, 0, 0.4)"
+            value={inputText}
+            onChangeText={handleTextChange}
+            onContentSizeChange={handleContentSizeChange}
+            testID="message-input"
+            editable={!loading}
+            multiline={true}
+          />
+          {inputText.trim() ? (
+            <TouchableOpacity 
+              style={styles.sendButton} 
+              onPress={handleSend} 
+              testID="send-button"
+              disabled={loading}
+            >
+              <SendArrowIcon size={20} color="#FFFFFF" testID="send-icon" />
+            </TouchableOpacity>
+          ) : null}
+          {/* TODO: Implement voice input (microphone button hidden for MVP) */}
+        </View>
+      </KeyboardStickyView>
     </View>
   );
 }
