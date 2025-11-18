@@ -7,10 +7,12 @@ import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { extractTextFromContent, generateAIResponse, getOrCreateThread, loadOlderMessages, markChatAsRead, sendMessage, subscribeToMessages } from '@/services/chat.service';
 import { logger } from '@/services/logger.service';
 import { ChatMessage, ChatThread } from '@/types';
+import { showToast } from '@/utils/toast';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Only import on native platforms
@@ -208,6 +210,16 @@ export default function ChatScreen() {
     }
   };
 
+  const handleCopyMessage = async (text: string): Promise<void> => {
+    try {
+      await Clipboard.setStringAsync(text);
+      showToast('Message copied', 1500);
+      trackAmplitudeEvent('chat_message_copied', { textLength: text.length });
+    } catch (error) {
+      logger.error('Failed to copy message', { feature: 'ChatScreen', error });
+    }
+  };
+
   const handleSend = async (): Promise<void> => {
     if (!inputText.trim() || !user || !threadId) {
       return;
@@ -268,7 +280,8 @@ export default function ChatScreen() {
         ]}
         testID={`message-${index}`}
       >
-        <View
+        <Pressable
+          onLongPress={() => handleCopyMessage(text)}
           style={[
             styles.messageBubble,
             isUser ? styles.userMessageBubble : styles.aiMessageBubble,
@@ -284,7 +297,7 @@ export default function ChatScreen() {
           >
             {text}
           </Text>
-        </View>
+        </Pressable>
       </View>
     );
   };
