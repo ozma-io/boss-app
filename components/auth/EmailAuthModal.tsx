@@ -9,7 +9,6 @@ import { isSignInWithEmailLink } from 'firebase/auth';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
   Linking,
   Platform,
   StyleSheet,
@@ -18,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
 
 const TEST_EMAIL = 'test@test.test';
@@ -248,10 +248,11 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
       animationOut="slideOutDown"
       backdropOpacity={0.35}
     >
-      <KeyboardAvoidingView
+      <KeyboardAwareScrollView
         style={styles.modalContent}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        enabled
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bottomOffset={40}
       >
         {currentScreen === 'email-input' ? (
           <View style={styles.container}>
@@ -364,7 +365,7 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
             )}
           </View>
         )}
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </Modal>
   );
 }
@@ -375,11 +376,13 @@ const styles = StyleSheet.create({
     margin: 0,
   },
   modalContent: {
-    height: '90%',
+    maxHeight: '90%',
     backgroundColor: '#FAF8F5',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    overflow: 'hidden',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   container: {
     flex: 1,
