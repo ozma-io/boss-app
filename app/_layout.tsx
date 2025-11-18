@@ -21,6 +21,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -247,15 +248,17 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <SessionProvider>
-        <AuthProvider>
-          <TrackingOnboardingProvider>
-            <NotificationOnboardingProvider>
-              <RootLayoutNav />
-            </NotificationOnboardingProvider>
-          </TrackingOnboardingProvider>
-        </AuthProvider>
-      </SessionProvider>
+      <KeyboardProvider>
+        <SessionProvider>
+          <AuthProvider>
+            <TrackingOnboardingProvider>
+              <NotificationOnboardingProvider>
+                <RootLayoutNav />
+              </NotificationOnboardingProvider>
+            </TrackingOnboardingProvider>
+          </AuthProvider>
+        </SessionProvider>
+      </KeyboardProvider>
       <Toast />
     </SafeAreaProvider>
   );
