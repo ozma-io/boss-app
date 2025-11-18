@@ -77,7 +77,7 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
       packageName: process.env.EXPO_PUBLIC_ANDROID_PACKAGE || 'com.ozmaio.bossup',
       installApp: true,
     },
-    dynamicLinkDomain: 'boss-app.ozma.io',
+    linkDomain: 'boss-app.ozma.io',
   };
 
   logger.info('Sending sign-in link', {
