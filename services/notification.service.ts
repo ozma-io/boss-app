@@ -99,7 +99,7 @@ export async function getNotificationPermissionStatus(): Promise<NotificationPer
 // Import Firebase Messaging (native only)
 let FirebaseMessaging: any = null;
 if (Platform.OS !== 'web') {
-  FirebaseMessaging = require('@react-native-firebase/messaging').default;
+  FirebaseMessaging = require('@react-native-firebase/messaging');
 }
 
 /**
