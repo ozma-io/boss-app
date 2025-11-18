@@ -2,14 +2,13 @@ import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from 'react-native';
-import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
 
 interface AddCustomFieldModalProps {
@@ -187,26 +186,28 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
       animationOut="slideOutDown"
       backdropOpacity={0.35}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+      <KeyboardAwareScrollView 
+        style={styles.keyboardView} 
+        contentContainerStyle={styles.modalContent} 
+        showsVerticalScrollIndicator={false} 
+        bottomOffset={40}
+        testID="add-custom-field-modal"
       >
-        <View style={styles.modalContent} testID="add-custom-field-modal">
-          <View style={styles.header}>
-            <View style={styles.dragHandle} />
-            <Text style={styles.title} testID="modal-title">
-              Add Custom Field
-            </Text>
-            <Pressable
-              style={styles.closeButton}
-              onPress={handleClose}
-              testID="close-button"
-            >
-              <Ionicons name="close" size={28} color="#000" />
-            </Pressable>
-          </View>
+        <View style={styles.header}>
+          <View style={styles.dragHandle} />
+          <Text style={styles.title} testID="modal-title">
+            Add Custom Field
+          </Text>
+          <Pressable
+            style={styles.closeButton}
+            onPress={handleClose}
+            testID="close-button"
+          >
+            <Ionicons name="close" size={28} color="#000" />
+          </Pressable>
+        </View>
 
-          <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bottomOffset={40}>
+        <View style={styles.scrollView}>
             <View style={styles.section}>
               <Text style={styles.sectionLabel} testID="label-section-label">
                 Field Label
@@ -274,9 +275,8 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
                 testID="initial-value-input"
               />
             </View>
-          </KeyboardAwareScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </Modal>
   );
 }
@@ -289,13 +289,13 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
     justifyContent: 'flex-end',
+    maxHeight: '90%',
   },
   modalContent: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 34,
-    maxHeight: '90%',
   },
   header: {
     alignItems: 'center',

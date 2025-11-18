@@ -249,14 +249,13 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
       animationOut="slideOutDown"
       backdropOpacity={0.35}
     >
-      <View style={styles.modalContent}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          {currentScreen === 'email-input' ? (
-            <>
-              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+      <KeyboardAvoidingView
+        style={styles.modalContent}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {currentScreen === 'email-input' ? (
+          <View style={styles.container}>
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                 <Ionicons name="close" size={28} color="#000" />
               </TouchableOpacity>
 
@@ -287,11 +286,11 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
                 onPress={handleContinue}
                 disabled={!email || !validateEmail(email) || isLoading}
               >
-                <Text style={styles.continueButtonText}>{isLoading ? 'Sending...' : 'Continue'}</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
+            <Text style={styles.continueButtonText}>{isLoading ? 'Sending...' : 'Continue'}</Text>
+          </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.container}>
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
               <Ionicons name="arrow-back" size={28} color="#000" />
             </TouchableOpacity>
@@ -363,10 +362,9 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
                 <Text style={styles.loadingText}>Verifying...</Text>
               </View>
             )}
-            </>
-          )}
-        </KeyboardAvoidingView>
-      </View>
+          </View>
+        )}
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

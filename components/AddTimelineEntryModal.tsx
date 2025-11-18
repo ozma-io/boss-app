@@ -3,14 +3,13 @@ import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
-  View,
+  View
 } from 'react-native';
-import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
 import { DateTimePickerModal } from './DateTimePickerModal';
 
@@ -352,26 +351,28 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       animationOut="slideOutDown"
       backdropOpacity={0.35}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+      <KeyboardAwareScrollView 
+        style={styles.keyboardView} 
+        contentContainerStyle={styles.modalContent} 
+        showsVerticalScrollIndicator={false} 
+        bottomOffset={40}
+        testID="add-timeline-entry-modal"
       >
-        <View style={styles.modalContent} testID="add-timeline-entry-modal">
-          <View style={styles.header}>
-            <View style={styles.dragHandle} />
-            <Text style={styles.title} testID="modal-title">
-              {isEditMode ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
-            </Text>
-            <Pressable
-              style={styles.closeButton}
-              onPress={handleClose}
-              testID="close-button"
-            >
-              <Ionicons name="close" size={28} color="#000" />
-            </Pressable>
-          </View>
+        <View style={styles.header}>
+          <View style={styles.dragHandle} />
+          <Text style={styles.title} testID="modal-title">
+            {isEditMode ? 'Edit Timeline Entry' : 'Add Timeline Entry'}
+          </Text>
+          <Pressable
+            style={styles.closeButton}
+            onPress={handleClose}
+            testID="close-button"
+          >
+            <Ionicons name="close" size={28} color="#000" />
+          </Pressable>
+        </View>
 
-          <KeyboardAwareScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} bottomOffset={40}>
+        <View style={styles.scrollView}>
             {/* Date/Time Pickers - First */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel} testID="timestamp-section-label">
@@ -605,29 +606,28 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
                 */}
               </>
             )}
-          </KeyboardAwareScrollView>
-
-          {/* Date Picker */}
-          <DateTimePickerModal
-            isVisible={showDatePicker}
-            value={selectedDate}
-            mode="date"
-            onChange={handleDateChange}
-            onClose={() => setShowDatePicker(false)}
-            testID="date-picker"
-          />
-
-          {/* Time Picker */}
-          <DateTimePickerModal
-            isVisible={showTimePicker}
-            value={selectedDate}
-            mode="time"
-            onChange={handleTimeChange}
-            onClose={() => setShowTimePicker(false)}
-            testID="time-picker"
-          />
         </View>
-      </KeyboardAvoidingView>
+
+        {/* Date Picker */}
+        <DateTimePickerModal
+          isVisible={showDatePicker}
+          value={selectedDate}
+          mode="date"
+          onChange={handleDateChange}
+          onClose={() => setShowDatePicker(false)}
+          testID="date-picker"
+        />
+
+        {/* Time Picker */}
+        <DateTimePickerModal
+          isVisible={showTimePicker}
+          value={selectedDate}
+          mode="time"
+          onChange={handleTimeChange}
+          onClose={() => setShowTimePicker(false)}
+          testID="time-picker"
+        />
+      </KeyboardAwareScrollView>
     </Modal>
   );
 }
@@ -640,13 +640,13 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
     justifyContent: 'flex-end',
+    maxHeight: '90%',
   },
   modalContent: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 34,
-    maxHeight: '90%',
   },
   header: {
     alignItems: 'center',
