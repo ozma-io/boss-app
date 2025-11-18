@@ -123,3 +123,18 @@ export const APPLE_ROOT_CA_URLS = [
   'https://www.apple.com/certificateauthority/AppleRootCA-G2.cer',
 ];
 
+// ============================================================================
+// Google Play Configuration
+// ============================================================================
+// ⚠️ DUPLICATED in ../../app.config.ts (android.package) - keep both in sync!
+export const GOOGLE_PLAY_PACKAGE_NAME = 'com.ozmaio.bossup';
+// ============================================================================
+// End of duplicated section
+// ============================================================================
+
+/**
+ * Google Play Service Account credentials
+ * Stored in Firebase Secret Manager as GOOGLE_SERVICE_ACCOUNT_KEY
+ * Contains JSON key file with private_key and client_email
+ */
+

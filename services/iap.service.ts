@@ -38,8 +38,8 @@ export async function initializeIAP(): Promise<void> {
   }
 
   try {
-    // Only initialize for iOS (Android coming soon)
-    if (Platform.OS === 'ios') {
+    // Initialize for both iOS and Android
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
       await RNIap.initConnection();
       iapConnection = true;
       logger.info('IAP connection initialized', { platform: Platform.OS });
@@ -47,7 +47,7 @@ export async function initializeIAP(): Promise<void> {
       // Setup purchase update listener
       setupPurchaseListener();
     } else {
-      logger.info('IAP not initialized - Android support coming soon', { platform: Platform.OS });
+      logger.info('IAP not available on this platform', { platform: Platform.OS });
     }
   } catch (error) {
     logger.error('Failed to initialize IAP', { error, platform: Platform.OS });
@@ -77,7 +77,7 @@ export async function endIAPConnection(): Promise<void> {
  * Setup listener for purchase updates
  */
 function setupPurchaseListener(): void {
-  if (Platform.OS !== 'ios' || !RNIap) {
+  if ((Platform.OS !== 'ios' && Platform.OS !== 'android') || !RNIap) {
     return;
   }
 
@@ -146,9 +146,37 @@ export async function getAvailableProducts(productIds: string[]): Promise<IAPPro
       return [];
     }
   } else if (Platform.OS === 'android') {
-    // TODO: Implement Android support
-    logger.info('Android IAP not yet implemented', { productIds });
-    return [];
+    try {
+      if (!iapConnection) {
+        await initializeIAP();
+      }
+
+      const products = await RNIap.fetchProducts({ skus: productIds, type: 'subs' });
+
+      if (!products || products.length === 0) {
+        logger.info('No products available from Google Play', { productIds });
+        return [];
+      }
+
+      return products.map((product) => {
+        const androidProduct = product as import('react-native-iap').ProductSubscriptionAndroid;
+        
+        // Get pricing from first subscription offer
+        const firstOffer = androidProduct.subscriptionOfferDetailsAndroid?.[0];
+        const pricingPhase = firstOffer?.pricingPhases?.pricingPhaseList?.[0];
+        
+        return {
+          productId: androidProduct.id,
+          price: pricingPhase?.formattedPrice || androidProduct.oneTimePurchaseOfferDetailsAndroid?.formattedPrice || '',
+          currency: pricingPhase?.priceCurrencyCode || 'USD',
+          title: androidProduct.title,
+          description: androidProduct.description,
+        };
+      });
+    } catch (error) {
+      logger.error('Failed to get available products from Google Play', { error, productIds });
+      return [];
+    }
   } else {
     // Web or other platforms
     return [];
@@ -290,8 +318,182 @@ export async function purchaseSubscription(
       };
     }
   } else if (Platform.OS === 'android') {
-    // TODO: Implement Android support
-    throw new Error('Android IAP not yet implemented. Coming soon!');
+    try {
+      if (!iapConnection) {
+        await initializeIAP();
+      }
+
+      logger.info('Starting Android subscription purchase', { productId, tier, billingPeriod });
+
+      // First, fetch the subscription product to get offerToken
+      const products = await RNIap.fetchProducts({ skus: [productId], type: 'subs' });
+      
+      if (!products || products.length === 0) {
+        logger.error('Product not found in Google Play', { productId });
+        return {
+          success: false,
+          error: 'Product not found',
+        };
+      }
+
+      const product = products[0] as import('react-native-iap').ProductSubscriptionAndroid;
+      const subscriptionOfferDetailsAndroid = product.subscriptionOfferDetailsAndroid;
+
+      if (!subscriptionOfferDetailsAndroid || subscriptionOfferDetailsAndroid.length === 0) {
+        logger.error('No subscription offers available', { productId });
+        return {
+          success: false,
+          error: 'No subscription offers available',
+        };
+      }
+
+      // Use the first available offer (base plan)
+      const firstOffer = subscriptionOfferDetailsAndroid[0];
+      const offerToken = firstOffer.offerToken;
+
+      if (!offerToken) {
+        logger.error('No offerToken found in subscription offer', { productId });
+        return {
+          success: false,
+          error: 'Invalid subscription offer',
+        };
+      }
+
+      // Request subscription with offerToken
+      const purchaseResult = await RNIap.requestPurchase({
+        type: 'subs',
+        request: {
+          android: {
+            skus: [productId],
+            subscriptionOffers: [
+              {
+                sku: productId,
+                offerToken: offerToken,
+              },
+            ],
+          },
+        },
+      });
+
+      if (!purchaseResult) {
+        logger.info('Purchase cancelled - no result returned', { productId });
+        trackAmplitudeEvent('iap_purchase_cancelled', {
+          product_id: productId,
+          platform: Platform.OS,
+          tier,
+          billing_period: billingPeriod,
+        });
+        return {
+          success: false,
+          error: 'Purchase cancelled',
+        };
+      }
+
+      // Handle both single purchase and array
+      const purchase = Array.isArray(purchaseResult) ? purchaseResult[0] : purchaseResult;
+
+      if (!purchase) {
+        logger.info('Purchase cancelled - empty result', { productId });
+        trackAmplitudeEvent('iap_purchase_cancelled', {
+          product_id: productId,
+          platform: Platform.OS,
+          tier,
+          billing_period: billingPeriod,
+        });
+        return {
+          success: false,
+          error: 'Purchase cancelled',
+        };
+      }
+
+      // Check for pending purchase state (Android-specific)
+      if (purchase.purchaseState === 'pending') {
+        logger.info('Purchase is pending', { 
+          transactionId: purchase.transactionId,
+          productId: purchase.productId,
+        });
+        
+        trackAmplitudeEvent('iap_purchase_pending', {
+          product_id: productId,
+          platform: Platform.OS,
+          tier,
+          billing_period: billingPeriod,
+        });
+
+        return {
+          success: false,
+          error: 'Purchase is pending verification. You will receive access once payment is confirmed.',
+        };
+      }
+
+      logger.info('Purchase completed, verifying with backend', { 
+        transactionId: purchase.transactionId,
+        productId: purchase.productId,
+      });
+
+      // Get purchase token for backend verification
+      const purchaseToken = purchase.purchaseToken || '';
+
+      // Verify with backend
+      const verificationResult = await verifyPurchaseWithBackend(
+        purchaseToken,
+        productId,
+        tier,
+        billingPeriod
+      );
+
+      if (verificationResult.success) {
+        // Acknowledge purchase (required for Android)
+        await RNIap.finishTransaction({ purchase, isConsumable: false });
+
+        // Track trial start if applicable
+        if (verificationResult.subscription?.status === 'trial') {
+          trackAmplitudeEvent('subscription_trial_started', {
+            tier,
+            billing_period: billingPeriod,
+            platform: Platform.OS,
+          });
+        }
+
+        logger.info('Purchase verified and completed', { 
+          transactionId: purchase.transactionId,
+        });
+
+        return {
+          success: true,
+          transactionId: purchase.transactionId || undefined,
+        };
+      } else {
+        logger.error('Purchase verification failed', { error: verificationResult.error });
+        return {
+          success: false,
+          error: verificationResult.error || 'Verification failed',
+        };
+      }
+    } catch (error: any) {
+      // Check if user cancelled
+      if (error.code === 'E_USER_CANCELLED' || (error instanceof Error && error.message.includes('cancelled'))) {
+        logger.info('Purchase cancelled by user', { productId });
+        trackAmplitudeEvent('iap_purchase_cancelled', {
+          product_id: productId,
+          platform: Platform.OS,
+          tier,
+          billing_period: billingPeriod,
+        });
+        return {
+          success: false,
+          error: 'Purchase cancelled',
+        };
+      }
+
+      // Real error - log to Sentry
+      logger.error('Purchase failed', { error, productId });
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Purchase failed',
+      };
+    }
   } else {
     throw new Error('IAP not supported on this platform');
   }
@@ -402,8 +604,59 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       // Don't throw - sync is best-effort
     }
   } else if (Platform.OS === 'android') {
-    // TODO: Implement Android sync
-    logger.info('Android subscription sync not yet implemented', { userId });
+    try {
+      if (!iapConnection) {
+        await initializeIAP();
+      }
+
+      logger.info('Checking and syncing Android subscription', { userId });
+
+      // Get current purchases from device
+      const availablePurchases = await RNIap.getAvailablePurchases();
+
+      // Get current subscription from Firestore
+      const db = getFirestore();
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      
+      if (!userSnap.exists()) {
+        logger.warn('User document not found', { userId });
+        return;
+      }
+
+      const userData = userSnap.data() as UserProfile;
+      const currentSubscription = userData.subscription;
+
+      // If user has Google subscription in Firestore
+      if (currentSubscription?.provider === 'google') {
+        // Check if subscription still exists on device
+        const hasActiveGoogleSubscription = availablePurchases.some(
+          purchase => purchase.productId === currentSubscription.googlePlayProductId
+        );
+
+        // If Firestore says active but device has no subscription
+        if (
+          !hasActiveGoogleSubscription &&
+          (currentSubscription.status === 'active' || currentSubscription.status === 'trial')
+        ) {
+          logger.info('Google subscription not found on device, updating to expired', { userId });
+
+          // Update Firestore to expired
+          await updateDoc(userRef, {
+            'subscription.status': 'expired',
+            'subscription.updatedAt': new Date().toISOString(),
+          });
+        }
+      }
+
+      // If user has Stripe or Apple subscription, don't touch it
+      // Those subscriptions are monitored separately
+
+      logger.info('Subscription sync completed', { userId });
+    } catch (error) {
+      logger.error('Failed to sync Android subscription', { error, userId });
+      // Don't throw - sync is best-effort
+    }
   }
 }
 
@@ -447,8 +700,32 @@ export async function restorePurchases(): Promise<IAPPurchaseResult> {
       };
     }
   } else if (Platform.OS === 'android') {
-    // TODO: Implement Android restore
-    throw new Error('Android IAP not yet implemented. Coming soon!');
+    try {
+      if (!iapConnection) {
+        await initializeIAP();
+      }
+
+      const purchases = await RNIap.getAvailablePurchases();
+
+      if (purchases.length === 0) {
+        return {
+          success: false,
+          error: 'No purchases found to restore',
+        };
+      }
+
+      logger.info('Purchases restored', { count: purchases.length });
+
+      return {
+        success: true,
+      };
+    } catch (error) {
+      logger.error('Failed to restore purchases', { error });
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Restore failed',
+      };
+    }
   } else {
     throw new Error('IAP not supported on this platform');
   }

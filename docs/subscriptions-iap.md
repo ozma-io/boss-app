@@ -9,7 +9,7 @@ Complete guide for Apple and Google in-app purchase integration.
 BossUp uses native in-app purchases for subscriptions on mobile platforms:
 
 - **iOS:** Apple In-App Purchase (active)
-- **Android:** Google Play Billing (coming soon)
+- **Android:** Google Play Billing (active)
 - **Web:** Stripe (handled separately, not in this doc)
 
 **Key Features:**
@@ -111,22 +111,82 @@ Set up Server-to-Server notifications to receive real-time updates about subscri
 1. Settings → Users and Access → Sandbox Testers
 2. Create test Apple IDs for development
 
-### 2. Firebase Secrets Setup
+### 2. Google Play Console Setup
+
+**Create Subscriptions:**
+
+1. Go to: Google Play Console → Your App → Monetize → Subscriptions
+2. Create subscription products:
+
+| Product ID | Display Name | Billing Period |
+|------------|--------------|----------------|
+| `play_basic:monthly` | Basic Monthly | 1 month |
+| `play_basic:quarterly` | Basic Quarterly | 3 months |
+| `play_basic:semiannual` | Basic Semi-Annual | 6 months |
+| `play_basic:annual` | Basic Annual | 1 year |
+
+> **Note:** Product IDs must match those in `constants/subscriptionPlans.ts` (googlePlayProductId field).
+
+**Create Service Account:**
+
+1. **Create Project in Google Cloud Platform:**
+   - Go to [Google Cloud Console](https://console.cloud.google.com/)
+   - Create new project or select existing project linked to your app
+
+2. **Enable Google Play Developer API:**
+   - In Google Cloud Console → APIs & Services → Library
+   - Search for "Google Play Developer API"
+   - Click "Enable"
+
+3. **Create Service Account:**
+   - In Google Cloud Console → IAM & Admin → Service Accounts
+   - Click "Create Service Account"
+   - Name: `firebase-iap-verification` (or any name)
+   - Click "Create and Continue"
+   - Skip optional steps and click "Done"
+
+4. **Create Service Account Key:**
+   - Click on the newly created service account
+   - Go to "Keys" tab
+   - Click "Add Key" → "Create new key"
+   - Select "JSON" format
+   - Download the JSON key file (keep it secure!)
+
+5. **Grant Access in Google Play Console:**
+   - Go to [Google Play Console](https://play.google.com/console/)
+   - Settings → Developer account → API access
+   - Under "Service accounts", find your service account
+   - Click "Grant access"
+   - Select permissions:
+     - View financial data
+     - Manage orders and subscriptions
+   - Click "Invite user"
+
+**License Testing:**
+
+1. Google Play Console → Settings → License testing
+2. Add test Gmail accounts that can make test purchases
+3. Test purchases are free for license testers
+
+### 3. Firebase Secrets Setup
 
 Set secrets for Cloud Functions:
 
 ```bash
-# Enter your Issuer ID (UUID format)
-
+# Apple App Store Private Key
 firebase functions:secrets:set APPLE_APP_STORE_PRIVATE_KEY
 # Paste entire content of .p8 file (including header/footer)
+
+# Google Service Account Key
+firebase functions:secrets:set GOOGLE_SERVICE_ACCOUNT_KEY
+# Paste entire content of JSON key file from Google Cloud Console
 
 # Stripe (for migration handling)
 firebase functions:secrets:set STRIPE_SECRET_KEY
 # Enter your Stripe secret key (sk_live_...)
 ```
 
-### 3. Deploy Cloud Function
+### 4. Deploy Cloud Function
 
 ```bash
 cd functions
@@ -136,7 +196,7 @@ cd ..
 firebase deploy --only functions:verifyIAPPurchase
 ```
 
-### 4. Verify Remote Config
+### 5. Verify Remote Config
 
 Product IDs must match in Remote Config:
 
@@ -147,6 +207,7 @@ Product IDs must match in Remote Config:
       "tier": "basic",
       "billingPeriod": "monthly",
       "appleProductId": "com.ozmaio.bossup.basic.monthly",
+      "googlePlayProductId": "play_basic:monthly",
       ...
     }
   ]
@@ -191,18 +252,71 @@ To test fresh installs:
 2. Recreate same tester email
 3. Or: Create new sandbox tester
 
+### Android Testing
+
+**Setup:**
+
+1. **Add License Testers:**
+   - Google Play Console → Settings → License testing
+   - Add Gmail accounts (e.g., `test@gmail.com`)
+   - These accounts can make test purchases without real charges
+
+2. **Internal Testing Track:**
+   - Build a signed release APK/AAB
+   - Upload to Play Console → Testing → Internal testing
+   - Add testers to the internal testing list
+   - Testers receive email invitation
+
+3. **Important Notes:**
+   - Must use signed build (not debug builds)
+   - Must be uploaded to Play Console (internal testing minimum)
+   - Testers must opt-in via invitation link
+   - Test purchases are free for license testers
+
+**Test Purchase Flow:**
+
+1. Install app from internal testing track
+2. Open app → Navigate to Subscription screen
+3. Select a plan → Tap "Subscribe"
+4. Google Play payment dialog appears
+5. Confirm purchase (no real charge for license testers)
+6. Verify subscription appears in app
+
+**Test Environment:**
+
+- Test purchases behave like real subscriptions but are free
+- Auto-renewal works (but can be quickly cancelled)
+- Can test upgrades, downgrades, cancellations
+- Subscriptions can be managed in Google Play app → Subscriptions
+
+**Pending Purchases:**
+
+Android supports pending purchases for certain payment methods (e.g., bank transfers):
+- Purchase stays in "pending" state until payment clears
+- App shows appropriate message to user
+- Backend verifies purchase status when payment completes
+
 ### Check Subscription Status
 
 **Firestore:**
 ```
 /users/{userId}/subscription
-  - status: "active" | "trial" | "expired"
+  - status: "active" | "trial" | "expired" | "cancelled" | "pending"
   - provider: "apple" | "google" | "stripe"
   - tier: "basic"
   - billingPeriod: "monthly" | "quarterly" | "semiannual" | "annual"
   - currentPeriodStart: ISO timestamp
   - currentPeriodEnd: ISO timestamp
+  
+  // Apple-specific fields
   - appleOriginalTransactionId: "..."
+  - appleProductId: "com.ozmaio.bossup.basic.monthly"
+  - appleEnvironment: "Sandbox" | "Production"
+  
+  // Google-specific fields
+  - googlePurchaseToken: "..."
+  - googleProductId: "play_basic:monthly"
+  - googlePackageName: "com.ozmaio.bossup"
 ```
 
 **Cloud Function Logs:**
@@ -301,10 +415,12 @@ Users can manually cancel their subscriptions from the Subscription screen. The 
 - ✅ Sandbox and production environments
 - ✅ Auto-sync on app launch
 
-### Android (Coming Soon)
-- ⏳ Google Play Billing integration planned
-- ⏳ Receipt verification via Google Play Developer API
-- ⏳ Similar architecture to iOS
+### Android (Active)
+- ✅ Google Play Billing via `react-native-iap`
+- ✅ Receipt verification via Google Play Developer API v3
+- ✅ License testing for development
+- ✅ Auto-sync on app launch
+- ✅ Pending purchase support
 
 ### Web
 - ℹ️ Uses Stripe (separate implementation)
@@ -347,6 +463,38 @@ Users can manually cancel their subscriptions from the Subscription screen. The 
 - 1 year → 1 hour
 
 **Fix:** This is expected behavior in sandbox. Test renewal flow quickly.
+
+### Android: Product Not Found
+
+**Cause:** Product not configured properly or app not uploaded to Play Console
+
+**Fix:**
+1. Verify product exists in Play Console → Monetize → Subscriptions
+2. Ensure product is "Active" status
+3. Upload signed build to internal testing track minimum
+4. Wait 2-24 hours for products to propagate
+5. Verify product ID matches exactly (case-sensitive)
+
+### Android: No Offer Token Available
+
+**Cause:** Subscription missing base plan or offers
+
+**Fix:**
+1. Go to Play Console → Monetize → Subscriptions → Your subscription
+2. Ensure base plan is created and active
+3. Add at least one offer (can be default pricing)
+4. Save and wait for changes to propagate
+
+### Android: License Error
+
+**Cause:** Service account not configured or lacks permissions
+
+**Fix:**
+1. Verify Service Account created in Google Cloud Console
+2. Verify Google Play Developer API is enabled
+3. Check Service Account has access in Play Console → API access
+4. Ensure permissions include "View financial data" and "Manage orders and subscriptions"
+5. Re-download JSON key and update Firebase secret
 
 ---
 

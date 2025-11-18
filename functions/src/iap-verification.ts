@@ -9,6 +9,7 @@ import { AppStoreServerAPIClient, Environment, ReceiptUtility, SignedDataVerifie
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { google } from 'googleapis';
 import Stripe from 'stripe';
 import { downloadAppleRootCertificates } from './apple-helpers';
 import {
@@ -16,12 +17,14 @@ import {
   APPLE_APP_STORE_ISSUER_ID,
   APPLE_APP_STORE_KEY_ID,
   APPLE_BUNDLE_ID,
+  GOOGLE_PLAY_PACKAGE_NAME,
 } from './constants';
 import { logger } from './logger';
 
 // Define secrets using Cloud Functions v2 API
 const applePrivateKey = defineSecret('APPLE_APP_STORE_PRIVATE_KEY');
 const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
+const googleServiceAccountKey = defineSecret('GOOGLE_SERVICE_ACCOUNT_KEY');
 
 // Note: APPLE_APP_STORE_KEY_ID and APPLE_APP_STORE_ISSUER_ID are not secrets,
 // they are public identifiers stored in constants.ts
@@ -328,7 +331,6 @@ async function verifyAppleReceipt(
 
 /**
  * Verify Google Play purchase
- * TODO: Implement when Google Play integration is ready
  */
 async function verifyGooglePlayPurchase(
   purchaseToken: string,
@@ -336,11 +338,155 @@ async function verifyGooglePlayPurchase(
   tier: string,
   billingPeriod: string
 ): Promise<VerifyIAPResponse> {
-  // TODO: Implement Google Play verification
-  throw new HttpsError(
-    'unimplemented',
-    'Google Play verification not yet implemented. Coming soon for Android.'
-  );
+  try {
+    // Get Google Service Account key from secret
+    const serviceAccountKeyJson = googleServiceAccountKey.value().trim();
+
+    if (!serviceAccountKeyJson) {
+      throw new Error('Google Service Account key not configured');
+    }
+
+    // Parse service account credentials
+    const serviceAccountKey = JSON.parse(serviceAccountKeyJson);
+
+    // Initialize Google Play Developer API client with service account
+    const auth = new google.auth.GoogleAuth({
+      credentials: serviceAccountKey,
+      scopes: ['https://www.googleapis.com/auth/androidpublisher'],
+    });
+
+    const androidPublisher = google.androidpublisher({
+      version: 'v3',
+      auth,
+    });
+
+    // Get subscription details from Google Play
+    // Using subscriptionsv2 API for enhanced subscription info
+    const response = await retryWithBackoff(
+      async () => {
+        return await androidPublisher.purchases.subscriptionsv2.get({
+          packageName: GOOGLE_PLAY_PACKAGE_NAME,
+          token: purchaseToken,
+        });
+      },
+      3,
+      500
+    );
+
+    if (!response || !response.data) {
+      throw new Error('Failed to get subscription info from Google Play');
+    }
+
+    const subscription = response.data;
+
+    // Extract subscription status and dates
+    const subscriptionState = subscription.subscriptionState;
+    const lineItems = subscription.lineItems || [];
+    
+    if (lineItems.length === 0) {
+      throw new Error('No line items found in subscription');
+    }
+
+    const lineItem = lineItems[0];
+    const expiryTime = lineItem.expiryTime ? new Date(lineItem.expiryTime) : null;
+    const startTime = subscription.startTime ? new Date(subscription.startTime) : new Date();
+    
+    // Check for trial period
+    const offerDetails = lineItem.offerDetails;
+    const isInTrialPeriod = offerDetails?.basePlanId?.includes('trial') || 
+                            offerDetails?.offerTags?.includes('trial') ||
+                            false;
+
+    // Determine subscription status based on Google Play state
+    let status: string;
+    const now = new Date();
+
+    // Google Play subscription states:
+    // SUBSCRIPTION_STATE_ACTIVE (1) - Active subscription
+    // SUBSCRIPTION_STATE_CANCELED (2) - Canceled but still valid until expiry
+    // SUBSCRIPTION_STATE_IN_GRACE_PERIOD (3) - Payment issue, user still has access
+    // SUBSCRIPTION_STATE_ON_HOLD (4) - Payment issue, user lost access
+    // SUBSCRIPTION_STATE_PAUSED (5) - Subscription paused by user
+    // SUBSCRIPTION_STATE_EXPIRED (6) - Subscription expired
+
+    switch (subscriptionState) {
+      case 'SUBSCRIPTION_STATE_ACTIVE':
+        status = isInTrialPeriod ? 'trial' : 'active';
+        break;
+      
+      case 'SUBSCRIPTION_STATE_CANCELED':
+        // Canceled but still valid until expiry date
+        if (expiryTime && expiryTime > now) {
+          status = 'cancelled';
+        } else {
+          status = 'expired';
+        }
+        break;
+      
+      case 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD':
+        // Payment failed but user still has access
+        status = 'active';
+        break;
+      
+      case 'SUBSCRIPTION_STATE_ON_HOLD':
+      case 'SUBSCRIPTION_STATE_PAUSED':
+        // Payment failed and user lost access, or paused
+        status = 'expired';
+        break;
+      
+      case 'SUBSCRIPTION_STATE_EXPIRED':
+        status = 'expired';
+        break;
+      
+      case 'SUBSCRIPTION_STATE_PENDING':
+        // Subscription purchase is pending (e.g., bank transfer)
+        status = 'pending';
+        break;
+      
+      default:
+        // Unknown state, treat as expired for safety
+        logger.warn('Unknown Google Play subscription state', {
+          subscriptionState,
+          purchaseToken,
+        });
+        status = 'expired';
+    }
+
+    // Calculate period dates
+    const currentPeriodStart = startTime.toISOString();
+    const currentPeriodEnd = expiryTime 
+      ? expiryTime.toISOString() 
+      : new Date(startTime.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    
+    const trialEnd = isInTrialPeriod && expiryTime ? expiryTime.toISOString() : undefined;
+
+    // Get cancellation details if applicable
+    const canceledStateContext = subscription.canceledStateContext;
+    const cancelReason = canceledStateContext?.userInitiatedCancellation ? 'user' : 
+                        canceledStateContext?.systemInitiatedCancellation ? 'system' : 
+                        undefined;
+
+    return {
+      success: true,
+      subscription: {
+        status,
+        tier,
+        billingPeriod,
+        provider: 'google',
+        transactionId: purchaseToken,
+        currentPeriodStart,
+        currentPeriodEnd,
+        trialEnd,
+        ...(cancelReason && { cancellationReason: cancelReason }),
+      },
+    };
+  } catch (error) {
+    logger.error('Google Play purchase verification failed', { error, purchaseToken });
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }
 
 /**
@@ -514,6 +660,13 @@ async function updateUserSubscription(
     }
   }
 
+  // Google Play-specific fields
+  if (subscriptionData.provider === 'google') {
+    updateData['subscription.googlePurchaseToken'] = subscriptionData.transactionId;
+    updateData['subscription.googlePlayProductId'] = productId;
+    updateData['subscription.googlePackageName'] = GOOGLE_PLAY_PACKAGE_NAME;
+  }
+
   // Trial period
   if (subscriptionData.trialEnd) {
     updateData['subscription.trialEnd'] = subscriptionData.trialEnd;
@@ -551,7 +704,7 @@ async function updateUserSubscription(
 export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPResponse>>(
   {
     region: 'us-central1',
-    secrets: [applePrivateKey, stripeSecretKey],
+    secrets: [applePrivateKey, stripeSecretKey, googleServiceAccountKey],
   },
   async (request) => {
     // Verify authentication

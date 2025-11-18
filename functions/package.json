@@ -20,6 +20,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "firebase-admin": "^12.0.0",
     "firebase-functions": "^6.6.0",
+    "googleapis": "^166.0.0",
     "jsonwebtoken": "^9.0.2",
     "langfuse": "^3.30.0",
     "openai": "^4.88.0",
