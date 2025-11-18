@@ -638,9 +638,26 @@ export const onChatMessageCreated = onDocumentCreated(
           });
           
           // Remove invalid FCM token from Firestore
-          if (notificationError.code === 'messaging/invalid-registration-token' ||
-              notificationError.code === 'messaging/registration-token-not-registered') {
-            logger.info('Removing invalid FCM token', { userId });
+          // Only remove token for errors that definitely indicate invalid/expired token
+          const invalidTokenErrors = [
+            'messaging/invalid-registration-token',
+            'messaging/registration-token-not-registered',
+          ];
+          
+          // Also handle cases where FCM API returns 404 for token not found
+          // Error message from FCM: "Requested entity was not found"
+          const isTokenNotFoundError = notificationError.message && 
+            (notificationError.message.includes('Requested entity was not found') ||
+             notificationError.message.includes('registration token not found'));
+          
+          const shouldRemoveToken = invalidTokenErrors.includes(notificationError.code) || isTokenNotFoundError;
+          
+          if (shouldRemoveToken) {
+            logger.info('Removing invalid FCM token', { 
+              userId, 
+              errorCode: notificationError.code,
+              errorMessage: notificationError.message,
+            });
             try {
               await db.collection('users').doc(userId).update({
                 fcmToken: null,
