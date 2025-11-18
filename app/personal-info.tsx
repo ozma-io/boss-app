@@ -250,6 +250,13 @@ export default function PersonalInfoScreen() {
           </View>
 
           <View style={styles.versionBlock} testID="version-block">
+            <View style={styles.versionItem} testID="version-item-platform">
+              <Text style={styles.versionLabel} testID="version-label-platform">Platform</Text>
+              <Text style={styles.versionValue} testID="version-value-platform">
+                {DeviceInfo.getSystemName()} {DeviceInfo.getSystemVersion()}
+              </Text>
+            </View>
+            
             <View style={styles.versionItem} testID="version-item-app">
               <Text style={styles.versionLabel} testID="version-label-app">App Version</Text>
               <Text style={styles.versionValue} testID="version-value-app">
