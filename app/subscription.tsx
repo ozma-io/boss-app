@@ -46,7 +46,7 @@ export default function SubscriptionScreen() {
   // Auto-sync subscription on screen focus
   useFocusEffect(
     useCallback(() => {
-      if (profile?.id && Platform.OS === 'ios') {
+      if (profile?.id && (Platform.OS === 'ios' || Platform.OS === 'android')) {
         syncSubscription();
       }
     }, [profile?.id])
@@ -57,7 +57,7 @@ export default function SubscriptionScreen() {
     loadPlans();
     
     // Initialize IAP connection
-    if (Platform.OS === 'ios') {
+    if (Platform.OS === 'ios' || Platform.OS === 'android') {
       initializeIAP().catch((error) => {
         logger.error('Failed to initialize IAP', { feature: 'SubscriptionScreen', error });
       });
@@ -65,7 +65,7 @@ export default function SubscriptionScreen() {
 
     // Cleanup
     return () => {
-      if (Platform.OS === 'ios') {
+      if (Platform.OS === 'ios' || Platform.OS === 'android') {
         endIAPConnection().catch((error) => {
           logger.error('Failed to end IAP connection', { feature: 'SubscriptionScreen', error });
         });
@@ -203,7 +203,7 @@ export default function SubscriptionScreen() {
       currentPlan: subscriptionInfo.billingPeriod,
     });
 
-    // Check platform - handle each case explicitly
+    // Check platform - only iOS and Android are supported
     if (Platform.OS === 'web') {
       Alert.alert(
         'Not Available on Web',
@@ -213,23 +213,10 @@ export default function SubscriptionScreen() {
       return;
     }
     
-    if (Platform.OS === 'android') {
-      // TODO: Implement Android support for subscription purchases
-      Alert.alert(
-        'Coming Soon',
-        'Android in-app purchases are coming soon! Stay tuned.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    
-    if (Platform.OS === 'ios') {
-      // iOS is supported - continue with purchase flow
-    } else {
-      // Unsupported platform (Windows, macOS, Linux, etc.)
+    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
       Alert.alert(
         'Not Available',
-        'Subscriptions are only available on iOS. Android support is coming soon.',
+        'Subscriptions are only available on iOS and Android devices.',
         [{ text: 'OK' }]
       );
       return;
