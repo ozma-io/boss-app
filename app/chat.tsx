@@ -30,6 +30,7 @@ export default function ChatScreen() {
   const [threadId, setThreadId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [appState, setAppState] = useState(AppState.currentState);
+  const [inputHeight, setInputHeight] = useState(40);
   
   // Pagination state
   const [oldestTimestamp, setOldestTimestamp] = useState<string | null>(null);
@@ -190,6 +191,23 @@ export default function ChatScreen() {
     }
   };
 
+  const handleContentSizeChange = (event: any): void => {
+    const contentHeight = event.nativeEvent.contentSize.height;
+    const minHeight = 40;
+    const maxHeight = 220;
+    const newHeight = Math.max(minHeight, Math.min(contentHeight, maxHeight));
+    setInputHeight(newHeight);
+  };
+
+  const handleTextChange = (text: string): void => {
+    setInputText(text);
+    
+    // Reset to min height if text is empty
+    if (!text.trim()) {
+      setInputHeight(40);
+    }
+  };
+
   const handleSend = async (): Promise<void> => {
     if (!inputText.trim() || !user || !threadId) {
       return;
@@ -197,6 +215,7 @@ export default function ChatScreen() {
 
     const textToSend = inputText.trim();
     setInputText('');
+    setInputHeight(40);
 
     try {
       // Send user message to Firestore
@@ -325,13 +344,15 @@ export default function ChatScreen() {
 
       <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]} testID="input-container">
         <TextInput
-          style={styles.input}
+          style={[styles.input, { height: inputHeight }]}
           placeholder="Message"
           placeholderTextColor="rgba(0, 0, 0, 0.4)"
           value={inputText}
-          onChangeText={setInputText}
+          onChangeText={handleTextChange}
+          onContentSizeChange={handleContentSizeChange}
           testID="message-input"
           editable={!loading}
+          multiline={true}
         />
         {inputText.trim() ? (
           <TouchableOpacity 
@@ -419,8 +440,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
+    lineHeight: 20,
     color: '#333',
     fontFamily: 'Manrope-Regular',
+    textAlignVertical: 'top',
   },
   micButton: {
     marginLeft: 12,
