@@ -20,7 +20,7 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -442,7 +442,11 @@ function RootLayoutNav() {
   if (authState === 'loading') {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: AppColors.background }} testID="auth-loading-container">
-        <ActivityIndicator size="large" color={AppColors.loaderColor} testID="auth-loading-indicator" />
+        <Image 
+          source={require('../assets/images/icon.png')}
+          style={{ width: 120, height: 120, marginBottom: 20 }}
+          testID="auth-loading-logo"
+        />
       </View>
     );
   }

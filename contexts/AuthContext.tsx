@@ -1,7 +1,7 @@
 import { auth } from '@/constants/firebase.config';
 import { resetAmplitudeUser, setAmplitudeUserId } from '@/services/amplitude.service';
 import { getAttributionData } from '@/services/attribution.service';
-import { getCurrentUser, onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
+import { onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { logoutIntercomUser, registerIntercomUser } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { ensureUserProfileExists, updateUserAttribution } from '@/services/user.service';
@@ -26,6 +26,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
   const [user, setUser] = useState<User | null>(null);
   const [authState, setAuthState] = useState<AuthState>('loading');
   const isProcessingEmailLinkRef = useRef<boolean>(false);
+  const hasReceivedInitialAuthStateRef = useRef<boolean>(false);
 
   useEffect(() => {
     const initAuth = async (): Promise<void> => {
@@ -47,6 +48,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
               const signedInUser = await verifyEmailCode(email, url);
               setUser(signedInUser);
               setAuthState('authenticated');
+              hasReceivedInitialAuthStateRef.current = true;
               window.localStorage.removeItem('emailForSignIn');
               window.history.replaceState({}, document.title, window.location.pathname);
               isProcessingEmailLinkRef.current = false;
@@ -59,13 +61,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         }
       }
       
-      const currentUser = getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-        setAuthState('authenticated');
-      } else {
-        setAuthState('unauthenticated');
-      }
+      // Don't set auth state here - wait for onAuthStateChanged to fire
+      // This prevents the flash of login screen when Firebase Auth is still initializing
     };
 
     initAuth();
@@ -74,10 +71,22 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       if (isProcessingEmailLinkRef.current) {
         return;
       }
-      logger.info(`Auth state changed: ${newUser ? 'authenticated' : 'unauthenticated'}`, { 
-        feature: 'AuthContext', 
-        hasUser: !!newUser 
-      });
+      
+      // This is the first auth state change event from Firebase Auth
+      // It's guaranteed to fire after Firebase has fully initialized and checked for existing session
+      if (!hasReceivedInitialAuthStateRef.current) {
+        hasReceivedInitialAuthStateRef.current = true;
+        logger.info(`Initial auth state received: ${newUser ? 'authenticated' : 'unauthenticated'}`, { 
+          feature: 'AuthContext', 
+          hasUser: !!newUser 
+        });
+      } else {
+        logger.info(`Auth state changed: ${newUser ? 'authenticated' : 'unauthenticated'}`, { 
+          feature: 'AuthContext', 
+          hasUser: !!newUser 
+        });
+      }
+      
       setUser(newUser);
       setAuthState(newUser ? 'authenticated' : 'unauthenticated');
       
