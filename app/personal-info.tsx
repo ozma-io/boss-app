@@ -12,6 +12,7 @@ import { useFocusEffect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PersonalInfoScreen() {
@@ -20,6 +21,7 @@ export default function PersonalInfoScreen() {
   const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
+  const [lastAppUpdateTime, setLastAppUpdateTime] = useState<number | null>(null);
 
   // Sync local state with profile data when it loads
   useEffect(() => {
@@ -27,6 +29,22 @@ export default function PersonalInfoScreen() {
       setName(profile.displayName || '');
     }
   }, [profile]);
+
+  // Load last app update time from device
+  useEffect(() => {
+    const loadLastUpdateTime = async (): Promise<void> => {
+      try {
+        const timestamp = await DeviceInfo.getLastUpdateTime();
+        setLastAppUpdateTime(timestamp);
+      } catch (error) {
+        logger.error('Failed to get last update time', { 
+          feature: 'PersonalInfoScreen', 
+          error: error instanceof Error ? error : new Error(String(error)) 
+        });
+      }
+    };
+    loadLastUpdateTime();
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -163,6 +181,39 @@ export default function PersonalInfoScreen() {
     }
   };
 
+  // Format app version update time from timestamp
+  const formatAppUpdateTime = (timestamp: number | null): string => {
+    if (!timestamp) {
+      return 'N/A';
+    }
+    try {
+      const date = new Date(timestamp);
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  // Format app version update time as relative time
+  const formatAppUpdateTimeAgo = (timestamp: number | null): string => {
+    if (!timestamp) {
+      return 'N/A';
+    }
+    try {
+      const date = new Date(timestamp);
+      return formatUpdateTimeAgo(date);
+    } catch {
+      return 'N/A';
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -242,6 +293,20 @@ export default function PersonalInfoScreen() {
               <Text style={styles.versionLabel} testID="version-label-app">App Version</Text>
               <Text style={styles.versionValue} testID="version-value-app">
                 {Constants.expoConfig?.version || '1.0.0'}
+              </Text>
+            </View>
+            
+            <View style={styles.versionItem} testID="version-item-app-update-date">
+              <Text style={styles.versionLabel} testID="version-label-app-update-date">Version Updated At</Text>
+              <Text style={styles.versionValue} testID="version-value-app-update-date">
+                {formatAppUpdateTime(lastAppUpdateTime)}
+              </Text>
+            </View>
+            
+            <View style={styles.versionItem} testID="version-item-app-update-time-ago">
+              <Text style={styles.versionLabel} testID="version-label-app-update-time-ago">Version Updated Ago</Text>
+              <Text style={styles.versionValue} testID="version-value-app-update-time-ago">
+                {formatAppUpdateTimeAgo(lastAppUpdateTime)}
               </Text>
             </View>
             
