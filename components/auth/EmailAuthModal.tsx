@@ -17,7 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KeyboardAwareScrollView, KeyboardController } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
 
 const TEST_EMAIL = 'test@test.test';
@@ -153,6 +153,9 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
       return;
     }
 
+    // Dismiss keyboard before proceeding to prevent double-tap issue
+    KeyboardController.dismiss();
+
     setIsLoading(true);
     try {
       // Check if this is a test email (test@test.test or test[+.*]@ozma.io)
@@ -197,6 +200,9 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
   };
 
   const handleClose = (): void => {
+    // Dismiss keyboard with animation before closing modal
+    KeyboardController.dismiss();
+    
     setCurrentScreen('email-input');
     setEmail('');
     setIsLoading(false);
@@ -253,6 +259,7 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bottomOffset={40}
+        keyboardShouldPersistTaps="handled"
       >
         {currentScreen === 'email-input' ? (
           <View style={styles.container}>

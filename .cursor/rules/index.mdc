@@ -6,7 +6,7 @@ alwaysApply: true
 
 ## Tech Stack
 React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functions)
-- **Keyboard Handling**: `react-native-keyboard-controller` only (KeyboardAvoidingView not used)
+- **Keyboard Handling**: `react-native-keyboard-controller` only (KeyboardAvoidingView not used) — use `KeyboardController.dismiss()` instead of `Keyboard.dismiss()` for smooth animations
 
 ## Key Architecture
 - **Expo Development Build** - production-like environment with full native module support
