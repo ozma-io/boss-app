@@ -314,7 +314,7 @@ function RootLayoutNav() {
         }
       });
     };
-  }, [user]);
+  }, [user?.id]);
 
   // Check for attribution email (only once when unauthenticated and not showing tracking onboarding)
   useEffect(() => {

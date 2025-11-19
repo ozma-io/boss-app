@@ -159,8 +159,20 @@ export async function registerFCMToken(userId: string): Promise<void> {
 
     logger.info('FCM token saved to Firestore', { feature: 'NotificationService', userId });
   } catch (error) {
+    // Handle TOO_MANY_REGISTRATIONS gracefully - don't crash the app
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('TOO_MANY_REGISTRATIONS')) {
+      logger.warn('FCM token registration limit reached. User needs to reinstall the app or clear app data.', { 
+        feature: 'NotificationService',
+        userId,
+        error: errorMessage
+      });
+      // Don't throw - let the app continue working
+      return;
+    }
+    
     logger.error('Error registering FCM token', { feature: 'NotificationService', error });
-    throw error;
+    // For other errors, still don't throw to avoid crashing the app
   }
 }
 
