@@ -1,5 +1,6 @@
 import { AuthButton } from '@/components/auth/AuthButton';
 import { EmailAuthModal } from '@/components/auth/EmailAuthModal';
+import { ResponsiveContainer } from '@/components/ResponsiveContainer';
 import { AppColors } from '@/constants/Colors';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signInWithApple, signInWithGoogle } from '@/services/auth.service';
@@ -7,7 +8,7 @@ import { logger } from '@/services/logger.service';
 import { openPrivacyPolicy, openTermsOfService } from '@/services/policy.service';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type AuthButtonType = 'email' | 'google' | 'apple';
 
@@ -137,65 +138,74 @@ export default function WelcomeScreen(): React.JSX.Element {
   };
 
   return (
-    <View style={styles.container} testID="welcome-container">
-      <View style={styles.emojiContainer} testID="emoji-container">
-        <Image
-          source={require('@/assets/images/emoji-faces.png')}
-          style={styles.emojiImage}
-          resizeMode="contain"
-          testID="emoji-image"
-        />
-      </View>
+    <ResponsiveContainer maxWidth={600} backgroundColor="#FAF8F5">
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.scrollContent}
+        testID="welcome-container"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.emojiContainer} testID="emoji-container">
+          <Image
+            source={require('@/assets/images/emoji-faces.png')}
+            style={styles.emojiImage}
+            resizeMode="contain"
+            testID="emoji-image"
+          />
+        </View>
 
-      <View style={styles.titleContainer} testID="title-container">
-        <Text style={styles.title} testID="title-text">Microsteps</Text>
-        <Text style={styles.subtitle} testID="subtitle-text">as a Path to Growth</Text>
-        <Text style={styles.description} testID="description-text">
-          Your AI Assistant tells you exactly{'\n'}what to do next
-        </Text>
-      </View>
+        <View style={styles.titleContainer} testID="title-container">
+          <Text style={styles.title} testID="title-text">Microsteps</Text>
+          <Text style={styles.subtitle} testID="subtitle-text">as a Path to Growth</Text>
+          <Text style={styles.description} testID="description-text">
+            Your AI Assistant tells you exactly{'\n'}what to do next
+          </Text>
+        </View>
 
-      <View style={styles.buttonContainer} testID="button-container">
-        {getAuthButtonsConfig().map((buttonConfig) => {
-          const handlePress = 
-            buttonConfig.type === 'email' ? handleEmailSignIn :
-            buttonConfig.type === 'google' ? handleGoogleSignIn :
-            handleAppleSignIn;
-          
-          return (
-            <AuthButton
-              key={buttonConfig.type}
-              type={buttonConfig.type}
-              variant={buttonConfig.variant}
-              onPress={handlePress}
-              testID={`auth-button-${buttonConfig.type}`}
-            />
-          );
-        })}
-      </View>
+        <View style={styles.buttonContainer} testID="button-container">
+          {getAuthButtonsConfig().map((buttonConfig) => {
+            const handlePress = 
+              buttonConfig.type === 'email' ? handleEmailSignIn :
+              buttonConfig.type === 'google' ? handleGoogleSignIn :
+              handleAppleSignIn;
+            
+            return (
+              <AuthButton
+                key={buttonConfig.type}
+                type={buttonConfig.type}
+                variant={buttonConfig.variant}
+                onPress={handlePress}
+                testID={`auth-button-${buttonConfig.type}`}
+              />
+            );
+          })}
+        </View>
 
-      <View style={styles.footer} testID="welcome-footer">
-        <TouchableOpacity onPress={openPrivacyPolicy} testID="privacy-policy-button">
-          <Text style={styles.footerLink} testID="privacy-policy-text">Privacy policy</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={openTermsOfService} testID="terms-of-service-button">
-          <Text style={styles.footerLink} testID="terms-of-service-text">Terms of service</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={styles.footer} testID="welcome-footer">
+          <TouchableOpacity onPress={openPrivacyPolicy} testID="privacy-policy-button">
+            <Text style={styles.footerLink} testID="privacy-policy-text">Privacy policy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={openTermsOfService} testID="terms-of-service-button">
+            <Text style={styles.footerLink} testID="terms-of-service-text">Terms of service</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
 
       <EmailAuthModal
         isVisible={isEmailModalVisible}
         onClose={() => setIsEmailModalVisible(false)}
         initialEmail={prefillEmail}
       />
-    </View>
+    </ResponsiveContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF8F5',
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingTop: 60,
     paddingBottom: 40,
   },
