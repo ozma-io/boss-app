@@ -50,7 +50,7 @@ const config: ExpoConfig = {
     },
   },
   ios: {
-    supportsTablet: false,
+    supportsTablet: true,
     bundleIdentifier: 'com.ozmaio.bossup',
     associatedDomains: ['applinks:boss-app.ozma.io', 'applinks:discovery.ozma.io'],
     googleServicesFile: './firebase/GoogleService-Info.plist',
