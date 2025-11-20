@@ -63,7 +63,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 ### 1. KeyboardAwareScrollView (Most Common)
 
-Use for: **Forms, profile screens, modals with inputs**
+Use for: **Forms, profile screens, scrollable content with inputs**
 
 ```tsx
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -83,13 +83,12 @@ import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
 - No need for `extraKeyboardSpace` - library handles it automatically
 - Automatically removes space when keyboard dismisses
 
-**Current usage:**
+**Current usage (screens):**
 - `app/(tabs)/boss.tsx` - Boss profile screen
 - `app/(tabs)/profile.tsx` - User profile screen
 - `app/personal-info.tsx` - Personal info screen
-- `components/auth/EmailAuthModal.tsx` - Authentication modal
-- `components/AddTimelineEntryModal.tsx` - Timeline entry modal
-- `components/AddCustomFieldModal.tsx` - Custom field modal
+
+**See also:** Section 3 for modal usage
 
 ### 2. KeyboardAvoidingView (Chat Screen Only)
 
@@ -126,7 +125,50 @@ import { KEYBOARD_AVOIDING_OFFSET } from '@/constants/keyboard';
 **Current usage:**
 - `app/chat.tsx` - Chat screen with AI assistant
 
-### 3. KeyboardStickyView (Not Currently Used)
+### 3. Modals with Input Fields
+
+**Best Practice:** Use `react-native-modal` + `KeyboardAwareScrollView` inside
+
+```tsx
+import Modal from 'react-native-modal';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
+
+<Modal
+  isVisible={showModal}
+  onBackdropPress={handleClose}
+  onSwipeComplete={handleClose}
+  swipeDirection={['down']}
+  style={styles.modal}
+  propagateSwipe
+  animationIn="slideInUp"
+  animationOut="slideOutDown"
+  backdropOpacity={0.5}
+>
+  <KeyboardAwareScrollView
+    style={styles.modalContent}
+    contentContainerStyle={styles.modalContentContainer}
+    showsVerticalScrollIndicator={false}
+    bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
+  >
+    {/* Modal content with TextInput */}
+  </KeyboardAwareScrollView>
+</Modal>
+```
+
+**Key properties:**
+- `react-native-modal` - Better animations and swipe gestures than React Native's Modal
+- `KeyboardAwareScrollView` inside modal - Handles keyboard avoidance
+- `onBackdropPress` / `onSwipeComplete` - Allow closing modal by tapping outside or swiping down
+- Disable gestures during async operations (e.g., `onBackdropPress={isLoading ? undefined : handleClose}`)
+
+**Current usage:**
+- `components/auth/EmailAuthModal.tsx` - Authentication modal
+- `components/AddTimelineEntryModal.tsx` - Timeline entry modal
+- `components/AddCustomFieldModal.tsx` - Custom field modal
+- `app/personal-info.tsx` - Delete account confirmation modal
+
+### 4. KeyboardStickyView (Not Currently Used)
 
 **When to use:** Footer that sticks to keyboard (e.g., chat input, sticky action buttons)
 
@@ -222,14 +264,16 @@ We don't use this pattern in chat because `KeyboardAvoidingView` works better wi
 
 ## Migration Checklist
 
-When adding keyboard avoidance to a new screen:
+When adding keyboard avoidance to a new screen or modal:
 
 - [ ] Import from `react-native-keyboard-controller` (not `react-native`)
 - [ ] Import offset constant from `@/constants/keyboard`
 - [ ] Choose appropriate component:
-  - `KeyboardAwareScrollView` for forms/lists
-  - `KeyboardAvoidingView` for chat/complex layouts
+  - **Screens**: `KeyboardAwareScrollView` for forms/lists
+  - **Screens**: `KeyboardAvoidingView` for chat/complex layouts
+  - **Modals**: Use `react-native-modal` + `KeyboardAwareScrollView` inside
 - [ ] Use `KEYBOARD_AWARE_SCROLL_OFFSET` or `KEYBOARD_AVOIDING_OFFSET`
+- [ ] For modals: Disable backdrop/swipe gestures during async operations
 - [ ] Test on both iOS and Android
 - [ ] Test on devices with different screen sizes
 - [ ] Add `testID` for debugging
@@ -243,9 +287,11 @@ When adding keyboard avoidance to a new screen:
 
 ## Version History
 
-- **2025-11-20**: Initial documentation
+- **2025-11-20**: Initial documentation + Modal best practices
   - Unified keyboard offsets in constants
   - Fixed chat screen keyboard handling
   - Removed excessive offsets and unnecessary props
   - Applied Context7 best practices
+  - Migrated delete account modal to react-native-modal + KeyboardAwareScrollView
+  - Added modal best practices section
 

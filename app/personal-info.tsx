@@ -13,9 +13,10 @@ import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PersonalInfoScreen() {
@@ -448,81 +449,89 @@ export default function PersonalInfoScreen() {
 
       {/* Account deletion confirmation modal */}
       <Modal
-        visible={showDeleteModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleCloseDeleteModal}
-        testID="delete-account-modal"
+        isVisible={showDeleteModal}
+        onBackdropPress={isDeleting ? undefined : handleCloseDeleteModal}
+        onSwipeComplete={isDeleting ? undefined : handleCloseDeleteModal}
+        swipeDirection={isDeleting ? undefined : ['down']}
+        style={styles.modal}
+        propagateSwipe
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+        backdropOpacity={0.5}
       >
-        <View style={styles.modalOverlay} testID="modal-overlay">
-          <View style={styles.modalContent} testID="modal-content">
-            <Text style={styles.modalTitle} testID="modal-title">Delete Account</Text>
+        <KeyboardAwareScrollView
+          style={styles.modalContent}
+          contentContainerStyle={styles.modalContentContainer}
+          showsVerticalScrollIndicator={false}
+          bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
+          testID="delete-account-modal"
+        >
+          <Text style={styles.modalTitle} testID="modal-title">Delete Account</Text>
+          
+          <Text style={styles.modalWarning} testID="modal-warning">
+            ⚠️ This action cannot be undone
+          </Text>
+          
+          <Text style={styles.modalDescription} testID="modal-description">
+            All your data will be permanently deleted:{'\n'}
+            • Your profile and personal information{'\n'}
+            • All bosses and their information{'\n'}
+            • All timeline entries and notes{'\n'}
+            • All chat conversations{'\n'}
+            • Your active subscription will be cancelled
+          </Text>
+          
+          <Text style={styles.modalInstruction} testID="modal-instruction">
+            Type <Text style={styles.modalInstructionBold}>DELETE MY ACCOUNT</Text> to confirm:
+          </Text>
+          
+          <TextInput
+            style={[styles.modalInput, { outlineStyle: 'none' } as any]}
+            value={deleteConfirmationText}
+            onChangeText={setDeleteConfirmationText}
+            placeholder="DELETE MY ACCOUNT"
+            placeholderTextColor="#999"
+            autoCapitalize="characters"
+            editable={!isDeleting}
+            testID="delete-confirmation-input"
+          />
+          
+          <View style={styles.modalButtons} testID="modal-buttons">
+            <Pressable
+              style={({ pressed }) => [
+                styles.modalButton,
+                styles.modalCancelButton,
+                pressed && styles.buttonPressed,
+                isDeleting && styles.buttonDisabled
+              ]}
+              onPress={handleCloseDeleteModal}
+              disabled={isDeleting}
+              testID="modal-cancel-button"
+            >
+              <Text style={styles.modalCancelButtonText} testID="modal-cancel-text">Cancel</Text>
+            </Pressable>
             
-            <Text style={styles.modalWarning} testID="modal-warning">
-              ⚠️ This action cannot be undone
-            </Text>
-            
-            <Text style={styles.modalDescription} testID="modal-description">
-              All your data will be permanently deleted:{'\n'}
-              • Your profile and personal information{'\n'}
-              • All bosses and their information{'\n'}
-              • All timeline entries and notes{'\n'}
-              • All chat conversations{'\n'}
-              • Your active subscription will be cancelled
-            </Text>
-            
-            <Text style={styles.modalInstruction} testID="modal-instruction">
-              Type <Text style={styles.modalInstructionBold}>DELETE MY ACCOUNT</Text> to confirm:
-            </Text>
-            
-            <TextInput
-              style={[styles.modalInput, { outlineStyle: 'none' } as any]}
-              value={deleteConfirmationText}
-              onChangeText={setDeleteConfirmationText}
-              placeholder="DELETE MY ACCOUNT"
-              placeholderTextColor="#999"
-              autoCapitalize="characters"
-              editable={!isDeleting}
-              testID="delete-confirmation-input"
-            />
-            
-            <View style={styles.modalButtons} testID="modal-buttons">
-              <Pressable
-                style={({ pressed }) => [
-                  styles.modalButton,
-                  styles.modalCancelButton,
-                  pressed && styles.buttonPressed,
-                  isDeleting && styles.buttonDisabled
-                ]}
-                onPress={handleCloseDeleteModal}
-                disabled={isDeleting}
-                testID="modal-cancel-button"
-              >
-                <Text style={styles.modalCancelButtonText} testID="modal-cancel-text">Cancel</Text>
-              </Pressable>
-              
-              <Pressable
-                style={({ pressed }) => [
-                  styles.modalButton,
-                  styles.modalDeleteButton,
-                  pressed && styles.buttonPressed,
-                  (deleteConfirmationText !== 'DELETE MY ACCOUNT' || isDeleting) && styles.buttonDisabled
-                ]}
-                onPress={handleConfirmDelete}
-                disabled={deleteConfirmationText !== 'DELETE MY ACCOUNT' || isDeleting}
-                testID="modal-confirm-button"
-              >
-                {isDeleting ? (
-                  <ActivityIndicator size="small" color="#fff" testID="modal-deleting-spinner" />
-                ) : (
-                  <Text style={styles.modalDeleteButtonText} testID="modal-confirm-text">
-                    Delete Account
-                  </Text>
-                )}
-              </Pressable>
-            </View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.modalButton,
+                styles.modalDeleteButton,
+                pressed && styles.buttonPressed,
+                (deleteConfirmationText !== 'DELETE MY ACCOUNT' || isDeleting) && styles.buttonDisabled
+              ]}
+              onPress={handleConfirmDelete}
+              disabled={deleteConfirmationText !== 'DELETE MY ACCOUNT' || isDeleting}
+              testID="modal-confirm-button"
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#fff" testID="modal-deleting-spinner" />
+              ) : (
+                <Text style={styles.modalDeleteButtonText} testID="modal-confirm-text">
+                  Delete Account
+                </Text>
+              )}
+            </Pressable>
           </View>
-        </View>
+        </KeyboardAwareScrollView>
       </Modal>
     </View>
   );
@@ -686,19 +695,17 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.5,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  modal: {
+    margin: 20,
     justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
   },
   modalContent: {
     backgroundColor: '#fff',
     borderRadius: 16,
+    maxHeight: '80%',
+  },
+  modalContentContainer: {
     padding: 24,
-    width: '100%',
-    maxWidth: 500,
   },
   modalTitle: {
     fontSize: 24,
