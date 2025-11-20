@@ -99,7 +99,6 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
 export async function verifyEmailCode(email: string, emailLink: string): Promise<User> {
   try {
     trackAmplitudeEvent('auth_magic_link_clicked', {
-      email: email,
       source: Platform.OS === 'web' ? 'browser' : 'email_client',
     });
     
@@ -108,7 +107,6 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
     
     trackAmplitudeEvent('auth_signin_completed', {
       method: 'email',
-      email: email,
     });
     
     // ============================================================
@@ -165,7 +163,6 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
     trackAmplitudeEvent('auth_signin_failed', {
       method: 'email',
       error_type: error instanceof Error ? error.message : 'unknown',
-      email: email,
     });
     throw error;
   }
@@ -186,7 +183,6 @@ export async function signInWithTestEmail(email: string): Promise<User> {
   
   trackAmplitudeEvent('auth_signin_completed', {
     method: 'email',
-    email: email,
     is_test: true,
   });
   
@@ -277,7 +273,6 @@ export async function signInWithGoogle(): Promise<User> {
       
       trackAmplitudeEvent('auth_signin_completed', {
         method: 'google',
-        email: user.email,
         platform: 'web',
       });
       
@@ -327,7 +322,6 @@ export async function signInWithGoogle(): Promise<User> {
     
     trackAmplitudeEvent('auth_signin_completed', {
       method: 'google',
-      email: user.email,
       platform: Platform.OS,
       native: true,
     });
@@ -423,7 +417,6 @@ export async function signInWithApple(): Promise<User> {
     
     trackAmplitudeEvent('auth_signin_completed', {
       method: 'apple',
-      email: user.email,
     });
     
     // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
@@ -462,11 +455,7 @@ export async function signInWithApple(): Promise<User> {
 }
 
 export async function signOut(): Promise<void> {
-  const currentUser = getCurrentUser();
-  
-  trackAmplitudeEvent('auth_signout_completed', {
-    email: currentUser?.email || '[no_email]',
-  });
+  trackAmplitudeEvent('auth_signout_completed');
   
   await auth.signOut();
 }

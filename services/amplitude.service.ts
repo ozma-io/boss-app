@@ -26,7 +26,6 @@ type QueuedEvent = {
 } | {
   type: 'setUserId';
   userId: string;
-  email: string;
 } | {
   type: 'setUserProperties';
   properties: Record<string, any>;
@@ -143,7 +142,7 @@ export async function initializeAmplitude(): Promise<void> {
       
       for (const item of queueToFlush) {
         if (item.type === 'setUserId') {
-          await setAmplitudeUserId(item.userId, item.email);
+          await setAmplitudeUserId(item.userId);
         } else if (item.type === 'setUserProperties') {
           await setAmplitudeUserProperties(item.properties);
         } else if (item.type === 'event') {
@@ -164,35 +163,24 @@ export async function initializeAmplitude(): Promise<void> {
  * Call this after user authentication
  * 
  * @param userId - User ID to set
- * @param email - User email to set as user property (sets '[no_email]' placeholder if empty)
  */
-export async function setAmplitudeUserId(userId: string, email: string): Promise<void> {
+export async function setAmplitudeUserId(userId: string): Promise<void> {
   if (!isInitialized) {
     console.log('[Amplitude] SDK not initialized, queuing setUserId');
-    eventQueue.push({ type: 'setUserId', userId, email });
+    eventQueue.push({ type: 'setUserId', userId });
     return;
   }
 
   try {
-    const emailValue = email && email.trim() !== '' ? email : '[no_email]';
-    
     if (Platform.OS === 'web') {
       if (webAmplitude) {
         webAmplitude.setUserId(userId);
-        
-        const identifyObj = new webAmplitude.Identify();
-        identifyObj.set('email', emailValue);
-        webAmplitude.identify(identifyObj);
-        console.log('[Amplitude] User ID and email set (web)', { userId, email: emailValue });
+        console.log('[Amplitude] User ID set (web)', { userId });
       }
     } else {
       if (amplitude) {
         await amplitude.setUserId(userId);
-        
-        const identifyObj = new amplitude.Identify();
-        identifyObj.set('email', emailValue);
-        await amplitude.identify(identifyObj);
-        console.log('[Amplitude] User ID and email set (native)', { userId, email: emailValue });
+        console.log('[Amplitude] User ID set (native)', { userId });
       }
     }
   } catch (error) {

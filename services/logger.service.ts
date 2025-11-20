@@ -131,13 +131,13 @@ class LoggerService {
   /**
    * Set user context for tracking
    */
-  setUserContext(userId: string, email?: string): void {
-    this.setContext({ userId, userEmail: email });
+  setUserContext(userId: string): void {
+    this.setContext({ userId });
     
     // Set user context in Sentry with graceful fallback
     if (this.isSentryAvailable && Sentry) {
       try {
-        Sentry.setUser({ id: userId, email });
+        Sentry.setUser({ id: userId });
       } catch (error) {
         console.error('Failed to set Sentry user context:', error);
       }

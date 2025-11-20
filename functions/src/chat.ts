@@ -135,10 +135,10 @@ async function fetchUserContext(userId: string): Promise<string> {
   // User profile info
   if (userData) {
     contextParts.push('## User Profile');
+    contextParts.push(`User ID: ${userId}`);
     contextParts.push(`Name: ${userData.name || 'Not set'}`);
     contextParts.push(`Position: ${userData.position || 'Not set'}`);
     contextParts.push(`Goal: ${userData.goal || 'Not set'}`);
-    contextParts.push(`Email: ${userData.email || 'Not set'}`);
     
     // Add custom fields if they exist
     if (userData._fieldsMeta) {

@@ -278,7 +278,7 @@ function RootLayoutNav() {
   // Set or clear user context in Sentry when auth state changes
   useEffect(() => {
     if (authState === 'authenticated' && user) {
-      logger.setUserContext(user.id, user.email || undefined);
+      logger.setUserContext(user.id);
     } else if (authState === 'unauthenticated') {
       logger.clearUserContext();
     }

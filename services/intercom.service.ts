@@ -55,6 +55,10 @@ async function getJwtFromBackend(userId: string): Promise<string> {
  * Register user in Intercom with JWT authentication
  * This should be called after successful Firebase authentication
  * Only works on iOS and Android
+ * 
+ * IMPORTANT: We intentionally send email to Intercom for support functionality.
+ * Intercom uses email to send unread conversation messages to users via email.
+ * This is a core support feature and justified use of PII.
  */
 export async function registerIntercomUser(
   userId: string,

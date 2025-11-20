@@ -52,10 +52,11 @@ export const getIntercomJwt = onCall(
     
     // Intercom Messenger Security JWT payload
     // Reference: https://help.intercom.com/en/articles/183-authenticating-users-in-the-messenger-with-json-web-tokens-jwts
-    // user_id is REQUIRED, email is recommended
+    // IMPORTANT: user_id is REQUIRED, email is recommended for support messaging.
+    // We intentionally include email so Intercom can send unread messages via email.
     const payload = {
       user_id: userId,
-      email: email,
+      email: email, // Keep email for support messaging functionality
     };
     
     logger.debug('Intercom generating JWT with payload', { payload });
