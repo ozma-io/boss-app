@@ -108,6 +108,8 @@ Generic career advice ignores your reality. Your manager's style, your company c
 
 Download BossUp and get an AI assistant that proactively helps you advance your career with personalized guidance based on your real professional context.
 
+Terms of Use: https://www.iubenda.com/terms-and-conditions/44080391
+
 ================================================================================
 KEYWORDS (100 characters max, comma-separated)
 ================================================================================
@@ -237,6 +239,15 @@ App Store Review Guidelines:
 ✅ Demo account or instructions for reviewers
 ✅ Compliance with privacy requirements
 ✅ Age rating accurately reflects content
+
+Requirements for Apps with Auto-Renewable Subscriptions:
+✅ Privacy Policy URL in dedicated field (required)
+✅ Terms of Use (EULA) link in app description OR custom EULA uploaded
+   - Standard Apple EULA: https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
+   - Add to end of app description text
+✅ Subscription promotional images must be unique (not app icon, not duplicates)
+   - Show value and benefits of the subscription
+   - Different image for each subscription period
 
 Sources:
 - https://developer.apple.com/app-store/product-page/
