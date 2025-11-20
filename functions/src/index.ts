@@ -20,6 +20,7 @@ initSentry();
 
 admin.initializeApp();
 
+export { deleteUserAccount } from './account-deletion';
 export { appleServerNotification } from './apple-notifications';
 export { generateChatResponse, onChatMessageCreated } from './chat';
 export { sendFacebookConversionEvent } from './facebook';

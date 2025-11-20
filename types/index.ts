@@ -272,3 +272,13 @@ export interface CancelSubscriptionResponse {
   error?: string;
 }
 
+// Account deletion types
+export interface DeleteAccountRequest {
+  confirmationText: string; // Must be "DELETE MY ACCOUNT"
+}
+
+export interface DeleteAccountResponse {
+  success: boolean;
+  error?: string;
+}
+

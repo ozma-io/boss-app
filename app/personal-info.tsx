@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { deleteAccount } from '@/services/account-deletion.service';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { logger } from '@/services/logger.service';
@@ -8,10 +9,10 @@ import { showToast } from '@/utils/toast';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Clipboard from 'expo-clipboard';
 import Constants from 'expo-constants';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,6 +23,11 @@ export default function PersonalInfoScreen() {
   const [name, setName] = useState('');
   const [isEditingName, setIsEditingName] = useState(false);
   const [lastAppUpdateTime, setLastAppUpdateTime] = useState<number | null>(null);
+  
+  // Account deletion modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Sync local state with profile data when it loads
   useEffect(() => {
@@ -76,6 +82,110 @@ export default function PersonalInfoScreen() {
     } catch (error) {
       Alert.alert('Error', 'Failed to sign out. Please try again.');
       logger.error('Failed to sign out', { feature: 'PersonalInfoScreen', error: error instanceof Error ? error : new Error(String(error)) });
+    }
+  };
+
+  const handleDeleteAccountPress = (): void => {
+    trackAmplitudeEvent('account_deletion_button_clicked', {
+      email: user?.email || '[no_email]',
+      screen: 'personal_info',
+    });
+    setShowDeleteModal(true);
+  };
+
+  const handleCloseDeleteModal = (): void => {
+    // Prevent closing modal while deletion is in progress
+    if (isDeleting) {
+      return;
+    }
+    setShowDeleteModal(false);
+    setDeleteConfirmationText('');
+  };
+
+  const handleConfirmDelete = async (): Promise<void> => {
+    if (deleteConfirmationText !== 'DELETE MY ACCOUNT') {
+      Alert.alert('Invalid Confirmation', 'Please type "DELETE MY ACCOUNT" exactly to confirm.');
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      trackAmplitudeEvent('account_deletion_initiated', {
+        email: user?.email || '[no_email]',
+      });
+
+      logger.info('Starting account deletion', { 
+        feature: 'PersonalInfoScreen',
+        userId: user?.id,
+      });
+
+      const result = await deleteAccount(deleteConfirmationText);
+
+      if (result.success) {
+        trackAmplitudeEvent('account_deletion_completed', {
+          email: user?.email || '[no_email]',
+        });
+
+        logger.info('Account deletion completed successfully', { 
+          feature: 'PersonalInfoScreen',
+        });
+
+        // Close modal
+        setShowDeleteModal(false);
+        setDeleteConfirmationText('');
+
+        // Show success toast
+        showToast('Account successfully deleted. You will be signed out now.');
+
+        // Redirect to welcome screen immediately
+        // AuthContext will automatically handle the deleted auth account
+        router.replace('/(auth)/welcome');
+
+        // Try to clean up session (will likely fail as account is deleted, but that's okay)
+        setTimeout(async () => {
+          try {
+            await signOut();
+          } catch (error) {
+            // Ignore signout errors as account is already deleted
+            logger.info('Sign out after deletion (expected to fail)', { feature: 'PersonalInfoScreen' });
+          }
+        }, 100);
+      } else {
+        trackAmplitudeEvent('account_deletion_failed', {
+          email: user?.email || '[no_email]',
+          error: result.error,
+        });
+
+        logger.error('Account deletion failed', { 
+          feature: 'PersonalInfoScreen',
+          error: result.error,
+        });
+
+        Alert.alert(
+          'Deletion Failed',
+          result.error || 'Failed to delete account. Please try again or contact support.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      trackAmplitudeEvent('account_deletion_failed', {
+        email: user?.email || '[no_email]',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      logger.error('Account deletion error', { 
+        feature: 'PersonalInfoScreen',
+        error: error instanceof Error ? error : new Error(String(error)),
+      });
+
+      Alert.alert(
+        'Error',
+        'An unexpected error occurred. Please try again or contact support.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -307,6 +417,17 @@ export default function PersonalInfoScreen() {
           >
             <Text style={styles.signOutButtonText} testID="sign-out-button-text">Sign out</Text>
           </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.deleteAccountButton,
+              pressed && styles.buttonPressed
+            ]}
+            onPress={handleDeleteAccountPress}
+            testID="delete-account-button"
+          >
+            <Text style={styles.deleteAccountButtonText} testID="delete-account-button-text">Delete my account</Text>
+          </Pressable>
         </View>
       </ScrollView>
 
@@ -318,6 +439,85 @@ export default function PersonalInfoScreen() {
           <Text style={styles.footerLink} testID="footer-terms-text">Terms of service</Text>
         </Pressable>
       </View>
+
+      {/* Account deletion confirmation modal */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseDeleteModal}
+        testID="delete-account-modal"
+      >
+        <View style={styles.modalOverlay} testID="modal-overlay">
+          <View style={styles.modalContent} testID="modal-content">
+            <Text style={styles.modalTitle} testID="modal-title">Delete Account</Text>
+            
+            <Text style={styles.modalWarning} testID="modal-warning">
+              ⚠️ This action cannot be undone
+            </Text>
+            
+            <Text style={styles.modalDescription} testID="modal-description">
+              All your data will be permanently deleted:{'\n'}
+              • Your profile and personal information{'\n'}
+              • All bosses and their information{'\n'}
+              • All timeline entries and notes{'\n'}
+              • All chat conversations{'\n'}
+              • Your active subscription will be cancelled
+            </Text>
+            
+            <Text style={styles.modalInstruction} testID="modal-instruction">
+              Type <Text style={styles.modalInstructionBold}>DELETE MY ACCOUNT</Text> to confirm:
+            </Text>
+            
+            <TextInput
+              style={[styles.modalInput, { outlineStyle: 'none' } as any]}
+              value={deleteConfirmationText}
+              onChangeText={setDeleteConfirmationText}
+              placeholder="DELETE MY ACCOUNT"
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+              editable={!isDeleting}
+              testID="delete-confirmation-input"
+            />
+            
+            <View style={styles.modalButtons} testID="modal-buttons">
+              <Pressable
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  styles.modalCancelButton,
+                  pressed && styles.buttonPressed,
+                  isDeleting && styles.buttonDisabled
+                ]}
+                onPress={handleCloseDeleteModal}
+                disabled={isDeleting}
+                testID="modal-cancel-button"
+              >
+                <Text style={styles.modalCancelButtonText} testID="modal-cancel-text">Cancel</Text>
+              </Pressable>
+              
+              <Pressable
+                style={({ pressed }) => [
+                  styles.modalButton,
+                  styles.modalDeleteButton,
+                  pressed && styles.buttonPressed,
+                  (deleteConfirmationText !== 'DELETE MY ACCOUNT' || isDeleting) && styles.buttonDisabled
+                ]}
+                onPress={handleConfirmDelete}
+                disabled={deleteConfirmationText !== 'DELETE MY ACCOUNT' || isDeleting}
+                testID="modal-confirm-button"
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#fff" testID="modal-deleting-spinner" />
+                ) : (
+                  <Text style={styles.modalDeleteButtonText} testID="modal-confirm-text">
+                    Delete Account
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -463,6 +663,108 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     fontFamily: 'Manrope-Regular',
+  },
+  deleteAccountButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+    alignItems: 'flex-start',
+  },
+  deleteAccountButtonText: {
+    color: '#ff3b30',
+    fontSize: 16,
+    fontFamily: 'Manrope-Regular',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 500,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+    textAlign: 'center',
+    fontFamily: 'Manrope-Bold',
+  },
+  modalWarning: {
+    fontSize: 18,
+    color: '#ff3b30',
+    marginBottom: 16,
+    textAlign: 'center',
+    fontFamily: 'Manrope-SemiBold',
+  },
+  modalDescription: {
+    fontSize: 15,
+    color: '#666',
+    marginBottom: 20,
+    lineHeight: 22,
+    fontFamily: 'Manrope-Regular',
+  },
+  modalInstruction: {
+    fontSize: 15,
+    color: '#333',
+    marginBottom: 12,
+    fontFamily: 'Manrope-Regular',
+  },
+  modalInstructionBold: {
+    fontWeight: 'bold',
+    fontFamily: 'Manrope-Bold',
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 24,
+    fontFamily: 'Manrope-Regular',
+    backgroundColor: '#fff',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  modalCancelButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  modalCancelButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  modalDeleteButton: {
+    backgroundColor: '#ff3b30',
+  },
+  modalDeleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Manrope-SemiBold',
   },
 });
 

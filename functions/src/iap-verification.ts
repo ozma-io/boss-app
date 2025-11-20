@@ -493,12 +493,12 @@ async function verifyGooglePlayPurchase(
 
 /**
  * Shared function to cancel a Stripe subscription
- * Used for both manual cancellation and auto-migration
+ * Used for manual cancellation, auto-migration, and account deletion
  */
-async function cancelStripeSubscription(
+export async function cancelStripeSubscription(
   stripeSubscriptionId: string,
   userId: string,
-  reason: 'migration' | 'user_request'
+  reason: 'migration' | 'user_request' | 'account_deletion'
 ): Promise<{ success: boolean; currentPeriodEnd?: string; error?: string }> {
   try {
     const stripeKey = stripeSecretKey.value().trim();
