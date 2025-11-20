@@ -1,6 +1,6 @@
 import { logger } from '@/services/logger.service';
 import { NotificationPermissionStatus } from '@/types';
-import { Platform } from 'react-native';
+import { Platform, PermissionsAndroid } from 'react-native';
 
 // Only import on native platforms to avoid web initialization warnings
 let Notifications: any = null;
@@ -47,11 +47,14 @@ export async function requestNotificationPermissions(): Promise<NotificationPerm
       return 'granted';
     }
 
-    const { status } = await Notifications.requestPermissionsAsync();
+    // Use native Android API for Android 13+ (API 33+)
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
 
-    if (status === 'granted') {
+    if (result === PermissionsAndroid.RESULTS.GRANTED) {
       return 'granted';
-    } else if (status === 'denied') {
+    } else if (result === PermissionsAndroid.RESULTS.DENIED || result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
       return 'denied';
     } else {
       return 'denied';
@@ -115,7 +118,7 @@ if (Platform.OS !== 'web') {
 
 /**
  * Get FCM token from Firebase and save it to Firestore
- * Should be called after notification permission is granted
+ * Should be called ONLY after notification permission is already granted
  */
 export async function registerFCMToken(userId: string): Promise<void> {
   if (Platform.OS === 'web' || !getMessagingFn) {
@@ -126,17 +129,6 @@ export async function registerFCMToken(userId: string): Promise<void> {
   try {
     // Get messaging instance
     const messaging = getMessagingFn();
-    
-    // Request permission first (required for iOS)
-    const authStatus = await requestPermissionFn(messaging);
-    const enabled =
-      authStatus === AuthorizationStatus.AUTHORIZED ||
-      authStatus === AuthorizationStatus.PROVISIONAL;
-
-    if (!enabled) {
-      logger.warn('Firebase Messaging permission not granted', { feature: 'NotificationService' });
-      return;
-    }
 
     // Get FCM token
     const fcmToken = await getTokenFn(messaging);

@@ -5,6 +5,10 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "react-native": {
+    "messaging_android_notification_channel_id": "chat_messages",
+    "messaging_ios_foreground_presentation_options": ["badge", "sound", "alert", "list", "banner"]
+  },
   "functions": [
     {
       "source": "functions",

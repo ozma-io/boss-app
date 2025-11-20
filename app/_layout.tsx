@@ -119,7 +119,7 @@ export default function RootLayout() {
             importance: Notifications.AndroidImportance.HIGH,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#8BC34A',
-            sound: 'default',
+            sound: true,
             enableVibrate: true,
           });
 
@@ -315,6 +315,46 @@ function RootLayoutNav() {
       });
     };
   }, [user?.id]);
+
+  // Handle foreground FCM messages - display notification when app is open
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const setupForegroundHandler = async () => {
+      const messagingModule = require('@react-native-firebase/messaging/lib/modular');
+      const { getMessaging, onMessage } = messagingModule;
+      const messaging = getMessaging();
+
+      const unsubscribe = onMessage(messaging, async (remoteMessage: any) => {
+        logger.info('FCM message received in foreground', { 
+          feature: 'RootLayout',
+          title: remoteMessage.notification?.title 
+        });
+
+        // Display notification using expo-notifications
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: remoteMessage.notification?.title || 'New message',
+            body: remoteMessage.notification?.body || '',
+            data: remoteMessage.data,
+          },
+          trigger: null, // Show immediately
+        });
+      });
+
+      return unsubscribe;
+    };
+
+    const unsubscribePromise = setupForegroundHandler();
+
+    return () => {
+      unsubscribePromise.then((unsubscribe) => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      });
+    };
+  }, []);
 
   // Check for attribution email (only once when unauthenticated and not showing tracking onboarding)
   useEffect(() => {
