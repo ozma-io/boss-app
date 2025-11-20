@@ -92,9 +92,9 @@ export default function RootLayout() {
         // Initialize Google Sign-In (iOS/Android only)
         initializeGoogleSignIn();
 
-        // Setup Android notification handler and channel
-        if (Platform.OS === 'android') {
-          // Set notification handler
+        // Setup notification handler for both iOS and Android
+        // This controls how notifications are displayed when app is in foreground
+        if (Platform.OS !== 'web') {
           Notifications.setNotificationHandler({
             handleNotification: async () => ({
               shouldShowAlert: true,
@@ -104,7 +104,10 @@ export default function RootLayout() {
               shouldShowList: true,
             }),
           });
-          
+        }
+
+        // Setup Android-specific notification channels
+        if (Platform.OS === 'android') {
           // Create default notification channel (required for Android 13+ permission dialog)
           await Notifications.setNotificationChannelAsync('default', {
             name: 'Default Notifications',
@@ -119,11 +122,10 @@ export default function RootLayout() {
             importance: Notifications.AndroidImportance.HIGH,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#8BC34A',
-            sound: true,
             enableVibrate: true,
           });
 
-          logger.info('Android notification handler and channels initialized', { feature: 'App' });
+          logger.info('Android notification channels initialized', { feature: 'App' });
         }
 
         // Check if this is the first launch
@@ -328,8 +330,15 @@ function RootLayoutNav() {
       const unsubscribe = onMessage(messaging, async (remoteMessage: any) => {
         logger.info('FCM message received in foreground', { 
           feature: 'RootLayout',
-          title: remoteMessage.notification?.title 
+          title: remoteMessage.notification?.title,
+          currentRoute: segments[0],
         });
+
+        // Don't show notification banner if user is already in chat
+        if (segments[0] === 'chat') {
+          logger.info('User is in chat screen, skipping notification banner', { feature: 'RootLayout' });
+          return;
+        }
 
         // Display notification using expo-notifications
         await Notifications.scheduleNotificationAsync({
@@ -354,7 +363,7 @@ function RootLayoutNav() {
         }
       });
     };
-  }, []);
+  }, [segments]);
 
   // Check for attribution email (only once when unauthenticated and not showing tracking onboarding)
   useEffect(() => {
