@@ -4,6 +4,7 @@
   "devCommand": "npm run web",
   "installCommand": "npm install",
   "framework": null,
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- 'app/**' 'components/**' 'services/**' 'hooks/**' 'contexts/**' 'utils/**' 'types/**' 'constants/**' 'assets/**' 'public/**' 'index.js'",
   "rewrites": [
     {
       "source": "/(.*)",

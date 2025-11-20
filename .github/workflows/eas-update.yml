@@ -4,32 +4,17 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - 'functions/**'
-      - 'firestore/**'
-      - 'docs/**'
-      - '.cursor/**'
-      - '.github/**'
-      - '.vscode/**'
-      - '.vercel/**'
-      - 'package-lock.json'
-      - 'package.json'  # Version bumps are part of full releases (via tags), dependency changes trigger via code changes
-      - 'app.config.ts'  # Native config changes require full builds, not OTA updates
-      - '__tests__/**'
-      - 'scripts/**'
-      - 'credentials/**'
-      - 'plugins/**'
-      - 'firebase/**'
-      - '*.md'
-      - 'firebase.json'
-      - 'firestore.rules'
-      - 'firestore.indexes.json'
-      - 'remoteconfig.template.json'
-      - 'vercel.json'
-      - 'tsconfig.json'
-      - 'eas.json'
-      - '.*ignore'
-      - '.firebaserc'
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'services/**'
+      - 'hooks/**'
+      - 'contexts/**'
+      - 'utils/**'
+      - 'types/**'
+      - 'constants/**'
+      - 'assets/**'
+      - 'index.js'
 
 jobs:
   update:
