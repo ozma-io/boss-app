@@ -19,7 +19,7 @@ const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
 const intercomAccessToken = defineSecret('INTERCOM_ACCESS_TOKEN');
 
 // Intercom API version
-const INTERCOM_API_VERSION = '2.11';
+const INTERCOM_API_VERSION = '2.10';
 
 interface DeleteAccountRequest {
   confirmationText: string;
@@ -54,18 +54,31 @@ async function deleteFromIntercom(userId: string): Promise<{success: boolean; er
       return { success: true }; // Not a failure - service not configured
     }
 
-    // Step 1: Find contact by external_id
+    // Step 1: Find contact by external_id using Search API
     logger.info('Finding Intercom contact by external_id', { userId });
     
     const findResponse = await fetch(
-      `https://api.intercom.io/contacts?external_id=${encodeURIComponent(userId)}`,
+      'https://api.intercom.io/contacts/search',
       {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
           'Intercom-Version': INTERCOM_API_VERSION
-        }
+        },
+        body: JSON.stringify({
+          query: {
+            operator: 'AND',
+            value: [
+              {
+                field: 'external_id',
+                operator: '=',
+                value: userId
+              }
+            ]
+          }
+        })
       }
     );
 
@@ -97,7 +110,7 @@ async function deleteFromIntercom(userId: string): Promise<{success: boolean; er
     const contactId = findData.data[0].id;
     logger.info('Found Intercom contact, proceeding with deletion', { userId, contactId });
 
-    // Step 2: Delete contact
+    // Step 2: Delete contact permanently
     const deleteResponse = await fetch(
       `https://api.intercom.io/contacts/${contactId}`,
       {
