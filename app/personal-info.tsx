@@ -15,7 +15,7 @@ import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { KeyboardAwareScrollView, KeyboardController } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -101,6 +101,9 @@ export default function PersonalInfoScreen() {
     if (isDeleting) {
       return;
     }
+    // Dismiss keyboard with animation before closing modal
+    KeyboardController.dismiss();
+    
     setShowDeleteModal(false);
     setDeleteConfirmationText('');
   };
@@ -110,6 +113,9 @@ export default function PersonalInfoScreen() {
       Alert.alert('Invalid Confirmation', 'Please type "DELETE MY ACCOUNT" exactly to confirm.');
       return;
     }
+
+    // Dismiss keyboard before proceeding to prevent double-tap issue
+    KeyboardController.dismiss();
 
     setIsDeleting(true);
 
@@ -464,7 +470,6 @@ export default function PersonalInfoScreen() {
           style={styles.modalContent}
           contentContainerStyle={styles.modalContentContainer}
           showsVerticalScrollIndicator={false}
-          bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
           testID="delete-account-modal"
         >
           <Text style={styles.modalTitle} testID="modal-title">Delete Account</Text>
