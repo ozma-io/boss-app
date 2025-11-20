@@ -3,6 +3,7 @@ import { AddCustomFieldModal } from '@/components/AddCustomFieldModal';
 import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { InlineEditableHeading } from '@/components/InlineEditableHeading';
 import { SwipeableCustomFieldRow } from '@/components/SwipeableCustomFieldRow';
+import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { isUserFieldRequired } from '@/firestore/schemas/field-presets';
 import { useUserProfile } from '@/hooks/useUserProfile';
@@ -342,8 +343,7 @@ export default function ProfileScreen() {
       <KeyboardAwareScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent} 
-        bottomOffset={150} 
-        extraKeyboardSpace={50}
+        bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
         testID="profile-scroll-view"
       >
         {loading ? (

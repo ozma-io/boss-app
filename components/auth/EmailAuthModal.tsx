@@ -1,5 +1,6 @@
 import { AppColors } from '@/constants/Colors';
 import { auth } from '@/constants/firebase.config';
+import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendEmailVerificationCode, signInWithTestEmail, verifyEmailCode } from '@/services/auth.service';
 import { logger } from '@/services/logger.service';
@@ -258,7 +259,7 @@ export function EmailAuthModal({ isVisible, onClose, initialEmail }: EmailAuthMo
         style={styles.modalContent}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        bottomOffset={40}
+        bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
         keyboardShouldPersistTaps="handled"
       >
         {currentScreen === 'email-input' ? (

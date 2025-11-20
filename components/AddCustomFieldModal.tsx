@@ -1,3 +1,4 @@
+import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
 import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -189,7 +190,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
         style={styles.keyboardView} 
         contentContainerStyle={styles.modalContent} 
         showsVerticalScrollIndicator={false} 
-        bottomOffset={40}
+        bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
         testID="add-custom-field-modal"
       >
         <View style={styles.header}>

@@ -4,6 +4,7 @@ import { DateTimePickerModal } from '@/components/DateTimePickerModal';
 import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { InlineEditableHeading } from '@/components/InlineEditableHeading';
 import { SwipeableCustomFieldRow } from '@/components/SwipeableCustomFieldRow';
+import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
 import { isBossFieldRequired } from '@/firestore/schemas/field-presets';
 import { useBoss } from '@/hooks/useBoss';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
@@ -331,8 +332,7 @@ export default function BossScreen() {
       <KeyboardAwareScrollView 
         style={styles.scrollView} 
         contentContainerStyle={styles.scrollContent} 
-        bottomOffset={150} 
-        extraKeyboardSpace={50}
+        bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
         testID="boss-scroll"
       >
         {loading ? (

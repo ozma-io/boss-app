@@ -1,3 +1,4 @@
+import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
 import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
@@ -354,7 +355,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
         style={styles.keyboardView} 
         contentContainerStyle={styles.modalContent} 
         showsVerticalScrollIndicator={false} 
-        bottomOffset={40}
+        bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
         testID="add-timeline-entry-modal"
       >
         <View style={styles.header}>

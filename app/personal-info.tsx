@@ -1,3 +1,4 @@
+import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { deleteAccount } from '@/services/account-deletion.service';
@@ -12,8 +13,9 @@ import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PersonalInfoScreen() {
@@ -308,7 +310,11 @@ export default function PersonalInfoScreen() {
 
   return (
     <View style={styles.container} testID="personal-info-container">
-      <ScrollView style={styles.scrollView} testID="personal-info-scroll">
+      <KeyboardAwareScrollView 
+        style={styles.scrollView} 
+        bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
+        testID="personal-info-scroll"
+      >
         <View style={styles.content} testID="personal-info-content">
           <View style={styles.infoBlock}>
             <Pressable
@@ -429,7 +435,7 @@ export default function PersonalInfoScreen() {
             <Text style={styles.deleteAccountButtonText} testID="delete-account-button-text">Delete my account</Text>
           </Pressable>
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 40) }]} testID="footer">
         <Pressable onPress={openPrivacyPolicy} testID="footer-privacy-button">

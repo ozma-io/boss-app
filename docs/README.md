@@ -56,10 +56,14 @@ Simple naming rules for custom Amplitude events:
 - Event categories and properties usage
 - When and what to track
 
-### Keyboard Handling
-- **Library:** `react-native-keyboard-controller` v1.19.5 - unified keyboard handling for all screens
-- **Approach:** `KeyboardAwareScrollView` for modals and forms, `renderScrollComponent` for FlatList integration
-- **No other keyboard libraries** - KeyboardAvoidingView from React Native is not used
+### [Keyboard Handling](./keyboard-handling.md)
+Complete keyboard avoidance implementation guide:
+- Centralized constants and offset values
+- `KeyboardAwareScrollView` for forms and modals
+- `KeyboardAvoidingView` for chat with inverted FlatList
+- Platform differences (iOS vs Android)
+- Best practices from react-native-keyboard-controller
+- Troubleshooting common issues
 
 ### AI Chat Integration
 AI-powered chat feature with OpenAI GPT-5:
@@ -153,6 +157,7 @@ docs/
 ├── tracking-and-attribution-flow.md # Tracking & Attribution flow scenarios
 ├── amplitude-integration.md        # Amplitude Analytics integration guide
 ├── amplitude-naming-convention.md  # Amplitude events naming convention
+├── keyboard-handling.md            # Keyboard avoidance implementation guide
 ├── magic-link-development.md       # Magic link development workflow
 ├── vercel-deployment.md            # Vercel web deployment
 ├── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)
@@ -172,6 +177,10 @@ Key files for IAP:
 ├── app/subscription.tsx            # Subscription UI
 ├── services/iap.service.ts         # IAP service
 └── functions/src/iap-verification.ts # Receipt verification
+
+Key files for Keyboard Handling:
+├── constants/keyboard.ts           # Centralized keyboard offset constants
+└── docs/keyboard-handling.md       # Implementation guide
 ```
 
 ---

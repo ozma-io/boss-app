@@ -1,6 +1,7 @@
 import { SendArrowIcon } from '@/components/icons/SendArrowIcon';
 import { TypingIndicator } from '@/components/TypingIndicator';
 import { db } from '@/constants/firebase.config';
+import { KEYBOARD_AVOIDING_OFFSET } from '@/constants/keyboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSession } from '@/contexts/SessionContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
@@ -12,8 +13,8 @@ import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from 'expo-router';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, AppState, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { KeyboardStickyView, useKeyboardAnimation } from 'react-native-keyboard-controller';
+import { ActivityIndicator, AppState, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Only import on native platforms
@@ -26,7 +27,6 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { sessionId } = useSession();
-  const { height: keyboardHeight } = useKeyboardAnimation();
   const flatListRef = useRef<FlatList>(null);
   const [inputText, setInputText] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -313,77 +313,80 @@ export default function ChatScreen() {
   }
 
   return (
-    <View style={styles.container} testID="chat-container">
-      {loading ? (
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#000" testID="loading-indicator" />
-        </View>
-      ) : (
-        <Animated.FlatList
-          ref={flatListRef}
-          data={messages}
-          inverted={true}
-          keyExtractor={(item, index) => `${item.timestamp}-${index}`}
-          renderItem={({ item, index }) => renderMessage(item, messages.length - 1 - index)}
-          onEndReached={handleLoadOlder}
-          onEndReachedThreshold={0.5}
-          contentContainerStyle={[
-            styles.messagesContent,
-            { paddingBottom: Animated.add(16, keyboardHeight) as any },
-          ]}
-          testID="messages-list"
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          ListFooterComponent={
-            <>
-              {isLoadingOlder && (
-                <View style={styles.loaderContainer} testID="older-messages-loader">
-                  <ActivityIndicator size="small" color="#666" />
-                </View>
-              )}
-            </>
-          }
-          ListHeaderComponent={
-            <>
-              {isTyping && (
-                <View style={styles.typingIndicatorContainer} testID="typing-indicator">
-                  <View style={styles.typingIndicatorBubble}>
-                    <TypingIndicator />
+    <KeyboardAvoidingView 
+      style={styles.container} 
+      behavior="padding"
+      keyboardVerticalOffset={KEYBOARD_AVOIDING_OFFSET}
+      testID="chat-container"
+    >
+      <View style={{ flex: 1 }}>
+        {loading ? (
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="large" color="#000" testID="loading-indicator" />
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            inverted={true}
+            keyExtractor={(item, index) => `${item.timestamp}-${index}`}
+            renderItem={({ item, index }) => renderMessage(item, messages.length - 1 - index)}
+            onEndReached={handleLoadOlder}
+            onEndReachedThreshold={0.5}
+            contentContainerStyle={styles.messagesContent}
+            style={{ flex: 1 }}
+            testID="messages-list"
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            ListFooterComponent={
+              <>
+                {isLoadingOlder && (
+                  <View style={styles.loaderContainer} testID="older-messages-loader">
+                    <ActivityIndicator size="small" color="#666" />
                   </View>
-                </View>
-              )}
-            </>
-          }
-        />
-      )}
-
-      <KeyboardStickyView offset={{ closed: 0, opened: 0 }} style={styles.stickyContainer}>
-        <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]} testID="input-container">
-          <TextInput
-            style={[styles.input, { height: inputHeight }]}
-            placeholder="Message"
-            placeholderTextColor="rgba(0, 0, 0, 0.4)"
-            value={inputText}
-            onChangeText={handleTextChange}
-            onContentSizeChange={handleContentSizeChange}
-            testID="message-input"
-            editable={!loading}
-            multiline={true}
+                )}
+              </>
+            }
+            ListHeaderComponent={
+              <>
+                {isTyping && (
+                  <View style={styles.typingIndicatorContainer} testID="typing-indicator">
+                    <View style={styles.typingIndicatorBubble}>
+                      <TypingIndicator />
+                    </View>
+                  </View>
+                )}
+              </>
+            }
           />
-          {inputText.trim() ? (
-            <TouchableOpacity 
-              style={styles.sendButton} 
-              onPress={handleSend} 
-              testID="send-button"
-              disabled={loading}
-            >
-              <SendArrowIcon size={20} color="#FFFFFF" testID="send-icon" />
-            </TouchableOpacity>
-          ) : null}
-          {/* TODO: Implement voice input (microphone button hidden for MVP) */}
-        </View>
-      </KeyboardStickyView>
-    </View>
+        )}
+
+        <View style={[styles.inputContainer, { paddingBottom: insets.bottom }]} testID="input-container">
+        <TextInput
+          style={[styles.input, { height: inputHeight }]}
+          placeholder="Message"
+          placeholderTextColor="rgba(0, 0, 0, 0.4)"
+          value={inputText}
+          onChangeText={handleTextChange}
+          onContentSizeChange={handleContentSizeChange}
+          testID="message-input"
+          editable={!loading}
+          multiline={true}
+        />
+        {inputText.trim() ? (
+          <TouchableOpacity 
+            style={styles.sendButton} 
+            onPress={handleSend} 
+            testID="send-button"
+            disabled={loading}
+          >
+            <SendArrowIcon size={20} color="#FFFFFF" testID="send-icon" />
+          </TouchableOpacity>
+        ) : null}
+        {/* TODO: Implement voice input (microphone button hidden for MVP) */}
+      </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -404,13 +407,11 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     padding: 16,
+    paddingBottom: 16,
   },
   loaderContainer: {
     paddingVertical: 16,
     alignItems: 'center',
-  },
-  stickyContainer: {
-    backgroundColor: '#F5F1E8',
   },
   messageContainer: {
     marginBottom: 12,

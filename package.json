@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "build:web": "expo export --platform web",
     "test": "jest",
-    "eas-build-post-install": "bash .eas/build/fix-android-manifest.sh"
+    "check:keyboard": "node scripts/check-keyboard-imports.js",
+    "eas-build-post-install": "bash .eas/build/eas-build-post-install.sh"
   },
   "dependencies": {
     "@amplitude/analytics-react-native": "^1.5.16",
