@@ -145,47 +145,6 @@ Documentation templates and checklists:
 
 ---
 
-## 🎯 Documentation Structure
-
-```
-docs/
-├── README.md                       # This file - documentation index
-├── firebase-deployment.md          # Firebase deployment guide
-├── firestore-management.md         # Firestore database management
-├── authentication.md               # Authentication system (magic links, Apple, Google)
-├── subscriptions-iap.md            # Subscriptions & In-App Purchases (IAP)
-├── facebook-integration.md         # Facebook Attribution & Conversions API
-├── tracking-and-attribution-flow.md # Tracking & Attribution flow scenarios
-├── amplitude-integration.md        # Amplitude Analytics integration guide
-├── amplitude-naming-convention.md  # Amplitude events naming convention
-├── keyboard-handling.md            # Keyboard avoidance implementation guide
-├── magic-link-development.md       # Magic link development workflow
-├── vercel-deployment.md            # Vercel web deployment
-├── expo-cloud-setup.md             # Expo cloud build setup (iOS/Android)
-├── troubleshooting-ios-pod-install.md # iOS CocoaPods troubleshooting
-├── templates/                      # Templates and checklists
-│   └── what-to-test.md             # Testing checklist
-└── user-flows/                     # User journey documentation
-    └── facebook-attribution-user-flow.md
-
-Key files for AI Chat:
-├── app/chat.tsx                    # Chat UI
-├── services/chat.service.ts        # Chat service
-├── functions/src/chat.ts           # OpenAI Cloud Function
-└── firestore/schemas/chat.schema.ts # Chat data schema
-
-Key files for IAP:
-├── app/subscription.tsx            # Subscription UI
-├── services/iap.service.ts         # IAP service
-└── functions/src/iap-verification.ts # Receipt verification
-
-Key files for Keyboard Handling:
-├── constants/keyboard.ts           # Centralized keyboard offset constants
-└── docs/keyboard-handling.md       # Implementation guide
-```
-
----
-
 ## 🔗 External Resources
 
 - [Expo Documentation](https://docs.expo.dev/)
