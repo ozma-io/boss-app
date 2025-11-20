@@ -8,9 +8,12 @@ import { logger } from './logger.service';
  * 
  * Handles account deletion and data cleanup for user privacy compliance.
  * 
- * TODO: Consider not sending email to analytics services at all instead of anonymizing later.
- * This would be more privacy-friendly and reduce need for post-deletion cleanup.
- * We could implement a "privacy mode" where email is never sent to third-party services.
+ * Privacy by Design: We do NOT send email to analytics (Amplitude, Sentry) or AI (OpenAI).
+ * Only User ID is sent, eliminating need for post-deletion anonymization.
+ * 
+ * Email is only sent to:
+ * - Intercom (for support messaging) - requires manual cleanup via Intercom API
+ * - Facebook Conversions API (hashed, for attribution) - only when user consents to tracking
  */
 
 /**
@@ -60,90 +63,46 @@ export async function deleteAccount(confirmationText: string): Promise<DeleteAcc
 }
 
 /**
- * TODO: Anonymize user data in Amplitude analytics
+ * Amplitude data cleanup
  * 
- * Options:
- * 1. Delete user data via Amplitude API (if available)
- * 2. Anonymize user properties (set email to "[deleted]", userId to anonymous ID)
- * 3. Better approach: Don't send email to Amplitude at all initially
- * 
- * Note: Currently we send email on user login via setAmplitudeUserId().
- * Consider implementing privacy mode where email is never sent to analytics.
- * 
- * @param userId - User ID to anonymize
+ * NOT NEEDED: We implement Privacy by Design - email is never sent to Amplitude.
+ * Only User ID is tracked, so no PII cleanup required after account deletion.
+ * Amplitude will automatically stop receiving events after Firebase Auth account is deleted.
  */
-export async function anonymizeAmplitudeData(userId: string): Promise<void> {
-  // TODO: Implement Amplitude data anonymization
-  logger.info('TODO: Anonymize Amplitude data', { 
+
+/**
+ * TODO: Delete user data from Intercom
+ * 
+ * We intentionally send email to Intercom for support messaging functionality
+ * (to send unread conversations via email). This requires manual cleanup on account deletion.
+ * 
+ * Implementation options:
+ * 1. Use Intercom API to delete user: DELETE /users/{user_id}
+ * 2. Use Intercom API to archive user: POST /users/{user_id}/archive
+ * 
+ * @param userId - User ID to delete from Intercom
+ */
+export async function deleteIntercomData(userId: string): Promise<void> {
+  // TODO: Implement Intercom user deletion via API
+  logger.info('TODO: Delete Intercom user data via API', { 
     feature: 'AccountDeletion', 
     userId,
-    note: 'Consider not sending email to Amplitude at all instead of anonymizing later'
+    note: 'Use Intercom REST API to delete or archive user'
   });
 }
 
 /**
- * TODO: Anonymize user data in Intercom
+ * Sentry data cleanup
  * 
- * Options:
- * 1. Delete user via Intercom API
- * 2. Anonymize user attributes (name, email, custom attributes)
- * 3. Better approach: Don't send email to Intercom at all initially (privacy mode)
- * 
- * Note: Currently we send email on user login via registerIntercomUser().
- * Consider implementing privacy mode where email is never sent to support system.
- * 
- * @param userId - User ID to anonymize
+ * NOT NEEDED: We implement Privacy by Design - email is never sent to Sentry.
+ * Only User ID is tracked in error logs, so no PII cleanup required after account deletion.
  */
-export async function anonymizeIntercomData(userId: string): Promise<void> {
-  // TODO: Implement Intercom data anonymization
-  logger.info('TODO: Anonymize Intercom data', { 
-    feature: 'AccountDeletion', 
-    userId,
-    note: 'Consider not sending email to Intercom at all instead of anonymizing later'
-  });
-}
 
 /**
- * TODO: Anonymize user context in Sentry error logs
+ * Facebook Conversions API data
  * 
- * Options:
- * 1. Remove user context from Sentry events (if API available)
- * 2. Update user context to anonymous ID
- * 3. Better approach: Don't send email to Sentry at all initially (privacy mode)
- * 
- * Note: Currently logger.service.ts sends user context to Sentry.
- * Consider implementing privacy mode where PII is never sent to error tracking.
- * 
- * @param userId - User ID to anonymize
+ * Email is sent to Facebook (hashed with SHA-256) but ONLY when user consents to tracking
+ * (advertiserTrackingEnabled = true). Facebook handles data retention per their privacy policy.
+ * No manual cleanup needed as Facebook automatically respects user consent flag.
  */
-export async function anonymizeSentryData(userId: string): Promise<void> {
-  // TODO: Implement Sentry data anonymization
-  logger.info('TODO: Anonymize Sentry data', { 
-    feature: 'AccountDeletion', 
-    userId,
-    note: 'Consider not sending email to Sentry at all instead of anonymizing later'
-  });
-}
-
-/**
- * TODO: Clean up any stored logs with PII
- * 
- * Options:
- * 1. Scan and remove local logs with user email/PII
- * 2. Clean AsyncStorage/localStorage for any cached user data
- * 3. Better approach: Never log PII in the first place (privacy by design)
- * 
- * Note: Review logging practices to ensure no PII is logged.
- * Consider using user IDs instead of emails in all logs.
- * 
- * @param userId - User ID to clean logs for
- */
-export async function cleanupLogData(userId: string): Promise<void> {
-  // TODO: Implement log data cleanup
-  logger.info('TODO: Clean up log data', { 
-    feature: 'AccountDeletion', 
-    userId,
-    note: 'Consider never logging PII instead of cleaning it up later'
-  });
-}
 
