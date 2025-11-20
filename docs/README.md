@@ -125,6 +125,7 @@ Solutions for common CocoaPods errors:
 - **[scripts/README.md](../scripts/README.md)** - Automation scripts
 - **[firestore/schemas/README.md](../firestore/schemas/README.md)** - TypeScript schemas
 - **[firestore/migrations/README.md](../firestore/migrations/README.md)** - Data migrations
+- **[Intercom Access Token Setup](./intercom-access-token-setup.md)** - Configure Intercom integration for account deletion
 
 ---
 

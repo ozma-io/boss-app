@@ -71,25 +71,18 @@ export async function deleteAccount(confirmationText: string): Promise<DeleteAcc
  */
 
 /**
- * TODO: Delete user data from Intercom
+ * Intercom data deletion
  * 
- * We intentionally send email to Intercom for support messaging functionality
- * (to send unread conversations via email). This requires manual cleanup on account deletion.
+ * IMPLEMENTED: User is permanently deleted from Intercom during account deletion.
+ * The deletion is handled by the Cloud Function (functions/src/account-deletion.ts).
  * 
- * Implementation options:
- * 1. Use Intercom API to delete user: DELETE /users/{user_id}
- * 2. Use Intercom API to archive user: POST /users/{user_id}/archive
+ * Process:
+ * 1. Find contact by external_id (Firebase UID)
+ * 2. Permanently delete contact via Intercom REST API
  * 
- * @param userId - User ID to delete from Intercom
+ * We intentionally send email to Intercom for support messaging functionality,
+ * so it must be cleaned up when account is deleted.
  */
-export async function deleteIntercomData(userId: string): Promise<void> {
-  // TODO: Implement Intercom user deletion via API
-  logger.info('TODO: Delete Intercom user data via API', { 
-    feature: 'AccountDeletion', 
-    userId,
-    note: 'Use Intercom REST API to delete or archive user'
-  });
-}
 
 /**
  * Sentry data cleanup

@@ -16,6 +16,10 @@ import { cancelStripeSubscription } from './iap-verification';
 import { logger } from './logger';
 
 const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
+const intercomAccessToken = defineSecret('INTERCOM_ACCESS_TOKEN');
+
+// Intercom API version
+const INTERCOM_API_VERSION = '2.11';
 
 interface DeleteAccountRequest {
   confirmationText: string;
@@ -24,6 +28,119 @@ interface DeleteAccountRequest {
 interface DeleteAccountResponse {
   success: boolean;
   error?: string;
+}
+
+/**
+ * Delete user data from Intercom
+ * 
+ * We intentionally send email to Intercom for support messaging functionality.
+ * This function permanently deletes the user from Intercom when account is deleted.
+ * 
+ * Process:
+ * 1. Find contact by external_id (Firebase UID)
+ * 2. Delete contact permanently
+ * 
+ * Returns success even if user doesn't exist in Intercom
+ * Only returns failure if deletion was attempted but failed
+ */
+async function deleteFromIntercom(userId: string): Promise<{success: boolean; error?: string}> {
+  logger.info('Attempting to delete user from Intercom', { userId });
+
+  try {
+    const accessToken = intercomAccessToken.value().trim();
+    
+    if (!accessToken) {
+      logger.warn('Intercom access token not configured, skipping deletion', { userId });
+      return { success: true }; // Not a failure - service not configured
+    }
+
+    // Step 1: Find contact by external_id
+    logger.info('Finding Intercom contact by external_id', { userId });
+    
+    const findResponse = await fetch(
+      `https://api.intercom.io/contacts?external_id=${encodeURIComponent(userId)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Intercom-Version': INTERCOM_API_VERSION
+        }
+      }
+    );
+
+    if (!findResponse.ok) {
+      if (findResponse.status === 404) {
+        logger.info('User not found in Intercom, nothing to delete', { userId });
+        return { success: true }; // User doesn't exist - that's fine
+      }
+      
+      const errorText = await findResponse.text();
+      logger.error('Failed to find Intercom contact', { 
+        userId, 
+        status: findResponse.status,
+        error: errorText 
+      });
+      return { 
+        success: false, 
+        error: `Failed to find contact: ${findResponse.status}` 
+      };
+    }
+
+    const findData = await findResponse.json();
+    
+    if (!findData.data || findData.data.length === 0) {
+      logger.info('No Intercom contacts found with this external_id', { userId });
+      return { success: true }; // User doesn't exist - that's fine
+    }
+
+    const contactId = findData.data[0].id;
+    logger.info('Found Intercom contact, proceeding with deletion', { userId, contactId });
+
+    // Step 2: Delete contact
+    const deleteResponse = await fetch(
+      `https://api.intercom.io/contacts/${contactId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Intercom-Version': INTERCOM_API_VERSION
+        }
+      }
+    );
+
+    if (!deleteResponse.ok) {
+      const errorText = await deleteResponse.text();
+      logger.error('Failed to delete Intercom contact', { 
+        userId, 
+        contactId,
+        status: deleteResponse.status,
+        error: errorText 
+      });
+      return { 
+        success: false, 
+        error: `Failed to delete contact: ${deleteResponse.status}` 
+      };
+    }
+
+    const deleteData = await deleteResponse.json();
+    
+    if (deleteData.deleted === true || deleteData.id === contactId) {
+      logger.info('Successfully deleted user from Intercom', { userId, contactId });
+      return { success: true };
+    } else {
+      logger.warn('Unexpected response from Intercom delete', { userId, contactId, response: deleteData });
+      return { success: true }; // Probably deleted anyway
+    }
+
+  } catch (error) {
+    logger.error('Error deleting from Intercom', { userId, error });
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }
 
 /**
@@ -121,7 +238,7 @@ export const deleteUserAccount = onCall<DeleteAccountRequest, Promise<DeleteAcco
     region: 'us-central1',
     timeoutSeconds: 540, // 9 minutes for large accounts with many documents
     memory: '1GiB', // More memory for processing large accounts
-    secrets: [stripeSecretKey], // Required for Stripe subscription cancellation
+    secrets: [stripeSecretKey, intercomAccessToken], // Required for Stripe & Intercom
   },
   async (request) => {
     // Verify authentication
@@ -149,6 +266,7 @@ export const deleteUserAccount = onCall<DeleteAccountRequest, Promise<DeleteAcco
     // Track success of each step
     const errors: string[] = [];
     let subscriptionCancelled = false;
+    let intercomDeleted = false;
     let firestoreDeleted = false;
     let authDeleted = false;
 
@@ -169,7 +287,24 @@ export const deleteUserAccount = onCall<DeleteAccountRequest, Promise<DeleteAcco
       logger.warn('Continuing despite subscription error', { userId, error });
     }
 
-    // Step 2: Delete all Firestore data using recursiveDelete
+    // Step 2: Delete user from Intercom
+    try {
+      const intercomResult = await deleteFromIntercom(userId);
+      
+      if (intercomResult.success) {
+        intercomDeleted = true;
+        logger.info('Intercom data deleted successfully', { userId });
+      } else {
+        errors.push(`Intercom deletion failed: ${intercomResult.error}`);
+        logger.warn('Continuing despite Intercom error', { userId, error: intercomResult.error });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`Intercom error: ${errorMessage}`);
+      logger.warn('Continuing despite Intercom error', { userId, error });
+    }
+
+    // Step 3: Delete all Firestore data using recursiveDelete
     try {
       logger.info('Starting Firestore data deletion', { userId });
       
@@ -218,7 +353,7 @@ export const deleteUserAccount = onCall<DeleteAccountRequest, Promise<DeleteAcco
       logger.error('Firestore deletion failed', { userId, error });
     }
 
-    // Step 3: Delete Firebase Auth account
+    // Step 4: Delete Firebase Auth account
     try {
       logger.info('Deleting Firebase Auth account', { userId });
       
@@ -245,6 +380,7 @@ export const deleteUserAccount = onCall<DeleteAccountRequest, Promise<DeleteAcco
         userId, 
         success: true,
         subscriptionCancelled,
+        intercomDeleted,
         firestoreDeleted,
         authDeleted,
         errorCount: errors.length,
