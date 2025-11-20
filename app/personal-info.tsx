@@ -312,7 +312,8 @@ export default function PersonalInfoScreen() {
   return (
     <View style={styles.container} testID="personal-info-container">
       <KeyboardAwareScrollView 
-        style={styles.scrollView} 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         bottomOffset={KEYBOARD_AWARE_SCROLL_OFFSET}
         testID="personal-info-scroll"
       >
@@ -573,6 +574,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 70,
+    flexGrow: 1,
   },
   content: {
     padding: 16,
