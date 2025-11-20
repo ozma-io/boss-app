@@ -365,6 +365,7 @@ export default function ProfileScreen() {
           </View>
         ) : (
           <>
+            <View style={styles.yellowCircle} />
             <View style={[styles.header, { paddingTop: topInset + 16 }]} testID="profile-header">
               <Text style={styles.headerTitle} testID="header-title">BossUp</Text>
             </View>
@@ -548,6 +549,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F1E8',
+    overflow: 'hidden',
   },
   centerContent: {
     justifyContent: 'center',
@@ -596,6 +598,17 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     fontFamily: 'Manrope-Regular',
+  },
+  yellowCircle: {
+    position: 'absolute',
+    width: 1021,
+    height: 1021,
+    borderRadius: 510.5,
+    backgroundColor: '#FFFFE2',
+    top: -650,
+    left: '50%',
+    marginLeft: -510.5,
+    zIndex: 0,
   },
   scrollView: {
     flex: 1,
