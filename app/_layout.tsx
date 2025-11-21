@@ -11,7 +11,6 @@ import { initializeFacebookSdk, parseDeepLinkParams, sendAppInstallEventDual, se
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
-import { checkAndApplyUpdates } from '@/services/updates.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -80,6 +79,7 @@ export default function RootLayout() {
         // Uses force=false for soft update (won't interrupt user, applies on next restart)
         // Set to force=true if you need immediate critical updates
         if (Platform.OS !== 'web') {
+          const { checkAndApplyUpdates } = await import('@/services/updates.service');
           await checkAndApplyUpdates(false);
         }
 
