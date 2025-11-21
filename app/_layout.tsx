@@ -650,9 +650,9 @@ function RootLayoutNav() {
             setRedirectPath('/chat');
           }
         } else {
-          // CAPTURE ERROR in Sentry with full structure (but don't block flow)
+          // CAPTURE ERROR in Sentry but USE CHAT FALLBACK
           const errorContext = {
-            message: 'Notification tap navigation failed - no valid data found',
+            message: 'Notification navigation failed - using chat fallback',
             fullResponse: JSON.parse(JSON.stringify(response)),
             dataPaths,
             notificationType,
@@ -663,19 +663,42 @@ function RootLayoutNav() {
             timestamp: new Date().toISOString(),
             platform: Platform.OS,
             expectedType: 'chat_message',
+            fallbackUsed: true,
           };
 
-          logger.error('Notification navigation failed', { feature: 'RootLayout', ...errorContext });
+          logger.warn('Notification navigation failed - using chat fallback', { 
+            feature: 'RootLayout', 
+            notificationType,
+            fallbackUsed: true,
+          });
 
-          // Send Error to Sentry (but don't throw - continue app flow)
-          captureException(new Error('Notification navigation failed - no valid data found'), {
+          // Send Error to Sentry (for debugging) but continue with fallback
+          captureException(new Error('Notification navigation failed - using chat fallback'), {
             tags: {
               feature: 'NotificationNavigation',
               platform: Platform.OS,
               notificationType: notificationType || 'unknown',
+              fallback_used: 'chat',
             },
             extra: errorContext,
           });
+
+          // FALLBACK: Navigate to chat anyway (most notifications are chat-related)
+          addBreadcrumb({
+            message: 'Using chat fallback navigation',
+            level: 'info',
+            data: {
+              reason: 'unknown_notification_type',
+              notificationType,
+              authState,
+            },
+          });
+
+          if (authState === 'authenticated') {
+            router.push('/chat');
+          } else {
+            setRedirectPath('/chat');
+          }
         }
       } catch (error) {
         // Log any handler crashes
@@ -817,9 +840,9 @@ function RootLayoutNav() {
               setRedirectPath('/chat');
             }
           } else {
-            // CAPTURE ERROR in Sentry with full structure (but don't block flow)
+            // CAPTURE ERROR in Sentry but USE CHAT FALLBACK
             const errorContext = {
-              message: 'Initial notification navigation failed - no valid data found',
+              message: 'Initial notification navigation failed - using chat fallback',
               fullResponse: JSON.parse(JSON.stringify(response)),
               dataPaths,
               notificationType,
@@ -829,19 +852,42 @@ function RootLayoutNav() {
               timestamp: new Date().toISOString(),
               platform: Platform.OS,
               expectedType: 'chat_message',
+              fallbackUsed: true,
             };
 
-            logger.error('Initial notification navigation failed', { feature: 'RootLayout', ...errorContext });
+            logger.warn('Initial notification navigation failed - using chat fallback', { 
+              feature: 'RootLayout',
+              notificationType,
+              fallbackUsed: true,
+            });
 
-            // Send Error to Sentry (but don't throw - continue app flow)
-            captureException(new Error('Initial notification navigation failed - no valid data found'), {
+            // Send Error to Sentry (for debugging) but continue with fallback
+            captureException(new Error('Initial notification navigation failed - using chat fallback'), {
               tags: {
                 feature: 'InitialNotificationNavigation',
                 platform: Platform.OS,
                 notificationType: notificationType || 'unknown',
+                fallback_used: 'chat',
               },
               extra: errorContext,
             });
+
+            // FALLBACK: Navigate to chat anyway (most notifications are chat-related)  
+            addBreadcrumb({
+              message: 'Using chat fallback for initial notification',
+              level: 'info',
+              data: {
+                reason: 'unknown_notification_type',
+                notificationType,
+                authState,
+              },
+            });
+
+            if (authState === 'authenticated') {
+              router.push('/chat');
+            } else {
+              setRedirectPath('/chat');
+            }
           }
         } catch (error) {
           const { captureException } = require('@sentry/react-native');
