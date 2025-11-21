@@ -228,7 +228,7 @@ export async function shouldShowNotificationOnboarding(userId: string): Promise<
  * 1. boss-app/services/user.service.ts (this file) 
  * 2. web-funnels/app/api/firebase/create-user/route.ts
  * 
- * This replaces the old Cloud Function approach (functions/src/user-triggers.ts → onUserCreated)
+ * This replaces the old Cloud Function approach (onUserCreated trigger)
  * which was removed to eliminate race conditions.
  * 
  * @param userId - User ID

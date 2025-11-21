@@ -26,9 +26,6 @@ export { generateChatResponse, onChatMessageCreated } from './chat';
 export { sendFacebookConversionEvent } from './facebook';
 export { cancelSubscription, verifyIAPPurchase } from './iap-verification';
 export { getIntercomJwt } from './intercom';
-// DISABLED: onUserCreated trigger now handled synchronously at user creation
-// This eliminates race conditions between user creation and chat screen opening
-// export { onUserCreated } from './user-triggers';
 
 const TEST_EMAIL = 'test@test.test';
 
