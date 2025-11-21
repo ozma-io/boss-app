@@ -362,5 +362,76 @@ Firestore user document now contains:
 
 ---
 
-**Last Updated:** 2025-11-16
+## Facebook Events Manager Configuration
+
+### TODO: SKAdNetwork & Conversion Values Setup
+
+**IMPORTANT:** Complete these steps in the correct order to ensure proper attribution tracking for iOS.
+
+#### Step 1: Add iOS Platform to Facebook App (MUST DO FIRST)
+
+Before configuring Events Manager, ensure iOS app is properly linked:
+
+1. Go to [Facebook App Dashboard - Settings](https://developers.facebook.com/apps/853405190716887/settings/basic/)
+2. Click **"Add Platform"** → Select **"iOS"**
+3. Configure iOS settings:
+   - **Bundle ID**: `com.ozmaio.bossup`
+   - **App Store ID**: (add when app is published to App Store)
+   - **SKAdNetwork**: ✅ Enable this (critical for iOS 14.5+ attribution)
+4. Click **"Save Changes"**
+
+**Why this matters:** Events Manager uses these platform settings. If iOS is not linked, SKAdNetwork conversion values won't work correctly.
+
+#### Step 2: Configure Events Manager (After iOS Platform Added)
+
+1. Go to [Events Manager - Conversion Config](https://business.facebook.com/events_manager2/conversion_config/1170898585142562/AEO?business_id=2178506568838763)
+2. **App event connection**: Select **"Use Facebook SDK to manage SKAdNetwork"**
+   - ✅ Correct choice because we use `react-native-fbsdk-next` (official SDK)
+   - ❌ Don't select "Custom integration" - that's only for Conversions API without SDK
+3. Click **"Next"**
+
+#### Step 3: Configure Fine Conversion Values (SKAdNetwork Priority)
+
+**Purpose:** Tell Facebook which events are most valuable for iOS 14.5+ attribution.
+
+**Add these events** (in order of business priority):
+
+| Priority | Event Name | Value Optimization | Why |
+|----------|-----------|-------------------|-----|
+| **63** (highest) | `fb_mobile_purchase` | Value (revenue) | Direct revenue - most important |
+| **50** | `fb_mobile_complete_registration` | Default | User completed registration - potential paying customer |
+| **20** | `fb_mobile_activate_app` | Default | User opened app - lowest priority |
+
+**How to add:**
+1. Click **"Add Event"**
+2. Select event name from dropdown
+3. Set priority number (1-63, where 63 is highest)
+4. Choose value optimization if applicable
+5. Save
+
+**Note:** SKAdNetwork reports only the highest-priority event in the conversion window (24h). If user opens app → registers → purchases, Facebook only sees `fb_mobile_purchase` (priority 63).
+
+#### Step 4: Test Attribution Flow
+
+After configuration:
+1. Create test Facebook ad campaign
+2. Install app from ad on iOS device
+3. Verify events appear in [Events Manager](https://business.facebook.com/events_manager)
+4. Check **Test Events** tab for real-time event data
+
+**Test command (simulator):**
+```bash
+xcrun simctl openurl booted "https://discovery.ozma.io/go-app/the-boss?fbclid=test123&utm_source=facebook&email=test@example.com"
+```
+
+#### Related Links
+
+- **Facebook App Dashboard**: https://developers.facebook.com/apps/853405190716887/dashboard/?business_id=2178506568838763
+- **Events Manager**: https://business.facebook.com/events_manager
+- **Conversion Config**: https://business.facebook.com/events_manager2/conversion_config/1170898585142562/AEO?business_id=2178506568838763
+- **Implementation Guide**: [facebook-integration.md](../facebook-integration.md)
+
+---
+
+**Last Updated:** 2025-11-21
 
