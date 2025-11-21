@@ -81,86 +81,7 @@ function isClientSdkAvailable(): boolean {
   return Platform.OS !== 'web' && !!AppEventsLogger;
 }
 
-/**
- * Generic client-side event logger using Facebook SDK
- * 
- * Sends events directly to Facebook via the native SDK (AppEventsLogger).
- * This provides faster attribution but may be blocked by tracking prevention.
- * Always pair with server-side events for reliability.
- * 
- * @param eventName - Facebook event name (e.g., 'fb_mobile_activate_app')
- * @param eventId - Unique event ID for deduplication with server-side events
- * @param parameters - Optional event parameters to include
- * @internal
- */
-async function logClientEvent(
-  eventName: string,
-  eventId: string,
-  parameters?: Record<string, string>
-): Promise<void> {
-  // Check if SDK is available (not web, SDK loaded)
-  if (!isClientSdkAvailable()) {
-    logger.info(`Skipping ${eventName} (web or SDK not available)`, { feature: 'Facebook' });
-    return;
-  }
 
-  try {
-    // Prepare event parameters with event ID for deduplication
-    const eventParams: Record<string, string> = {
-      _eventId: eventId,
-      ...parameters,
-    };
-    
-    // Send event via Facebook SDK
-    AppEventsLogger.logEvent(eventName, eventParams);
-    
-    logger.info(`${eventName} logged to Facebook`, { feature: 'Facebook', eventId });
-  } catch (error) {
-    logger.error(`Error logging ${eventName}`, { feature: 'Facebook', error });
-    throw error;
-  }
-}
-
-/**
- * Generic server-side event sender via Cloud Function
- * 
- * Sends events to Facebook Conversions API through a Cloud Function.
- * Server-side events are more reliable than client-side as they bypass tracking prevention.
- * 
- * @param eventName - Event name for Conversions API (e.g., 'AppInstall', 'AppLaunch')
- * @param eventId - Unique event ID for deduplication with client-side events
- * @param userData - Optional user data (email, phone, etc.) - will be hashed by Cloud Function
- * @param customData - Optional custom event parameters
- * @param attributionData - Optional attribution data from deep links (fbclid, utm params)
- * @internal
- */
-async function sendServerEvent(
-  eventName: string,
-  eventId: string,
-  userData?: {
-    email?: string;
-    phone?: string;
-    firstName?: string;
-    lastName?: string;
-  },
-  customData?: Record<string, string | number | boolean>,
-  attributionData?: AttributionData
-): Promise<void> {
-  try {
-    // Delegate to sendConversionEvent which handles all the details
-    await sendConversionEvent(eventId, eventName, userData, customData, attributionData);
-    
-    logger.info(`${eventName} event sent successfully`, { 
-      feature: 'Facebook', 
-      eventId,
-      hasUserData: !!userData,
-      hasAttribution: !!attributionData
-    });
-  } catch (error) {
-    logger.error(`Error sending ${eventName} event`, { feature: 'Facebook', error });
-    throw error;
-  }
-}
 
 /**
  * Build event data payload for Facebook Conversions API
@@ -209,80 +130,6 @@ async function buildEventData(params: ConversionEventParams) {
   };
 }
 
-/**
- * Universal dual-send orchestrator (client + server in parallel)
- * 
- * Sends events to both client-side SDK and server-side Conversions API simultaneously.
- * This provides maximum reliability:
- * - Client-side: Faster attribution, may be blocked
- * - Server-side: Slower but more reliable, bypasses tracking prevention
- * 
- * Facebook automatically deduplicates events using the shared eventId.
- * The function succeeds if at least one destination receives the event.
- * 
- * @param eventName - Display name for logging (e.g., 'AppInstall', 'AppLaunch')
- * @param eventId - Unique event ID shared between client and server for deduplication
- * @param clientFn - Function that sends event via client SDK
- * @param serverFn - Function that sends event via server API
- * @internal
- */
-async function sendEventDual(
-  eventName: string,
-  eventId: string,
-  clientFn: () => Promise<void>,
-  serverFn: () => Promise<void>
-): Promise<void> {
-  logger.info(`Sending ${eventName} event (dual-send)`, { 
-    feature: 'Facebook', 
-    eventId
-  });
-  
-  // Send to both destinations in parallel using Promise.allSettled
-  // This ensures both attempts complete even if one fails
-  const results = await Promise.allSettled([
-    clientFn(),
-    serverFn()
-  ]);
-  
-  // Analyze results
-  const [clientResult, serverResult] = results;
-  const clientSuccess = clientResult.status === 'fulfilled';
-  const serverSuccess = serverResult.status === 'fulfilled';
-  
-  // Log individual results
-  if (clientSuccess) {
-    logger.info(`${eventName} client-side event sent successfully`, { feature: 'Facebook', eventId });
-  } else {
-    logger.warn(`${eventName} client-side event failed`, { 
-      feature: 'Facebook', 
-      eventId,
-      error: clientResult.reason 
-    });
-  }
-  
-  if (serverSuccess) {
-    logger.info(`${eventName} server-side event sent successfully`, { feature: 'Facebook', eventId });
-  } else {
-    logger.error(`${eventName} server-side event failed`, { 
-      feature: 'Facebook', 
-      eventId,
-      error: serverResult.reason 
-    });
-  }
-  
-  // Throw error only if both destinations failed
-  if (!clientSuccess && !serverSuccess) {
-    throw new Error(`Both client and server ${eventName} events failed`);
-  }
-  
-  // If only client failed but server succeeded, that's acceptable (server is more reliable)
-  logger.info(`${eventName} dual-send completed`, { 
-    feature: 'Facebook', 
-    eventId,
-    clientSuccess,
-    serverSuccess
-  });
-}
 
 // ============================================================================
 // SDK Initialization
@@ -369,52 +216,6 @@ export function parseDeepLinkParams(url: string): AttributionData {
   }
 }
 
-/**
- * Log Activate App event to Facebook (client-side)
- * 
- * Sends official Facebook "Activate App" event which is used for both:
- * - First app launch (install) - with attribution parameters
- * - Subsequent launches - without attribution parameters
- * 
- * Facebook's backend automatically differentiates between install and launch events.
- * 
- * INTERNAL USE ONLY - Use sendAppInstallEventDual() instead
- * 
- * @param eventId - Event ID for deduplication between client and server
- * @param attributionData - Optional attribution data from deep link (include for first launch)
- */
-async function logActivateAppEvent(
-  eventId: string,
-  attributionData?: AttributionData
-): Promise<void> {
-  // Build attribution parameters if provided (for install event)
-  const parameters: Record<string, string> = {};
-  
-  if (attributionData) {
-    if (attributionData.fbclid) {
-      parameters.fbclid = attributionData.fbclid;
-    }
-    if (attributionData.utm_source) {
-      parameters.utm_source = attributionData.utm_source;
-    }
-    if (attributionData.utm_medium) {
-      parameters.utm_medium = attributionData.utm_medium;
-    }
-    if (attributionData.utm_campaign) {
-      parameters.utm_campaign = attributionData.utm_campaign;
-    }
-    if (attributionData.email) {
-      parameters.email = attributionData.email;
-    }
-  }
-  
-  // Delegate to generic client event logger
-  await logClientEvent(
-    FB_MOBILE_ACTIVATE_APP, 
-    eventId, 
-    Object.keys(parameters).length > 0 ? parameters : undefined
-  );
-}
 
 /**
  * Generate a unique event ID for deduplication between client and server events
@@ -476,38 +277,13 @@ export async function sendConversionEvent(
   }
 }
 
-/**
- * Send AppInstall event to Facebook (Server-Side via Cloud Function)
- * 
- * Uses Facebook standard event 'fb_mobile_activate_app' with attribution data.
- * Facebook automatically identifies this as an install event based on context.
- * 
- * Simplified wrapper that uses sendServerEvent() helper.
- * Delegates server-side event sending with standardized error handling.
- * 
- * INTERNAL USE ONLY - Use sendAppInstallEventDual() instead
- * 
- * @param eventId - Event ID for deduplication between client and server
- * @param userData - User data for the event
- * @param attributionData - Attribution data from deep link
- */
-async function sendAppInstallEvent(
-  eventId: string,
-  userData?: {
-    email?: string;
-  },
-  attributionData?: AttributionData
-): Promise<void> {
-  // Delegate to generic server event sender with standard Facebook event name
-  await sendServerEvent(FB_MOBILE_ACTIVATE_APP, eventId, userData, undefined, attributionData);
-}
 
 
 /**
  * Send AppInstall event to both client and server with shared event ID for deduplication
  * 
- * Simplified wrapper that uses sendEventDual() helper for parallel client/server sending.
- * This is the recommended way to send AppInstall events as it ensures proper deduplication.
+ * Sends Facebook "Activate App" event with attribution data for proper campaign tracking.
+ * Uses dual-send approach (client + server) for maximum reliability.
  * 
  * @param attributionData - Attribution data from deep link (fbclid, utm params, email)
  * @param userData - Optional user data (email) for server-side event
@@ -518,17 +294,50 @@ export async function sendAppInstallEventDual(
     email?: string;
   }
 ): Promise<void> {
-  // Generate shared event ID for deduplication
   const eventId = generateEventId();
   
-  // Use generic dual-send helper with closures that capture the necessary data
-  await sendEventDual(
-    'AppInstall',
+  logger.info('Sending AppInstall event (dual-send)', { 
+    feature: 'Facebook', 
     eventId,
-    // Client-side function: pass eventId to logActivateAppEvent with attribution data
-    async () => logActivateAppEvent(eventId, attributionData),
-    // Server-side function: pass eventId to sendAppInstallEvent
-    async () => sendAppInstallEvent(eventId, userData, attributionData)
-  );
+    hasFbclid: !!attributionData.fbclid
+  });
+  
+  // Build attribution parameters for client-side event
+  const clientParams: Record<string, string> = { _eventId: eventId };
+  if (attributionData.fbclid) clientParams.fbclid = attributionData.fbclid;
+  if (attributionData.utm_source) clientParams.utm_source = attributionData.utm_source;
+  if (attributionData.utm_medium) clientParams.utm_medium = attributionData.utm_medium;
+  if (attributionData.utm_campaign) clientParams.utm_campaign = attributionData.utm_campaign;
+  if (attributionData.email) clientParams.email = attributionData.email;
+  
+  // Send to both client and server in parallel
+  const results = await Promise.allSettled([
+    // Client-side: Facebook SDK
+    (async () => {
+      if (isClientSdkAvailable()) {
+        AppEventsLogger.logEvent(FB_MOBILE_ACTIVATE_APP, clientParams);
+        logger.info('AppInstall client-side sent', { feature: 'Facebook', eventId });
+      }
+    })(),
+    
+    // Server-side: Conversions API via Cloud Function
+    sendConversionEvent(eventId, FB_MOBILE_ACTIVATE_APP, userData, undefined, attributionData)
+  ]);
+  
+  // Check results
+  const [clientResult, serverResult] = results;
+  const clientSuccess = clientResult.status === 'fulfilled';
+  const serverSuccess = serverResult.status === 'fulfilled';
+  
+  if (!clientSuccess && !serverSuccess) {
+    throw new Error('Both client and server AppInstall events failed');
+  }
+  
+  logger.info('AppInstall dual-send completed', { 
+    feature: 'Facebook', 
+    eventId,
+    clientSuccess,
+    serverSuccess
+  });
 }
 
