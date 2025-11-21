@@ -469,22 +469,117 @@ function RootLayoutNav() {
     if (Platform.OS === 'web' || !Notifications) return;
 
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
-      
-      // Check if it's a chat message notification
-      if (data?.type === 'chat_message') {
-        logger.info('User tapped on chat notification', { 
-          feature: 'RootLayout', 
-          threadId: data.threadId 
-        });
+      try {
+        // Log FULL response object to Sentry
+        const { captureException, addBreadcrumb } = require('@sentry/react-native');
         
-        // Navigate to chat screen
-        router.push('/chat');
+        addBreadcrumb({
+          message: 'Notification response received',
+          level: 'info',
+          data: {
+            fullResponse: JSON.parse(JSON.stringify(response)),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        // Check all possible data paths (with type casting for runtime access)
+        const dataPaths = {
+          path1: response?.notification?.request?.content?.data,
+          path2: (response?.notification as any)?.data,
+          path3: (response as any)?.data,
+          path4: (response as any)?.request?.content?.data,
+          path5: (response?.notification as any)?.request?.data,
+        };
+
+        logger.debug('All notification data paths', { feature: 'RootLayout', dataPaths });
+
+        // Search for notification type in any path
+        let notificationType = null;
+        let threadId = null;
+        let workingDataPath = null;
+
+        for (const [pathName, pathData] of Object.entries(dataPaths)) {
+          if (pathData?.type) {
+            notificationType = pathData.type;
+            threadId = pathData.threadId;
+            workingDataPath = pathName;
+            break;
+          }
+        }
+
+        if (notificationType === 'chat_message') {
+          logger.info('Chat notification detected, navigating', { 
+            feature: 'RootLayout',
+            workingDataPath,
+            threadId,
+            authState,
+            currentRoute: segments[0],
+          });
+          
+          addBreadcrumb({
+            message: 'Chat notification navigation triggered',
+            level: 'info',
+            data: {
+              workingDataPath,
+              threadId,
+              authState,
+              currentRoute: segments[0],
+            },
+          });
+
+          if (authState === 'authenticated') {
+            router.push('/chat');
+          } else {
+            // Delayed navigation after authentication
+            setRedirectPath('/chat');
+          }
+        } else {
+          // CAPTURE ERROR in Sentry with full structure (but don't block flow)
+          const errorContext = {
+            message: 'Notification tap navigation failed - no valid data found',
+            fullResponse: JSON.parse(JSON.stringify(response)),
+            dataPaths,
+            notificationType,
+            threadId,
+            workingDataPath,
+            authState,
+            currentRoute: segments[0],
+            timestamp: new Date().toISOString(),
+            platform: Platform.OS,
+            expectedType: 'chat_message',
+          };
+
+          logger.error('Notification navigation failed', { feature: 'RootLayout', ...errorContext });
+
+          // Send Error to Sentry (but don't throw - continue app flow)
+          captureException(new Error('Notification navigation failed - no valid data found'), {
+            tags: {
+              feature: 'NotificationNavigation',
+              platform: Platform.OS,
+              notificationType: notificationType || 'unknown',
+            },
+            extra: errorContext,
+          });
+        }
+      } catch (error) {
+        // Log any handler crashes
+        const { captureException } = require('@sentry/react-native');
+        captureException(error, {
+          tags: {
+            feature: 'NotificationNavigation',
+            error_type: 'handler_crash',
+          },
+          extra: {
+            originalResponse: response,
+            timestamp: new Date().toISOString(),
+          },
+        });
+        logger.error('Notification handler crashed', { feature: 'RootLayout', error });
       }
     });
 
     return () => subscription.remove();
-  }, [router]);
+  }, [router, authState, segments]);
 
   // Handle notification that opened the app from quit/background state
   useEffect(() => {
@@ -493,27 +588,130 @@ function RootLayoutNav() {
     // Check if app was opened by notification tap
     Notifications.getLastNotificationResponseAsync()
       .then((response) => {
-        if (!response) return;
-        
-        const data = response.notification.request.content.data;
-        
-        if (data?.type === 'chat_message') {
-          logger.info('App opened from chat notification', { 
-            feature: 'RootLayout', 
-            threadId: data.threadId 
-          });
+        if (!response) {
+          logger.debug('No initial notification found', { feature: 'RootLayout' });
+          return;
+        }
+
+        try {
+          const { captureException, addBreadcrumb } = require('@sentry/react-native');
           
-          // Navigate to chat screen
-          router.push('/chat');
+          addBreadcrumb({
+            message: 'Initial notification response received',
+            level: 'info',
+            data: {
+              fullResponse: JSON.parse(JSON.stringify(response)),
+              timestamp: new Date().toISOString(),
+            },
+          });
+
+          // Check all possible data paths (with type casting for runtime access)
+          const dataPaths = {
+            path1: response?.notification?.request?.content?.data,
+            path2: (response?.notification as any)?.data,
+            path3: (response as any)?.data,
+            path4: (response as any)?.request?.content?.data,
+            path5: (response?.notification as any)?.request?.data,
+          };
+
+          logger.debug('All initial notification data paths', { feature: 'RootLayout', dataPaths });
+
+          // Search for notification type in any path
+          let notificationType = null;
+          let threadId = null;
+          let workingDataPath = null;
+
+          for (const [pathName, pathData] of Object.entries(dataPaths)) {
+            if (pathData?.type) {
+              notificationType = pathData.type;
+              threadId = pathData.threadId;
+              workingDataPath = pathName;
+              break;
+            }
+          }
+
+          if (notificationType === 'chat_message') {
+            logger.info('Initial chat notification detected, navigating', { 
+              feature: 'RootLayout',
+              workingDataPath,
+              threadId,
+              authState,
+            });
+            
+            addBreadcrumb({
+              message: 'Initial chat notification navigation triggered',
+              level: 'info',
+              data: {
+                workingDataPath,
+                threadId,
+                authState,
+              },
+            });
+
+            if (authState === 'authenticated') {
+              router.push('/chat');
+            } else {
+              setRedirectPath('/chat');
+            }
+          } else {
+            // CAPTURE ERROR in Sentry with full structure (but don't block flow)
+            const errorContext = {
+              message: 'Initial notification navigation failed - no valid data found',
+              fullResponse: JSON.parse(JSON.stringify(response)),
+              dataPaths,
+              notificationType,
+              threadId,
+              workingDataPath,
+              authState,
+              timestamp: new Date().toISOString(),
+              platform: Platform.OS,
+              expectedType: 'chat_message',
+            };
+
+            logger.error('Initial notification navigation failed', { feature: 'RootLayout', ...errorContext });
+
+            // Send Error to Sentry (but don't throw - continue app flow)
+            captureException(new Error('Initial notification navigation failed - no valid data found'), {
+              tags: {
+                feature: 'InitialNotificationNavigation',
+                platform: Platform.OS,
+                notificationType: notificationType || 'unknown',
+              },
+              extra: errorContext,
+            });
+          }
+        } catch (error) {
+          const { captureException } = require('@sentry/react-native');
+          captureException(error, {
+            tags: {
+              feature: 'InitialNotificationNavigation',
+              error_type: 'handler_crash',
+            },
+            extra: {
+              originalResponse: response,
+              timestamp: new Date().toISOString(),
+            },
+          });
+          logger.error('Initial notification handler crashed', { feature: 'RootLayout', error });
         }
       })
       .catch((error) => {
+        const { captureException } = require('@sentry/react-native');
+        captureException(error, {
+          tags: {
+            feature: 'InitialNotificationNavigation',
+            error_type: 'get_last_notification_failed',
+          },
+          extra: {
+            timestamp: new Date().toISOString(),
+          },
+        });
         logger.error('Error checking initial notification', { 
           feature: 'RootLayout', 
           error 
         });
       });
-  }, [router]);
+  }, [router, authState]);
 
   if (authState === 'loading') {
     return (
