@@ -15,9 +15,30 @@ Complete guide for Facebook Attribution tracking and Conversions API integration
 ## 📋 Overview
 
 The app integrates with Facebook for:
-- **Attribution tracking** - Track app installs from Meta ads with deep links
+- **Automatic Event Logging** - SDK automatically tracks standard events (app launches, purchases, content views)
+- **Attribution tracking** - Track app installs from Meta ads with deep links (manual events for attribution data)
 - **Conversions API** - Server-side event tracking (fb_mobile_activate_app, fb_mobile_purchase, etc.)
 - **Email pre-filling** - Auto-fill email from attribution data
+
+## 🔄 Event Tracking Strategy
+
+The app uses a **hybrid approach** for Facebook event tracking:
+
+### Automatic Events (autoLogAppEvents: true)
+- ✅ **App launches** - Handled automatically by Facebook SDK
+- ✅ **Purchases** - Automatic tracking of in-app purchases 
+- ✅ **Content views** - Screen navigation and content engagement
+- ✅ **Standard user actions** - Buttons, forms, and interactions
+
+### Manual Events (attribution tracking only)
+- 🎯 **Install events WITH attribution data** - For paid acquisition campaigns
+- 🎯 **Events with fbclid/UTM parameters** - For proper campaign attribution
+- 🎯 **Server-side events** - Via Conversions API for reliability
+
+**When to use manual events:**
+- User came from Facebook ad (has fbclid parameter)
+- UTM parameters need to be preserved for campaign tracking
+- Server-side reliability is required (bypasses ad blockers)
 
 ---
 
@@ -36,6 +57,10 @@ The app integrates with Facebook for:
 **Where to add:**
 - `constants/facebook.config.ts` (main source)
 - `app.config.ts` (Expo config - must be kept in sync)
+
+**Auto Event Logging:**
+- `autoLogAppEvents: true` - Automatically tracks standard Facebook events (app launches, content views, purchases)
+- Reduces manual event tracking and improves data consistency
 
 ```typescript
 // constants/facebook.config.ts
@@ -165,51 +190,53 @@ Attribution data is stored in Firestore at `/users/{userId}/attribution`:
 
 ## 🔧 Usage Examples
 
-### Send AppInstall Event (First Launch)
+### Send Install Event with Attribution Data (Paid Acquisition Only)
+
+Manual install events are **only needed** when you have attribution data from Facebook ads:
 
 ```typescript
 import { isFirstLaunch, markAppAsLaunched, getAttributionData } from '@/services/attribution.service';
 import { sendAppInstallEventDual } from '@/services/facebook.service';
 
-async function handleFirstLaunch() {
+async function handleAttributedInstall() {
   const firstLaunch = await isFirstLaunch();
   
   if (firstLaunch) {
     const attributionData = await getAttributionData();
     
-    if (attributionData) {
-      // Send fb_mobile_activate_app event (client + server) using dual-send approach
-      // Facebook identifies this as an install based on attribution data context
+    // ✅ ONLY send manual events if we have Facebook attribution data
+    if (attributionData?.fbclid || attributionData?.utm_source === 'facebook') {
+      // Send install event with attribution for proper campaign tracking
       await sendAppInstallEventDual(
-        attributionData,
+        attributionData, // Contains fbclid, utm_source, utm_campaign, etc.
         attributionData.email ? { email: attributionData.email } : undefined
       );
     }
+    // ❌ For organic users, SDK handles automatically - no manual event needed
     
     await markAppAsLaunched();
   }
 }
 ```
 
-### Send AppLaunch Event (Subsequent Launches)
+**Key Points:**
+- Manual events only for **paid acquisition** (fbclid present)
+- **Organic installs** are handled automatically by SDK
+- Attribution data (fbclid, UTM params) is critical for campaign optimization
+
+### App Launch Events (Automatic)
+
+App launch events are now handled **automatically** by Facebook SDK when `autoLogAppEvents: true`:
 
 ```typescript
-import { getAttributionData } from '@/services/attribution.service';
-import { getCurrentUser } from '@/services/auth.service';
-import { sendAppLaunchEventDual } from '@/services/facebook.service';
+// ❌ NO LONGER NEEDED - SDK handles automatically
+// await sendAppLaunchEventDual(attributionData, userData);
 
-async function handleAppLaunch() {
-  const currentUser = getCurrentUser();
-  const attributionData = await getAttributionData();
-  
-  // Send fb_mobile_activate_app event (client + server) using dual-send approach
-  // Same event as install, but for subsequent launches
-  await sendAppLaunchEventDual(
-    attributionData || undefined,
-    currentUser?.email ? { email: currentUser.email } : undefined
-  );
-}
+// ✅ SDK automatically sends fb_mobile_activate_app on each app launch
+// No manual code required - attribution happens through device fingerprinting
 ```
+
+**Note:** Automatic app launch events use device fingerprinting and advertiser IDs for attribution. Manual events are only needed when you have Facebook attribution data (fbclid, UTM parameters) from paid acquisition campaigns.
 
 ### Send Custom Events
 

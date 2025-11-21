@@ -2,7 +2,6 @@ import { auth } from '@/constants/firebase.config';
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { clearTrackingAfterAuth, isFirstLaunch, markAppAsLaunched, needsTrackingAfterAuth } from '@/services/attribution.service';
-import { sendAppInstallEventDual } from '@/services/facebook.service';
 import { User } from '@/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -143,15 +142,11 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
       } else if (Platform.OS === 'android') {
         // Android: Send events immediately (no prompt needed)
         try {
-          await sendAppInstallEventDual(
-            {}, // No attribution data (organic user)
-            { email }
-          );
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
           logger.info('MAIN FLOW: Android tracking completed', { feature: 'AuthService' });
         } catch (fbError) {
-          logger.error('MAIN FLOW: Failed to send tracking events', { feature: 'AuthService', error: fbError });
+          logger.error('MAIN FLOW: Failed to clear tracking state', { feature: 'AuthService', error: fbError });
           // Don't block user flow on Facebook error
           await clearTrackingAfterAuth();
         }
@@ -201,11 +196,10 @@ export async function signInWithTestEmail(email: string): Promise<User> {
       router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
     } else if (Platform.OS === 'android') {
       try {
-        await sendAppInstallEventDual({}, { email });
         await clearTrackingAfterAuth();
         await markAppAsLaunched();
       } catch (fbError) {
-        logger.error('MAIN FLOW: Failed to send tracking events', { feature: 'AuthService', error: fbError });
+        logger.error('MAIN FLOW: Failed to clear tracking state', { feature: 'AuthService', error: fbError });
         await clearTrackingAfterAuth();
       }
     }
@@ -341,11 +335,10 @@ export async function signInWithGoogle(): Promise<User> {
         router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
       } else if (Platform.OS === 'android') {
         try {
-          await sendAppInstallEventDual({}, { email: user.email });
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
         } catch (fbError) {
-          logger.error('MAIN FLOW: Failed to send tracking events', { feature: 'AuthService', error: fbError });
+          logger.error('MAIN FLOW: Failed to clear tracking state', { feature: 'AuthService', error: fbError });
           await clearTrackingAfterAuth();
         }
       }
@@ -434,11 +427,10 @@ export async function signInWithApple(): Promise<User> {
         router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
       } else if (Platform.OS === 'android') {
         try {
-          await sendAppInstallEventDual({}, { email: user.email });
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
         } catch (fbError) {
-          logger.error('MAIN FLOW: Failed to send tracking events', { feature: 'AuthService', error: fbError });
+          logger.error('MAIN FLOW: Failed to clear tracking state', { feature: 'AuthService', error: fbError });
           await clearTrackingAfterAuth();
         }
       }

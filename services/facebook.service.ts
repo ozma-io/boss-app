@@ -290,6 +290,10 @@ async function sendEventDual(
 
 /**
  * Initialize Facebook SDK
+ * 
+ * Best practice timing:
+ * - Android: Can be called early (no ATT requirements)
+ * - iOS: Should be called AFTER requestTrackingPermission() for proper IDFA usage
  */
 export async function initializeFacebookSdk(): Promise<void> {
   // Skip on web
@@ -322,33 +326,21 @@ export async function initializeFacebookSdk(): Promise<void> {
     }
 
     // Initialize App Events
+    // Note: On iOS, this should be called AFTER ATT permission for best practices
     await Settings.initializeSDK();
     
-    logger.info('SDK initialized successfully', { feature: 'Facebook' });
+    logger.info('SDK initialized successfully', { 
+      feature: 'Facebook', 
+      platform: Platform.OS,
+      autoLogAppEvents: FACEBOOK_CONFIG.autoLogAppEvents,
+      advertiserIDCollection: FACEBOOK_CONFIG.advertiserIDCollectionEnabled
+    });
   } catch (error) {
     logger.error('Error initializing SDK', { feature: 'Facebook', error });
     throw error;
   }
 }
 
-/**
- * Fetch deferred deep link from Facebook SDK
- * This retrieves the deep link that caused the app install
- */
-export async function fetchDeferredAppLink(): Promise<string | null> {
-  try {
-    // Note: react-native-fbsdk-next doesn't expose fetchDeferredAppLink directly
-    // We need to use native modules or rely on regular deep linking via Linking API
-    // The deferred deep link will be available through the regular deep link mechanism
-    // after the Facebook SDK processes it on the native side
-    
-    logger.info('Deferred deep link fetch attempted (handled by native SDK)', { feature: 'Facebook' });
-    return null;
-  } catch (error) {
-    logger.error('Error fetching deferred app link', { feature: 'Facebook', error });
-    return null;
-  }
-}
 
 /**
  * Parse deep link parameters from URL
@@ -386,7 +378,7 @@ export function parseDeepLinkParams(url: string): AttributionData {
  * 
  * Facebook's backend automatically differentiates between install and launch events.
  * 
- * INTERNAL USE ONLY - Use sendAppInstallEventDual() or sendAppLaunchEventDual() instead
+ * INTERNAL USE ONLY - Use sendAppInstallEventDual() instead
  * 
  * @param eventId - Event ID for deduplication between client and server
  * @param attributionData - Optional attribution data from deep link (include for first launch)
@@ -510,31 +502,6 @@ async function sendAppInstallEvent(
   await sendServerEvent(FB_MOBILE_ACTIVATE_APP, eventId, userData, undefined, attributionData);
 }
 
-/**
- * Send AppLaunch event to Facebook (Server-Side via Cloud Function)
- * 
- * Uses Facebook standard event 'fb_mobile_activate_app' for app launches.
- * Same event as install, but without attribution data (subsequent launches).
- * 
- * Simplified wrapper that uses sendServerEvent() helper.
- * Delegates server-side event sending with standardized error handling.
- * 
- * INTERNAL USE ONLY - Use sendAppLaunchEventDual() instead
- * 
- * @param eventId - Event ID for deduplication between client and server
- * @param userData - User data for the event
- * @param attributionData - Attribution data from deep link
- */
-async function sendAppLaunchEvent(
-  eventId: string,
-  userData?: {
-    email?: string;
-  },
-  attributionData?: AttributionData
-): Promise<void> {
-  // Delegate to generic server event sender with standard Facebook event name
-  await sendServerEvent(FB_MOBILE_ACTIVATE_APP, eventId, userData, undefined, attributionData);
-}
 
 /**
  * Send AppInstall event to both client and server with shared event ID for deduplication
@@ -565,31 +532,3 @@ export async function sendAppInstallEventDual(
   );
 }
 
-/**
- * Send AppLaunch event to both client and server with shared event ID for deduplication
- * 
- * Simplified wrapper that uses sendEventDual() helper for parallel client/server sending.
- * This is the recommended way to send AppLaunch events as it ensures proper deduplication.
- * 
- * @param attributionData - Optional attribution data from deep link (fbclid, utm params)
- * @param userData - Optional user data (email) for server-side event
- */
-export async function sendAppLaunchEventDual(
-  attributionData?: AttributionData,
-  userData?: {
-    email?: string;
-  }
-): Promise<void> {
-  // Generate shared event ID for deduplication
-  const eventId = generateEventId();
-  
-  // Use generic dual-send helper with closures that capture the necessary data
-  await sendEventDual(
-    'AppLaunch',
-    eventId,
-    // Client-side function: pass eventId to logActivateAppEvent (no attribution data for subsequent launches)
-    async () => logActivateAppEvent(eventId),
-    // Server-side function: pass eventId to sendAppLaunchEvent
-    async () => sendAppLaunchEvent(eventId, userData, attributionData)
-  );
-}

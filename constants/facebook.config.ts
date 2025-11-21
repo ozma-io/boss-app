@@ -39,7 +39,7 @@ export const FACEBOOK_CONFIG = {
   pixelId: FACEBOOK_PIXEL_ID,
   
   // Enable automatic event logging (AppInstall, AppLaunch, etc.)
-  autoLogAppEvents: false,
+  autoLogAppEvents: true,
   
   // Enable advertiser tracking (for iOS 14.5+)
   advertiserIDCollectionEnabled: true,

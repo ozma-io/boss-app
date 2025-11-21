@@ -5,9 +5,9 @@ import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/con
 import { SessionProvider } from '@/contexts/SessionContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { initializeAmplitude } from '@/services/amplitude.service';
-import { getAttributionData, getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData, setNeedsTrackingAfterAuth } from '@/services/attribution.service';
-import { getCurrentUser, initializeGoogleSignIn } from '@/services/auth.service';
-import { initializeFacebookSdk, parseDeepLinkParams, sendAppInstallEventDual, sendAppLaunchEventDual } from '@/services/facebook.service';
+import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData, setNeedsTrackingAfterAuth } from '@/services/attribution.service';
+import { initializeGoogleSignIn } from '@/services/auth.service';
+import { initializeFacebookSdk, parseDeepLinkParams, sendAppInstallEventDual } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
@@ -112,9 +112,11 @@ export default function RootLayout() {
         }
 
         // Initialize Facebook SDK
-        if (Platform.OS !== 'web') {
+        if (Platform.OS === 'android') {
+          // Android: Initialize early (no ATT permission needed)
           await initializeFacebookSdk();
         }
+        // iOS: Initialize later in tracking-onboarding.tsx AFTER ATT permission
 
         // Initialize Intercom SDK
         await initializeIntercom();
@@ -227,31 +229,6 @@ export default function RootLayout() {
           
           // Mark app as launched
           await markAppAsLaunched();
-        } else {
-          // Not first launch - send App Launch event for returning user
-          if (Platform.OS !== 'web') {
-            logger.info('Subsequent launch detected', { feature: 'App' });
-            
-            try {
-              const currentUser = getCurrentUser();
-              const attributionData = await getAttributionData();
-              
-              // Send app launch event (client + server with event deduplication)
-              await sendAppLaunchEventDual(
-                attributionData || undefined,
-                currentUser?.email ? { email: currentUser.email } : undefined
-              );
-              
-              logger.info('App Launch event sent', { 
-                feature: 'App', 
-                hasUserEmail: !!currentUser?.email,
-                hasAttribution: !!attributionData
-              });
-            } catch (launchError) {
-              logger.error('Failed to send App Launch event', { feature: 'App', error: launchError instanceof Error ? launchError : new Error(String(launchError)) });
-              // Don't block app initialization
-            }
-          }
         }
       } catch (initError) {
         logger.error('Failed to initialize app', { feature: 'App', error: initError instanceof Error ? initError : new Error(String(initError)) });

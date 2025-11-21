@@ -2,13 +2,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { clearTrackingAfterAuth, getAttributionData, isFirstLaunch, markAppAsLaunched } from '@/services/attribution.service';
-import { sendAppInstallEventDual } from '@/services/facebook.service';
+import { initializeFacebookSdk, sendAppInstallEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution, recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TrackingOnboardingScreen(): React.JSX.Element {
   const router = useRouter();
@@ -38,6 +38,24 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
       // Request system ATT permission
       const status = await requestTrackingPermission();
       logger.info('ATT permission status received', { feature: 'TrackingOnboarding', status });
+      
+      // Initialize Facebook SDK on iOS AFTER ATT permission (best practice)
+      if (Platform.OS === 'ios') {
+        await initializeFacebookSdk();
+        
+        // Enable advertiser tracking if permission granted (critical for IDFA usage)
+        if (status === 'authorized') {
+          try {
+            const { Settings } = require('react-native-fbsdk-next');
+            await Settings.setAdvertiserTrackingEnabled(true);
+            logger.info('Advertiser tracking enabled in Facebook SDK', { feature: 'TrackingOnboarding' });
+          } catch (error) {
+            logger.warn('Failed to enable advertiser tracking', { feature: 'TrackingOnboarding', error });
+          }
+        }
+        
+        logger.info('Facebook SDK initialized after ATT permission', { feature: 'TrackingOnboarding', status });
+      }
       
       // If user is logged in, update their tracking permission status
       if (user) {
@@ -82,18 +100,14 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
             // User installed organically, send events with email only
             // See: services/auth.service.ts for where this flow starts (post-login)
             
-            logger.info('MAIN FLOW: Organic user, sending install event with email', {
+            logger.info('MAIN FLOW: Organic user, clearing tracking state', {
               feature: 'TrackingOnboarding',
               hasEmail: !!email
             });
             
-            await sendAppInstallEventDual(
-              {}, // No attribution data (organic user)
-              email ? { email } : undefined
-            );
             await clearTrackingAfterAuth();
             await markAppAsLaunched();
-            logger.info('MAIN FLOW: Install event sent successfully', { feature: 'TrackingOnboarding' });
+            logger.info('MAIN FLOW: Tracking state cleared successfully', { feature: 'TrackingOnboarding' });
           }
         } catch (fbError) {
           logger.error('Failed to send install event', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
