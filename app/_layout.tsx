@@ -587,6 +587,40 @@ function RootLayoutNav() {
           )
         });
 
+        // DEEP DIVE: Analyze full content object
+        const fullContent = response?.notification?.request?.content;
+        const contentDataField = fullContent?.data;
+        
+        logger.debug('Full content object analysis', {
+          feature: 'RootLayout',
+          fullContent,
+          contentKeys: Object.keys(fullContent || {}),
+          dataField: contentDataField,
+          dataType: typeof contentDataField,
+          dataKeys: Object.keys(contentDataField || {}),
+          dataIsNull: contentDataField === null,
+          dataIsUndefined: contentDataField === undefined,
+        });
+
+        // Check if data is INSIDE content directly (not in .data field)
+        const alternativePaths = {
+          contentTitle: fullContent?.title,
+          contentBody: fullContent?.body, 
+          contentData: fullContent?.data,
+          // Maybe data fields are directly in content?
+          contentType: (fullContent as any)?.type,
+          contentThreadId: (fullContent as any)?.threadId,
+          contentMessageId: (fullContent as any)?.messageId,
+          // Or in nested objects?
+          contentUserInfo: (fullContent as any)?.userInfo,
+          contentCustomData: (fullContent as any)?.customData,
+        };
+
+        logger.debug('Alternative content paths analysis', {
+          feature: 'RootLayout',
+          alternativePaths,
+        });
+
         // Send detailed analysis to Sentry
         const { captureMessage } = require('@sentry/react-native');
         captureMessage('Notification Response Debug: Detailed structure analysis', {
@@ -604,7 +638,28 @@ function RootLayoutNav() {
             pathTypes: Object.fromEntries(
               Object.entries(dataPaths).map(([key, value]) => [key, typeof value])
             ),
+            fullContent: JSON.parse(JSON.stringify(fullContent)),
+            contentDataField: contentDataField,
+            alternativePaths,
             fullResponse: JSON.parse(JSON.stringify(response)),
+            timestamp: new Date().toISOString(),
+          }
+        });
+
+        // ALSO send content-specific debug message
+        captureMessage('Content Object Deep Analysis', {
+          level: 'info',
+          tags: { 
+            feature: 'ContentDebug',
+            platform: Platform.OS,
+          },
+          extra: {
+            fullContent: JSON.parse(JSON.stringify(fullContent)),
+            dataField: contentDataField,
+            dataType: typeof contentDataField,
+            dataIsNull: contentDataField === null,
+            dataKeys: Object.keys(contentDataField || {}),
+            alternativePaths,
             timestamp: new Date().toISOString(),
           }
         });
@@ -780,6 +835,38 @@ function RootLayoutNav() {
             )
           });
 
+          // DEEP DIVE: Analyze full content object for initial notification
+          const fullContent = response?.notification?.request?.content;
+          const contentDataField = fullContent?.data;
+          
+          logger.debug('Initial notification full content analysis', {
+            feature: 'RootLayout',
+            fullContent,
+            contentKeys: Object.keys(fullContent || {}),
+            dataField: contentDataField,
+            dataType: typeof contentDataField,
+            dataKeys: Object.keys(contentDataField || {}),
+            dataIsNull: contentDataField === null,
+            dataIsUndefined: contentDataField === undefined,
+          });
+
+          // Check alternative paths in initial notification
+          const alternativePaths = {
+            contentTitle: fullContent?.title,
+            contentBody: fullContent?.body,
+            contentData: fullContent?.data,
+            contentType: (fullContent as any)?.type,
+            contentThreadId: (fullContent as any)?.threadId,
+            contentMessageId: (fullContent as any)?.messageId,
+            contentUserInfo: (fullContent as any)?.userInfo,
+            contentCustomData: (fullContent as any)?.customData,
+          };
+
+          logger.debug('Initial notification alternative paths', {
+            feature: 'RootLayout',
+            alternativePaths,
+          });
+
           // Send initial notification analysis to Sentry
           const { captureMessage } = require('@sentry/react-native');
           captureMessage('Initial Notification Debug: Detailed structure analysis', {
@@ -797,6 +884,9 @@ function RootLayoutNav() {
               pathTypes: Object.fromEntries(
                 Object.entries(dataPaths).map(([key, value]) => [key, typeof value])
               ),
+              fullContent: JSON.parse(JSON.stringify(fullContent)),
+              contentDataField: contentDataField,
+              alternativePaths,
               fullResponse: JSON.parse(JSON.stringify(response)),
               timestamp: new Date().toISOString(),
             }
