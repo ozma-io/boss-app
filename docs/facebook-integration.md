@@ -4,6 +4,14 @@ Complete guide for Facebook Attribution tracking and Conversions API integration
 
 ---
 
+## 🔗 Quick Links
+
+- **Facebook App Dashboard:** https://developers.facebook.com/apps/853405190716887/dashboard/?business_id=2178506568838763
+- **Facebook Events Manager:** https://business.facebook.com/events_manager
+- **Google Play Console:** https://play.google.com/console/
+
+---
+
 ## 📋 Overview
 
 The app integrates with Facebook for:
