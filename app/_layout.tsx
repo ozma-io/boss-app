@@ -355,14 +355,30 @@ function RootLayoutNav() {
       const messaging = getMessaging();
 
       const unsubscribe = onMessage(messaging, async (remoteMessage: any) => {
+        // Log to console for immediate debugging
         logger.info('FCM message received in foreground', { 
           feature: 'RootLayout',
           title: remoteMessage.notification?.title,
           currentRoute: segments[0],
-          // ADD FULL FCM LOGGING
           fullRemoteMessage: JSON.stringify(remoteMessage),
           remoteMessageData: remoteMessage.data,
           remoteMessageNotification: remoteMessage.notification,
+        });
+
+        // ALSO log to Sentry breadcrumbs so you can see it in Sentry
+        const { addBreadcrumb } = require('@sentry/react-native');
+        addBreadcrumb({
+          message: 'FCM message received in foreground',
+          level: 'info',
+          category: 'fcm',
+          data: {
+            title: remoteMessage.notification?.title,
+            currentRoute: segments[0],
+            fullRemoteMessage: JSON.parse(JSON.stringify(remoteMessage)), // Deep copy
+            remoteMessageData: remoteMessage.data,
+            remoteMessageNotification: remoteMessage.notification,
+            timestamp: new Date().toISOString(),
+          },
         });
 
         // Don't show notification if user is in chat
