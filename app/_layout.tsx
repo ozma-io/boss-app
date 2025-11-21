@@ -359,6 +359,10 @@ function RootLayoutNav() {
           feature: 'RootLayout',
           title: remoteMessage.notification?.title,
           currentRoute: segments[0],
+          // ADD FULL FCM LOGGING
+          fullRemoteMessage: JSON.stringify(remoteMessage),
+          remoteMessageData: remoteMessage.data,
+          remoteMessageNotification: remoteMessage.notification,
         });
 
         // Don't show notification if user is in chat
@@ -367,12 +371,19 @@ function RootLayoutNav() {
           return;
         }
 
-        // Create local notification (works better with navigation than native FCM)
+        // Create local notification with EXPLICIT data structure
         await Notifications.scheduleNotificationAsync({
           content: {
             title: remoteMessage.notification?.title || 'New message',
             body: remoteMessage.notification?.body || '',
-            data: remoteMessage.data,
+            data: {
+              // EXPLICIT structure to ensure navigation works
+              type: 'chat_message',
+              threadId: remoteMessage.data?.threadId || 'main',
+              messageId: remoteMessage.data?.messageId,
+              // Include all original FCM data fields
+              ...remoteMessage.data,
+            },
           },
           trigger: null, // Show immediately
         });
