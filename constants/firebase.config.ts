@@ -24,7 +24,16 @@ let functions: Functions | undefined;
 let remoteConfig: RemoteConfig | null = null;
 
 // Check if we're in a real runtime environment (not SSR/SSG build time)
-if (typeof window !== 'undefined') {
+// We want to initialize Firebase in:
+// - Browser (web): has document object
+// - React Native (iOS/Android): has Platform global from React Native
+// We DON'T want to initialize during SSR/SSG builds in Node.js
+//
+// The check works as follows:
+// - typeof document !== 'undefined': true in browser, false in Node.js SSR and React Native
+// - typeof navigator !== 'undefined': true in browser and React Native (through polyfills), false in Node.js SSR
+// Using navigator check ensures we init in both browser AND React Native environments
+if (typeof navigator !== 'undefined') {
   app = initializeApp(firebaseConfig);
 
   // Initialize Auth with proper persistence
@@ -55,7 +64,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Export with type assertions for runtime usage
-// During SSG build (typeof window === 'undefined'), these will be undefined
+// During SSG build (typeof navigator === 'undefined'), these will be undefined
 // But at actual runtime (in browser/mobile app), they will be properly initialized
 // We use type assertion here to avoid changing all consuming files
 export { app };
@@ -65,5 +74,5 @@ export const functionsInstance = functions as Functions;
 export { remoteConfig };
 
 // Re-export with original names for backward compatibility
-  export { authInstance as auth, dbInstance as db, functionsInstance as functions };
+export { authInstance as auth, dbInstance as db, functionsInstance as functions };
 
