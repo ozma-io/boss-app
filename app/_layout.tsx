@@ -387,21 +387,59 @@ function RootLayoutNav() {
           return;
         }
 
+        // Prepare notification data with detailed logging
+        const dataToSend = {
+          type: 'chat_message',
+          threadId: remoteMessage.data?.threadId || 'main',
+          messageId: remoteMessage.data?.messageId,
+          ...remoteMessage.data,
+        };
+
+        logger.debug('Creating local notification', {
+          feature: 'RootLayout',
+          dataToSend,
+          originalRemoteData: remoteMessage.data,
+          title: remoteMessage.notification?.title,
+        });
+
+        // Log to Sentry breadcrumbs
+        addBreadcrumb({
+          message: 'Creating local notification with data',
+          level: 'info',
+          category: 'local_notification',
+          data: {
+            dataToSend,
+            originalRemoteData: remoteMessage.data,
+            title: remoteMessage.notification?.title,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
         // Create local notification with EXPLICIT data structure
-        await Notifications.scheduleNotificationAsync({
+        const notificationId = await Notifications.scheduleNotificationAsync({
           content: {
             title: remoteMessage.notification?.title || 'New message',
             body: remoteMessage.notification?.body || '',
-            data: {
-              // EXPLICIT structure to ensure navigation works
-              type: 'chat_message',
-              threadId: remoteMessage.data?.threadId || 'main',
-              messageId: remoteMessage.data?.messageId,
-              // Include all original FCM data fields
-              ...remoteMessage.data,
-            },
+            data: dataToSend,
           },
           trigger: null, // Show immediately
+        });
+
+        logger.debug('Local notification created', {
+          feature: 'RootLayout',
+          notificationId,
+          dataToSend,
+        });
+
+        // Log successful creation to Sentry
+        addBreadcrumb({
+          message: 'Local notification created successfully',
+          level: 'info',
+          category: 'local_notification',
+          data: {
+            notificationId,
+            dataToSend,
+          },
         });
       });
 
@@ -500,25 +538,76 @@ function RootLayoutNav() {
         // Log FULL response object to Sentry
         const { captureException, addBreadcrumb } = require('@sentry/react-native');
         
+        // DETAILED response structure analysis
+        const responseKeys = Object.keys(response || {});
+        const notificationKeys = Object.keys(response?.notification || {});
+        const requestKeys = Object.keys(response?.notification?.request || {});
+        const contentKeys = Object.keys(response?.notification?.request?.content || {});
+
+        logger.debug('Detailed response structure analysis', {
+          feature: 'RootLayout',
+          responseKeys,
+          notificationKeys,
+          requestKeys,
+          contentKeys,
+          fullResponse: JSON.stringify(response),
+        });
+
         addBreadcrumb({
-          message: 'Notification response received',
+          message: 'Notification response received with detailed structure',
           level: 'info',
           data: {
+            responseKeys,
+            notificationKeys,
+            requestKeys,
+            contentKeys,
             fullResponse: JSON.parse(JSON.stringify(response)),
             timestamp: new Date().toISOString(),
           },
         });
 
-        // Check all possible data paths (with type casting for runtime access)
+        // Check ALL possible data paths (including iOS-specific)
         const dataPaths = {
           path1: response?.notification?.request?.content?.data,
           path2: (response?.notification as any)?.data,
           path3: (response as any)?.data,
           path4: (response as any)?.request?.content?.data,
           path5: (response?.notification as any)?.request?.data,
+          path6: (response?.notification?.request?.content as any)?.userInfo, // iOS specific
+          path7: (response as any)?.userInfo, // iOS alternative
+          path8: (response?.notification as any)?.userInfo,
+          path9: (response?.notification?.request as any)?.userInfo,
         };
 
-        logger.debug('All notification data paths', { feature: 'RootLayout', dataPaths });
+        logger.debug('All notification data paths', { 
+          feature: 'RootLayout', 
+          dataPaths,
+          pathTypes: Object.fromEntries(
+            Object.entries(dataPaths).map(([key, value]) => [key, typeof value])
+          )
+        });
+
+        // Send detailed analysis to Sentry
+        const { captureMessage } = require('@sentry/react-native');
+        captureMessage('Notification Response Debug: Detailed structure analysis', {
+          level: 'info',
+          tags: { 
+            feature: 'NotificationResponseDebug',
+            platform: Platform.OS,
+          },
+          extra: {
+            responseKeys,
+            notificationKeys,
+            requestKeys,
+            contentKeys,
+            dataPaths,
+            pathTypes: Object.fromEntries(
+              Object.entries(dataPaths).map(([key, value]) => [key, typeof value])
+            ),
+            fullResponse: JSON.parse(JSON.stringify(response)),
+            timestamp: new Date().toISOString(),
+          }
+        });
 
         // Search for notification type in any path
         let notificationType = null;
@@ -632,16 +721,63 @@ function RootLayoutNav() {
             },
           });
 
-          // Check all possible data paths (with type casting for runtime access)
+          // Check ALL possible data paths (including iOS-specific)
           const dataPaths = {
             path1: response?.notification?.request?.content?.data,
             path2: (response?.notification as any)?.data,
             path3: (response as any)?.data,
             path4: (response as any)?.request?.content?.data,
             path5: (response?.notification as any)?.request?.data,
+            path6: (response?.notification?.request?.content as any)?.userInfo, // iOS specific
+            path7: (response as any)?.userInfo, // iOS alternative
+            path8: (response?.notification as any)?.userInfo,
+            path9: (response?.notification?.request as any)?.userInfo,
           };
 
-          logger.debug('All initial notification data paths', { feature: 'RootLayout', dataPaths });
+          // DETAILED initial response structure analysis
+          const responseKeys = Object.keys(response || {});
+          const notificationKeys = Object.keys(response?.notification || {});
+          const requestKeys = Object.keys(response?.notification?.request || {});
+          const contentKeys = Object.keys(response?.notification?.request?.content || {});
+
+          logger.debug('Initial notification detailed structure analysis', {
+            feature: 'RootLayout',
+            responseKeys,
+            notificationKeys,
+            requestKeys,
+            contentKeys,
+            fullResponse: JSON.stringify(response),
+          });
+
+          logger.debug('All initial notification data paths', { 
+            feature: 'RootLayout', 
+            dataPaths,
+            pathTypes: Object.fromEntries(
+              Object.entries(dataPaths).map(([key, value]) => [key, typeof value])
+            )
+          });
+
+          // Send initial notification analysis to Sentry
+          const { captureMessage } = require('@sentry/react-native');
+          captureMessage('Initial Notification Debug: Detailed structure analysis', {
+            level: 'info',
+            tags: { 
+              feature: 'InitialNotificationDebug',
+              platform: Platform.OS,
+            },
+            extra: {
+              responseKeys,
+              notificationKeys,
+              requestKeys,
+              contentKeys,
+              dataPaths,
+              pathTypes: Object.fromEntries(
+                Object.entries(dataPaths).map(([key, value]) => [key, typeof value])
+              ),
+              fullResponse: JSON.parse(JSON.stringify(response)),
+              timestamp: new Date().toISOString(),
+            }
+          });
 
           // Search for notification type in any path
           let notificationType = null;
