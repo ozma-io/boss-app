@@ -76,6 +76,8 @@ export interface User {
   id: string;
   email: string;
   createdAt: string;
+  currentScreen: string | null; // Current screen user is viewing ('chat', 'support', etc)
+  lastActivityAt: string | null; // Last activity timestamp for presence timeout
 }
 
 // User Profile type definition (for Firestore data)

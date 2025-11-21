@@ -381,3 +381,41 @@ export async function updateUserProfile(
   }
 }
 
+/**
+ * Update user presence (current screen tracking)
+ * 
+ * Used to prevent notifications when user is actively viewing a screen.
+ * Updates are best-effort and non-critical (failures are logged but not thrown).
+ * 
+ * @param userId - User ID
+ * @param currentScreen - Screen name ('chat', 'support', etc) or null when leaving
+ */
+export async function updateUserPresence(
+  userId: string,
+  currentScreen: string | null
+): Promise<void> {
+  try {
+    logger.debug('Updating user presence', { feature: 'UserService', userId, currentScreen });
+    
+    const userDocRef = doc(db, 'users', userId);
+    const now = new Date().toISOString();
+    
+    await updateDoc(userDocRef, {
+      currentScreen,
+      lastActivityAt: now,
+    });
+    
+    logger.debug('User presence updated', { feature: 'UserService', userId, currentScreen });
+  } catch (error) {
+    const err = error as Error;
+    // Presence updates are non-critical, just log the error
+    logger.warn('Failed to update user presence (non-critical)', { 
+      feature: 'UserService', 
+      userId, 
+      currentScreen, 
+      error: err 
+    });
+    // Don't throw - app should continue working even if presence update fails
+  }
+}
+

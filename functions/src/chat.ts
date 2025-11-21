@@ -34,6 +34,26 @@ const langfusePublicKey = defineSecret('LANGFUSE_PUBLIC_KEY');
 const langfuseSecretKey = defineSecret('LANGFUSE_SECRET_KEY');
 
 /**
+ * Check if user is actively viewing a specific screen
+ * Uses presence tracking with 2-minute timeout for crash detection
+ * 
+ * @param userData - User document data
+ * @param screenName - Screen to check ('chat', 'support', etc)
+ * @returns true if user is actively in the screen
+ */
+function isUserActiveInScreen(
+  userData: any,
+  screenName: string
+): boolean {
+  if (userData?.currentScreen !== screenName) return false;
+  if (!userData?.lastActivityAt) return false;
+  
+  const TWO_MINUTES_MS = 2 * 60 * 1000;
+  const lastActivity = new Date(userData.lastActivityAt).getTime();
+  return (Date.now() - lastActivity) < TWO_MINUTES_MS;
+}
+
+/**
  * Convert Firestore message to OpenAI format
  * Strips the timestamp field which is not needed for the API
  */
@@ -566,6 +586,21 @@ export const onChatMessageCreated = onDocumentCreated(
       .collection('chatThreads').doc(threadId);
     
     try {
+      // Check if user is actively in chat screen
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data();
+      
+      if (isUserActiveInScreen(userData, 'chat')) {
+        logger.info('User is actively in chat, skipping notification and unread count', {
+          userId,
+          threadId,
+          messageId,
+          currentScreen: userData?.currentScreen,
+          lastActivityAt: userData?.lastActivityAt,
+        });
+        return;
+      }
+      
       // Update thread with unread count and last message info
       await threadRef.update({
         unreadCount: admin.firestore.FieldValue.increment(1),
@@ -580,8 +615,6 @@ export const onChatMessageCreated = onDocumentCreated(
       });
       
       // Send push notification if user has FCM token
-      const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
       const fcmToken = userData?.fcmToken;
       
       if (fcmToken) {

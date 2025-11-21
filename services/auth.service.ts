@@ -477,6 +477,8 @@ function mapFirebaseUserToUser(firebaseUser: FirebaseUser): User {
     id: firebaseUser.uid,
     email: firebaseUser.email || '',
     createdAt: firebaseUser.metadata.creationTime || new Date().toISOString(),
+    currentScreen: null,
+    lastActivityAt: null,
   };
 }
 

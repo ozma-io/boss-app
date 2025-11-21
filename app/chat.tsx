@@ -7,6 +7,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { extractTextFromContent, generateAIResponse, getOrCreateThread, loadOlderMessages, markChatAsRead, sendMessage, subscribeToMessages } from '@/services/chat.service';
 import { logger } from '@/services/logger.service';
+import { updateUserPresence } from '@/services/user.service';
 import { ChatMessage, ChatThread } from '@/types';
 import { showToast } from '@/utils/toast';
 import * as Clipboard from 'expo-clipboard';
@@ -44,6 +45,9 @@ export default function ChatScreen() {
   
   // Typing indicator timeout management
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  // Heartbeat interval for presence tracking
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Unified function to reset unread count when chat is visible
   const resetUnreadCountIfVisible = useCallback(() => {
@@ -67,23 +71,57 @@ export default function ChatScreen() {
       
       // Mark chat as read when user opens the screen
       resetUnreadCountIfVisible();
-    }, [resetUnreadCountIfVisible])
+      
+      // Set user presence to 'chat' screen
+      if (user) {
+        updateUserPresence(user.id, 'chat');
+        
+        // Setup heartbeat to keep presence fresh (every 30 seconds)
+        heartbeatIntervalRef.current = setInterval(() => {
+          updateUserPresence(user.id, 'chat');
+        }, 30000);
+      }
+      
+      return () => {
+        // Clear presence when leaving chat screen
+        if (user) {
+          updateUserPresence(user.id, null);
+        }
+        
+        // Clear heartbeat interval
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
+        }
+      };
+    }, [resetUnreadCountIfVisible, user])
   );
 
   // Reset unread count when app comes to foreground (handles scenario where chat is already open)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      // When app comes to foreground and chat screen is mounted, reset counter
+      // When app goes to background, clear presence
+      if (nextAppState === 'background' || nextAppState === 'inactive') {
+        if (user) {
+          updateUserPresence(user.id, null);
+        }
+      }
+      
+      // When app comes to foreground and chat screen is mounted, reset counter and set presence
       if (appState.match(/inactive|background/) && nextAppState === 'active') {
         resetUnreadCountIfVisible();
+        if (user) {
+          updateUserPresence(user.id, 'chat');
+        }
       }
+      
       setAppState(nextAppState);
     });
 
     return () => {
       subscription.remove();
     };
-  }, [appState, resetUnreadCountIfVisible]);
+  }, [appState, resetUnreadCountIfVisible, user]);
 
   // Initialize thread on mount
   useEffect(() => {

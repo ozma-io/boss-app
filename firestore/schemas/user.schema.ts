@@ -53,6 +53,10 @@ export interface UserSchema {
   // Push notification token for FCM
   fcmToken?: string | null;
   
+  // User presence tracking (for suppressing notifications when in-app)
+  currentScreen?: string | null; // Current screen user is viewing ('chat', 'support', etc)
+  lastActivityAt?: string | null; // Last activity timestamp for presence timeout
+  
   // Notification settings
   notificationPermissionStatus?: 'granted' | 'denied' | 'not_asked';
   lastNotificationPromptAt?: string | null;
