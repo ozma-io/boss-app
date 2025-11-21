@@ -105,11 +105,10 @@ export default function RootLayout() {
         // CHECK FOR UPDATES (before showing any UI)
         // ============================================================
         // This ensures users always get the latest version before interacting with the app
-        // Uses force=false for soft update (won't interrupt user, applies on next restart)
-        // Set to force=true if you need immediate critical updates
+        // Uses force=true to immediately reload with new update
         if (Platform.OS !== 'web') {
           const { checkAndApplyUpdates } = await import('@/services/updates.service');
-          await checkAndApplyUpdates(false);
+          await checkAndApplyUpdates(true);
         }
 
         // Initialize Facebook SDK
