@@ -2,7 +2,7 @@ import { auth } from '@/constants/firebase.config';
 import { resetAmplitudeUser, setAmplitudeUserId } from '@/services/amplitude.service';
 import { getAttributionData } from '@/services/attribution.service';
 import { onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
-import { logoutIntercomUser, registerIntercomUser } from '@/services/intercom.service';
+import { logoutIntercomUser } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { ensureUserProfileExists, updateUserAttribution } from '@/services/user.service';
 import { AuthState, User } from '@/types';
@@ -115,8 +115,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         setAmplitudeUserId(newUser.id)
           .catch(err => logger.error('Amplitude setUserId failed', { feature: 'AuthContext', error: err }));
         
-        registerIntercomUser(newUser.id, newUser.email, undefined)
-          .catch(err => logger.error('Intercom registration failed', { feature: 'AuthContext', error: err }));
+        // Note: Intercom user registration moved to lazy loading (when user opens Support)
+        // This prevents background timeout issues on iOS
       } else {
         // Reset Amplitude user on logout
         resetAmplitudeUser()

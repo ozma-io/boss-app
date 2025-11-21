@@ -13,6 +13,10 @@ if (Platform.OS !== 'web') {
   }
 }
 
+// Track if user is registered to avoid duplicate registrations
+let isUserRegistered = false;
+let registeredUserId: string | null = null;
+
 /**
  * Initialize Intercom SDK
  * Should be called once at app startup
@@ -136,22 +140,52 @@ export async function registerIntercomUser(
 }
 
 /**
+ * Ensure user is registered in Intercom before showing messenger
+ * This is called lazily when user opens Support screen
+ * @param userId - Firebase user ID
+ * @param email - User email
+ * @param name - User name (optional)
+ */
+async function ensureUserRegistered(userId: string, email: string, name?: string): Promise<void> {
+  if (isUserRegistered && registeredUserId === userId) {
+    logger.info('User already registered, skipping', { feature: 'Intercom', userId });
+    return;
+  }
+
+  logger.info('Registering user lazily before showing messenger', { feature: 'Intercom', userId });
+  await registerIntercomUser(userId, email, name);
+  isUserRegistered = true;
+  registeredUserId = userId;
+}
+
+/**
  * Show Intercom messenger
  * Call this when user opens Support screen
  * Only works on iOS and Android
+ * 
+ * IMPORTANT: This function registers the user lazily (on first call) to avoid
+ * background timeout issues. Registration happens when app is guaranteed to be
+ * in foreground (user clicked Support button).
+ * 
+ * @param userId - Firebase user ID (required for lazy registration)
+ * @param email - User email (required for lazy registration)
+ * @param name - User name (optional)
  */
-export async function showIntercomMessenger(): Promise<void> {
+export async function showIntercomMessenger(userId: string, email: string, name?: string): Promise<void> {
   if (Platform.OS === 'web' || !IntercomNative) {
     logger.info('Skipping messenger (web or SDK not available)', { feature: 'Intercom' });
     return;
   }
 
   try {
+    // Register user lazily if not already registered
+    await ensureUserRegistered(userId, email, name);
+    
     await IntercomNative.present();
     logger.info('Messenger opened', { feature: 'Intercom' });
   } catch (error) {
     logger.error('Failed to open messenger', { feature: 'Intercom', error });
-    // Don't throw - just log the error
+    throw error;
   }
 }
 
@@ -168,6 +202,9 @@ export async function logoutIntercomUser(): Promise<void> {
 
   try {
     await IntercomNative.logout();
+    // Reset registration state
+    isUserRegistered = false;
+    registeredUserId = null;
     logger.info('User logged out', { feature: 'Intercom' });
   } catch (error) {
     logger.error('Failed to logout', { feature: 'Intercom', error });

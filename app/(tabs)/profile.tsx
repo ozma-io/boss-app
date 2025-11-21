@@ -306,8 +306,13 @@ export default function ProfileScreen() {
         Linking.openURL('mailto:support@ozma.io');
       }
     } else {
+      if (!user) {
+        logger.error('Cannot open support without user', { feature: 'ProfileScreen' });
+        return;
+      }
+      
       try {
-        await showIntercomMessenger();
+        await showIntercomMessenger(user.id, user.email, profile?.name);
       } catch (error) {
         logger.error('Failed to open Intercom messenger', { feature: 'ProfileScreen', error: error instanceof Error ? error : new Error(String(error)) });
         showAlert(
