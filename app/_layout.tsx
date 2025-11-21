@@ -11,6 +11,7 @@ import { initializeFacebookSdk, parseDeepLinkParams, sendAppInstallEventDual, se
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
+import { checkAndApplyUpdates } from '@/services/updates.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -63,20 +64,24 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
+  // Initialize app: check for updates, initialize SDKs, handle attribution
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  // Initialize Sentry, Facebook SDK, Intercom, Amplitude and handle attribution on first launch
-  useEffect(() => {
-    const initializeFacebookAndAttribution = async (): Promise<void> => {
+    const initializeApp = async (): Promise<void> => {
       try {
         // Initialize Sentry first (before other SDKs so it can catch their errors)
         // The logger.init() already initializes Sentry with graceful fallback
         // This is just to ensure it's initialized early in the app lifecycle
         logger.info('App initialization started', { feature: 'App' });
+
+        // ============================================================
+        // CHECK FOR UPDATES (before showing any UI)
+        // ============================================================
+        // This ensures users always get the latest version before interacting with the app
+        // Uses force=false for soft update (won't interrupt user, applies on next restart)
+        // Set to force=true if you need immediate critical updates
+        if (Platform.OS !== 'web') {
+          await checkAndApplyUpdates(false);
+        }
 
         // Initialize Facebook SDK
         if (Platform.OS !== 'web') {
@@ -235,12 +240,17 @@ export default function RootLayout() {
           }
         }
       } catch (initError) {
-        logger.error('Failed to initialize Facebook SDK or attribution', { feature: 'App', error: initError instanceof Error ? initError : new Error(String(initError)) });
+        logger.error('Failed to initialize app', { feature: 'App', error: initError instanceof Error ? initError : new Error(String(initError)) });
+      } finally {
+        // Hide splash screen after all initialization is complete
+        // This ensures user sees the UI only after updates are checked and SDKs are initialized
+        await SplashScreen.hideAsync();
+        logger.info('App initialization complete, splash screen hidden', { feature: 'App' });
       }
     };
 
     if (loaded) {
-      initializeFacebookAndAttribution();
+      initializeApp();
     }
   }, [loaded]);
 
