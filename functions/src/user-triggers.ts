@@ -11,21 +11,20 @@ import { logger } from './logger';
 import type { ContentItem, FirestoreChatMessage } from './types/chat.types';
 
 /**
- * Firestore Trigger: Initialize chat when new user is created
+ * DISABLED: Firestore Trigger for chat initialization
  * 
- * Triggers when a new user document is created and:
- * 1. Creates the main chat thread
- * 2. Adds a welcome message from the assistant
+ * ⚠️ THIS FUNCTION IS DISABLED to prevent race conditions
  * 
- * This ensures every new user has a welcome message waiting for them
- * even before they open the chat for the first time.
+ * Chat creation is now handled synchronously at user creation time:
+ * - Web-funnel: web-funnels/app/api/firebase/create-user/route.ts → createChatWithWelcomeMessage()
+ * - App registration: boss-app/services/user.service.ts → createChatWithWelcomeMessage()
  * 
- * NOTE: Boss creation is NOT handled here. Boss is created explicitly at:
- * - Web-funnel: when user submits email (with onboarding data)
- * - App registration: in ensureUserProfileExists() when new user signs up (default boss)
- * This prevents race conditions and makes boss creation logic clear
+ * This eliminates the race condition where users could open the chat screen
+ * before the Cloud Function completed, causing fallback errors.
+ * 
+ * DEPLOYMENT: Comment out the export in functions/src/index.ts to fully disable
  */
-export const onUserCreated = onDocumentCreated(
+const onUserCreated_DISABLED = onDocumentCreated(
   {
     document: 'users/{userId}',
     region: 'us-central1',

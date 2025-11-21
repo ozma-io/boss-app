@@ -1,6 +1,6 @@
 import { db } from '@/constants/firebase.config';
 import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
-import { NotificationPermissionStatus, NotificationPromptHistoryItem, Unsubscribe, UserNotificationData, UserProfile } from '@/types';
+import { ChatMessage, ChatThread, ContentItem, NotificationPermissionStatus, NotificationPromptHistoryItem, Unsubscribe, UserNotificationData, UserProfile } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import { addDoc, collection, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
@@ -8,6 +8,27 @@ import { AttributionData } from './attribution.service';
 import { logger } from './logger.service';
 
 const DAYS_BETWEEN_PROMPTS = 3;
+
+/**
+ * Welcome message shown to new users when they first join
+ * 
+ * ⚠️ DUPLICATED LOGIC WARNING:
+ * This constant is duplicated in web-funnels repository:
+ * - web-funnels/app/utils/constants.ts → CHAT_WELCOME_MESSAGE
+ * - boss-app/functions/src/constants.ts → CHAT_WELCOME_MESSAGE (Cloud Functions)
+ * 
+ * If you change this message, please update ALL THREE locations:
+ * 1. boss-app/services/user.service.ts (this file)
+ * 2. web-funnels/app/utils/constants.ts
+ * 3. boss-app/functions/src/constants.ts
+ */
+const CHAT_WELCOME_MESSAGE = `Welcome to BossUp! I'm your AI assistant ready to help you manage your relationship with your boss.
+
+I can answer your questions anytime, and I'll sometimes reach out to you proactively with helpful insights. Make sure to enable notifications so you don't miss my messages!
+
+I have access to all your data in the app, so I can provide personalized advice and support. Feel free to ask me anything!
+
+Let's build your career together! 🚀`;
 
 function isFirebaseOfflineError(error: Error): boolean {
   return (
@@ -196,6 +217,82 @@ export async function shouldShowNotificationOnboarding(userId: string): Promise<
 }
 
 /**
+ * Create chat thread with welcome message for new user
+ * 
+ * ⚠️ DUPLICATED LOGIC WARNING:
+ * This function logic is duplicated in web-funnels repository:
+ * - web-funnels/app/api/firebase/create-user/route.ts → createChatWithWelcomeMessage()
+ * - boss-app/services/user.service.ts → createChatWithWelcomeMessage() (this file)
+ * 
+ * If you change this logic, please update BOTH locations:
+ * 1. boss-app/services/user.service.ts (this file) 
+ * 2. web-funnels/app/api/firebase/create-user/route.ts
+ * 
+ * This replaces the old Cloud Function approach (functions/src/user-triggers.ts → onUserCreated)
+ * which was removed to eliminate race conditions.
+ * 
+ * @param userId - User ID
+ */
+async function createChatWithWelcomeMessage(userId: string): Promise<void> {
+  logger.debug('Creating chat thread with welcome message', { feature: 'UserService', userId });
+  
+  const threadId = 'main'; // Single thread per user for MVP
+  const now = new Date().toISOString();
+  
+  try {
+    const threadRef = doc(db, 'users', userId, 'chatThreads', threadId);
+    
+    // Welcome message content (OpenAI-compatible format)
+    const welcomeContent: ContentItem[] = [
+      {
+        type: 'text',
+        text: CHAT_WELCOME_MESSAGE,
+      },
+    ];
+    
+    // Create welcome message
+    const welcomeMessage: ChatMessage = {
+      role: 'assistant',
+      content: welcomeContent,
+      timestamp: now,
+    };
+    
+    // Add message to collection FIRST (this triggers onChatMessageCreated)
+    const messagesRef = collection(db, 'users', userId, 'chatThreads', threadId, 'messages');
+    const messageRef = await addDoc(messagesRef, welcomeMessage);
+    
+    // Then create thread document with metadata
+    // IMPORTANT: unreadCount = 0, onChatMessageCreated trigger will increment it to 1
+    const threadData: ChatThread = {
+      createdAt: now,
+      updatedAt: now,
+      messageCount: 1,
+      assistantIsTyping: false,
+      unreadCount: 0, // onChatMessageCreated trigger increments this
+      lastReadAt: null,
+      lastMessageAt: now,
+      lastMessageRole: 'assistant',
+    };
+    
+    await setDoc(threadRef, threadData);
+    
+    logger.info('Chat thread and welcome message created successfully', {
+      feature: 'UserService',
+      userId,
+      threadId,
+      messageId: messageRef.id,
+    });
+  } catch (error) {
+    logger.error('Failed to create chat thread with welcome message', {
+      feature: 'UserService',
+      userId,
+      error,
+    });
+    throw error;
+  }
+}
+
+/**
  * Ensure user profile exists in Firestore
  * Creates the document with correct email from Auth if it doesn't exist
  * Also creates a default boss for new users who didn't come from web-funnel
@@ -247,6 +344,10 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
         userId, 
         bossId: bossDocRef.id 
       });
+      
+      // Create chat thread with welcome message
+      // This ensures new users have a welcome message immediately available
+      await createChatWithWelcomeMessage(userId);
     } else {
       logger.debug('User profile already exists', { feature: 'UserService', userId });
     }
