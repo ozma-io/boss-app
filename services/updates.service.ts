@@ -5,6 +5,10 @@ import { logger } from './logger.service';
 // If network is slow, we don't want to block app startup
 const UPDATE_CHECK_TIMEOUT_MS = 3000;
 
+// Error messages for timeout scenarios
+const UPDATE_CHECK_TIMEOUT_ERROR = 'Update check timed out';
+const UPDATE_FETCH_TIMEOUT_ERROR = 'Update fetch timed out';
+
 /**
  * Helper function to run a promise with timeout
  */
@@ -48,7 +52,7 @@ export async function checkAndApplyUpdates(
     const update = await withTimeout(
       Updates.checkForUpdateAsync(),
       timeoutMs,
-      'Update check timed out'
+      UPDATE_CHECK_TIMEOUT_ERROR
     );
     
     if (update.isAvailable) {
@@ -61,7 +65,7 @@ export async function checkAndApplyUpdates(
       await withTimeout(
         Updates.fetchUpdateAsync(),
         timeoutMs * 4, // 4x timeout for actual download
-        'Update fetch timed out'
+        UPDATE_FETCH_TIMEOUT_ERROR
       );
       
       if (force) {
@@ -84,13 +88,24 @@ export async function checkAndApplyUpdates(
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const isTimeout = errorMessage.includes('timed out');
+    const isCheckTimeout = errorMessage.includes(UPDATE_CHECK_TIMEOUT_ERROR);
+    const isFetchTimeout = errorMessage.includes(UPDATE_FETCH_TIMEOUT_ERROR);
     
-    if (isTimeout) {
-      logger.info('Update check timed out (slow network), continuing without update', { 
+    if (isCheckTimeout) {
+      logger.error('Update check timed out, UPDATE_CHECK_TIMEOUT_MS constant may need adjustment', { 
         feature: 'Updates',
         timeoutMs,
-        errorMessage
+        currentTimeout: UPDATE_CHECK_TIMEOUT_MS,
+        errorMessage,
+        error: error instanceof Error ? error : new Error(String(error))
+      });
+    } else if (isFetchTimeout) {
+      logger.error('Update download timed out, fetch timeout constant may need adjustment', { 
+        feature: 'Updates',
+        checkTimeout: timeoutMs,
+        fetchTimeout: timeoutMs * 4,
+        errorMessage,
+        error: error instanceof Error ? error : new Error(String(error))
       });
     } else {
       logger.error('Failed to check for updates', { 
