@@ -20,9 +20,9 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
-import 'react-native-reanimated';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
@@ -45,6 +45,35 @@ function HeaderBackButton(): React.JSX.Element {
     >
       <BackArrowIcon size={24} color="#161616" opacity={1} />
     </TouchableOpacity>
+  );
+}
+
+function AnimatedLogo(): React.JSX.Element {
+  const scale = useSharedValue(1);
+
+  useEffect(() => {
+    // Smooth breathing animation: scale from 1 to 1.08 and back
+    // Duration: 2000ms for gentle, calm effect
+    scale.value = withRepeat(
+      withTiming(1.08, {
+        duration: 2000,
+        easing: Easing.inOut(Easing.ease),
+      }),
+      -1, // Infinite repeat
+      true // Reverse (go back to 1)
+    );
+  }, [scale]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.Image
+      source={require('../assets/images/icon.png')}
+      style={[{ width: 120, height: 120, marginBottom: 20 }, animatedStyle]}
+      testID="auth-loading-logo"
+    />
   );
 }
 
@@ -501,11 +530,7 @@ function RootLayoutNav() {
   if (authState === 'loading') {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: AppColors.background }} testID="auth-loading-container">
-        <Image 
-          source={require('../assets/images/icon.png')}
-          style={{ width: 120, height: 120, marginBottom: 20 }}
-          testID="auth-loading-logo"
-        />
+        <AnimatedLogo />
       </View>
     );
   }
