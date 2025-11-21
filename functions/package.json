@@ -19,7 +19,7 @@
     "@sentry/node": "^10.25.0",
     "@types/jsonwebtoken": "^9.0.10",
     "firebase-admin": "^12.0.0",
-    "firebase-functions": "^6.6.0",
+    "firebase-functions": "^7.0.0",
     "googleapis": "^166.0.0",
     "jsonwebtoken": "^9.0.2",
     "langfuse": "^3.30.0",
