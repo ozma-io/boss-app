@@ -6,12 +6,12 @@
 
 import * as admin from 'firebase-admin';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
-import { CHAT_WELCOME_MESSAGE, DEFAULT_BOSS_NAME, DEFAULT_BOSS_POSITION } from './constants';
+import { CHAT_WELCOME_MESSAGE } from './constants';
 import { logger } from './logger';
 import type { ContentItem, FirestoreChatMessage } from './types/chat.types';
 
 /**
- * Firestore Trigger: Create welcome message when new user is created
+ * Firestore Trigger: Initialize chat when new user is created
  * 
  * Triggers when a new user document is created and:
  * 1. Creates the main chat thread
@@ -19,6 +19,11 @@ import type { ContentItem, FirestoreChatMessage } from './types/chat.types';
  * 
  * This ensures every new user has a welcome message waiting for them
  * even before they open the chat for the first time.
+ * 
+ * NOTE: Boss creation is NOT handled here. Boss is created explicitly at:
+ * - Web-funnel: when user submits email (with onboarding data)
+ * - App registration: in ensureUserProfileExists() when new user signs up (default boss)
+ * This prevents race conditions and makes boss creation logic clear
  */
 export const onUserCreated = onDocumentCreated(
   {
@@ -76,27 +81,13 @@ export const onUserCreated = onDocumentCreated(
         messageId: messageRef.id,
       });
       
-      // Create default boss for new user
-      const bossesRef = db.collection('users').doc(userId).collection('bosses');
-      const bossData = {
-        name: DEFAULT_BOSS_NAME,
-        position: DEFAULT_BOSS_POSITION,
-        birthday: '',
-        managementStyle: '',
-        startedAt: now,
-        createdAt: now,
-        updatedAt: now,
-        _fieldsMeta: {},
-      };
+      // NOTE: Boss creation is handled explicitly elsewhere:
+      // - Web-funnel: creates boss with onboarding data when user submits email
+      // - App registration: ensureUserProfileExists() creates default boss for new users
+      // This prevents race conditions between trigger and explicit creation
       
-      const bossRef = await bossesRef.add(bossData);
-      
-      logger.info('Default boss created successfully', {
-        userId,
-        bossId: bossRef.id,
-      });
     } catch (error) {
-      logger.error('Failed to initialize new user data (chat or boss)', {
+      logger.error('Failed to initialize new user data (chat)', {
         userId,
         error,
       });

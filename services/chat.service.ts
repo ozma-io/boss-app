@@ -2,18 +2,18 @@ import { db, functions } from '@/constants/firebase.config';
 import { ChatMessage, ChatThread, ContentItem, LoadMessagesResult, Unsubscribe } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
-    addDoc,
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    limit,
-    onSnapshot,
-    orderBy,
-    query,
-    setDoc,
-    startAt,
-    updateDoc,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  setDoc,
+  startAt,
+  updateDoc,
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { logger } from './logger.service';
@@ -73,6 +73,15 @@ export async function getOrCreateThread(userId: string): Promise<string> {
         // FALLBACK: Create new thread if it doesn't exist
         // Normally the thread is created by Cloud Function on user creation (onUserCreated trigger)
         // This is a safety fallback in case the trigger fails or is delayed
+        
+        // ⚠️ This should NOT happen in production - report to Sentry
+        logger.error('FALLBACK TRIGGERED: Chat thread not found for user (should be unreachable)', {
+          feature: 'ChatService',
+          userId,
+          threadId,
+          error: new Error('Chat thread creation fallback triggered - Cloud Function may have failed'),
+        });
+        
         const now = new Date().toISOString();
         const newThread: ChatThread = {
           createdAt: now,
@@ -86,7 +95,7 @@ export async function getOrCreateThread(userId: string): Promise<string> {
         };
         
         await setDoc(threadRef, newThread);
-        logger.info('Created new chat thread', { feature: 'ChatService', userId, threadId });
+        logger.info('Created chat thread via fallback', { feature: 'ChatService', userId, threadId });
       } else {
         logger.debug('Chat thread already exists', { feature: 'ChatService', userId, threadId });
       }

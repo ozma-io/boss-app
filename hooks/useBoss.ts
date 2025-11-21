@@ -54,11 +54,20 @@ export function useBoss() {
         // Load first boss
         let firstBoss = await getFirstBoss(user.id);
 
-        // FALLBACK: If no boss exists, create one automatically
-        // Normally the boss is created by Cloud Function on user creation (onUserCreated trigger)
-        // This is a safety fallback in case the trigger fails or is delayed
+        // SAFETY FALLBACK: If no boss exists, create one
+        // Normally boss is created explicitly at:
+        // 1. Web-funnel: when user submits email (with onboarding data)
+        // 2. App registration: in ensureUserProfileExists() when new user signs up
+        // This fallback should rarely trigger but ensures the app never breaks
         if (!firstBoss) {
-          logger.info('No boss found, creating new boss automatically', { feature: 'useBoss', userId: user.id });
+          // ⚠️ This should NOT happen in production - report to Sentry
+          logger.error('FALLBACK TRIGGERED: No boss found for user (should be unreachable)', { 
+            feature: 'useBoss', 
+            userId: user.id,
+            error: new Error('Boss creation fallback triggered - explicit creation failed'),
+          });
+          
+          logger.info('Creating boss via fallback', { feature: 'useBoss', userId: user.id });
           const newBossId = await createBoss(user.id);
           
           // Wait a bit for Firestore to sync

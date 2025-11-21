@@ -2,7 +2,7 @@ import { db } from '@/constants/firebase.config';
 import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
 import { NotificationPermissionStatus, NotificationPromptHistoryItem, Unsubscribe, UserNotificationData, UserProfile } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
-import { doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 import { AttributionData } from './attribution.service';
 import { logger } from './logger.service';
@@ -198,6 +198,7 @@ export async function shouldShowNotificationOnboarding(userId: string): Promise<
 /**
  * Ensure user profile exists in Firestore
  * Creates the document with correct email from Auth if it doesn't exist
+ * Also creates a default boss for new users who didn't come from web-funnel
  * 
  * Should be called once when user authenticates to guarantee the document exists
  * 
@@ -212,15 +213,40 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
     if (!userDoc.exists()) {
       logger.info('Creating user profile document', { feature: 'UserService', userId, userEmail });
       
+      const now = new Date().toISOString();
+      
+      // Create User document
       await setDoc(userDocRef, {
         email: userEmail,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
         name: '',
         goal: '',
         position: '',
       });
       
       logger.info('User profile document created', { feature: 'UserService', userId });
+      
+      // Create default boss for new users (web-funnel users already have a boss)
+      // This ensures every user has at least one boss
+      const bossesRef = collection(db, 'users', userId, 'bosses');
+      const defaultBoss = {
+        name: 'My Boss',
+        position: 'Manager',
+        birthday: '',
+        managementStyle: '',
+        startedAt: now,
+        createdAt: now,
+        updatedAt: now,
+        _fieldsMeta: {},
+      };
+      
+      const bossDocRef = await addDoc(bossesRef, defaultBoss);
+      
+      logger.info('Default boss created for new user', { 
+        feature: 'UserService', 
+        userId, 
+        bossId: bossDocRef.id 
+      });
     } else {
       logger.debug('User profile already exists', { feature: 'UserService', userId });
     }

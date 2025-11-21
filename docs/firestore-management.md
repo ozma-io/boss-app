@@ -162,6 +162,202 @@ This type contains complete user profile data and is used for:
 
 **Note:** `UserSchema` in `firestore/schemas/user.schema.ts` is the authoritative schema for Firestore documents and includes all fields including technical fields (FCM tokens, notification permissions, etc.) and custom fields.
 
+---
+
+## 🏗️ Document Creation Lifecycle
+
+### User & Boss Document Creation
+
+BossUp creates User and Boss documents through **two explicit paths**, ensuring no race conditions or duplicate bosses.
+
+#### Path 1: Web Funnel (with Onboarding Data)
+
+**When:** User submits email in web funnel (discovery.ozma.io)  
+**Where:** `web-funnels/app/api/firebase/create-user` API endpoint  
+**Triggered:** Background (fire-and-forget) when user clicks "Continue" on email screen
+
+**What gets created:**
+
+1. **Firebase Auth User** (if doesn't exist)
+   - Email normalized (lowercase, trimmed)
+   - `emailVerified: false`
+   - Firebase "one account per email" ensures no duplicates across providers
+
+2. **User Document** (`/users/{userId}`)
+   - `email`: from funnel
+   - `createdAt`: timestamp
+   - `name`, `goal`, `position`: empty (user fills later)
+   - `custom_age`: from funnel question
+   - `goal`: from funnel "mainGoal" question (core field)
+
+3. **Boss Document** (`/users/{userId}/bosses/{bossId}`)
+   - `name`: "My Boss" (placeholder)
+   - `position`: "Manager" (placeholder)
+   - `birthday`: "" (empty)
+   - `managementStyle`: "" (empty)
+   - `custom_bossAge`: from funnel
+   - `custom_oneOnOne`: from funnel
+   - `custom_bossCommunication`: from funnel
+   - `custom_mistakesHandling`: from funnel
+
+4. **Timeline Entries** (`/users/{userId}/entries/{entryId}`)
+   - 29 FactEntry documents from funnel questions
+   - Type: `'fact'`
+   - Source: `'onboarding_funnel'`
+   - Examples: stress level, confidence, workload assessments
+
+**Code location:**
+```typescript
+// web-funnels/app/api/firebase/create-user/route.ts
+// Mapping: web-funnels/app/utils/firebaseUserMapper.ts
+// Config: web-funnels/app/new-job/config.ts (dataDestination field)
+```
+
+#### Path 2: Direct App Registration (No Web Funnel)
+
+**When:** User signs up via Apple/Google/Email directly in mobile app  
+**Where:** `services/user.service.ts` → `ensureUserProfileExists()`  
+**Triggered:** Automatically on first authentication (from `AuthContext`)
+
+**What gets created:**
+
+1. **User Document** (`/users/{userId}`)
+   - `email`: from Firebase Auth
+   - `createdAt`: timestamp
+   - `name`, `goal`, `position`: empty strings (user fills during onboarding)
+
+2. **Boss Document** (`/users/{userId}/bosses/{bossId}`)
+   - `name`: "My Boss"
+   - `position`: "Manager"
+   - `birthday`: ""
+   - `managementStyle`: ""
+   - `startedAt`: timestamp
+   - `createdAt`: timestamp
+   - `updatedAt`: timestamp
+   - `_fieldsMeta`: {}
+
+**Code location:**
+```typescript
+// services/user.service.ts: ensureUserProfileExists()
+// Called from: contexts/AuthContext.tsx line 95
+```
+
+#### Path 3: Safety Fallback (Edge Cases)
+
+**When:** Boss doesn't exist when user opens Boss/Timeline screen  
+**Where:** `hooks/useBoss.ts` → `createBoss()`  
+**Triggered:** On first screen load if no boss found
+
+**Purpose:** Safety net that should rarely trigger. Ensures app never breaks if explicit creation fails.
+
+**Monitoring:** Reports to Sentry with error level when triggered (should be unreachable in production)
+
+**Code location:**
+```typescript
+// hooks/useBoss.ts: lines 57-83
+// Creates: services/boss.service.ts: createBoss()
+// Reports: logger.error() sends to Sentry for monitoring
+```
+
+### Chat Thread Creation
+
+**When:** User document is created (any path)  
+**Where:** Cloud Function trigger `onUserCreated`  
+**File:** `functions/src/user-triggers.ts`
+
+**What gets created:**
+- Chat thread: `/users/{userId}/chatThreads/main`
+- Welcome message from AI assistant
+- Thread metadata (unreadCount, lastMessageAt, etc.)
+
+**Safety Fallback:** If thread doesn't exist when user opens chat (e.g., Cloud Function failed), it's created in `services/chat.service.ts` → `getOrCreateThread()`. This fallback reports to Sentry for monitoring.
+
+**Important:** This Cloud Function does NOT create Boss document to avoid race conditions with explicit creation.
+
+### Creation Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     USER REGISTRATION                        │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────────┐
+                    │   Two Entry Points  │
+                    └─────────────────────┘
+                              │
+                ┌─────────────┴─────────────┐
+                │                           │
+                ▼                           ▼
+    ┌───────────────────────┐   ┌──────────────────────┐
+    │    Web Funnel Path    │   │   Direct App Path    │
+    │  (discovery.ozma.io)  │   │  (Apple/Google/Email)│
+    └───────────────────────┘   └──────────────────────┘
+                │                           │
+                ▼                           ▼
+    ┌───────────────────────┐   ┌──────────────────────┐
+    │ Firebase Auth User    │   │ Firebase Auth User   │
+    │ (if not exists)       │   │                      │
+    └───────────────────────┘   └──────────────────────┘
+                │                           │
+                ▼                           ▼
+    ┌───────────────────────┐   ┌──────────────────────┐
+    │ User Doc              │   │ User Doc             │
+    │ /users/{uid}          │   │ /users/{uid}         │
+    │ + custom fields       │   │ (empty fields)       │
+    └───────────────────────┘   └──────────────────────┘
+                │                           │
+                │ ◄─── TRIGGER ────────────┤
+                │     onUserCreated         │
+                │   (creates chat thread)   │
+                │                           │
+                ▼                           ▼
+    ┌───────────────────────┐   ┌──────────────────────┐
+    │ Boss Doc              │   │ Boss Doc             │
+    │ /users/{uid}/bosses/  │   │ /users/{uid}/bosses/ │
+    │ + funnel data         │   │ (default values)     │
+    └───────────────────────┘   └──────────────────────┘
+                │                           │
+                ▼                           │
+    ┌───────────────────────┐               │
+    │ Timeline Entries      │               │
+    │ 29 FactEntry docs     │               │
+    │ from funnel questions │               │
+    └───────────────────────┘               │
+                │                           │
+                └───────────┬───────────────┘
+                            ▼
+                ┌───────────────────────┐
+                │   User Opens App      │
+                │   Boss Screen Loads   │
+                │   ✅ Boss Exists      │
+                └───────────────────────┘
+```
+
+### Key Design Decisions
+
+**Why two explicit paths instead of one Cloud Function trigger?**
+
+1. **Web funnel creates immediately** - No delay, user data saved instantly
+2. **App registration creates explicitly** - No race condition with web funnel
+3. **No automatic trigger** - Prevents duplicate boss creation
+4. **Clear separation** - Easy to understand where boss comes from
+
+**Why safety fallbacks (boss and chat thread)?**
+
+- Edge case protection if explicit creation paths fail
+- Ensures app never breaks with "No data found" errors
+- **Reports to Sentry** when triggered for monitoring and investigation
+- Should rarely/never trigger in production (unreachable code)
+- Allows us to detect and fix root causes (Cloud Function failures, race conditions, etc.)
+
+**Web funnel users linking to existing Auth accounts:**
+
+- Firebase "one account per email" setting automatically links credentials
+- Web funnel creates Auth user with email (unverified)
+- User later signs in with Apple/Google → same email → same Auth UID
+- User sees their web funnel data immediately (boss, entries, etc.)
+
 ### Schema Versioning
 
 Each schema has a version number:
