@@ -71,8 +71,8 @@ export async function getOrCreateThread(userId: string): Promise<string> {
       
       if (!threadDoc.exists()) {
         // FALLBACK: Create new thread if it doesn't exist
-        // Normally the thread is created by Cloud Function on user creation (onUserCreated trigger)
-        // This is a safety fallback in case the trigger fails or is delayed
+        // Normally the thread is created synchronously during user creation
+        // This is a safety fallback in case the creation failed
         
         // ⚠️ This should NOT happen in production - report to Sentry
         logger.error('FALLBACK TRIGGERED: Chat thread not found for user (should be unreachable)', {

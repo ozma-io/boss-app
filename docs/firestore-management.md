@@ -262,17 +262,19 @@ BossUp creates User and Boss documents through **two explicit paths**, ensuring 
 ### Chat Thread Creation
 
 **When:** User document is created (any path)  
-**Where:** Cloud Function trigger `onUserCreated`  
-**File:** `functions/src/user-triggers.ts`
+**Where:** Handled synchronously during user creation  
+**Files:** 
+- `web-funnels/app/api/firebase/create-user/route.ts` → `createChatWithWelcomeMessage()` (web funnel path)
+- `services/user.service.ts` → `createChatWithWelcomeMessage()` (direct app path)
 
 **What gets created:**
 - Chat thread: `/users/{userId}/chatThreads/main`
 - Welcome message from AI assistant
 - Thread metadata (unreadCount, lastMessageAt, etc.)
 
-**Safety Fallback:** If thread doesn't exist when user opens chat (e.g., Cloud Function failed), it's created in `services/chat.service.ts` → `getOrCreateThread()`. This fallback reports to Sentry for monitoring.
+**Safety Fallback:** If thread doesn't exist when user opens chat (e.g., creation failed), it's created in `services/chat.service.ts` → `getOrCreateThread()`. This fallback reports to Sentry for monitoring.
 
-**Important:** This Cloud Function does NOT create Boss document to avoid race conditions with explicit creation.
+**Important:** Chat creation is now synchronous to eliminate race conditions that occurred with the old `onUserCreated` Cloud Function trigger.
 
 ### Creation Flow Diagram
 
@@ -305,11 +307,9 @@ BossUp creates User and Boss documents through **two explicit paths**, ensuring 
     │ User Doc              │   │ User Doc             │
     │ /users/{uid}          │   │ /users/{uid}         │
     │ + custom fields       │   │ (empty fields)       │
+    │ + Chat Thread         │   │ + Chat Thread        │
+    │   (synchronous)       │   │   (synchronous)      │
     └───────────────────────┘   └──────────────────────┘
-                │                           │
-                │ ◄─── TRIGGER ────────────┤
-                │     onUserCreated         │
-                │   (creates chat thread)   │
                 │                           │
                 ▼                           ▼
     ┌───────────────────────┐   ┌──────────────────────┐
