@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { clearTrackingAfterAuth, getAttributionData, isFirstLaunch, markAppAsLaunched } from '@/services/attribution.service';
-import { initializeFacebookSdk, sendAppInstallEventDual } from '@/services/facebook.service';
+import { initializeFacebookSdk, sendAppInstallEventDual, sendRegistrationEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution, recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -100,14 +100,21 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
             // User installed organically, send events with email only
             // See: services/auth.service.ts for where this flow starts (post-login)
             
-            logger.info('MAIN FLOW: Organic user, clearing tracking state', {
+            logger.info('MAIN FLOW: Organic user, sending registration event', {
               feature: 'TrackingOnboarding',
               hasEmail: !!email
             });
             
+            // Send registration event with email for Advanced Matching (Custom Audiences)
+            if (email) {
+              await sendRegistrationEventDual(email);
+              logger.info('MAIN FLOW: Registration event sent, tracking completed', { feature: 'TrackingOnboarding' });
+            } else {
+              logger.info('MAIN FLOW: No email available, tracking state cleared without registration event', { feature: 'TrackingOnboarding' });
+            }
+            
             await clearTrackingAfterAuth();
             await markAppAsLaunched();
-            logger.info('MAIN FLOW: Tracking state cleared successfully', { feature: 'TrackingOnboarding' });
           }
         } catch (fbError) {
           logger.error('Failed to send install event', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });

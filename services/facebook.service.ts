@@ -341,3 +341,57 @@ export async function sendAppInstallEventDual(
   });
 }
 
+/**
+ * Send registration event to Facebook for organic users (Advanced Matching)
+ * 
+ * Sends fb_mobile_complete_registration event with email for Custom Audiences and Lookalike targeting.
+ * This helps Facebook identify your users for better campaign optimization.
+ * 
+ * @param email - User email for Advanced Matching (will be hashed automatically)
+ */
+export async function sendRegistrationEventDual(email: string): Promise<void> {
+  const eventId = generateEventId();
+  
+  logger.info('Sending Registration event for organic user', { 
+    feature: 'Facebook', 
+    eventId,
+    hasEmail: !!email
+  });
+  
+  // Client params with email for Advanced Matching
+  const clientParams: Record<string, string> = { 
+    _eventId: eventId,
+    registration_method: 'email'
+  };
+  
+  // Send to both client and server in parallel
+  const results = await Promise.allSettled([
+    // Client-side: Facebook SDK
+    (async () => {
+      if (isClientSdkAvailable()) {
+        AppEventsLogger.logEvent('fb_mobile_complete_registration', clientParams);
+        logger.info('Registration client-side sent', { feature: 'Facebook', eventId });
+      }
+    })(),
+    
+    // Server-side: Conversions API with email (automatically hashed)
+    sendConversionEvent(eventId, 'fb_mobile_complete_registration', { email }, { registration_method: 'email' })
+  ]);
+  
+  // Check results  
+  const [clientResult, serverResult] = results;
+  const clientSuccess = clientResult.status === 'fulfilled';
+  const serverSuccess = serverResult.status === 'fulfilled';
+  
+  if (!clientSuccess && !serverSuccess) {
+    throw new Error('Both client and server Registration events failed');
+  }
+  
+  logger.info('Registration dual-send completed', { 
+    feature: 'Facebook', 
+    eventId,
+    clientSuccess,
+    serverSuccess
+  });
+}
+

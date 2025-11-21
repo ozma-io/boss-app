@@ -142,7 +142,9 @@ const config: ExpoConfig = {
         scheme: `fb${FACEBOOK_APP_ID}`,
         advertiserIDCollectionEnabled: true,
         autoLogAppEventsEnabled: true,
-        isAutoInitEnabled: true,
+        // iOS: Manual init after ATT permission (best practice)
+        // Android: Auto init early (no ATT permission needed)
+        isAutoInitEnabled: false,
         iosUserTrackingPermission: 'This app uses data for delivering personalized ads to you.',
       },
     ],
