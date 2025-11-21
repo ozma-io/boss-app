@@ -120,9 +120,7 @@ export default function PersonalInfoScreen() {
     setIsDeleting(true);
 
     try {
-      trackAmplitudeEvent('account_deletion_initiated', {
-        email: user?.email || '[no_email]',
-      });
+      trackAmplitudeEvent('account_deletion_initiated');
 
       logger.info('Starting account deletion', { 
         feature: 'PersonalInfoScreen',
@@ -132,9 +130,7 @@ export default function PersonalInfoScreen() {
       const result = await deleteAccount(deleteConfirmationText);
 
       if (result.success) {
-        trackAmplitudeEvent('account_deletion_completed', {
-          email: user?.email || '[no_email]',
-        });
+        trackAmplitudeEvent('account_deletion_completed');
 
         logger.info('Account deletion completed successfully', { 
           feature: 'PersonalInfoScreen',
@@ -162,7 +158,6 @@ export default function PersonalInfoScreen() {
         }, 100);
       } else {
         trackAmplitudeEvent('account_deletion_failed', {
-          email: user?.email || '[no_email]',
           error: result.error,
         });
 
@@ -179,7 +174,6 @@ export default function PersonalInfoScreen() {
       }
     } catch (error) {
       trackAmplitudeEvent('account_deletion_failed', {
-        email: user?.email || '[no_email]',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
