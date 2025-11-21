@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
 import { Auth, getAuth, initializeAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getFunctions } from 'firebase/functions';
+import { Firestore, getFirestore } from 'firebase/firestore';
+import { Functions, getFunctions } from 'firebase/functions';
 import { getRemoteConfig, RemoteConfig } from 'firebase/remote-config';
 import { Platform } from 'react-native';
 
@@ -16,38 +16,54 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || ""
 };
 
-const app = initializeApp(firebaseConfig);
-
-// Initialize Auth with proper persistence
-// For React Native, we use AsyncStorage for persistence
-// For web, we use default persistence
-let auth: Auth;
-
-if (Platform.OS === 'web') {
-  auth = getAuth(app);
-} else {
-  // Import getReactNativePersistence dynamically to avoid TypeScript issues
-  // @ts-ignore - TypeScript doesn't recognize this export but it exists at runtime
-  const { getReactNativePersistence } = require('firebase/auth');
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
-}
-
-export { app, auth };
-
-export const functions = getFunctions(app);
-
-export const db = getFirestore(app);
-
-// Initialize Remote Config (web only - native uses @react-native-firebase/remote-config)
+// Initialize Firebase only in browser/mobile environment (not during SSR/SSG)
+let app: ReturnType<typeof initializeApp> | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
+let functions: Functions | undefined;
 let remoteConfig: RemoteConfig | null = null;
-if (Platform.OS === 'web') {
-  remoteConfig = getRemoteConfig(app);
-  // Configure Remote Config settings
-  remoteConfig.settings.minimumFetchIntervalMillis = __DEV__ 
-    ? 0  // No cache in development
-    : 3600000; // 1 hour cache in production
+
+// Check if we're in a real runtime environment (not SSR/SSG build time)
+if (typeof window !== 'undefined') {
+  app = initializeApp(firebaseConfig);
+
+  // Initialize Auth with proper persistence
+  // For React Native, we use AsyncStorage for persistence
+  // For web, we use default persistence
+  if (Platform.OS === 'web') {
+    auth = getAuth(app);
+  } else {
+    // Import getReactNativePersistence dynamically to avoid TypeScript issues
+    // @ts-ignore - TypeScript doesn't recognize this export but it exists at runtime
+    const { getReactNativePersistence } = require('firebase/auth');
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
+  }
+
+  functions = getFunctions(app);
+  db = getFirestore(app);
+
+  // Initialize Remote Config (web only - native uses @react-native-firebase/remote-config)
+  if (Platform.OS === 'web') {
+    remoteConfig = getRemoteConfig(app);
+    // Configure Remote Config settings
+    remoteConfig.settings.minimumFetchIntervalMillis = __DEV__ 
+      ? 0  // No cache in development
+      : 3600000; // 1 hour cache in production
+  }
 }
 
+// Export with type assertions for runtime usage
+// During SSG build (typeof window === 'undefined'), these will be undefined
+// But at actual runtime (in browser/mobile app), they will be properly initialized
+// We use type assertion here to avoid changing all consuming files
+export { app };
+export const authInstance = auth as Auth;
+export const dbInstance = db as Firestore;
+export const functionsInstance = functions as Functions;
 export { remoteConfig };
+
+// Re-export with original names for backward compatibility
+  export { authInstance as auth, dbInstance as db, functionsInstance as functions };
+
