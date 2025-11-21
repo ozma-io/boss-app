@@ -299,28 +299,27 @@ function RootLayoutNav() {
   const hasCheckedAttribution = useRef<boolean>(false);
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
 
-  // Setup notification handler with dynamic chat screen detection
-  // This controls how notifications are displayed when app is in foreground
+  // Setup notification handler to block native FCM notifications
+  // We always create local notifications instead (via onMessage handler)
+  // This ensures notifications work consistently and navigation works properly
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
     Notifications.setNotificationHandler({
       handleNotification: async () => {
-        // Don't show in-app notification banner if user is currently in chat
-        const isInChat = segments[0] === 'chat';
-        
-        logger.debug('Notification handler called', { 
+        logger.debug('Notification handler called - blocking native FCM', { 
           feature: 'RootLayout',
-          isInChat,
           currentRoute: segments[0],
         });
 
+        // Always block native FCM notifications
+        // Local notifications are created by onMessage handler instead
         return {
-          shouldShowAlert: !isInChat,
-          shouldPlaySound: !isInChat,
+          shouldShowAlert: false,
+          shouldPlaySound: false,
           shouldSetBadge: true, // Always update badge count
-          shouldShowBanner: !isInChat,
-          shouldShowList: !isInChat,
+          shouldShowBanner: false,
+          shouldShowList: false,
         };
       },
     });
@@ -385,13 +384,21 @@ function RootLayoutNav() {
           currentRoute: segments[0],
         });
 
-        // setNotificationHandler already handles showing/hiding notifications
-        // based on current screen. This handler is just for logging and
-        // potential future custom logic (e.g., updating in-app state)
-        
-        // Note: No need to call scheduleNotificationAsync here - that would
-        // create duplicate notifications. The original FCM message is already
-        // processed by setNotificationHandler.
+        // Don't show notification if user is in chat
+        if (segments[0] === 'chat') {
+          logger.info('User is in chat screen, skipping notification', { feature: 'RootLayout' });
+          return;
+        }
+
+        // Create local notification (works better with navigation than native FCM)
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: remoteMessage.notification?.title || 'New message',
+            body: remoteMessage.notification?.body || '',
+            data: remoteMessage.data,
+          },
+          trigger: null, // Show immediately
+        });
       });
 
       return unsubscribe;
