@@ -126,20 +126,6 @@ export default function RootLayout() {
         // Initialize Google Sign-In (iOS/Android only)
         initializeGoogleSignIn();
 
-        // Setup notification handler for both iOS and Android
-        // This controls how notifications are displayed when app is in foreground
-        if (Platform.OS !== 'web') {
-          Notifications.setNotificationHandler({
-            handleNotification: async () => ({
-              shouldShowAlert: true,
-              shouldPlaySound: true,
-              shouldSetBadge: true,
-              shouldShowBanner: true,
-              shouldShowList: true,
-            }),
-          });
-        }
-
         // Setup Android-specific notification channels
         if (Platform.OS === 'android') {
           // Create default notification channel (required for Android 13+ permission dialog)
@@ -313,6 +299,33 @@ function RootLayoutNav() {
   const router = useRouter();
   const hasCheckedAttribution = useRef<boolean>(false);
   const [redirectPath, setRedirectPath] = useState<string | null>(null);
+
+  // Setup notification handler with dynamic chat screen detection
+  // This controls how notifications are displayed when app is in foreground
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    Notifications.setNotificationHandler({
+      handleNotification: async () => {
+        // Don't show in-app notification banner if user is currently in chat
+        const isInChat = segments[0] === 'chat';
+        
+        logger.debug('Notification handler called', { 
+          feature: 'RootLayout',
+          isInChat,
+          currentRoute: segments[0],
+        });
+
+        return {
+          shouldShowAlert: !isInChat,
+          shouldPlaySound: !isInChat,
+          shouldSetBadge: true, // Always update badge count
+          shouldShowBanner: !isInChat,
+          shouldShowList: !isInChat,
+        };
+      },
+    });
+  }, [segments]);
 
   // Set or clear user context in Sentry when auth state changes
   useEffect(() => {
