@@ -28,9 +28,13 @@ async function withTimeout<T>(
 /**
  * Checks for available updates and applies them
  * 
+ * If the check or download times out, automatically falls back to background update check
+ * without timeout, ensuring updates will still be downloaded when network is available.
+ * 
  * @param force - If true, forces immediate app reload with the new update
  *                If false, update will be applied on next app restart (softer UX)
- * @param timeoutMs - Timeout in milliseconds (default: 5000ms). If check takes longer, it will be cancelled.
+ * @param timeoutMs - Timeout in milliseconds (default: 3000ms). If check takes longer, it will be cancelled
+ *                    and background check will be started as fallback.
  * @returns Promise<boolean> - true if update was found and downloaded, false otherwise
  */
 export async function checkAndApplyUpdates(
@@ -99,6 +103,15 @@ export async function checkAndApplyUpdates(
         errorMessage,
         error: error instanceof Error ? error : new Error(String(error))
       });
+      
+      // Fallback: Start background update check without timeout
+      logger.info('Starting background update check as fallback', { feature: 'Updates' });
+      checkUpdatesInBackground().catch((bgError) => {
+        logger.error('Background update check failed to start', { 
+          feature: 'Updates', 
+          error: bgError instanceof Error ? bgError : new Error(String(bgError))
+        });
+      });
     } else if (isFetchTimeout) {
       logger.error('Update download timed out, fetch timeout constant may need adjustment', { 
         feature: 'Updates',
@@ -106,6 +119,15 @@ export async function checkAndApplyUpdates(
         fetchTimeout: timeoutMs * 4,
         errorMessage,
         error: error instanceof Error ? error : new Error(String(error))
+      });
+      
+      // Fallback: Start background update check without timeout
+      logger.info('Starting background update check as fallback', { feature: 'Updates' });
+      checkUpdatesInBackground().catch((bgError) => {
+        logger.error('Background update check failed to start', { 
+          feature: 'Updates', 
+          error: bgError instanceof Error ? bgError : new Error(String(bgError))
+        });
       });
     } else {
       logger.error('Failed to check for updates', { 
@@ -116,6 +138,43 @@ export async function checkAndApplyUpdates(
     
     // Always return false on error - don't block app startup
     return false;
+  }
+}
+
+/**
+ * Checks for updates in the background without timeout
+ * This is a fallback when the synchronous check times out
+ * Runs silently in the background without blocking app startup
+ */
+export async function checkUpdatesInBackground(): Promise<void> {
+  try {
+    if (!Updates.isEnabled) {
+      return;
+    }
+
+    logger.info('Starting background update check (no timeout)', { feature: 'Updates' });
+    
+    const update = await Updates.checkForUpdateAsync();
+    
+    if (update.isAvailable) {
+      logger.info('Background check: Update available, downloading...', { 
+        feature: 'Updates',
+        manifestString: update.manifest ? JSON.stringify(update.manifest) : undefined
+      });
+      
+      await Updates.fetchUpdateAsync();
+      
+      logger.info('Background update downloaded successfully, will apply on next restart', { 
+        feature: 'Updates' 
+      });
+    } else {
+      logger.info('Background check: No updates available', { feature: 'Updates' });
+    }
+  } catch (error) {
+    logger.error('Background update check failed', { 
+      feature: 'Updates',
+      error: error instanceof Error ? error : new Error(String(error))
+    });
   }
 }
 
