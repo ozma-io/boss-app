@@ -1,0 +1,57 @@
+name: Deploy Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'services/**'
+      - 'hooks/**'
+      - 'contexts/**'
+      - 'utils/**'
+      - 'types/**'
+      - 'constants/**'
+      - 'assets/**'
+      - 'public/**'
+      - 'index.js'
+      - 'firebase.json'
+      - 'package.json'
+      - 'package-lock.json'
+
+jobs:
+  deploy:
+    name: Deploy Web App to Hosting
+    runs-on: ubuntu-latest
+    env:
+      FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+    steps:
+      - name: Check for FIREBASE_TOKEN
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ]; then
+            echo "You must provide a FIREBASE_TOKEN secret in this repo's secrets."
+            echo "Generate it with: firebase login:ci"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build:web
+
+      - name: Deploy to Firebase Hosting
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only hosting --token "$FIREBASE_TOKEN" --non-interactive --force
+
