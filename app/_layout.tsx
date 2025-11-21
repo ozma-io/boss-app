@@ -386,21 +386,13 @@ function RootLayoutNav() {
           currentRoute: segments[0],
         });
 
-        // Don't show notification banner if user is already in chat
-        if (segments[0] === 'chat') {
-          logger.info('User is in chat screen, skipping notification banner', { feature: 'RootLayout' });
-          return;
-        }
-
-        // Display notification using expo-notifications
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: remoteMessage.notification?.title || 'New message',
-            body: remoteMessage.notification?.body || '',
-            data: remoteMessage.data,
-          },
-          trigger: null, // Show immediately
-        });
+        // setNotificationHandler already handles showing/hiding notifications
+        // based on current screen. This handler is just for logging and
+        // potential future custom logic (e.g., updating in-app state)
+        
+        // Note: No need to call scheduleNotificationAsync here - that would
+        // create duplicate notifications. The original FCM message is already
+        // processed by setNotificationHandler.
       });
 
       return unsubscribe;
