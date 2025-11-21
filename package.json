@@ -6,6 +6,7 @@
     "start": "expo start --dev-client",
     "dev": "expo start --dev-client",
     "android": "expo run:android",
+    "preios": "xcrun simctl delete unavailable || true",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "expo export --platform web",
