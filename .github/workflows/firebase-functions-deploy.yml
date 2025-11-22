@@ -44,6 +44,19 @@ jobs:
           cd functions
           npm run build
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Python virtual environment
+        run: |
+          cd functions-python
+          python3.12 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Deploy to Firebase
         run: |
           npm install -g firebase-tools
