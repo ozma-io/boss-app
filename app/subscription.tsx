@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 24,
+    paddingBottom: 120,
   },
   currentPlanCard: {
     backgroundColor: '#B8E986',
@@ -811,7 +811,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Manrope-SemiBold',
   },
   footer: {
-    backgroundColor: '#F5F1E8',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
     paddingTop: 16,
   },
@@ -826,7 +829,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   changePlanButtonDisabled: {
-    opacity: 0.7,
+    backgroundColor: '#B3B3B3',
   },
   changePlanButtonText: {
     color: '#fff',
