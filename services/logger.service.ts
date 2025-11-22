@@ -320,7 +320,10 @@ class LoggerService {
    * Output log to console
    */
   private outputToConsole(level: LogLevel, message: string, context: LogContext): void {
-    const contextString = Object.keys(context).length > 0 ? JSON.stringify(context, null, 2) : '';
+    // Use a replacer function to handle Error objects and circular references
+    const contextString = Object.keys(context).length > 0 
+      ? JSON.stringify(context, this.jsonReplacer(), 2) 
+      : '';
 
     switch (level) {
       case LogLevel.DEBUG:
@@ -342,6 +345,34 @@ class LoggerService {
   }
 
   /**
+   * JSON replacer function to handle Error objects and circular references
+   */
+  private jsonReplacer(): (key: string, value: any) => any {
+    const seen = new WeakSet();
+    return (key: string, value: any) => {
+      // Handle Error objects
+      if (value instanceof Error) {
+        return {
+          name: value.name,
+          message: value.message,
+          stack: value.stack,
+          ...(value as any), // Include any custom properties
+        };
+      }
+      
+      // Handle circular references
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular Reference]';
+        }
+        seen.add(value);
+      }
+      
+      return value;
+    };
+  }
+
+  /**
    * Enrich context with error details
    */
   private enrichErrorContext(error: Error | unknown, context?: LogContext): LogContext {
@@ -351,6 +382,28 @@ class LoggerService {
       enriched.errorMessage = error.message;
       enriched.errorName = error.name;
       enriched.errorStack = error.stack;
+      
+      // Include any custom Error properties
+      Object.keys(error).forEach(key => {
+        if (!['message', 'name', 'stack'].includes(key)) {
+          enriched[`error_${key}`] = (error as any)[key];
+        }
+      });
+    } else if (error && typeof error === 'object') {
+      // Handle non-Error objects (like IAP error objects)
+      try {
+        enriched.errorObject = JSON.stringify(error, null, 2);
+        
+        // Try to extract common error properties
+        const errorObj = error as any;
+        if (errorObj.code) enriched.errorCode = errorObj.code;
+        if (errorObj.message) enriched.errorMessage = errorObj.message;
+        if (errorObj.productId) enriched.errorProductId = errorObj.productId;
+        if (errorObj.responseCode) enriched.errorResponseCode = errorObj.responseCode;
+        if (errorObj.debugMessage) enriched.errorDebugMessage = errorObj.debugMessage;
+      } catch {
+        enriched.error = String(error);
+      }
     } else if (error) {
       enriched.error = String(error);
     }

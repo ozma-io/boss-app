@@ -92,14 +92,33 @@ function setupPurchaseListener(): void {
     // Check if user cancelled the purchase
     if (error.code === 'E_USER_CANCELLED') {
       // User cancellation is not an error - just track to Amplitude
-      logger.info('Purchase cancelled by user', { productId: error.productId });
+      logger.info('Purchase cancelled by user (listener)', { 
+        productId: error.productId,
+        errorCode: error.code,
+        errorMessage: error.message,
+        platform: Platform.OS,
+      });
       trackAmplitudeEvent('iap_purchase_cancelled', {
         product_id: error.productId || 'unknown',
         platform: Platform.OS,
       });
     } else {
-      // Real error - log to Sentry
-      logger.error('Purchase error', { error });
+      // Real error - log to Sentry with enhanced details
+      const errorDetails = {
+        productId: error.productId,
+        platform: Platform.OS,
+        errorType: typeof error,
+        errorCode: error?.code,
+        errorMessage: error?.message,
+        errorResponseCode: error?.responseCode,
+        errorDebugMessage: error?.debugMessage,
+        errorUserInfo: error?.userInfo,
+      };
+
+      logger.error('Purchase error (listener)', { 
+        ...errorDetails,
+        error: error instanceof Error ? error : new Error(JSON.stringify(error, null, 2)),
+      });
     }
   });
 
@@ -219,7 +238,14 @@ export async function purchaseSubscription(
       });
 
       if (!purchaseResult) {
-        logger.info('Purchase cancelled - no result returned', { productId });
+        logger.info('Purchase cancelled - no result returned', { 
+          productId,
+          tier,
+          billingPeriod,
+          platform: Platform.OS,
+          purchaseResultType: typeof purchaseResult,
+          purchaseResultValue: String(purchaseResult),
+        });
         trackAmplitudeEvent('iap_purchase_cancelled', {
           product_id: productId,
           platform: Platform.OS,
@@ -236,7 +262,16 @@ export async function purchaseSubscription(
       const purchase = Array.isArray(purchaseResult) ? purchaseResult[0] : purchaseResult;
 
       if (!purchase) {
-        logger.info('Purchase cancelled - empty result', { productId });
+        logger.info('Purchase cancelled - empty result', { 
+          productId,
+          tier,
+          billingPeriod,
+          platform: Platform.OS,
+          purchaseResultIsArray: Array.isArray(purchaseResult),
+          purchaseResultLength: Array.isArray(purchaseResult) ? purchaseResult.length : 'N/A',
+          purchaseResultType: typeof purchaseResult,
+          purchaseValue: String(purchase),
+        });
         trackAmplitudeEvent('iap_purchase_cancelled', {
           product_id: productId,
           platform: Platform.OS,
@@ -296,7 +331,14 @@ export async function purchaseSubscription(
     } catch (error: any) {
       // Check if user cancelled
       if (error.code === 'E_USER_CANCELLED' || (error instanceof Error && error.message.includes('cancelled'))) {
-        logger.info('Purchase cancelled by user', { productId });
+        logger.info('Purchase cancelled by user (iOS)', { 
+          productId,
+          tier,
+          billingPeriod,
+          platform: Platform.OS,
+          errorCode: error.code,
+          errorMessage: error.message,
+        });
         trackAmplitudeEvent('iap_purchase_cancelled', {
           product_id: productId,
           platform: Platform.OS,
@@ -309,8 +351,26 @@ export async function purchaseSubscription(
         };
       }
 
-      // Real error - log to Sentry
-      logger.error('Purchase failed', { error, productId });
+      // Real error - log to Sentry with enhanced details
+      const errorDetails = {
+        productId,
+        tier,
+        billingPeriod,
+        platform: Platform.OS,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorCode: error?.code,
+        errorProductId: error?.productId,
+        errorResponseCode: error?.responseCode,
+        errorDebugMessage: error?.debugMessage,
+        errorUserInfo: error?.userInfo,
+        errorStack: error instanceof Error ? error.stack : undefined,
+      };
+
+      logger.error('Purchase failed (iOS)', { 
+        ...errorDetails,
+        error: error instanceof Error ? error : new Error(JSON.stringify(error, null, 2)),
+      });
       
       return {
         success: false,
@@ -376,7 +436,14 @@ export async function purchaseSubscription(
       });
 
       if (!purchaseResult) {
-        logger.info('Purchase cancelled - no result returned', { productId });
+        logger.info('Purchase cancelled - no result returned (Android)', { 
+          productId,
+          tier,
+          billingPeriod,
+          platform: Platform.OS,
+          purchaseResultType: typeof purchaseResult,
+          purchaseResultValue: String(purchaseResult),
+        });
         trackAmplitudeEvent('iap_purchase_cancelled', {
           product_id: productId,
           platform: Platform.OS,
@@ -393,7 +460,16 @@ export async function purchaseSubscription(
       const purchase = Array.isArray(purchaseResult) ? purchaseResult[0] : purchaseResult;
 
       if (!purchase) {
-        logger.info('Purchase cancelled - empty result', { productId });
+        logger.info('Purchase cancelled - empty result (Android)', { 
+          productId,
+          tier,
+          billingPeriod,
+          platform: Platform.OS,
+          purchaseResultIsArray: Array.isArray(purchaseResult),
+          purchaseResultLength: Array.isArray(purchaseResult) ? purchaseResult.length : 'N/A',
+          purchaseResultType: typeof purchaseResult,
+          purchaseValue: String(purchase),
+        });
         trackAmplitudeEvent('iap_purchase_cancelled', {
           product_id: productId,
           platform: Platform.OS,
@@ -473,7 +549,14 @@ export async function purchaseSubscription(
     } catch (error: any) {
       // Check if user cancelled
       if (error.code === 'E_USER_CANCELLED' || (error instanceof Error && error.message.includes('cancelled'))) {
-        logger.info('Purchase cancelled by user', { productId });
+        logger.info('Purchase cancelled by user (Android)', { 
+          productId,
+          tier,
+          billingPeriod,
+          platform: Platform.OS,
+          errorCode: error.code,
+          errorMessage: error.message,
+        });
         trackAmplitudeEvent('iap_purchase_cancelled', {
           product_id: productId,
           platform: Platform.OS,
@@ -486,8 +569,26 @@ export async function purchaseSubscription(
         };
       }
 
-      // Real error - log to Sentry
-      logger.error('Purchase failed', { error, productId });
+      // Real error - log to Sentry with enhanced details
+      const errorDetails = {
+        productId,
+        tier,
+        billingPeriod,
+        platform: Platform.OS,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorCode: error?.code,
+        errorProductId: error?.productId,
+        errorResponseCode: error?.responseCode,
+        errorDebugMessage: error?.debugMessage,
+        errorUserInfo: error?.userInfo,
+        errorStack: error instanceof Error ? error.stack : undefined,
+      };
+
+      logger.error('Purchase failed (Android)', { 
+        ...errorDetails,
+        error: error instanceof Error ? error : new Error(JSON.stringify(error, null, 2)),
+      });
       
       return {
         success: false,

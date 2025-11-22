@@ -287,11 +287,31 @@ export default function SubscriptionScreen() {
         }
       }
     } catch (error) {
-      logger.error('Purchase error', { feature: 'SubscriptionScreen', error });
+      // Enhanced error logging with detailed context
+      const errorDetails = {
+        feature: 'SubscriptionScreen',
+        action,
+        productId: plan.appleProductId,
+        tier: plan.tier,
+        billingPeriod: plan.billingPeriod,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorCode: (error as any)?.code,
+        errorProductId: (error as any)?.productId,
+        errorResponseCode: (error as any)?.responseCode,
+        errorDebugMessage: (error as any)?.debugMessage,
+        platform: Platform.OS,
+      };
+
+      logger.error('Purchase error', { 
+        ...errorDetails,
+        error: error instanceof Error ? error : new Error(JSON.stringify(error, null, 2)),
+      });
       
       trackAmplitudeEvent('subscription_purchase_error', {
         action,
         error: error instanceof Error ? error.message : 'Unknown error',
+        errorCode: (error as any)?.code,
       });
 
       Alert.alert(
