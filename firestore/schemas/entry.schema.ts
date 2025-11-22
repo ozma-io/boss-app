@@ -3,27 +3,13 @@
  * 
  * Path: /users/{userId}/entries/{entryId}
  * 
- * Entries represent different types of timeline events:
- * - note: Text-based entries with subtypes (note, interaction, feedback, achievement, challenge, other)
- * - fact: Single data point/assessment for tracking measurements over time
- * 
- * ## Note Entry Pattern:
- * 
- * NoteEntry is used for all text-based timeline events with different subtypes:
+ * Timeline entries are text-based events with subtypes:
  * - note: General observations
  * - interaction: Meeting/call/communication logs
  * - feedback: Feedback from boss
  * - achievement: Successes and milestones
  * - challenge: Problems and conflicts
  * - other: Anything else
- * 
- * ## Fact Entry Pattern:
- * 
- * FactEntry is used for recording single assessments or states that change over time:
- * - Each fact is a separate document in the timeline
- * - Examples: stress level, confidence level, workload assessment
- * - Allows tracking changes over time
- * - Source indicates where the fact was recorded (funnel, user)
  */
 
 /**
@@ -35,7 +21,7 @@ export type NoteSubtype = 'note' | 'interaction' | 'feedback' | 'achievement' | 
  * Base fields common to all entry types
  */
 interface BaseEntrySchema {
-  type: 'note' | 'fact';
+  type: 'note';
   timestamp: string; // ISO 8601 timestamp
   title: string;
   content: string;
@@ -57,27 +43,9 @@ export interface NoteEntrySchema extends BaseEntrySchema {
 }
 
 /**
- * Fact Entry - Single data point or assessment
- * 
- * Used for tracking changing states and assessments over time.
- * Each fact is stored as a separate timeline entry.
- * 
- * Examples:
- * - title: "Confidence Level", value: "Often doubt myself"
- * - title: "Stress Level", value: "Quite stressful"
- * - title: "Workload", value: "Sometimes overloaded"
- * - title: "Team Support", value: "Rather yes"
+ * Entry schema type
  */
-export interface FactEntrySchema extends BaseEntrySchema {
-  type: 'fact';
-  factKey: string; // e.g., "custom_confidenceLevel", "custom_stressLevel"
-  value: string | number | string[]; // The actual value
-}
-
-/**
- * Discriminated union of all entry types
- */
-export type EntrySchema = NoteEntrySchema | FactEntrySchema;
+export type EntrySchema = NoteEntrySchema;
 
 /**
  * Version tracking
@@ -89,6 +57,8 @@ export type EntrySchema = NoteEntrySchema | FactEntrySchema;
  *            Added subtype field to NoteEntrySchema
  *            Added icon field to all entry types
  *            Removed 'weekly_survey' from source options
+ * Version 4: Removed FactEntrySchema completely
+ *            All timeline entries now use type 'note' with subtypes
  */
-export const ENTRY_SCHEMA_VERSION = 3;
+export const ENTRY_SCHEMA_VERSION = 4;
 

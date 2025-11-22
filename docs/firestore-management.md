@@ -201,8 +201,8 @@ BossUp creates User and Boss documents through **two explicit paths**, ensuring 
    - `custom_mistakesHandling`: from funnel
 
 4. **Timeline Entries** (`/users/{userId}/entries/{entryId}`)
-   - 29 FactEntry documents from funnel questions
-   - Type: `'fact'`
+   - 29 timeline entries from funnel questions
+   - Type: `'note'`, subtype: `'note'`
    - Source: `'onboarding_funnel'`
    - Examples: stress level, confidence, workload assessments
 
@@ -321,7 +321,7 @@ BossUp creates User and Boss documents through **two explicit paths**, ensuring 
                 ▼                           │
     ┌───────────────────────┐               │
     │ Timeline Entries      │               │
-    │ 29 FactEntry docs     │               │
+    │ 29 note entries       │               │
     │ from funnel questions │               │
     └───────────────────────┘               │
                 │                           │
@@ -365,7 +365,7 @@ Each schema has a version number:
 ```typescript
 export const USER_SCHEMA_VERSION = 3;
 export const BOSS_SCHEMA_VERSION = 2;
-export const ENTRY_SCHEMA_VERSION = 2;
+export const ENTRY_SCHEMA_VERSION = 4;
 ```
 
 Increment this when making breaking changes. Optionally store version in documents:
@@ -481,34 +481,19 @@ const preset = BOSS_FUNNEL_FIELD_PRESETS.custom_oneOnOne;
 
 ---
 
-## 📈 FactEntry Pattern
+## 📝 Timeline Entries
 
-**FactEntry** is a new entry type for tracking single assessments that change over time.
+Timeline entries are text-based events with subtypes that help organize different kinds of information.
 
-### When to Use FactEntry
+### Entry Types and Subtypes
 
-Use FactEntry for:
-- Frequently changing states (stress level, mood)
-- Time-series assessments (weekly confidence check-ins)
-- Historical tracking (how workload changed over time)
-
-Don't use for:
-- Stable characteristics (store in User/Boss document)
-- One-time events (use Note or Interaction entry)
-
-### Timeline Entry Types
-
-BossUp uses two technical entry types:
-
-1. **`note`** - Text-based entries with subtypes:
-   - `note` - General observations
-   - `interaction` - Meeting/call/communication logs
-   - `feedback` - Feedback from boss
-   - `achievement` - Successes and milestones
-   - `challenge` - Problems and conflicts
-   - `other` - Anything else
-
-2. **`fact`** - Single data points for measurements
+All timeline entries use `type: 'note'` with one of the following subtypes:
+- `note` - General observations and assessments
+- `interaction` - Meeting/call/communication logs
+- `feedback` - Feedback from boss
+- `achievement` - Successes and milestones
+- `challenge` - Problems and conflicts
+- `other` - Anything else
 
 ### Base Fields (Common to all entries)
 
@@ -516,8 +501,8 @@ BossUp uses two technical entry types:
 {
   id: string,
   timestamp: string,
-  title: string,               // Required (display name for the entry)
-  content: string,             // Required (empty string by default for facts)
+  title: string,
+  content: string,
   icon?: string,
   source?: 'onboarding_funnel' | 'user_added' | 'ai_added',
   createdAt?: string,
@@ -535,17 +520,6 @@ BossUp uses two technical entry types:
 }
 ```
 
-### FactEntry Schema
-
-```typescript
-{
-  type: 'fact',
-  factKey: string,             // e.g., "custom_stressLevel"
-  value: string | number | string[],
-  // + all base fields (title is the display name, e.g., "Stress Level")
-}
-```
-
 ### Example: Creating a Note Entry
 
 ```typescript
@@ -560,88 +534,23 @@ await addDoc(entriesRef, {
   title: 'Positive feedback on presentation',
   content: 'Boss praised my project presentation. She mentioned I explained technical concepts clearly.',
   icon: '👍',
-  createdAt: new Date().toISOString()
-});
-```
-
-### Example: Recording Stress Level (User Input)
-
-```typescript
-import { addDoc, collection } from 'firebase/firestore';
-
-const entriesRef = collection(db, 'users', userId, 'entries');
-
-await addDoc(entriesRef, {
-  type: 'fact',
-  timestamp: new Date().toISOString(),
-  factKey: 'custom_stressLevel',
-  title: 'Stress Level',
-  value: 'Quite stressful',
-  content: '',
   source: 'user_added',
   createdAt: new Date().toISOString()
 });
 ```
 
-### Example: AI-Generated Fact with Context
+### Example: Recording Assessment from Funnel
 
 ```typescript
 await addDoc(entriesRef, {
-  type: 'fact',
+  type: 'note',
+  subtype: 'note',
   timestamp: new Date().toISOString(),
-  factKey: 'custom_confidenceLevel',
-  title: 'Confidence Level',
-  value: 'High',
-  content: 'Based on recent achievements and positive feedback from the boss.',
-  source: 'ai_added',
-  icon: '🤖',
+  title: 'Stress Level',
+  content: 'Quite stressful',
+  source: 'onboarding_funnel',
   createdAt: new Date().toISOString()
 });
-```
-
-### Querying Facts
-
-```typescript
-import { query, collection, where, orderBy, getDocs } from 'firebase/firestore';
-
-// Get all stress level assessments, most recent first
-const q = query(
-  collection(db, 'users', userId, 'entries'),
-  where('type', '==', 'fact'),
-  where('factKey', '==', 'custom_stressLevel'),
-  orderBy('timestamp', 'desc')
-);
-
-const snapshot = await getDocs(q);
-snapshot.forEach(doc => {
-  const fact = doc.data();
-  console.log(`${fact.timestamp}: ${fact.value}`);
-});
-```
-
-### Web Funnel Integration
-
-When user completes funnel, create separate FactEntry for each assessment:
-
-```typescript
-const timelineFacts = [
-  { key: 'custom_stressLevel', label: 'Stress Level', value: 'Quite stressful', category: 'Emotions' },
-  { key: 'custom_confidenceLevel', label: 'Confidence Level', value: 'Often doubt myself', category: 'Emotions' },
-  { key: 'custom_workload', label: 'Workload', value: 'Sometimes overloaded', category: 'Workload' },
-];
-
-for (const fact of timelineFacts) {
-  await addDoc(entriesRef, {
-    type: 'fact',
-    timestamp: new Date().toISOString(),
-    factKey: fact.key,
-    factLabel: fact.label,
-    value: fact.value,
-    category: fact.category,
-    source: 'onboarding_funnel',
-    createdAt: new Date().toISOString()
-  });
-}
 ```
 
 ---

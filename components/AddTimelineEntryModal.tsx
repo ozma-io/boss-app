@@ -4,11 +4,11 @@ import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
@@ -22,32 +22,7 @@ interface AddTimelineEntryModalProps {
   entryToEdit?: TimelineEntry;
 }
 
-type EntryType = 'note' | 'fact';
 type NoteSubtype = 'note' | 'interaction' | 'feedback' | 'achievement' | 'challenge' | 'other';
-
-interface NoteEntryData {
-  type: 'note';
-  subtype: NoteSubtype;
-  title: string;
-  content: string;
-  icon?: string;
-  timestamp: string;
-}
-
-interface FactEntryData {
-  type: 'fact';
-  title: string;
-  content: string;
-  factKey: string;
-  value: string;
-  icon?: string;
-  timestamp: string;
-}
-
-const ENTRY_TYPES: Array<{ value: EntryType; label: string; icon: string }> = [
-  { value: 'note', label: 'Note', icon: 'document-text-outline' },
-  { value: 'fact', label: 'Metric', icon: 'stats-chart-outline' },
-];
 
 const NOTE_SUBTYPES: Array<{ value: NoteSubtype; label: string }> = [
   { value: 'note', label: 'Note' },
@@ -66,30 +41,14 @@ const NOTE_SUBTYPES: Array<{ value: NoteSubtype; label: string }> = [
 export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpdate, entryToEdit }: AddTimelineEntryModalProps) {
   const isEditMode = !!entryToEdit;
   
-  const [entryType, setEntryType] = useState<EntryType>('note');
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const [noteSubtype, setNoteSubtype] = useState<NoteSubtype>('note');
   const [icon, setIcon] = useState<string>('');
-  const [factKey, setFactKey] = useState<string>('');
-  const [factValue, setFactValue] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
-  
-  // State preservation for type switching
-  const [savedNoteFields, setSavedNoteFields] = useState<{
-    title: string;
-    content: string;
-    subtype: NoteSubtype;
-  } | null>(null);
-  const [savedFactFields, setSavedFactFields] = useState<{
-    title: string;
-    content: string;
-    factKey: string;
-    factValue: string;
-  } | null>(null);
 
   // Create empty entry or populate fields when editing
   useEffect(() => {
@@ -98,7 +57,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
     if (entryToEdit) {
       // Edit mode: populate fields
       setCurrentEntryId(entryToEdit.id);
-      setEntryType(entryToEdit.type);
       setTitle(entryToEdit.title);
       setContent(entryToEdit.content || '');
       setIcon(entryToEdit.icon || '');
@@ -106,9 +64,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       
       if (entryToEdit.type === 'note') {
         setNoteSubtype(entryToEdit.subtype);
-      } else if (entryToEdit.type === 'fact') {
-        setFactKey(entryToEdit.factKey);
-        setFactValue(String(entryToEdit.value));
       }
     } else {
       // Create mode: create empty entry immediately
@@ -128,16 +83,11 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       };
       
       // Reset to defaults
-      setEntryType('note');
       setTitle('');
       setContent('');
       setNoteSubtype('note');
       setIcon('');
-      setFactKey('');
-      setFactValue('');
       setSelectedDate(new Date());
-      setSavedNoteFields(null);
-      setSavedFactFields(null);
       
       createEmpty();
     }
@@ -157,8 +107,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
   // Debounce timer refs
   const titleDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const contentDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const factKeyDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const factValueDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Auto-save function
   const autoSave = useCallback(async (updates: Partial<TimelineEntry>): Promise<void> => {
@@ -209,49 +157,11 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
     };
   }, [content, currentEntryId, autoSave]);
   
-  // Debounced auto-save for factKey
-  useEffect(() => {
-    if (!currentEntryId || entryType !== 'fact') return;
-    
-    if (factKeyDebounceTimer.current) {
-      clearTimeout(factKeyDebounceTimer.current);
-    }
-    
-    factKeyDebounceTimer.current = setTimeout(() => {
-      autoSave({ factKey } as any);
-    }, 500);
-    
-    return () => {
-      if (factKeyDebounceTimer.current) {
-        clearTimeout(factKeyDebounceTimer.current);
-      }
-    };
-  }, [factKey, currentEntryId, entryType, autoSave]);
-  
-  // Debounced auto-save for factValue
-  useEffect(() => {
-    if (!currentEntryId || entryType !== 'fact') return;
-    
-    if (factValueDebounceTimer.current) {
-      clearTimeout(factValueDebounceTimer.current);
-    }
-    
-    factValueDebounceTimer.current = setTimeout(() => {
-      autoSave({ value: factValue } as any);
-    }, 500);
-    
-    return () => {
-      if (factValueDebounceTimer.current) {
-        clearTimeout(factValueDebounceTimer.current);
-      }
-    };
-  }, [factValue, currentEntryId, entryType, autoSave]);
-  
   // Immediate auto-save for noteSubtype
   useEffect(() => {
-    if (!currentEntryId || entryType !== 'note') return;
+    if (!currentEntryId) return;
     autoSave({ subtype: noteSubtype } as any);
-  }, [noteSubtype, currentEntryId, entryType, autoSave]);
+  }, [noteSubtype, currentEntryId, autoSave]);
 
   const handleDateChange = (event: any, date?: Date): void => {
     if (date) {
@@ -270,59 +180,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
     if (!currentEntryId) return;
     autoSave({ timestamp: selectedDate.toISOString() });
   }, [selectedDate, currentEntryId, autoSave]);
-  
-  // Handle entry type switching with state preservation
-  const handleEntryTypeChange = (newType: EntryType): void => {
-    if (newType === entryType) return;
-    
-    // Save current fields before switching
-    if (entryType === 'note') {
-      setSavedNoteFields({
-        title,
-        content,
-        subtype: noteSubtype,
-      });
-    } else if (entryType === 'fact') {
-      setSavedFactFields({
-        title,
-        content,
-        factKey,
-        factValue,
-      });
-    }
-    
-    // Switch type
-    const oldType = entryType;
-    setEntryType(newType);
-    
-    // Restore saved fields or set defaults
-    if (newType === 'note') {
-      if (savedNoteFields) {
-        setTitle(savedNoteFields.title);
-        setContent(savedNoteFields.content);
-        setNoteSubtype(savedNoteFields.subtype);
-      } else {
-        // Keep title and content, reset note-specific fields
-        setNoteSubtype('note');
-      }
-    } else if (newType === 'fact') {
-      if (savedFactFields) {
-        setTitle(savedFactFields.title);
-        setContent(savedFactFields.content);
-        setFactKey(savedFactFields.factKey);
-        setFactValue(savedFactFields.factValue);
-      } else {
-        // Keep title and content, reset fact-specific fields
-        setFactKey('');
-        setFactValue('');
-      }
-    }
-    
-    // Update entry type in database
-    if (currentEntryId && onUpdate) {
-      onUpdate(currentEntryId, { type: newType } as any);
-    }
-  };
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('en-US', {
@@ -404,43 +261,8 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
               </View>
             </View>
 
-            {/* Entry Type Selector */}
-            <View style={styles.section}>
-              <Text style={styles.sectionLabel} testID="type-section-label">
-                Entry Type
-              </Text>
-              <View style={styles.typeButtons}>
-                {ENTRY_TYPES.map((type) => (
-                  <Pressable
-                    key={type.value}
-                    style={[
-                      styles.typeButton,
-                      entryType === type.value && styles.typeButtonSelected,
-                    ]}
-                    onPress={() => handleEntryTypeChange(type.value)}
-                    testID={`entry-type-${type.value}`}
-                  >
-                    <Ionicons
-                      name={type.icon as any}
-                      size={20}
-                      color={entryType === type.value ? '#B8E986' : '#666'}
-                    />
-                    <Text
-                      style={[
-                        styles.typeButtonText,
-                        entryType === type.value && styles.typeButtonTextSelected,
-                      ]}
-                    >
-                      {type.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Note-specific fields */}
-            {entryType === 'note' && (
-              <>
+            {/* Note fields */}
+            <>
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel} testID="subtype-section-label">
                     Subtype
@@ -514,98 +336,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
                 </View>
                 */}
               </>
-            )}
-
-            {/* Fact-specific fields */}
-            {entryType === 'fact' && (
-              <>
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel} testID="title-section-label">
-                    Title
-                  </Text>
-                  <TextInput
-                    style={[styles.input, { outlineStyle: 'none' } as any]}
-                    value={title}
-                    onChangeText={setTitle}
-                    placeholder="e.g., Weekly 1-on-1 Meeting"
-                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
-                    testID="title-input"
-                  />
-                </View>
-
-                <View style={styles.section}>
-                  <View style={styles.labelWithInfo}>
-                    <Text style={styles.sectionLabel} testID="fact-key-section-label">
-                      Fact Key
-                    </Text>
-                    <Pressable
-                      onPress={() =>
-                        showAlert(
-                          'About Fact Keys',
-                          'This unique key identifies the metric. Data will be tracked and graphed by this key.'
-                        )
-                      }
-                      testID="fact-key-info-button"
-                    >
-                      <Ionicons name="information-circle-outline" size={20} color="#666" />
-                    </Pressable>
-                  </View>
-                  <TextInput
-                    style={[styles.input, { outlineStyle: 'none' } as any]}
-                    value={factKey}
-                    onChangeText={setFactKey}
-                    placeholder="e.g., mood_score, stress_level"
-                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
-                    testID="fact-key-input"
-                  />
-                </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel} testID="value-section-label">
-                    Value
-                  </Text>
-                  <TextInput
-                    style={[styles.input, { outlineStyle: 'none' } as any]}
-                    value={factValue}
-                    onChangeText={setFactValue}
-                    placeholder="e.g., 8, High, Good"
-                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
-                    testID="value-input"
-                  />
-                </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel} testID="content-section-label">
-                    Content
-                  </Text>
-                  <TextInput
-                    style={[styles.input, styles.multilineInput, { outlineStyle: 'none' } as any]}
-                    value={content}
-                    onChangeText={setContent}
-                    placeholder="Enter details..."
-                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
-                    multiline
-                    testID="content-input"
-                  />
-                </View>
-
-                {/* TODO: Add icon picker UI for users to select custom icons
-                <View style={styles.section}>
-                  <Text style={styles.sectionLabel} testID="icon-section-label">
-                    Icon (Optional)
-                  </Text>
-                  <TextInput
-                    style={[styles.input, { outlineStyle: 'none' } as any]}
-                    value={icon}
-                    onChangeText={setIcon}
-                    placeholder="e.g., 📊 or 📈"
-                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
-                    testID="icon-input"
-                  />
-                </View>
-                */}
-              </>
-            )}
         </View>
 
         {/* Date Picker */}

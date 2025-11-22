@@ -64,7 +64,7 @@ In `types/` directory, create:
 
 - `user.types.ts` - User model
 - `boss.types.ts` - Boss model
-- `entry.types.ts` - Entry model (notes with subtypes, facts)
+- `entry.types.ts` - Entry model (notes with subtypes)
 
 ### 3. Implement Firebase Services
 

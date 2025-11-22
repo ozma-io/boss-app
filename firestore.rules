@@ -73,7 +73,7 @@ service cloud.firestore {
       // Read and delete: owner only
       allow read, delete: if isOwner(userId);
       
-      // Entries subcollection (notes with subtypes, facts) - user level
+      // Entries subcollection (notes with subtypes) - user level
       match /entries/{entryId} {
         allow read, write: if isOwner(userId);
       }

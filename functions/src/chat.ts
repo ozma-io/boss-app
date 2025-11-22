@@ -201,13 +201,10 @@ async function fetchUserContext(userId: string): Promise<string> {
   if (entries.length > 0) {
     contextParts.push('\n## Timeline Entries (Recent)');
     for (const entry of entries) {
-      const entryType = entry.type === 'note' ? `Note (${entry.subtype})` : `Fact (${entry.factKey})`;
+      const entryType = entry.type === 'note' ? `Note (${entry.subtype})` : 'Entry';
       contextParts.push(`- [${entry.timestamp}] ${entryType}: ${entry.title}`);
       if (entry.content) {
         contextParts.push(`  Content: ${entry.content}`);
-      }
-      if (entry.type === 'fact' && entry.value !== undefined) {
-        contextParts.push(`  Value: ${entry.value}`);
       }
     }
   }

@@ -6,15 +6,14 @@ TypeScript schemas that define the structure of Firestore documents.
 
 - `user.schema.ts` - User document structure
 - `boss.schema.ts` - Boss document structure  
-- `entry.schema.ts` - Timeline entry structures (notes with subtypes, facts)
+- `entry.schema.ts` - Timeline entry structures (notes with subtypes)
 - `index.ts` - Exports all schemas
 
 ## Data Organization Principle
 
 **Timeline (Entries)** — frequently changing data (daily/weekly assessments):
 - Current mood, stress level today, confidence this week
-- Use `FactEntry` type for trackable metrics that change over time
-- Use `NoteEntry` with appropriate subtype for events and observations
+- Use timeline entries with type 'note' and appropriate subtype for all data
 - Examples: daily stress assessment, weekly confidence check-in, meeting notes, feedback received
 
 **User/Boss Documents** — stable characteristics (rarely change):

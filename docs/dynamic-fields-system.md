@@ -61,7 +61,7 @@ Whether a field comes from the web funnel or is added by the user in the app, it
 - Feedback patterns: frequency, clarity
 - Expectations clarity
 
-**Timeline (FactEntry)**: Current states, moods, assessments that change frequently
+**Timeline (Note Entries)**: Current states, moods, assessments that change frequently
 - Emotional states: stress, confidence
 - Current workload assessment
 - Team support feeling
@@ -138,15 +138,15 @@ Whether a field comes from the web funnel or is added by the user in the app, it
 
 ### Entry Schema (Timeline)
 
-**FactEntry** for frequently changing states:
+**NoteEntry** for all timeline data:
 ```typescript
 {
-  type: 'fact'
+  type: 'note'
+  subtype: 'note' | 'interaction' | 'feedback' | 'achievement' | 'challenge' | 'other'
   timestamp: string
-  factKey: string        // e.g., "custom_stressLevel"
-  factLabel: string      // e.g., "Stress Level"
-  value: string | number | string[]
-  category?: string      // e.g., "Emotions"
+  title: string          // e.g., "Stress Level"
+  content: string        // e.g., "Quite stressful"
+  icon?: string
   source?: string        // e.g., "onboarding_funnel"
 }
 ```
@@ -364,26 +364,26 @@ const bossData = {
 };
 ```
 
-**3. Create Timeline FactEntry documents:**
+**3. Create Timeline Note Entry documents:**
 ```typescript
-// Create separate entry for each fact
-const stressFactEntry = {
-  type: 'fact',
+// Create separate entry for each assessment
+const stressEntry = {
+  type: 'note',
+  subtype: 'note',
   timestamp: new Date().toISOString(),
-  factKey: 'custom_stressLevel',
-  factLabel: 'Stress Level',
-  value: 'Quite stressful',
+  title: 'Stress Level',
+  content: 'Quite stressful',
   category: 'Emotions',
   source: 'onboarding_funnel',
   createdAt: new Date().toISOString()
 };
 
-const confidenceFactEntry = {
-  type: 'fact',
+const confidenceEntry = {
+  type: 'note',
+  subtype: 'note',
   timestamp: new Date().toISOString(),
-  factKey: 'custom_confidenceLevel',
-  factLabel: 'Confidence Level',
-  value: 'Often doubt myself',
+  title: 'Confidence Level',
+  content: 'Often doubt myself',
   category: 'Emotions',
   source: 'onboarding_funnel',
   createdAt: new Date().toISOString()
@@ -392,11 +392,11 @@ const confidenceFactEntry = {
 // Add to timeline (entries are stored at user level)
 await addDoc(
   collection(db, 'users', userId, 'entries'),
-  stressFactEntry
+  stressEntry
 );
 await addDoc(
   collection(db, 'users', userId, 'entries'),
-  confidenceFactEntry
+  confidenceEntry
 );
 ```
 
@@ -548,17 +548,17 @@ if (BOSS_REQUIRED_FIELDS.includes(fieldKey)) {
 await updateDoc(bossRef, { [fieldKey]: deleteField() });
 ```
 
-### 5. Use FactEntry for Time-Series Data
+### 5. Use Timeline Entries for Time-Series Data
 
 ✅ **Good** (tracking changes over time):
 ```typescript
 // Create new entry each time stress level changes
 await addDoc(entriesRef, {
-  type: 'fact',
+  type: 'note',
+  subtype: 'note',
   timestamp: new Date().toISOString(),
-  factKey: 'custom_stressLevel',
-  factLabel: 'Stress Level',
-  value: 'Moderate',
+  title: 'Stress Level',
+  content: 'Moderate',
   category: 'Emotions'
 });
 ```

@@ -1,6 +1,5 @@
 import { db } from '@/constants/firebase.config';
 import {
-  FactEntry,
   NoteEntry,
   TimelineEntry,
   Unsubscribe
@@ -98,49 +97,6 @@ export async function createNoteEntry(
   } catch (error) {
     const err = error as Error;
     logger.error('Error creating note entry', { feature: 'TimelineService', userId, error: err });
-    throw error;
-  }
-}
-
-/**
- * Create a fact entry in the timeline
- * 
- * @param userId - User ID
- * @param data - Fact entry data (without id)
- * @returns Created entry ID
- */
-export async function createFactEntry(
-  userId: string,
-  data: Omit<FactEntry, 'id'>
-): Promise<string> {
-  try {
-    logger.debug('Creating fact entry', { feature: 'TimelineService', userId, factKey: data.factKey });
-    
-    const entriesRef = collection(db, 'users', userId, 'entries');
-    
-    // TODO: Remove null filtering when icon picker is implemented
-    // Filter out null/undefined values to avoid Firestore errors
-    const entryData = {
-      ...data,
-      type: 'fact' as const,
-      timestamp: data.timestamp || new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      // Remove icon if it's null or undefined
-      ...(data.icon && { icon: data.icon }),
-    };
-    
-    // Remove icon key completely if it's null
-    if (entryData.icon === null || entryData.icon === undefined) {
-      delete (entryData as any).icon;
-    }
-    
-    const docRef = await addDoc(entriesRef, entryData);
-    
-    logger.info('Successfully created fact entry', { feature: 'TimelineService', userId, entryId: docRef.id, factKey: data.factKey });
-    return docRef.id;
-  } catch (error) {
-    const err = error as Error;
-    logger.error('Error creating fact entry', { feature: 'TimelineService', userId, error: err });
     throw error;
   }
 }

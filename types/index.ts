@@ -40,7 +40,7 @@ export interface Boss {
 }
 
 // Timeline entry types
-export type TimelineEntryType = 'note' | 'fact';
+export type TimelineEntryType = 'note';
 
 // Note subtypes for different kinds of text-based entries
 export type NoteSubtype = 'note' | 'interaction' | 'feedback' | 'achievement' | 'challenge' | 'other';
@@ -61,15 +61,8 @@ export interface NoteEntry extends BaseEntry {
   subtype: NoteSubtype;
 }
 
-// Fact entry - for tracking single assessments over time
-export interface FactEntry extends BaseEntry {
-  type: 'fact';
-  factKey: string;
-  value: string | number | string[];
-}
-
 // Discriminated union for all timeline entries
-export type TimelineEntry = NoteEntry | FactEntry;
+export type TimelineEntry = NoteEntry;
 
 // User type definition (for authentication state - minimal data from Firebase Auth)
 export interface User {

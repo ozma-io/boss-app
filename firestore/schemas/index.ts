@@ -17,7 +17,7 @@ export * from './user.schema';
 export const SCHEMA_VERSIONS = {
   user: 3,
   boss: 2,
-  entry: 2,
+  entry: 4,
   chat: 1,
 } as const;
 
