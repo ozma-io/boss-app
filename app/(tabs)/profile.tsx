@@ -38,6 +38,9 @@ export default function ProfileScreen() {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [fieldKeyToEdit, setFieldKeyToEdit] = useState<string | null>(null);
   const [fieldToEdit, setFieldToEdit] = useState<{label: string; value: any; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'} | null>(null);
+  
+  // State for support loading
+  const [isLoadingSupport, setIsLoadingSupport] = useState(false);
 
   // Ref to always access latest profile value without affecting callback dependencies
   const profileRef = useRef(profile);
@@ -311,6 +314,8 @@ export default function ProfileScreen() {
         return;
       }
       
+      setIsLoadingSupport(true);
+      
       try {
         await showIntercomMessenger(user.id, user.email, profile?.name);
       } catch (error) {
@@ -329,6 +334,8 @@ export default function ProfileScreen() {
             },
           ]
         );
+      } finally {
+        setIsLoadingSupport(false);
       }
     }
   };
@@ -546,6 +553,16 @@ export default function ProfileScreen() {
         initialValue={fieldToEdit?.value ? String(fieldToEdit.value) : undefined}
         initialType={fieldToEdit?.type as 'text' | 'multiline' | 'select' | 'date' | 'multiselect' | undefined}
       />
+      
+      {/* Loading overlay for support */}
+      {isLoadingSupport && (
+        <View style={styles.loadingOverlay} testID="support-loading-overlay">
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#B6D95C" testID="support-loading-spinner" />
+            <Text style={styles.loadingOverlayText}>Opening support...</Text>
+          </View>
+        </View>
+      )}
     </GestureHandlerRootView>
   );
 }
@@ -793,5 +810,33 @@ const styles = StyleSheet.create({
   },
   customFieldWrapper: {
     marginHorizontal: 12,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  loadingContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  loadingOverlayText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#333',
+    fontFamily: 'Manrope-Regular',
   },
 });
