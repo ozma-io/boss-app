@@ -23,6 +23,7 @@
     "googleapis": "^166.0.0",
     "jsonwebtoken": "^9.0.2",
     "langfuse": "^3.30.0",
+    "mailgun.js": "^10.0.0",
     "openai": "^4.88.0",
     "stripe": "^19.3.1"
   },

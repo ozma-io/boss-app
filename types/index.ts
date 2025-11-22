@@ -87,6 +87,12 @@ export interface UserProfile {
   // Subscription data
   subscription?: UserSubscription;
   
+  // Notification settings
+  email_unsubscribed?: boolean;
+  notification_state?: {
+    last_notification_at?: string;
+  };
+  
   // Custom fields for profile data
   custom_department?: string;
   
@@ -275,5 +281,18 @@ export interface DeleteAccountRequest {
 export interface DeleteAccountResponse {
   success: boolean;
   error?: string;
+}
+
+// Email notification types
+export type EmailState = 'PLANNED' | 'SENDING' | 'SENT' | 'FAILED';
+
+export interface Email {
+  to: string;
+  subject: string;
+  body_text: string;
+  state: EmailState;
+  sentAt?: string;
+  lastErrorMessage?: string;
+  createdAt: string;
 }
 

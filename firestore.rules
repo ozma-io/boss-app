@@ -112,6 +112,14 @@ service cloud.firestore {
           allow read, write: if isOwner(userId);
         }
       }
+      
+      // Emails subcollection - for notification system
+      // Users can read their own emails
+      // Cloud Functions can create and update emails
+      match /emails/{emailId} {
+        allow read: if isOwner(userId);
+        allow create, update: if true; // Allow Cloud Functions to write
+      }
     }
     
     // Deny all other access

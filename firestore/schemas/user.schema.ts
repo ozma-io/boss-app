@@ -74,6 +74,16 @@ export interface UserSchema {
   }>;
   trackingPromptCount?: number;
   
+  // === NOTIFICATION SETTINGS ===
+  
+  // Track if user unsubscribed from emails via Mailgun
+  email_unsubscribed?: boolean;
+  
+  // Notification state tracking
+  notification_state?: {
+    last_notification_at?: string; // ISO 8601 timestamp
+  };
+  
   // === ATTRIBUTION DATA (system-managed) ===
   
   // Attribution data from Facebook/Meta ads
@@ -217,6 +227,8 @@ export const UserDefaults: Partial<UserSchema> = {
   fcmToken: null,
   attribution: undefined,
   _fieldsMeta: {},
+  email_unsubscribed: false,
+  notification_state: undefined,
 };
 
 /**

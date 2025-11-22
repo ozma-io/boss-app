@@ -60,6 +60,9 @@ firebase functions:secrets:set GOOGLE_PLAY_SERVICE_ACCOUNT < path/to/service-acc
 
 # Stripe (for web subscriptions and Stripe-to-IAP migration)
 firebase functions:secrets:set STRIPE_SECRET_KEY
+
+# Mailgun (for email notifications)
+firebase functions:secrets:set MAILGUN_API_KEY
 ```
 
 2. **Local Development (Optional):** For emulator testing only:
@@ -99,12 +102,16 @@ cp functions/.env.example functions/.env
 # Build TypeScript
 cd functions && npm run build
 
-# Deploy all functions
+# Deploy all functions (TypeScript + Python)
 cd .. && firebase deploy --only functions
 
 # First-time deploy or force cleanup policy setup
 firebase deploy --only functions --force
 ```
+
+**Note:** Firebase CLI automatically deploys both:
+- TypeScript functions from `functions/` directory
+- Python functions from `functions-python/` directory (if present)
 
 ### Service Account Permissions
 

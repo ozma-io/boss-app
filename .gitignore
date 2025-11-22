@@ -51,6 +51,13 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 
+# Python
+functions-python/.venv/
+functions-python/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
 # Firestore migrations
 firestore/migrations/node_modules/
 .vercel

@@ -1,0 +1,47 @@
+/**
+ * Email Schema
+ * 
+ * Path: /users/{userId}/emails/{emailId}
+ * 
+ * Represents email operations for the notification system.
+ * Each document tracks one email from planning to delivery.
+ */
+
+export interface EmailSchema {
+  // Recipient email address
+  to: string;
+  
+  // Email subject
+  subject: string;
+  
+  // Email body (plain text)
+  body_text: string;
+  
+  // Current state of email operation
+  state: 'PLANNED' | 'SENDING' | 'SENT' | 'FAILED';
+  
+  // When email was successfully sent
+  sentAt?: string; // ISO 8601 timestamp
+  
+  // Error message if sending failed
+  lastErrorMessage?: string;
+  
+  // When this email operation was created
+  createdAt: string; // ISO 8601 timestamp
+}
+
+/**
+ * Default values for new email
+ */
+export const EmailDefaults: Partial<EmailSchema> = {
+  state: 'PLANNED',
+};
+
+/**
+ * Version tracking
+ * Increment this when making breaking schema changes
+ * 
+ * Version 1: Initial email schema for notification system
+ */
+export const EMAIL_SCHEMA_VERSION = 1;
+

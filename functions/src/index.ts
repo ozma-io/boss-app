@@ -23,6 +23,7 @@ admin.initializeApp();
 export { deleteUserAccount } from './account-deletion';
 export { appleServerNotification } from './apple-notifications';
 export { generateChatResponse, onChatMessageCreated } from './chat';
+export { onEmailCreated, onEmailUpdated } from './email-sender';
 export { sendFacebookConversionEvent } from './facebook';
 export { cancelSubscription, verifyIAPPurchase } from './iap-verification';
 export { getIntercomJwt } from './intercom';

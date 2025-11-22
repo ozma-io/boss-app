@@ -7,6 +7,7 @@
 
 export * from './boss.schema';
 export * from './chat.schema';
+export * from './email.schema';
 export * from './entry.schema';
 export * from './field-presets';
 export * from './user.schema';
@@ -19,5 +20,6 @@ export const SCHEMA_VERSIONS = {
   boss: 2,
   entry: 4,
   chat: 1,
+  email: 1,
 } as const;
 
