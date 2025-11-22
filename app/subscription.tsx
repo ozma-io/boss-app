@@ -518,9 +518,44 @@ export default function SubscriptionScreen() {
               {plans.map((plan) => renderPlanCard(plan))}
             </ScrollView>
           ) : (
-            <View style={styles.plansGridContainer} testID="plans-grid-container">
-              {plans.map((plan) => renderPlanCard(plan))}
-            </View>
+            <>
+              <View style={styles.plansGridContainer} testID="plans-grid-container">
+                {plans.map((plan) => renderPlanCard(plan))}
+              </View>
+              
+              {/* Value proposition for new subscribers */}
+              <View style={styles.valuePropositionContainer} testID="value-proposition">
+                <Text style={styles.valuePropositionTitle} testID="value-proposition-title">
+                  What's included
+                </Text>
+                <View style={styles.valuePropositionList}>
+                  <View style={styles.valuePropositionItem}>
+                    <Text style={styles.valuePropositionIcon}>💬</Text>
+                    <Text style={styles.valuePropositionText}>
+                      Unlimited AI conversations about your workplace situations
+                    </Text>
+                  </View>
+                  <View style={styles.valuePropositionItem}>
+                    <Text style={styles.valuePropositionIcon}>🎯</Text>
+                    <Text style={styles.valuePropositionText}>
+                      Personalized advice based on your manager's style and goals
+                    </Text>
+                  </View>
+                  <View style={styles.valuePropositionItem}>
+                    <Text style={styles.valuePropositionIcon}>🔔</Text>
+                    <Text style={styles.valuePropositionText}>
+                      Proactive reminders to document wins and follow up
+                    </Text>
+                  </View>
+                  <View style={styles.valuePropositionItem}>
+                    <Text style={styles.valuePropositionIcon}>📈</Text>
+                    <Text style={styles.valuePropositionText}>
+                      Track your growth with timeline and smart recommendations
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </>
           )}
         </View>
       </ScrollView>
@@ -827,5 +862,37 @@ const styles = StyleSheet.create({
   },
   checkmarkContainerUnselected: {
     backgroundColor: '#F5F1E8',
+  },
+  valuePropositionContainer: {
+    marginTop: 32,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+  },
+  valuePropositionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 16,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  valuePropositionList: {
+    gap: 16,
+  },
+  valuePropositionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  valuePropositionIcon: {
+    fontSize: 20,
+    marginRight: 12,
+    marginTop: 2,
+  },
+  valuePropositionText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#333',
+    fontFamily: 'Manrope-Regular',
   },
 });
