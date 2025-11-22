@@ -18,73 +18,68 @@ from firebase_functions import scheduler_fn
 logger = logging.getLogger(__name__)
 
 
-def get_firestore_client() -> Any:
+# ============================================================================
+# BUSINESS LOGIC - Pure functions that can be tested independently
+# ============================================================================
+
+def process_notification_orchestration(db: Any) -> int:
     """
-    Get Firestore client instance, initializing Firebase Admin if needed.
+    Core business logic for notification orchestration.
     
-    Lazy initialization to avoid credential issues during module import.
-    """
-    if not firebase_admin._apps:  # type: ignore
-        firebase_admin.initialize_app()  # type: ignore
-    return firestore.client()  # type: ignore
-
-
-@scheduler_fn.on_schedule(schedule="every 2 hours", region="us-central1")
-def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
-    """
-    Orchestrate notification sending for all users.
+    Pure function that takes db client and processes notifications.
+    Can be tested independently without Cloud Function decorators.
     
-    Triggered automatically every 2 hours by Cloud Scheduler.
-    Currently contains stub logic - notification scenarios to be implemented later.
+    Args:
+        db: Firestore client instance
+        
+    Returns:
+        Number of users processed
     """
-    try:
-        logger.info("Starting notification orchestrator")
+    logger.info("Starting notification orchestration logic")
+    
+    # STUB: Query users (will add filtering logic later)
+    users_ref = db.collection('users')  # type: ignore
+    users = users_ref.limit(10).stream()  # type: ignore
+    
+    processed_count: int = 0
+    for user_doc in users:  # type: ignore
+        user_id: str = user_doc.id  # type: ignore
+        user_data: dict[str, Any] | None = user_doc.to_dict()  # type: ignore
         
-        db = get_firestore_client()
+        if user_data is None:
+            logger.warning(f"User {user_id} has no data, skipping")
+            continue
         
-        # STUB: Query users (will add filtering logic later)
-        users_ref = db.collection('users')  # type: ignore
-        users = users_ref.limit(10).stream()  # type: ignore
+        # STUB: Check if user is eligible for notifications
+        if user_data.get('email_unsubscribed', False):  # type: ignore
+            logger.info(f"User {user_id} is unsubscribed, skipping")
+            continue
         
-        processed_count: int = 0
-        for user_doc in users:  # type: ignore
-            user_id: str = user_doc.id  # type: ignore
-            user_data: dict[str, Any] | None = user_doc.to_dict()  # type: ignore
-            
-            if user_data is None:
-                logger.warning(f"User {user_id} has no data, skipping")
-                continue
-            
-            # STUB: Check if user is eligible for notifications
-            if user_data.get('email_unsubscribed', False):  # type: ignore
-                logger.info(f"User {user_id} is unsubscribed, skipping")
-                continue
-            
-            # STUB: Notification logic placeholder
-            # TODO: Add scenarios:
-            # - Onboarding reminder
-            # - Weekly check-in
-            # - N-day silence reminder
-            # - Check notification_state.last_notification_at
-            # TODO: 
-            # - Add sentry
-            # - Add logic to get and store mailgun unsubscribe list
-            
-            logger.info(f"Processed user {user_id}")
-            processed_count += 1
+        # STUB: Notification logic placeholder
+        # TODO: Add scenarios:
+        # - Onboarding reminder
+        # - Weekly check-in
+        # - N-day silence reminder
+        # - Check notification_state.last_notification_at
+        # TODO: 
+        # - Add sentry
+        # - Add logic to get and store mailgun unsubscribe list
         
-        logger.info(f"Notification orchestrator completed. Processed {processed_count} users")
-        
-    except Exception as e:
-        logger.error(f"Error in notification orchestrator: {str(e)}", exc_info=True)
-        raise
+        logger.info(f"Processed user {user_id}")
+        processed_count += 1
+    
+    logger.info(f"Notification orchestration completed. Processed {processed_count} users")
+    return processed_count
 
 
-def create_notification_email(user_id: str, email: str, subject: str, body: str) -> str:
+def create_email_document(db: Any, user_id: str, email: str, subject: str, body: str) -> str:
     """
     Create an email notification document in Firestore.
     
+    Pure function that takes db client as parameter.
+    
     Args:
+        db: Firestore client instance
         user_id: User ID
         email: Recipient email address
         subject: Email subject
@@ -93,7 +88,6 @@ def create_notification_email(user_id: str, email: str, subject: str, body: str)
     Returns:
         Email document ID
     """
-    db = get_firestore_client()
     email_ref = db.collection('users').document(user_id).collection('emails').document()  # type: ignore
     
     email_data: dict[str, Any] = {  # type: ignore
@@ -110,18 +104,20 @@ def create_notification_email(user_id: str, email: str, subject: str, body: str)
     return email_ref.id  # type: ignore
 
 
-def create_notification_message(user_id: str, content: str) -> str:
+def create_chat_message(db: Any, user_id: str, content: str) -> str:
     """
     Create a notification message in user's chat thread.
     
+    Pure function that takes db client as parameter.
+    
     Args:
+        db: Firestore client instance
         user_id: User ID
         content: Message content
         
     Returns:
         Message document ID
     """
-    db = get_firestore_client()
     thread_id = 'main'  # Single thread per user
     message_ref = (  # type: ignore
         db.collection('users')  # type: ignore
@@ -142,4 +138,72 @@ def create_notification_message(user_id: str, content: str) -> str:
     logger.info(f"Created message {message_ref.id} for user {user_id}")  # type: ignore
     
     return message_ref.id  # type: ignore
+
+
+# ============================================================================
+# INFRASTRUCTURE - Cloud Function decorator wrapper
+# ============================================================================
+
+def get_firestore_client() -> Any:
+    """
+    Get Firestore client instance, initializing Firebase Admin if needed.
+    
+    Lazy initialization to avoid credential issues during module import.
+    """
+    if not firebase_admin._apps:  # type: ignore
+        firebase_admin.initialize_app()  # type: ignore
+    return firestore.client()  # type: ignore
+
+
+@scheduler_fn.on_schedule(schedule="every 2 hours", region="us-central1")
+def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
+    """
+    Cloud Function wrapper for notification orchestration.
+    
+    Thin wrapper that handles Cloud Function lifecycle and calls business logic.
+    Triggered automatically every 2 hours by Cloud Scheduler.
+    """
+    try:
+        db = get_firestore_client()
+        process_notification_orchestration(db)
+        
+    except Exception as e:
+        logger.error(f"Error in notification orchestrator: {str(e)}", exc_info=True)
+        raise
+
+
+# ============================================================================
+# CONVENIENCE WRAPPERS - For backward compatibility
+# ============================================================================
+
+def create_notification_email(user_id: str, email: str, subject: str, body: str) -> str:
+    """
+    Convenience wrapper that gets db client and calls create_email_document.
+    
+    Args:
+        user_id: User ID
+        email: Recipient email address
+        subject: Email subject
+        body: Email body text
+        
+    Returns:
+        Email document ID
+    """
+    db = get_firestore_client()
+    return create_email_document(db, user_id, email, subject, body)
+
+
+def create_notification_message(user_id: str, content: str) -> str:
+    """
+    Convenience wrapper that gets db client and calls create_chat_message.
+    
+    Args:
+        user_id: User ID
+        content: Message content
+        
+    Returns:
+        Message document ID
+    """
+    db = get_firestore_client()
+    return create_chat_message(db, user_id, content)
 
