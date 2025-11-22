@@ -1,9 +1,0 @@
-{
-  "venvPath": "functions-python",
-  "venv": ".venv",
-  "exclude": [
-    "functions-python/**"
-  ],
-  "typeCheckingMode": "off"
-}
-

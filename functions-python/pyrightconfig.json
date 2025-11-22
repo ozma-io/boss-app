@@ -1,0 +1,28 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "off",
+  "reportMissingImports": "none",
+  "reportMissingTypeStubs": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportPrivateUsage": "none",
+  "reportUntypedFunctionDecorator": "none",
+  "reportUntypedClassDecorator": "none",
+  "reportUntypedBaseClass": "none",
+  "reportUntypedNamedTuple": "none",
+  "reportPrivateImportUsage": "none",
+  "reportConstantRedefinition": "none",
+  "reportDeprecated": "none",
+  "reportIncompatibleMethodOverride": "none",
+  "reportIncompatibleVariableOverride": "none",
+  "reportInconsistentConstructor": "none",
+  "reportOverlappingOverload": "none",
+  "reportMissingSuperCall": "none",
+  "reportUninitializedInstanceVariable": "none",
+  "reportInvalidStringEscapeSequence": "none",
+  "reportUnknownLambdaType": "none"
+}
+
