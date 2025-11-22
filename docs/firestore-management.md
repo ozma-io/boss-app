@@ -489,11 +489,11 @@ Timeline entries are text-based events with subtypes that help organize differen
 
 All timeline entries use `type: 'note'` with one of the following subtypes:
 - `note` - General observations and assessments
-- `interaction` - Meeting/call/communication logs
-- `feedback` - Feedback from boss
-- `achievement` - Successes and milestones
-- `challenge` - Problems and conflicts
-- `other` - Anything else
+   - `interaction` - Meeting/call/communication logs
+   - `feedback` - Feedback from boss
+   - `achievement` - Successes and milestones
+   - `challenge` - Problems and conflicts
+   - `other` - Anything else
 
 ### Base Fields (Common to all entries)
 
@@ -548,9 +548,9 @@ await addDoc(entriesRef, {
   timestamp: new Date().toISOString(),
   title: 'Stress Level',
   content: 'Quite stressful',
-  source: 'onboarding_funnel',
-  createdAt: new Date().toISOString()
-});
+    source: 'onboarding_funnel',
+    createdAt: new Date().toISOString()
+  });
 ```
 
 ---

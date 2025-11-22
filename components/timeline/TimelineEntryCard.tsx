@@ -15,7 +15,7 @@ const getIcon = (entry: TimelineEntry): string => {
   }
   
   // Fall back to default icons based on subtype
-  return DEFAULT_TIMELINE_ICONS[entry.subtype];
+    return DEFAULT_TIMELINE_ICONS[entry.subtype];
 };
 
 const getTitle = (entry: TimelineEntry): string => {
