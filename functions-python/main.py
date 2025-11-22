@@ -15,13 +15,18 @@ import firebase_admin  # type: ignore
 from firebase_admin import firestore  # type: ignore
 from firebase_functions import scheduler_fn
 
-# Initialize Firebase Admin
-if not firebase_admin._apps:  # type: ignore
-    firebase_admin.initialize_app()  # type: ignore
-
-db = firestore.client()  # type: ignore
-
 logger = logging.getLogger(__name__)
+
+
+def get_firestore_client() -> Any:
+    """
+    Get Firestore client instance, initializing Firebase Admin if needed.
+    
+    Lazy initialization to avoid credential issues during module import.
+    """
+    if not firebase_admin._apps:  # type: ignore
+        firebase_admin.initialize_app()  # type: ignore
+    return firestore.client()  # type: ignore
 
 
 @scheduler_fn.on_schedule(schedule="every 2 hours", region="us-central1")
@@ -34,6 +39,8 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
     """
     try:
         logger.info("Starting notification orchestrator")
+        
+        db = get_firestore_client()
         
         # STUB: Query users (will add filtering logic later)
         users_ref = db.collection('users')  # type: ignore
@@ -86,6 +93,7 @@ def create_notification_email(user_id: str, email: str, subject: str, body: str)
     Returns:
         Email document ID
     """
+    db = get_firestore_client()
     email_ref = db.collection('users').document(user_id).collection('emails').document()  # type: ignore
     
     email_data: dict[str, Any] = {  # type: ignore
@@ -113,6 +121,7 @@ def create_notification_message(user_id: str, content: str) -> str:
     Returns:
         Message document ID
     """
+    db = get_firestore_client()
     thread_id = 'main'  # Single thread per user
     message_ref = (  # type: ignore
         db.collection('users')  # type: ignore
