@@ -1,7 +1,7 @@
 """
 Notification Orchestrator Cloud Function
 
-This function is triggered by Cloud Scheduler every 2 hours to:
+This function is triggered automatically every 2 hours to:
 1. Query users from Firestore
 2. Decide who needs notifications
 3. Create messages in chatThreads/messages
@@ -12,7 +12,7 @@ import logging
 
 import firebase_admin
 from firebase_admin import firestore
-from firebase_functions import https_fn
+from firebase_functions import scheduler_fn
 
 # Initialize Firebase Admin
 if not firebase_admin._apps:
@@ -23,12 +23,12 @@ db = firestore.client()
 logger = logging.getLogger(__name__)
 
 
-@https_fn.on_request()
-def notificationOrchestrator(req: https_fn.Request) -> https_fn.Response:
+@scheduler_fn.on_schedule(schedule="every 2 hours", region="us-central1")
+def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
     """
     Orchestrate notification sending for all users.
     
-    Called by Cloud Scheduler every 2 hours.
+    Triggered automatically every 2 hours by Cloud Scheduler.
     Currently contains stub logic - notification scenarios to be implemented later.
     """
     try:
@@ -63,17 +63,9 @@ def notificationOrchestrator(req: https_fn.Request) -> https_fn.Response:
         
         logger.info(f"Notification orchestrator completed. Processed {processed_count} users")
         
-        return https_fn.Response(
-            response=f"Success: processed {processed_count} users",
-            status=200
-        )
-        
     except Exception as e:
         logger.error(f"Error in notification orchestrator: {str(e)}", exc_info=True)
-        return https_fn.Response(
-            response=f"Error: {str(e)}",
-            status=500
-        )
+        raise
 
 
 def create_notification_email(user_id: str, email: str, subject: str, body: str) -> str:
