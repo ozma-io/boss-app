@@ -13,5 +13,6 @@
     "javascriptreact",
     "typescript",
     "typescriptreact"
-  ]
+  ],
+  "python.defaultInterpreterPath": "${workspaceFolder}/functions-python/.venv/bin/python"
 }
