@@ -14,6 +14,7 @@ import {
 import { CancelSubscriptionResponse, SubscriptionPlanConfig } from '@/types';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
+import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -29,6 +30,7 @@ export default function SubscriptionScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const subscriptionInfo = getSubscriptionDisplayInfo(profile);
 
@@ -324,6 +326,66 @@ export default function SubscriptionScreen() {
     }
   };
 
+  const handleRestorePurchases = async (): Promise<void> => {
+    if (!profile?.id || restoring) return;
+
+    try {
+      setRestoring(true);
+
+      trackAmplitudeEvent('subscription_restore_clicked', {
+        platform: Platform.OS,
+      });
+
+      await syncSubscription();
+
+      // Check if subscription was found after sync
+      const db = getFirestore();
+      const userRef = doc(db, 'users', profile.id);
+      const userSnap = await getDoc(userRef);
+      
+      if (userSnap.exists()) {
+        const userData = userSnap.data() as any;
+        if (userData.subscription?.status === 'active' || userData.subscription?.status === 'trial') {
+          trackAmplitudeEvent('subscription_restore_success', {
+            platform: Platform.OS,
+            provider: userData.subscription.provider,
+          });
+
+          Alert.alert(
+            'Success!',
+            'Your subscription has been restored.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          trackAmplitudeEvent('subscription_restore_no_purchases', {
+            platform: Platform.OS,
+          });
+
+          Alert.alert(
+            'No Subscription Found',
+            'We couldn\'t find any active subscription to restore. If you believe this is an error, please contact support.',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to restore purchases', { error });
+
+      trackAmplitudeEvent('subscription_restore_error', {
+        platform: Platform.OS,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      Alert.alert(
+        'Error',
+        'Failed to restore purchases. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   const handleCancelSubscription = (): void => {
     const provider = profile?.subscription?.provider;
 
@@ -554,6 +616,28 @@ export default function SubscriptionScreen() {
                     </Text>
                   </View>
                 </View>
+              </View>
+
+              {/* Restore Purchases Link */}
+              <View style={styles.restorePurchasesContainer} testID="restore-purchases-container">
+                <Text style={styles.restorePurchasesText}>Already have a subscription?</Text>
+                <Pressable
+                  onPress={handleRestorePurchases}
+                  disabled={restoring}
+                  style={({ pressed }) => [
+                    styles.restorePurchasesButton,
+                    pressed && styles.buttonPressed
+                  ]}
+                  testID="restore-purchases-button"
+                >
+                  {restoring ? (
+                    <ActivityIndicator size="small" color="#666" testID="restore-purchases-loading" />
+                  ) : (
+                    <Text style={styles.restorePurchasesButtonText} testID="restore-purchases-button-text">
+                      Restore Purchases
+                    </Text>
+                  )}
+                </Pressable>
               </View>
             </>
           )}
@@ -896,6 +980,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     color: '#333',
+    fontFamily: 'Manrope-Regular',
+  },
+  restorePurchasesContainer: {
+    marginTop: 24,
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  restorePurchasesText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+    fontFamily: 'Manrope-Regular',
+  },
+  restorePurchasesButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  restorePurchasesButtonText: {
+    fontSize: 14,
+    color: '#666',
+    textDecorationLine: 'underline',
     fontFamily: 'Manrope-Regular',
   },
 });
