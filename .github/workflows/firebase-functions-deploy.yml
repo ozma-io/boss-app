@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'functions/**'
+      - 'functions-python/**'
+      - '.github/workflows/firebase-functions-deploy.yml'
 
 jobs:
   deploy:
