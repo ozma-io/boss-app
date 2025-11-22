@@ -8,14 +8,16 @@ This function is triggered automatically every 2 hours to:
 4. Create email operations in users/{userId}/emails
 """
 
-import logging
 from typing import Any
 
 import firebase_admin  # type: ignore
 from firebase_admin import firestore  # type: ignore
 from firebase_functions import scheduler_fn
+from logger import error, info, warn
+from sentry import init_sentry
 
-logger = logging.getLogger(__name__)
+# Initialize Sentry for error monitoring
+init_sentry()
 
 
 # ============================================================================
@@ -35,7 +37,7 @@ def process_notification_orchestration(db: Any) -> int:
     Returns:
         Number of users processed
     """
-    logger.info("Starting notification orchestration logic")
+    info("Starting notification orchestration logic", {})
     
     # STUB: Query users (will add filtering logic later)
     users_ref = db.collection('users')  # type: ignore
@@ -47,12 +49,12 @@ def process_notification_orchestration(db: Any) -> int:
         user_data: dict[str, Any] | None = user_doc.to_dict()  # type: ignore
         
         if user_data is None:
-            logger.warning(f"User {user_id} has no data, skipping")
+            warn("User has no data, skipping", {"user_id": user_id})
             continue
         
         # STUB: Check if user is eligible for notifications
         if user_data.get('email_unsubscribed', False):  # type: ignore
-            logger.info(f"User {user_id} is unsubscribed, skipping")
+            info("User is unsubscribed, skipping", {"user_id": user_id})
             continue
         
         # STUB: Notification logic placeholder
@@ -62,13 +64,12 @@ def process_notification_orchestration(db: Any) -> int:
         # - N-day silence reminder
         # - Check notification_state.last_notification_at
         # TODO: 
-        # - Add sentry
         # - Add logic to get and store mailgun unsubscribe list
         
-        logger.info(f"Processed user {user_id}")
+        info("Processed user", {"user_id": user_id})
         processed_count += 1
     
-    logger.info(f"Notification orchestration completed. Processed {processed_count} users")
+    info("Notification orchestration completed", {"processed_count": processed_count})
     return processed_count
 
 
@@ -99,7 +100,7 @@ def create_email_document(db: Any, user_id: str, email: str, subject: str, body:
     }
     
     email_ref.set(email_data)  # type: ignore
-    logger.info(f"Created email document {email_ref.id} for user {user_id}")  # type: ignore
+    info("Created email document", {"email_doc_id": email_ref.id, "user_id": user_id})  # type: ignore
     
     return email_ref.id  # type: ignore
 
@@ -135,7 +136,7 @@ def create_chat_message(db: Any, user_id: str, content: str) -> str:
     }
     
     message_ref.set(message_data)  # type: ignore
-    logger.info(f"Created message {message_ref.id} for user {user_id}")  # type: ignore
+    info("Created message", {"message_id": message_ref.id, "user_id": user_id})  # type: ignore
     
     return message_ref.id  # type: ignore
 
@@ -168,7 +169,7 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
         process_notification_orchestration(db)
         
     except Exception as e:
-        logger.error(f"Error in notification orchestrator: {str(e)}", exc_info=True)
+        error("Error in notification orchestrator", {"error": str(e)})
         raise
 
 

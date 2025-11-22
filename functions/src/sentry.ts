@@ -9,11 +9,17 @@ import * as Sentry from '@sentry/node';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
+// ============================================================================
+// ⚠️ DUPLICATED in ../../functions-python/sentry.py - keep both in sync!
+// ============================================================================
 /**
  * Sentry DSN for boss-app-cloud-functions project
  * This is a public key and safe to commit (similar to FACEBOOK_PIXEL_ID)
  */
 const SENTRY_DSN = 'https://c6c5f773287bc359d86a8595b65616d0@o4510351607136256.ingest.us.sentry.io/4510362871726080';
+// ============================================================================
+// End of duplicated section
+// ============================================================================
 
 /**
  * Get version from package.json
