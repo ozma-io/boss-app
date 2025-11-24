@@ -42,7 +42,6 @@ module.exports = [
       'coverage/',
       'ios/',
       'android/',
-      'functions/',
     ],
   },
 ];
