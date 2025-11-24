@@ -16,16 +16,16 @@ module.exports = [
       '@typescript-eslint': typescriptEslint,
     },
     rules: {
-      // ЗАПРЕТ использования any - можно разрешить только через eslint-disable-next-line
+      // Forbid usage of any - can only be allowed via eslint-disable-next-line
       '@typescript-eslint/no-explicit-any': 'error',
       
-      // Запрет неиспользуемых переменных (кроме с префиксом _)
+      // Forbid unused variables (except those prefixed with _)
       '@typescript-eslint/no-unused-vars': ['error', { 
         argsIgnorePattern: '^_',
         varsIgnorePattern: '^_',
       }],
       
-      // Требовать явные типы возврата для функций
+      // Require explicit return types for functions
       '@typescript-eslint/explicit-function-return-type': ['warn', {
         allowExpressions: true,
         allowTypedFunctionExpressions: true,
