@@ -54,7 +54,14 @@ export interface Boss extends BossBase {
 }
 
 // Type for Boss updates (allows Firestore dot notation and FieldValue)
-// Using Record for updates to support Firestore operations (deleteField, dot notation for nested updates)
+// 
+// WHY 'any' IS REQUIRED HERE:
+// 1. Firestore dot notation: '_fieldsMeta.custom_age.label' - impossible to type statically
+// 2. Firestore FieldValue: deleteField(), serverTimestamp() - special non-data types
+// 3. Dynamic keys: [generateUniqueFieldKey()]: value - runtime-generated field names
+// 
+// SAFETY: Boss interface itself is strictly typed - 'any' only for update operations
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type BossUpdate = Record<string, any>
 
 // Timeline entry types
@@ -124,7 +131,14 @@ export interface UserProfile extends UserProfileBase {
 }
 
 // Type for UserProfile updates (allows Firestore dot notation and FieldValue)
-// Using Record for updates to support Firestore operations (deleteField, dot notation for nested updates)
+// 
+// WHY 'any' IS REQUIRED HERE:
+// 1. Firestore dot notation: 'subscription.status', '_fieldsMeta.custom_age.label' - impossible to type statically
+// 2. Firestore FieldValue: deleteField(), serverTimestamp() - special non-data types
+// 3. Dynamic keys: [generateUniqueFieldKey()]: value - runtime-generated field names
+// 
+// SAFETY: UserProfile interface itself is strictly typed - 'any' only for update operations
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type UserProfileUpdate = Record<string, any>
 
 // Auth state type

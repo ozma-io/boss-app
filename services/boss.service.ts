@@ -260,7 +260,7 @@ export async function updateBoss(
     const bossRef = doc(db, 'users', userId, 'bosses', bossId);
     
     // Remove id from data if present (can't update document ID)
-    const { id, ...updateData } = data as Boss & { id?: string };
+    const { id: _id, ...updateData } = data as Boss & { id?: string };
     
     await updateDoc(bossRef, {
       ...updateData,

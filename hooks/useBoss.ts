@@ -30,7 +30,12 @@ import { useCallback, useEffect, useState } from 'react';
  * }
  * ```
  */
-export function useBoss() {
+export function useBoss(): {
+  boss: Boss | null;
+  loading: boolean;
+  error: string | null;
+  updateBoss: (data: BossUpdate) => Promise<void>;
+} {
   const { user } = useAuth();
   const [boss, setBoss] = useState<Boss | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -69,6 +74,8 @@ export function useBoss() {
           
           logger.info('Creating boss via fallback', { feature: 'useBoss', userId: user.id });
           const newBossId = await createBoss(user.id);
+          
+          logger.info('Boss created via fallback, syncing', { feature: 'useBoss', userId: user.id, bossId: newBossId });
           
           // Wait a bit for Firestore to sync
           await new Promise(resolve => setTimeout(resolve, 500));

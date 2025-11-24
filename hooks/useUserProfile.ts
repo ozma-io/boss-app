@@ -30,7 +30,12 @@ import { useCallback, useEffect, useState } from 'react';
  * }
  * ```
  */
-export function useUserProfile() {
+export function useUserProfile(): {
+  profile: UserProfile | null;
+  loading: boolean;
+  error: string | null;
+  updateProfile: (data: UserProfileUpdate) => Promise<void>;
+} {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
