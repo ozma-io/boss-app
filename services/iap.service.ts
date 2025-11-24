@@ -10,6 +10,7 @@ import { IAPProduct, IAPPurchaseResult, UserProfile } from '@/types';
 import { doc, getDoc, getFirestore, updateDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
+import type { Purchase, ProductSubscriptionIOS, ProductSubscriptionAndroid } from 'react-native-iap';
 import { trackAmplitudeEvent } from './amplitude.service';
 import { logger } from './logger.service';
 
@@ -81,38 +82,49 @@ function setupPurchaseListener(): void {
     return;
   }
 
-  const purchaseUpdateSubscription = RNIap.purchaseUpdatedListener((purchase) => {
+  // Store subscriptions but don't expose them (they're cleaned up automatically by the library)
+  void RNIap.purchaseUpdatedListener((purchase) => {
     logger.info('Purchase update received', { 
       productId: purchase.productId,
       transactionId: purchase.transactionId,
     });
   });
 
-  const purchaseErrorSubscription = RNIap.purchaseErrorListener((error: any) => {
+  void RNIap.purchaseErrorListener((error: unknown) => {
+    // Type guard for IAP error structure
+    const iapError = error as { 
+      code?: string; 
+      productId?: string; 
+      message?: string;
+      responseCode?: string;
+      debugMessage?: string;
+      userInfo?: unknown;
+    };
+
     // Check if user cancelled the purchase
-    if (error.code === 'E_USER_CANCELLED') {
+    if (iapError.code === 'E_USER_CANCELLED') {
       // User cancellation is not an error - just track to Amplitude
       logger.info('Purchase cancelled by user (listener)', { 
-        productId: error.productId,
-        errorCode: error.code,
-        errorMessage: error.message,
+        productId: iapError.productId,
+        errorCode: iapError.code,
+        errorMessage: iapError.message,
         platform: Platform.OS,
       });
       trackAmplitudeEvent('iap_purchase_cancelled', {
-        product_id: error.productId || 'unknown',
+        product_id: iapError.productId || 'unknown',
         platform: Platform.OS,
       });
     } else {
       // Real error - log to Sentry with enhanced details
       const errorDetails = {
-        productId: error.productId,
+        productId: iapError.productId,
         platform: Platform.OS,
         errorType: typeof error,
-        errorCode: error?.code,
-        errorMessage: error?.message,
-        errorResponseCode: error?.responseCode,
-        errorDebugMessage: error?.debugMessage,
-        errorUserInfo: error?.userInfo,
+        errorCode: iapError.code,
+        errorMessage: iapError.message,
+        errorResponseCode: iapError.responseCode,
+        errorDebugMessage: iapError.debugMessage,
+        errorUserInfo: iapError.userInfo,
       };
 
       logger.error('Purchase error (listener)', { 
@@ -132,7 +144,7 @@ function setupPurchaseListener(): void {
  */
 async function getAvailablePurchasesWithRetry(options?: {
   onlyIncludeActiveItemsIOS?: boolean;
-}): Promise<any[]> {
+}): Promise<Purchase[]> {
   if (!RNIap) {
     return [];
   }
@@ -143,18 +155,24 @@ async function getAvailablePurchasesWithRetry(options?: {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await RNIap.getAvailablePurchases(options || {});
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Type guard for IAP error structure
+      const iapError = error as { 
+        message?: string; 
+        code?: string;
+      };
+
       const isInitConnectionError = 
-        error?.message?.includes('Connection not initialized') ||
-        error?.message?.includes('initConnection') ||
-        error?.code === 'initConnection';
+        iapError.message?.includes('Connection not initialized') ||
+        iapError.message?.includes('initConnection') ||
+        iapError.code === 'initConnection';
 
       if (isInitConnectionError && attempt < maxAttempts - 1) {
         logger.info('IAP connection not ready, retrying...', { 
           attempt: attempt + 1,
           maxAttempts,
-          errorMessage: error?.message,
-          errorCode: error?.code,
+          errorMessage: iapError.message,
+          errorCode: iapError.code,
         });
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       } else {
@@ -191,7 +209,7 @@ export async function getAvailableProducts(productIds: string[]): Promise<IAPPro
       }
 
       return products.map((product) => {
-        const iosProduct = product as import('react-native-iap').ProductSubscriptionIOS;
+        const iosProduct = product as ProductSubscriptionIOS;
         return {
           productId: iosProduct.id,
           price: iosProduct.displayPrice,
@@ -218,7 +236,7 @@ export async function getAvailableProducts(productIds: string[]): Promise<IAPPro
       }
 
       return products.map((product) => {
-        const androidProduct = product as import('react-native-iap').ProductSubscriptionAndroid;
+        const androidProduct = product as ProductSubscriptionAndroid;
         
         // Get pricing from first subscription offer
         const firstOffer = androidProduct.subscriptionOfferDetailsAndroid?.[0];
@@ -368,16 +386,26 @@ export async function purchaseSubscription(
           error: verificationResult.error || 'Verification failed',
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Type guard for IAP error structure
+      const iapError = error as { 
+        code?: string; 
+        productId?: string; 
+        message?: string;
+        responseCode?: string;
+        debugMessage?: string;
+        userInfo?: unknown;
+      };
+
       // Check if user cancelled
-      if (error.code === 'E_USER_CANCELLED' || (error instanceof Error && error.message.includes('cancelled'))) {
+      if (iapError.code === 'E_USER_CANCELLED' || (error instanceof Error && error.message.includes('cancelled'))) {
         logger.info('Purchase cancelled by user (iOS)', { 
           productId,
           tier,
           billingPeriod,
           platform: Platform.OS,
-          errorCode: error.code,
-          errorMessage: error.message,
+          errorCode: iapError.code,
+          errorMessage: iapError.message,
         });
         trackAmplitudeEvent('iap_purchase_cancelled', {
           product_id: productId,
@@ -399,11 +427,11 @@ export async function purchaseSubscription(
         platform: Platform.OS,
         errorType: error instanceof Error ? error.constructor.name : typeof error,
         errorMessage: error instanceof Error ? error.message : String(error),
-        errorCode: error?.code,
-        errorProductId: error?.productId,
-        errorResponseCode: error?.responseCode,
-        errorDebugMessage: error?.debugMessage,
-        errorUserInfo: error?.userInfo,
+        errorCode: iapError.code,
+        errorProductId: iapError.productId,
+        errorResponseCode: iapError.responseCode,
+        errorDebugMessage: iapError.debugMessage,
+        errorUserInfo: iapError.userInfo,
         errorStack: error instanceof Error ? error.stack : undefined,
       };
 
@@ -436,7 +464,7 @@ export async function purchaseSubscription(
         };
       }
 
-      const product = products[0] as import('react-native-iap').ProductSubscriptionAndroid;
+      const product = products[0] as ProductSubscriptionAndroid;
       const subscriptionOfferDetailsAndroid = product.subscriptionOfferDetailsAndroid;
 
       if (!subscriptionOfferDetailsAndroid || subscriptionOfferDetailsAndroid.length === 0) {
@@ -586,16 +614,26 @@ export async function purchaseSubscription(
           error: verificationResult.error || 'Verification failed',
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Type guard for IAP error structure
+      const iapError = error as { 
+        code?: string; 
+        productId?: string; 
+        message?: string;
+        responseCode?: string;
+        debugMessage?: string;
+        userInfo?: unknown;
+      };
+
       // Check if user cancelled
-      if (error.code === 'E_USER_CANCELLED' || (error instanceof Error && error.message.includes('cancelled'))) {
+      if (iapError.code === 'E_USER_CANCELLED' || (error instanceof Error && error.message.includes('cancelled'))) {
         logger.info('Purchase cancelled by user (Android)', { 
           productId,
           tier,
           billingPeriod,
           platform: Platform.OS,
-          errorCode: error.code,
-          errorMessage: error.message,
+          errorCode: iapError.code,
+          errorMessage: iapError.message,
         });
         trackAmplitudeEvent('iap_purchase_cancelled', {
           product_id: productId,
@@ -617,11 +655,11 @@ export async function purchaseSubscription(
         platform: Platform.OS,
         errorType: error instanceof Error ? error.constructor.name : typeof error,
         errorMessage: error instanceof Error ? error.message : String(error),
-        errorCode: error?.code,
-        errorProductId: error?.productId,
-        errorResponseCode: error?.responseCode,
-        errorDebugMessage: error?.debugMessage,
-        errorUserInfo: error?.userInfo,
+        errorCode: iapError.code,
+        errorProductId: iapError.productId,
+        errorResponseCode: iapError.responseCode,
+        errorDebugMessage: iapError.debugMessage,
+        errorUserInfo: iapError.userInfo,
         errorStack: error instanceof Error ? error.stack : undefined,
       };
 
@@ -660,7 +698,11 @@ async function verifyPurchaseWithBackend(
       billingPeriod,
     });
 
-    const data = result.data as any;
+    const data = result.data as {
+      success: boolean;
+      error?: string;
+      subscription?: { status: string };
+    };
 
     return {
       success: data.success,
@@ -710,7 +752,9 @@ function parseProductId(productId: string): { tier: string; billingPeriod: strin
  * Select the most recent/active purchase from available purchases
  * Prioritizes purchases with most recent transaction date
  */
-function selectMostRecentPurchase(purchases: any[]): any | null {
+function selectMostRecentPurchase(
+  purchases: Purchase[]
+): Purchase | null {
   if (!purchases || purchases.length === 0) {
     return null;
   }
@@ -748,11 +792,34 @@ export interface SyncSubscriptionResult {
   error?: string;
   details: {
     platform: string;
-    availablePurchases?: any[];
-    firestoreStateBefore?: any;
-    firestoreStateAfter?: any;
-    verificationResult?: any;
-    error?: any;
+    availablePurchases?: Array<{
+      productId: string;
+      transactionId?: string | null;
+      transactionDate?: string | number;
+    }>;
+    firestoreStateBefore?: {
+      hasSubscription: boolean;
+      provider?: string;
+      status?: string;
+      tier?: string;
+      billingPeriod?: string;
+    };
+    firestoreStateAfter?: {
+      hasSubscription: boolean;
+      provider?: string;
+      status?: string;
+      tier?: string;
+      billingPeriod?: string;
+    };
+    verificationResult?: {
+      success: boolean;
+      error?: string;
+      subscriptionStatus?: string;
+    };
+    error?: {
+      message: string;
+      stack?: string;
+    } | string;
   };
 }
 
