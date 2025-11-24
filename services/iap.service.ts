@@ -667,6 +667,35 @@ function parseProductId(productId: string): { tier: string; billingPeriod: strin
 }
 
 /**
+ * Select the most recent/active purchase from available purchases
+ * Prioritizes purchases with most recent transaction date
+ */
+function selectMostRecentPurchase(purchases: any[]): any | null {
+  if (!purchases || purchases.length === 0) {
+    return null;
+  }
+  
+  if (purchases.length === 1) {
+    return purchases[0];
+  }
+  
+  // Sort by transaction date (most recent first)
+  const sorted = [...purchases].sort((a, b) => {
+    const dateA = a.transactionDate ? new Date(a.transactionDate).getTime() : 0;
+    const dateB = b.transactionDate ? new Date(b.transactionDate).getTime() : 0;
+    return dateB - dateA;
+  });
+  
+  logger.info('Selected most recent purchase', {
+    totalPurchases: purchases.length,
+    selectedProductId: sorted[0].productId,
+    selectedTransactionDate: sorted[0].transactionDate,
+  });
+  
+  return sorted[0];
+}
+
+/**
  * Check and sync subscription status
  * 
  * Automatically syncs device subscription status with Firestore
@@ -689,7 +718,10 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       logger.info('Checking and syncing subscription', { userId });
 
       // Get current purchases from device
-      const availablePurchases = await RNIap.getAvailablePurchases();
+      // onlyIncludeActiveItemsIOS: true prevents returning expired subscriptions on iOS
+      const availablePurchases = await RNIap.getAvailablePurchases({
+        onlyIncludeActiveItemsIOS: true,
+      });
 
       logger.info('Found purchases on device', { 
         userId, 
@@ -743,8 +775,14 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
           currentStatus: currentSubscription?.status,
         });
 
-        // Take the first available purchase (usually only one subscription at a time)
-        const purchase = availablePurchases[0];
+        // Select the most recent purchase (in case there are multiple)
+        const purchase = selectMostRecentPurchase(availablePurchases);
+        
+        if (!purchase) {
+          logger.warn('No valid purchase found to restore', { userId });
+          return;
+        }
+        
         const parsedProduct = parseProductId(purchase.productId);
 
         if (!parsedProduct) {
@@ -786,6 +824,22 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
             productId: purchase.productId,
           });
           
+          // Finish transaction to mark it as complete
+          try {
+            await RNIap.finishTransaction({
+              purchase,
+              isConsumable: false, // Subscriptions are non-consumable
+            });
+            logger.info('Finished transaction for restored purchase', {
+              transactionId: purchase.transactionId,
+            });
+          } catch (finishError) {
+            logger.error('Failed to finish transaction', { 
+              error: finishError,
+              transactionId: purchase.transactionId,
+            });
+          }
+          
           trackAmplitudeEvent('subscription_restored', {
             platform: Platform.OS,
             product_id: purchase.productId,
@@ -815,7 +869,10 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       logger.info('Checking and syncing Android subscription', { userId });
 
       // Get current purchases from device
-      const availablePurchases = await RNIap.getAvailablePurchases();
+      // onlyIncludeActiveItemsIOS: true prevents returning expired subscriptions (iOS only, no effect on Android)
+      const availablePurchases = await RNIap.getAvailablePurchases({
+        onlyIncludeActiveItemsIOS: true,
+      });
 
       logger.info('Found purchases on device', { 
         userId, 
@@ -869,8 +926,14 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
           currentStatus: currentSubscription?.status,
         });
 
-        // Take the first available purchase (usually only one subscription at a time)
-        const purchase = availablePurchases[0];
+        // Select the most recent purchase (in case there are multiple)
+        const purchase = selectMostRecentPurchase(availablePurchases);
+        
+        if (!purchase) {
+          logger.warn('No valid purchase found to restore', { userId });
+          return;
+        }
+        
         const parsedProduct = parseProductId(purchase.productId);
 
         if (!parsedProduct) {
@@ -911,6 +974,22 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
             userId,
             productId: purchase.productId,
           });
+          
+          // Finish transaction to mark it as complete
+          try {
+            await RNIap.finishTransaction({
+              purchase,
+              isConsumable: false, // Subscriptions are non-consumable
+            });
+            logger.info('Finished transaction for restored purchase', {
+              transactionId: purchase.transactionId,
+            });
+          } catch (finishError) {
+            logger.error('Failed to finish transaction', { 
+              error: finishError,
+              transactionId: purchase.transactionId,
+            });
+          }
           
           trackAmplitudeEvent('subscription_restored', {
             platform: Platform.OS,
