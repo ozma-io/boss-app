@@ -1,6 +1,6 @@
 import { db } from '@/constants/firebase.config';
 import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
-import { ChatMessage, ChatThread, ContentItem, NotificationPermissionStatus, NotificationPromptHistoryItem, Unsubscribe, UserNotificationData, UserProfile } from '@/types';
+import { ChatMessage, ChatThread, ContentItem, NotificationPermissionStatus, NotificationPromptHistoryItem, Unsubscribe, UserNotificationData, UserProfile, UserProfileUpdate } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import { addDoc, collection, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
@@ -462,7 +462,7 @@ export function subscribeToUserProfile(
  */
 export async function updateUserProfile(
   userId: string,
-  data: Partial<UserProfile>
+  data: UserProfileUpdate
 ): Promise<void> {
   try {
     logger.debug('Updating profile for user', { feature: 'UserService', userId });

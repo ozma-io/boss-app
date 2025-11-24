@@ -1,5 +1,24 @@
-// Boss type definition synced with BossSchema
-export interface Boss {
+// Type for custom field values based on field type
+export type CustomFieldValue = 
+  | string        // text, multiline, date, select
+  | string[]      // multiselect
+  | number        // potential numeric fields
+  | boolean       // potential checkbox fields
+  | null;         // deleted field
+
+// Type for field metadata
+export interface CustomFieldMetadata {
+  label: string;
+  type: 'text' | 'select' | 'date' | 'multiline' | 'multiselect';
+  category?: string;
+  source?: 'onboarding_funnel' | 'user_added';
+  createdAt: string;
+  displayOrder?: number;
+  options?: string[];
+}
+
+// Boss base interface with known fields only
+interface BossBase {
   id: string;
   
   // Core fields (required)
@@ -24,20 +43,19 @@ export interface Boss {
   
   // Field metadata for custom fields
   _fieldsMeta?: {
-    [fieldKey: string]: {
-      label: string;
-      type: 'text' | 'select' | 'date' | 'multiline' | 'multiselect';
-      category?: string;
-      source?: 'onboarding_funnel' | 'user_added';
-      createdAt: string;
-      displayOrder?: number;
-      options?: string[];
-    };
+    [fieldKey: string]: CustomFieldMetadata;
   };
-  
-  // Allow custom fields
-  [key: string]: any;
 }
+
+// Boss type definition synced with BossSchema
+export interface Boss extends BossBase {
+  // Allow ONLY custom_ prefixed fields with typed values
+  [key: `custom_${string}`]: CustomFieldValue;
+}
+
+// Type for Boss updates (allows Firestore dot notation and FieldValue)
+// Using Record for updates to support Firestore operations (deleteField, dot notation for nested updates)
+export type BossUpdate = Record<string, any>
 
 // Timeline entry types
 export type TimelineEntryType = 'note';
@@ -73,8 +91,8 @@ export interface User {
   lastActivityAt: string | null; // Last activity timestamp for presence timeout
 }
 
-// User Profile type definition (for Firestore data)
-export interface UserProfile {
+// User Profile base interface with known fields only
+interface UserProfileBase {
   email: string;
   name: string;
   goal: string;
@@ -93,25 +111,21 @@ export interface UserProfile {
     last_notification_at?: string;
   };
   
-  // Custom fields for profile data
-  custom_department?: string;
-  
   // Field metadata for custom fields
   _fieldsMeta?: {
-    [fieldKey: string]: {
-      label: string;
-      type: 'text' | 'select' | 'date' | 'multiline';
-      category?: string;
-      source?: string;
-      createdAt: string;
-      displayOrder?: number;
-      options?: string[];
-    };
+    [fieldKey: string]: CustomFieldMetadata;
   };
-  
-  // Allow custom fields
-  [key: string]: any;
 }
+
+// User Profile type definition (for Firestore data)
+export interface UserProfile extends UserProfileBase {
+  // Allow ONLY custom_ prefixed fields with typed values
+  [key: `custom_${string}`]: CustomFieldValue;
+}
+
+// Type for UserProfile updates (allows Firestore dot notation and FieldValue)
+// Using Record for updates to support Firestore operations (deleteField, dot notation for nested updates)
+export type UserProfileUpdate = Record<string, any>
 
 // Auth state type
 export type AuthState = 'authenticated' | 'unauthenticated' | 'loading';

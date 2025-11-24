@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { createBoss, getFirstBoss, subscribeToBoss, updateBoss as updateBossService } from '@/services/boss.service';
 import { logger } from '@/services/logger.service';
-import { Boss } from '@/types';
+import { Boss, BossUpdate } from '@/types';
 import { useCallback, useEffect, useState } from 'react';
 
 /**
@@ -120,7 +120,7 @@ export function useBoss() {
    * @throws Error if update fails
    */
   const updateBoss = useCallback(
-    async (data: Partial<Boss>): Promise<void> => {
+    async (data: BossUpdate): Promise<void> => {
       if (!user?.id || !bossId) {
         throw new Error('Cannot update boss: user or bossId not available');
       }

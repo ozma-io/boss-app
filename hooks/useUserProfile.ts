@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { subscribeToUserProfile, updateUserProfile as updateUserProfileService } from '@/services/user.service';
-import { UserProfile } from '@/types';
+import { UserProfile, UserProfileUpdate } from '@/types';
 import { useCallback, useEffect, useState } from 'react';
 
 /**
@@ -87,7 +87,7 @@ export function useUserProfile() {
    * ```
    */
   const updateProfile = useCallback(
-    async (data: Partial<UserProfile>): Promise<void> => {
+    async (data: UserProfileUpdate): Promise<void> => {
       if (!user?.id) {
         throw new Error('Cannot update profile: user not authenticated');
       }

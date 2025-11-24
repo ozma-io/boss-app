@@ -1,5 +1,5 @@
 import { db } from '@/constants/firebase.config';
-import { Boss, Unsubscribe } from '@/types';
+import { Boss, BossUpdate, Unsubscribe } from '@/types';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
   addDoc,
@@ -252,7 +252,7 @@ export async function createBoss(userId: string): Promise<string> {
 export async function updateBoss(
   userId: string,
   bossId: string,
-  data: Partial<Boss>
+  data: BossUpdate
 ): Promise<void> {
   try {
     logger.debug('Updating boss', { feature: 'BossService', userId, bossId });
