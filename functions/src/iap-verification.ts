@@ -30,6 +30,60 @@ const googleServiceAccountKey = defineSecret('GOOGLE_SERVICE_ACCOUNT_KEY');
 // they are public identifiers stored in constants.ts
 
 /**
+ * Subscription plan pricing configuration
+ * MUST be kept in sync with constants/subscriptionPlans.ts in the app
+ */
+interface PlanPricing {
+  priceAmount: number;
+  priceCurrency: string;
+  billingCycleMonths: number;
+}
+
+const SUBSCRIPTION_PRICING: Record<string, Record<string, PlanPricing>> = {
+  basic: {
+    monthly: {
+      priceAmount: 19,
+      priceCurrency: 'USD',
+      billingCycleMonths: 1,
+    },
+    quarterly: {
+      priceAmount: 53,
+      priceCurrency: 'USD',
+      billingCycleMonths: 3,
+    },
+    semiannual: {
+      priceAmount: 99,
+      priceCurrency: 'USD',
+      billingCycleMonths: 6,
+    },
+    annual: {
+      priceAmount: 180,
+      priceCurrency: 'USD',
+      billingCycleMonths: 12,
+    },
+  },
+};
+
+/**
+ * Get pricing information for a subscription plan
+ */
+function getPlanPricing(tier: string, billingPeriod: string): PlanPricing | null {
+  const tierPricing = SUBSCRIPTION_PRICING[tier];
+  if (!tierPricing) {
+    logger.warn('Unknown subscription tier', { tier, billingPeriod });
+    return null;
+  }
+  
+  const pricing = tierPricing[billingPeriod];
+  if (!pricing) {
+    logger.warn('Unknown billing period for tier', { tier, billingPeriod });
+    return null;
+  }
+  
+  return pricing;
+}
+
+/**
  * Retry helper with exponential backoff for Apple API calls
  */
 async function retryWithBackoff<T>(
@@ -83,6 +137,9 @@ interface VerifyIAPResponse {
     transactionId: string;
     currentPeriodStart: string;
     currentPeriodEnd: string;
+    priceAmount?: number;
+    priceCurrency?: string;
+    billingCycleMonths?: number;
     trialEnd?: string;
     revocationDate?: string;
     revocationReason?: number;
@@ -306,6 +363,9 @@ async function verifyAppleReceipt(
     const currentPeriodEnd = expiresDate ? expiresDate.toISOString() : new Date(purchaseDate.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const trialEnd = inTrialPeriod && expiresDate ? expiresDate.toISOString() : undefined;
 
+    // Get pricing information for this plan
+    const pricing = getPlanPricing(tier, billingPeriod);
+
     return {
       success: true,
       subscription: {
@@ -316,6 +376,9 @@ async function verifyAppleReceipt(
         transactionId: originalTransactionId || transactionId || extractedTransactionId,
         currentPeriodStart,
         currentPeriodEnd,
+        priceAmount: pricing?.priceAmount,
+        priceCurrency: pricing?.priceCurrency,
+        billingCycleMonths: pricing?.billingCycleMonths,
         trialEnd,
         revocationDate: revocationDate?.toISOString(),
         revocationReason,
@@ -468,6 +531,9 @@ async function verifyGooglePlayPurchase(
                         canceledStateContext?.systemInitiatedCancellation ? 'system' : 
                         undefined;
 
+    // Get pricing information for this plan
+    const pricing = getPlanPricing(tier, billingPeriod);
+
     return {
       success: true,
       subscription: {
@@ -478,6 +544,9 @@ async function verifyGooglePlayPurchase(
         transactionId: purchaseToken,
         currentPeriodStart,
         currentPeriodEnd,
+        priceAmount: pricing?.priceAmount,
+        priceCurrency: pricing?.priceCurrency,
+        billingCycleMonths: pricing?.billingCycleMonths,
         trialEnd,
         ...(cancelReason && { cancellationReason: cancelReason }),
       },
@@ -647,6 +716,17 @@ async function updateUserSubscription(
     'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp(),
     'subscription.lastVerifiedAt': admin.firestore.FieldValue.serverTimestamp(),
   };
+
+  // Add pricing information if available
+  if (subscriptionData.priceAmount !== undefined) {
+    updateData['subscription.priceAmount'] = subscriptionData.priceAmount;
+  }
+  if (subscriptionData.priceCurrency !== undefined) {
+    updateData['subscription.priceCurrency'] = subscriptionData.priceCurrency;
+  }
+  if (subscriptionData.billingCycleMonths !== undefined) {
+    updateData['subscription.billingCycleMonths'] = subscriptionData.billingCycleMonths;
+  }
 
   // Apple-specific fields
   if (subscriptionData.provider === 'apple') {

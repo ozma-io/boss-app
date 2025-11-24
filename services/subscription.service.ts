@@ -1,4 +1,29 @@
+import { DEFAULT_SUBSCRIPTION_PLANS } from '@/constants/subscriptionPlans';
 import { SubscriptionBillingPeriod, UserProfile } from '@/types';
+
+/**
+ * Get pricing from subscription plans configuration
+ * Used as fallback when subscription doesn't have pricing data
+ */
+function getPricingFromPlans(tier: string, billingPeriod: SubscriptionBillingPeriod): {
+  priceAmount: number;
+  priceCurrency: string;
+  billingCycleMonths: number;
+} | null {
+  const plan = DEFAULT_SUBSCRIPTION_PLANS.find(
+    p => p.tier === tier && p.billingPeriod === billingPeriod
+  );
+  
+  if (!plan) {
+    return null;
+  }
+  
+  return {
+    priceAmount: plan.priceAmount,
+    priceCurrency: plan.priceCurrency,
+    billingCycleMonths: plan.billingCycleMonths,
+  };
+}
 
 /**
  * Check if user has active subscription
@@ -39,15 +64,29 @@ export function getSubscriptionDisplayInfo(profile: UserProfile | null) {
   
   const isActive = hasActiveSubscription(profile);
   
+  // Get pricing from subscription or fallback to plans configuration
+  let priceAmount = sub.priceAmount;
+  let priceCurrency = sub.priceCurrency || 'USD';
+  let billingCycleMonths = sub.billingCycleMonths;
+  
+  if (!priceAmount && sub.tier && sub.billingPeriod) {
+    const pricing = getPricingFromPlans(sub.tier, sub.billingPeriod);
+    if (pricing) {
+      priceAmount = pricing.priceAmount;
+      priceCurrency = pricing.priceCurrency;
+      billingCycleMonths = pricing.billingCycleMonths;
+    }
+  }
+  
   return {
     hasSubscription: isActive,
     tier: sub.tier || 'basic',
     billingPeriod: sub.billingPeriod,
     status: sub.status,
     nextPaymentDate: sub.currentPeriodEnd,
-    priceAmount: sub.priceAmount,
-    priceCurrency: sub.priceCurrency || 'USD',
-    billingCycleMonths: sub.billingCycleMonths,
+    priceAmount,
+    priceCurrency,
+    billingCycleMonths,
     displayText: formatSubscriptionText(sub),
     showPlans: true,
     buttonText: isActive ? 'Change plan' : 'Subscribe',
