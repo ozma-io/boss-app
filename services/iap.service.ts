@@ -637,6 +637,36 @@ async function verifyPurchaseWithBackend(
 }
 
 /**
+ * Parse product ID to extract tier and billing period
+ * Apple: com.ozmaio.bossup.{tier}.{billingPeriod}
+ * Google: play_{tier}:{billingPeriod}
+ */
+function parseProductId(productId: string): { tier: string; billingPeriod: string } | null {
+  if (Platform.OS === 'ios') {
+    // Apple format: com.ozmaio.bossup.basic.monthly
+    const match = productId.match(/com\.ozmaio\.bossup\.([^.]+)\.([^.]+)/);
+    if (match) {
+      return {
+        tier: match[1],
+        billingPeriod: match[2],
+      };
+    }
+  } else if (Platform.OS === 'android') {
+    // Google format: play_basic:monthly
+    const match = productId.match(/play_([^:]+):([^:]+)/);
+    if (match) {
+      return {
+        tier: match[1],
+        billingPeriod: match[2],
+      };
+    }
+  }
+  
+  logger.warn('Could not parse product ID', { productId, platform: Platform.OS });
+  return null;
+}
+
+/**
  * Check and sync subscription status
  * 
  * Automatically syncs device subscription status with Firestore
@@ -661,6 +691,12 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       // Get current purchases from device
       const availablePurchases = await RNIap.getAvailablePurchases();
 
+      logger.info('Found purchases on device', { 
+        userId, 
+        purchaseCount: availablePurchases.length,
+        productIds: availablePurchases.map(p => p.productId),
+      });
+
       // Get current subscription from Firestore
       const db = getFirestore();
       const userRef = doc(db, 'users', userId);
@@ -674,9 +710,8 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       const userData = userSnap.data() as UserProfile;
       const currentSubscription = userData.subscription;
 
-      // If user has Apple subscription in Firestore
+      // Case 1: User has Apple subscription in Firestore - check if still valid
       if (currentSubscription?.provider === 'apple') {
-        // Check if subscription still exists on device
         const hasActiveAppleSubscription = availablePurchases.some(
           purchase => purchase.productId === currentSubscription.appleProductId
         );
@@ -688,16 +723,83 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
         ) {
           logger.info('Apple subscription not found on device, updating to expired', { userId });
 
-          // Update Firestore to expired
           await updateDoc(userRef, {
             'subscription.status': 'expired',
             'subscription.updatedAt': new Date().toISOString(),
           });
         }
       }
+      
+      // Case 2: User has NO active subscription in Firestore, but has one on device - RESTORE IT
+      const hasNoActiveSubscription = !currentSubscription || 
+        currentSubscription.provider === 'none' ||
+        currentSubscription.status === 'expired' ||
+        currentSubscription.status === 'cancelled';
+      
+      if (hasNoActiveSubscription && availablePurchases.length > 0) {
+        logger.info('Found subscription on device but not in Firebase - restoring', { 
+          userId,
+          currentProvider: currentSubscription?.provider,
+          currentStatus: currentSubscription?.status,
+        });
 
-      // If user has Stripe subscription, don't touch it
-      // Stripe subscriptions are monitored separately
+        // Take the first available purchase (usually only one subscription at a time)
+        const purchase = availablePurchases[0];
+        const parsedProduct = parseProductId(purchase.productId);
+
+        if (!parsedProduct) {
+          logger.warn('Could not parse product ID for restore', { 
+            productId: purchase.productId,
+            userId,
+          });
+          return;
+        }
+
+        const receipt = purchase.purchaseToken || '';
+        
+        if (!receipt) {
+          logger.warn('No receipt found for purchase restore', { 
+            productId: purchase.productId,
+            userId,
+          });
+          return;
+        }
+
+        logger.info('Verifying restored purchase with backend', {
+          userId,
+          productId: purchase.productId,
+          tier: parsedProduct.tier,
+          billingPeriod: parsedProduct.billingPeriod,
+        });
+
+        // Verify with backend - this will write to Firebase if valid
+        const verificationResult = await verifyPurchaseWithBackend(
+          receipt,
+          purchase.productId,
+          parsedProduct.tier,
+          parsedProduct.billingPeriod
+        );
+
+        if (verificationResult.success) {
+          logger.info('Successfully restored subscription', { 
+            userId,
+            productId: purchase.productId,
+          });
+          
+          trackAmplitudeEvent('subscription_restored', {
+            platform: Platform.OS,
+            product_id: purchase.productId,
+            tier: parsedProduct.tier,
+            billing_period: parsedProduct.billingPeriod,
+          });
+        } else {
+          logger.warn('Failed to verify restored purchase', { 
+            userId,
+            productId: purchase.productId,
+            error: verificationResult.error,
+          });
+        }
+      }
 
       logger.info('Subscription sync completed', { userId });
     } catch (error) {
@@ -715,6 +817,12 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       // Get current purchases from device
       const availablePurchases = await RNIap.getAvailablePurchases();
 
+      logger.info('Found purchases on device', { 
+        userId, 
+        purchaseCount: availablePurchases.length,
+        productIds: availablePurchases.map(p => p.productId),
+      });
+
       // Get current subscription from Firestore
       const db = getFirestore();
       const userRef = doc(db, 'users', userId);
@@ -728,9 +836,8 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       const userData = userSnap.data() as UserProfile;
       const currentSubscription = userData.subscription;
 
-      // If user has Google subscription in Firestore
+      // Case 1: User has Google subscription in Firestore - check if still valid
       if (currentSubscription?.provider === 'google') {
-        // Check if subscription still exists on device
         const hasActiveGoogleSubscription = availablePurchases.some(
           purchase => purchase.productId === currentSubscription.googlePlayProductId
         );
@@ -742,16 +849,83 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
         ) {
           logger.info('Google subscription not found on device, updating to expired', { userId });
 
-          // Update Firestore to expired
           await updateDoc(userRef, {
             'subscription.status': 'expired',
             'subscription.updatedAt': new Date().toISOString(),
           });
         }
       }
+      
+      // Case 2: User has NO active subscription in Firestore, but has one on device - RESTORE IT
+      const hasNoActiveSubscription = !currentSubscription || 
+        currentSubscription.provider === 'none' ||
+        currentSubscription.status === 'expired' ||
+        currentSubscription.status === 'cancelled';
+      
+      if (hasNoActiveSubscription && availablePurchases.length > 0) {
+        logger.info('Found subscription on device but not in Firebase - restoring', { 
+          userId,
+          currentProvider: currentSubscription?.provider,
+          currentStatus: currentSubscription?.status,
+        });
 
-      // If user has Stripe or Apple subscription, don't touch it
-      // Those subscriptions are monitored separately
+        // Take the first available purchase (usually only one subscription at a time)
+        const purchase = availablePurchases[0];
+        const parsedProduct = parseProductId(purchase.productId);
+
+        if (!parsedProduct) {
+          logger.warn('Could not parse product ID for restore', { 
+            productId: purchase.productId,
+            userId,
+          });
+          return;
+        }
+
+        const receipt = purchase.purchaseToken || '';
+        
+        if (!receipt) {
+          logger.warn('No receipt found for purchase restore', { 
+            productId: purchase.productId,
+            userId,
+          });
+          return;
+        }
+
+        logger.info('Verifying restored purchase with backend', {
+          userId,
+          productId: purchase.productId,
+          tier: parsedProduct.tier,
+          billingPeriod: parsedProduct.billingPeriod,
+        });
+
+        // Verify with backend - this will write to Firebase if valid
+        const verificationResult = await verifyPurchaseWithBackend(
+          receipt,
+          purchase.productId,
+          parsedProduct.tier,
+          parsedProduct.billingPeriod
+        );
+
+        if (verificationResult.success) {
+          logger.info('Successfully restored subscription', { 
+            userId,
+            productId: purchase.productId,
+          });
+          
+          trackAmplitudeEvent('subscription_restored', {
+            platform: Platform.OS,
+            product_id: purchase.productId,
+            tier: parsedProduct.tier,
+            billing_period: parsedProduct.billingPeriod,
+          });
+        } else {
+          logger.warn('Failed to verify restored purchase', { 
+            userId,
+            productId: purchase.productId,
+            error: verificationResult.error,
+          });
+        }
+      }
 
       logger.info('Subscription sync completed', { userId });
     } catch (error) {
