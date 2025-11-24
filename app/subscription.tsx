@@ -16,11 +16,11 @@ import { CancelSubscriptionResponse, SubscriptionPlanConfig } from '@/types';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { httpsCallable } from 'firebase/functions';
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function SubscriptionScreen() {
+export default function SubscriptionScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
@@ -75,7 +75,7 @@ export default function SubscriptionScreen() {
     };
   }, []);
 
-  async function loadPlans() {
+  async function loadPlans(): Promise<void> {
     try {
       setPlansLoading(true);
       setPlansError(null);
@@ -104,7 +104,7 @@ export default function SubscriptionScreen() {
     }
   }
 
-  async function syncSubscription() {
+  async function syncSubscription(): Promise<void> {
     if (!user?.id) return;
 
     try {
@@ -510,7 +510,7 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const renderPlanCard = (plan: SubscriptionPlanConfig) => {
+  const renderPlanCard = (plan: SubscriptionPlanConfig): React.JSX.Element => {
     const isCurrentPlan = subscriptionInfo.hasSubscription && 
       profile?.subscription?.billingPeriod === plan.billingPeriod;
     const isSelected = selectedPlan === plan.billingPeriod;
