@@ -696,17 +696,47 @@ function selectMostRecentPurchase(purchases: any[]): any | null {
 }
 
 /**
+ * Result of subscription sync operation
+ */
+export interface SyncSubscriptionResult {
+  success: boolean;
+  foundPurchases: boolean;
+  purchaseCount: number;
+  restoredSubscription: boolean;
+  verificationAttempted: boolean;
+  verificationSuccess: boolean;
+  error?: string;
+  details: {
+    platform: string;
+    availablePurchases?: any[];
+    firestoreStateBefore?: any;
+    firestoreStateAfter?: any;
+    verificationResult?: any;
+    error?: any;
+  };
+}
+
+/**
  * Check and sync subscription status
  * 
  * Automatically syncs device subscription status with Firestore
  * Called when subscription screen is focused
  * 
  * @param userId - User ID to sync
- * @returns Updated subscription status
+ * @returns Detailed result of sync operation
  */
-export async function checkAndSyncSubscription(userId: string): Promise<void> {
+export async function checkAndSyncSubscription(userId: string): Promise<SyncSubscriptionResult> {
   if (!RNIap) {
-    return;
+    return {
+      success: false,
+      foundPurchases: false,
+      purchaseCount: 0,
+      restoredSubscription: false,
+      verificationAttempted: false,
+      verificationSuccess: false,
+      error: 'IAP not available on this platform',
+      details: { platform: Platform.OS },
+    };
   }
 
   if (Platform.OS === 'ios') {
@@ -736,11 +766,35 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       
       if (!userSnap.exists()) {
         logger.warn('User document not found', { userId });
-        return;
+        return {
+          success: false,
+          foundPurchases: availablePurchases.length > 0,
+          purchaseCount: availablePurchases.length,
+          restoredSubscription: false,
+          verificationAttempted: false,
+          verificationSuccess: false,
+          error: 'User document not found',
+          details: {
+            platform: Platform.OS,
+            availablePurchases: availablePurchases.map(p => ({
+              productId: p.productId,
+              transactionId: p.transactionId,
+              transactionDate: p.transactionDate,
+            })),
+          },
+        };
       }
 
       const userData = userSnap.data() as UserProfile;
       const currentSubscription = userData.subscription;
+      
+      const firestoreStateBefore = {
+        hasSubscription: !!currentSubscription,
+        provider: currentSubscription?.provider,
+        status: currentSubscription?.status,
+        tier: currentSubscription?.tier,
+        billingPeriod: currentSubscription?.billingPeriod,
+      };
 
       // Case 1: User has Apple subscription in Firestore - check if still valid
       if (currentSubscription?.provider === 'apple') {
@@ -780,7 +834,24 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
         
         if (!purchase) {
           logger.warn('No valid purchase found to restore', { userId });
-          return;
+          return {
+            success: false,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: false,
+            verificationAttempted: false,
+            verificationSuccess: false,
+            error: 'No valid purchase found',
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+            },
+          };
         }
         
         const parsedProduct = parseProductId(purchase.productId);
@@ -790,7 +861,24 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
             productId: purchase.productId,
             userId,
           });
-          return;
+          return {
+            success: false,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: false,
+            verificationAttempted: false,
+            verificationSuccess: false,
+            error: 'Could not parse product ID',
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+            },
+          };
         }
 
         const receipt = purchase.purchaseToken || '';
@@ -800,7 +888,24 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
             productId: purchase.productId,
             userId,
           });
-          return;
+          return {
+            success: false,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: false,
+            verificationAttempted: false,
+            verificationSuccess: false,
+            error: 'No receipt found',
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+            },
+          };
         }
 
         logger.info('Verifying restored purchase with backend', {
@@ -846,19 +951,107 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
             tier: parsedProduct.tier,
             billing_period: parsedProduct.billingPeriod,
           });
+          
+          // Get updated state from Firestore
+          const userSnapAfter = await getDoc(userRef);
+          const userDataAfter = userSnapAfter.data() as UserProfile;
+          
+          return {
+            success: true,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: true,
+            verificationAttempted: true,
+            verificationSuccess: true,
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+              firestoreStateAfter: {
+                hasSubscription: !!userDataAfter.subscription,
+                provider: userDataAfter.subscription?.provider,
+                status: userDataAfter.subscription?.status,
+                tier: userDataAfter.subscription?.tier,
+                billingPeriod: userDataAfter.subscription?.billingPeriod,
+              },
+              verificationResult: {
+                success: verificationResult.success,
+                subscriptionStatus: verificationResult.subscription?.status,
+              },
+            },
+          };
         } else {
           logger.warn('Failed to verify restored purchase', { 
             userId,
             productId: purchase.productId,
             error: verificationResult.error,
           });
+          
+          return {
+            success: false,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: false,
+            verificationAttempted: true,
+            verificationSuccess: false,
+            error: verificationResult.error || 'Verification failed',
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+              verificationResult: {
+                success: verificationResult.success,
+                error: verificationResult.error,
+              },
+            },
+          };
         }
       }
 
-      logger.info('Subscription sync completed', { userId });
+      logger.info('Subscription sync completed - no restore needed', { userId });
+      return {
+        success: true,
+        foundPurchases: availablePurchases.length > 0,
+        purchaseCount: availablePurchases.length,
+        restoredSubscription: false,
+        verificationAttempted: false,
+        verificationSuccess: false,
+        details: {
+          platform: Platform.OS,
+          availablePurchases: availablePurchases.map(p => ({
+            productId: p.productId,
+            transactionId: p.transactionId,
+            transactionDate: p.transactionDate,
+          })),
+          firestoreStateBefore,
+        },
+      };
     } catch (error) {
       logger.error('Failed to sync subscription', { error, userId });
-      // Don't throw - sync is best-effort
+      return {
+        success: false,
+        foundPurchases: false,
+        purchaseCount: 0,
+        restoredSubscription: false,
+        verificationAttempted: false,
+        verificationSuccess: false,
+        error: error instanceof Error ? error.message : String(error),
+        details: {
+          platform: Platform.OS,
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+          } : String(error),
+        },
+      };
     }
   } else if (Platform.OS === 'android') {
     try {
@@ -887,11 +1080,35 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
       
       if (!userSnap.exists()) {
         logger.warn('User document not found', { userId });
-        return;
+        return {
+          success: false,
+          foundPurchases: availablePurchases.length > 0,
+          purchaseCount: availablePurchases.length,
+          restoredSubscription: false,
+          verificationAttempted: false,
+          verificationSuccess: false,
+          error: 'User document not found',
+          details: {
+            platform: Platform.OS,
+            availablePurchases: availablePurchases.map(p => ({
+              productId: p.productId,
+              transactionId: p.transactionId,
+              transactionDate: p.transactionDate,
+            })),
+          },
+        };
       }
 
       const userData = userSnap.data() as UserProfile;
       const currentSubscription = userData.subscription;
+      
+      const firestoreStateBefore = {
+        hasSubscription: !!currentSubscription,
+        provider: currentSubscription?.provider,
+        status: currentSubscription?.status,
+        tier: currentSubscription?.tier,
+        billingPeriod: currentSubscription?.billingPeriod,
+      };
 
       // Case 1: User has Google subscription in Firestore - check if still valid
       if (currentSubscription?.provider === 'google') {
@@ -931,7 +1148,24 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
         
         if (!purchase) {
           logger.warn('No valid purchase found to restore', { userId });
-          return;
+          return {
+            success: false,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: false,
+            verificationAttempted: false,
+            verificationSuccess: false,
+            error: 'No valid purchase found',
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+            },
+          };
         }
         
         const parsedProduct = parseProductId(purchase.productId);
@@ -941,7 +1175,24 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
             productId: purchase.productId,
             userId,
           });
-          return;
+          return {
+            success: false,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: false,
+            verificationAttempted: false,
+            verificationSuccess: false,
+            error: 'Could not parse product ID',
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+            },
+          };
         }
 
         const receipt = purchase.purchaseToken || '';
@@ -951,7 +1202,24 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
             productId: purchase.productId,
             userId,
           });
-          return;
+          return {
+            success: false,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: false,
+            verificationAttempted: false,
+            verificationSuccess: false,
+            error: 'No receipt found',
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+            },
+          };
         }
 
         logger.info('Verifying restored purchase with backend', {
@@ -997,21 +1265,121 @@ export async function checkAndSyncSubscription(userId: string): Promise<void> {
             tier: parsedProduct.tier,
             billing_period: parsedProduct.billingPeriod,
           });
+          
+          // Get updated state from Firestore
+          const userSnapAfter = await getDoc(userRef);
+          const userDataAfter = userSnapAfter.data() as UserProfile;
+          
+          return {
+            success: true,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: true,
+            verificationAttempted: true,
+            verificationSuccess: true,
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+              firestoreStateAfter: {
+                hasSubscription: !!userDataAfter.subscription,
+                provider: userDataAfter.subscription?.provider,
+                status: userDataAfter.subscription?.status,
+                tier: userDataAfter.subscription?.tier,
+                billingPeriod: userDataAfter.subscription?.billingPeriod,
+              },
+              verificationResult: {
+                success: verificationResult.success,
+                subscriptionStatus: verificationResult.subscription?.status,
+              },
+            },
+          };
         } else {
           logger.warn('Failed to verify restored purchase', { 
             userId,
             productId: purchase.productId,
             error: verificationResult.error,
           });
+          
+          return {
+            success: false,
+            foundPurchases: true,
+            purchaseCount: availablePurchases.length,
+            restoredSubscription: false,
+            verificationAttempted: true,
+            verificationSuccess: false,
+            error: verificationResult.error || 'Verification failed',
+            details: {
+              platform: Platform.OS,
+              availablePurchases: availablePurchases.map(p => ({
+                productId: p.productId,
+                transactionId: p.transactionId,
+                transactionDate: p.transactionDate,
+              })),
+              firestoreStateBefore,
+              verificationResult: {
+                success: verificationResult.success,
+                error: verificationResult.error,
+              },
+            },
+          };
         }
       }
 
-      logger.info('Subscription sync completed', { userId });
+      logger.info('Subscription sync completed - no restore needed', { userId });
+      return {
+        success: true,
+        foundPurchases: availablePurchases.length > 0,
+        purchaseCount: availablePurchases.length,
+        restoredSubscription: false,
+        verificationAttempted: false,
+        verificationSuccess: false,
+        details: {
+          platform: Platform.OS,
+          availablePurchases: availablePurchases.map(p => ({
+            productId: p.productId,
+            transactionId: p.transactionId,
+            transactionDate: p.transactionDate,
+          })),
+          firestoreStateBefore,
+        },
+      };
     } catch (error) {
       logger.error('Failed to sync Android subscription', { error, userId });
-      // Don't throw - sync is best-effort
+      return {
+        success: false,
+        foundPurchases: false,
+        purchaseCount: 0,
+        restoredSubscription: false,
+        verificationAttempted: false,
+        verificationSuccess: false,
+        error: error instanceof Error ? error.message : String(error),
+        details: {
+          platform: Platform.OS,
+          error: error instanceof Error ? {
+            message: error.message,
+            stack: error.stack,
+          } : String(error),
+        },
+      };
     }
   }
+  
+  // Fallback for unsupported platforms
+  return {
+    success: false,
+    foundPurchases: false,
+    purchaseCount: 0,
+    restoredSubscription: false,
+    verificationAttempted: false,
+    verificationSuccess: false,
+    error: 'Unsupported platform',
+    details: { platform: Platform.OS },
+  };
 }
 
 /**

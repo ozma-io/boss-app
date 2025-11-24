@@ -14,7 +14,6 @@ import {
 import { CancelSubscriptionResponse, SubscriptionPlanConfig } from '@/types';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
-import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -109,7 +108,27 @@ export default function SubscriptionScreen() {
 
     try {
       setSyncing(true);
-      await checkAndSyncSubscription(profile.id);
+      const syncResult = await checkAndSyncSubscription(profile.id);
+      
+      // Log if sync found purchases but couldn't restore them - THIS IS AN ERROR!
+      if (syncResult.foundPurchases && !syncResult.restoredSubscription && syncResult.verificationAttempted) {
+        const syncError = new Error('Auto-sync found purchases but failed to restore');
+        logger.error('Auto-sync found purchases but failed to restore', {
+          feature: 'SubscriptionScreen',
+          error: syncError,
+          userId: profile.id,
+          userEmail: profile.email,
+          syncResult: {
+            success: syncResult.success,
+            foundPurchases: syncResult.foundPurchases,
+            purchaseCount: syncResult.purchaseCount,
+            verificationSuccess: syncResult.verificationSuccess,
+            error: syncResult.error,
+          },
+          details: syncResult.details,
+        });
+      }
+      
       // Profile will update automatically via real-time Firestore listener
     } catch (error) {
       logger.error('Failed to sync subscription', { feature: 'SubscriptionScreen', error });
@@ -336,40 +355,85 @@ export default function SubscriptionScreen() {
         platform: Platform.OS,
       });
 
-      await syncSubscription();
+      // Perform sync and get detailed result
+      const syncResult = await checkAndSyncSubscription(profile.id);
 
-      // Check if subscription was found after sync
-      const db = getFirestore();
-      const userRef = doc(db, 'users', profile.id);
-      const userSnap = await getDoc(userRef);
-      
-      if (userSnap.exists()) {
-        const userData = userSnap.data() as any;
-        if (userData.subscription?.status === 'active' || userData.subscription?.status === 'trial') {
-          trackAmplitudeEvent('subscription_restore_success', {
-            platform: Platform.OS,
-            provider: userData.subscription.provider,
-          });
+      logger.info('Restore purchases completed', {
+        feature: 'SubscriptionScreen',
+        syncResult: {
+          success: syncResult.success,
+          foundPurchases: syncResult.foundPurchases,
+          purchaseCount: syncResult.purchaseCount,
+          restoredSubscription: syncResult.restoredSubscription,
+          verificationAttempted: syncResult.verificationAttempted,
+          verificationSuccess: syncResult.verificationSuccess,
+        },
+      });
 
-          Alert.alert(
-            'Success!',
-            'Your subscription has been restored.',
-            [{ text: 'OK' }]
-          );
-        } else {
-          trackAmplitudeEvent('subscription_restore_no_purchases', {
-            platform: Platform.OS,
-          });
+      // Check if subscription was restored successfully
+      if (syncResult.restoredSubscription) {
+        trackAmplitudeEvent('subscription_restore_success', {
+          platform: Platform.OS,
+          provider: syncResult.details.firestoreStateAfter?.provider,
+        });
 
-          Alert.alert(
-            'No Subscription Found',
-            'We couldn\'t find any active subscription to restore. If you believe this is an error, please contact support.',
-            [{ text: 'OK' }]
-          );
-        }
+        Alert.alert(
+          'Success!',
+          'Your subscription has been restored.',
+          [{ text: 'OK' }]
+        );
+      } else if (syncResult.foundPurchases && !syncResult.restoredSubscription) {
+        // CRITICAL: Purchases found but NOT restored - log to Sentry
+        const sentryError = new Error('Restore Purchases Failed: Purchases found but not restored');
+        logger.error('Restore purchases failed with purchases found', {
+          feature: 'SubscriptionScreen',
+          error: sentryError,
+          userId: profile.id,
+          userEmail: profile.email,
+          syncResult: {
+            success: syncResult.success,
+            foundPurchases: syncResult.foundPurchases,
+            purchaseCount: syncResult.purchaseCount,
+            restoredSubscription: syncResult.restoredSubscription,
+            verificationAttempted: syncResult.verificationAttempted,
+            verificationSuccess: syncResult.verificationSuccess,
+            error: syncResult.error,
+          },
+          details: syncResult.details,
+        });
+
+        trackAmplitudeEvent('subscription_restore_failed_with_purchases', {
+          platform: Platform.OS,
+          purchaseCount: syncResult.purchaseCount,
+          verificationAttempted: syncResult.verificationAttempted,
+          verificationSuccess: syncResult.verificationSuccess,
+          error: syncResult.error,
+        });
+
+        Alert.alert(
+          'Restore Failed',
+          'We found your purchase but couldn\'t restore it. Our team has been notified. Please try again or contact support.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        // No purchases found
+        trackAmplitudeEvent('subscription_restore_no_purchases', {
+          platform: Platform.OS,
+        });
+
+        Alert.alert(
+          'No Subscription Found',
+          'We couldn\'t find any active subscription to restore. If you believe this is an error, please contact support.',
+          [{ text: 'OK' }]
+        );
       }
     } catch (error) {
-      logger.error('Failed to restore purchases', { error });
+      logger.error('Failed to restore purchases', { 
+        feature: 'SubscriptionScreen',
+        error,
+        userId: profile.id,
+        userEmail: profile.email,
+      });
 
       trackAmplitudeEvent('subscription_restore_error', {
         platform: Platform.OS,
