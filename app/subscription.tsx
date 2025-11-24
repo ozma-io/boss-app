@@ -1,4 +1,5 @@
 import { functions } from '@/constants/firebase.config';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { checkAndSyncSubscription, endIAPConnection, initializeIAP, purchaseSubscription } from '@/services/iap.service';
@@ -21,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { profile, loading: profileLoading } = useUserProfile();
   const [plans, setPlans] = useState<SubscriptionPlanConfig[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
@@ -47,10 +49,10 @@ export default function SubscriptionScreen() {
   // Auto-sync subscription on screen focus
   useFocusEffect(
     useCallback(() => {
-      if (profile?.id && (Platform.OS === 'ios' || Platform.OS === 'android')) {
+      if (user?.id && (Platform.OS === 'ios' || Platform.OS === 'android')) {
         syncSubscription();
       }
-    }, [profile?.id])
+    }, [user?.id])
   );
 
   // Initialize IAP
@@ -104,11 +106,11 @@ export default function SubscriptionScreen() {
   }
 
   async function syncSubscription() {
-    if (!profile?.id) return;
+    if (!user?.id) return;
 
     try {
       setSyncing(true);
-      const syncResult = await checkAndSyncSubscription(profile.id);
+      const syncResult = await checkAndSyncSubscription(user.id);
       
       // Log if sync found purchases but couldn't restore them - THIS IS AN ERROR!
       if (syncResult.foundPurchases && !syncResult.restoredSubscription && syncResult.verificationAttempted) {
@@ -116,8 +118,8 @@ export default function SubscriptionScreen() {
         logger.error('Auto-sync found purchases but failed to restore', {
           feature: 'SubscriptionScreen',
           error: syncError,
-          userId: profile.id,
-          userEmail: profile.email,
+          userId: user.id,
+          userEmail: user.email,
           syncResult: {
             success: syncResult.success,
             foundPurchases: syncResult.foundPurchases,
@@ -346,7 +348,7 @@ export default function SubscriptionScreen() {
   };
 
   const handleRestorePurchases = async (): Promise<void> => {
-    if (!profile?.id || restoring) return;
+    if (!user?.id || restoring) return;
 
     try {
       setRestoring(true);
@@ -356,7 +358,7 @@ export default function SubscriptionScreen() {
       });
 
       // Perform sync and get detailed result
-      const syncResult = await checkAndSyncSubscription(profile.id);
+      const syncResult = await checkAndSyncSubscription(user.id);
 
       logger.info('Restore purchases completed', {
         feature: 'SubscriptionScreen',
@@ -388,8 +390,8 @@ export default function SubscriptionScreen() {
         logger.error('Restore purchases failed with purchases found', {
           feature: 'SubscriptionScreen',
           error: sentryError,
-          userId: profile.id,
-          userEmail: profile.email,
+          userId: user.id,
+          userEmail: user.email,
           syncResult: {
             success: syncResult.success,
             foundPurchases: syncResult.foundPurchases,
@@ -431,8 +433,8 @@ export default function SubscriptionScreen() {
       logger.error('Failed to restore purchases', { 
         feature: 'SubscriptionScreen',
         error,
-        userId: profile.id,
-        userEmail: profile.email,
+        userId: user.id,
+        userEmail: user.email,
       });
 
       trackAmplitudeEvent('subscription_restore_error', {
