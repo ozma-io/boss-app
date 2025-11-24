@@ -172,87 +172,158 @@ async function verifyAppleReceipt(
       throw new Error('Apple App Store private key not configured');
     }
 
-    // Start with a best-guess environment for API client initialization
-    // Will be updated based on actual transaction data after verification
-    let environment = receipt.includes('Sandbox') ? Environment.SANDBOX : Environment.PRODUCTION;
-
-    // Initialize App Store Server API Client
-    const client = new AppStoreServerAPIClient(
-      privateKey,
-      APPLE_APP_STORE_KEY_ID,
-      APPLE_APP_STORE_ISSUER_ID,
-      APPLE_BUNDLE_ID,
-      environment
-    );
-
-    // Extract transaction ID from receipt
-    const receiptUtil = new ReceiptUtility();
-    const extractedTransactionId = receiptUtil.extractTransactionIdFromAppReceipt(receipt);
-    
-    if (!extractedTransactionId) {
-      throw new Error('Invalid receipt format - could not extract transaction ID');
-    }
-
-    // Get transaction info from Apple (returns signed transaction string)
-    // Wrapped in retry logic to handle temporary network issues
-    const transactionInfoResponse = await retryWithBackoff(
-      () => client.getTransactionInfo(extractedTransactionId),
-      3, // maxRetries
-      500 // initialDelayMs
-    );
-    
-    if (!transactionInfoResponse || !transactionInfoResponse.signedTransactionInfo) {
-      throw new Error('Failed to get transaction info from Apple');
-    }
-
-    // Download Apple root certificates for verification
+    // Download Apple root certificates for verification (needed for both paths)
     const rootCAs = await downloadAppleRootCertificates();
     
     if (rootCAs.length === 0) {
       throw new Error('Failed to download Apple root certificates');
     }
 
-    // Create verifier to decode and verify the JWS
-    // App Apple ID is required for production, optional for sandbox
-    const appAppleId = environment === Environment.PRODUCTION ? APPLE_APP_ID : undefined;
+    // Detect receipt format:
+    // - JWS (StoreKit 2): starts with "eyJ" (base64 JSON header)
+    // - Old App Receipt: starts with "MIIT" or similar (base64 ASN.1/DER)
+    const isJWSFormat = receipt.startsWith('eyJ');
     
-    const verifier = new SignedDataVerifier(
-      rootCAs,
-      true, // Enable online checks
-      environment,
-      APPLE_BUNDLE_ID,
-      appAppleId
-    );
+    let decodedTransaction: any;
+    let environment: Environment;
+    let originalTransactionId: string | undefined;
+    let verifier: SignedDataVerifier;
+    let client: AppStoreServerAPIClient;
 
-    // Decode and verify the signed transaction
-    const decodedTransaction = await verifier.verifyAndDecodeTransaction(
-      transactionInfoResponse.signedTransactionInfo
-    );
-    
-    if (!decodedTransaction) {
-      throw new Error('Failed to decode transaction from Apple');
-    }
+    if (isJWSFormat) {
+      // NEW PATH: Direct JWS verification (StoreKit 2)
+      logger.info('Verifying JWS transaction (StoreKit 2)', { productId });
 
-    // Use the actual environment from decoded transaction
-    // This is the authoritative source, overrides our initial guess
-    if (decodedTransaction.environment) {
-      const actualEnvironment = decodedTransaction.environment === 'Sandbox' ? Environment.SANDBOX : Environment.PRODUCTION;
-      if (actualEnvironment !== environment) {
-        logger.info('Using actual environment from transaction (different from initial guess)', {
-          initialGuess: environment === Environment.SANDBOX ? 'Sandbox' : 'Production',
-          actualEnvironment: decodedTransaction.environment,
-        });
-        environment = actualEnvironment;
+      // For JWS, we need to guess environment initially, will be corrected after decoding
+      environment = Environment.PRODUCTION; // Start with production as default
+
+      // Create verifier - for JWS we can verify without knowing exact environment first
+      // The decoded transaction will tell us the actual environment
+      const appAppleId = APPLE_APP_ID; // Use app ID, verifier will handle sandbox vs production
+      
+      verifier = new SignedDataVerifier(
+        rootCAs,
+        true, // Enable online checks
+        environment,
+        APPLE_BUNDLE_ID,
+        appAppleId
+      );
+
+      // Decode and verify the JWS transaction directly
+      decodedTransaction = await verifier.verifyAndDecodeTransaction(receipt);
+      
+      if (!decodedTransaction) {
+        throw new Error('Failed to decode JWS transaction');
       }
-    } else {
-      // Fallback: if environment not in transaction, log warning
-      logger.warn('Transaction missing environment field, using initial guess', {
+
+      // Update environment based on decoded transaction
+      if (decodedTransaction.environment) {
+        environment = decodedTransaction.environment === 'Sandbox' ? Environment.SANDBOX : Environment.PRODUCTION;
+        
+        // Re-create verifier with correct environment if needed
+        if ((environment === Environment.SANDBOX) || 
+            (environment === Environment.PRODUCTION && !appAppleId)) {
+          const correctAppAppleId = environment === Environment.PRODUCTION ? APPLE_APP_ID : undefined;
+          verifier = new SignedDataVerifier(
+            rootCAs,
+            true,
+            environment,
+            APPLE_BUNDLE_ID,
+            correctAppAppleId
+          );
+          // Re-verify with correct environment
+          decodedTransaction = await verifier.verifyAndDecodeTransaction(receipt);
+        }
+      }
+
+      originalTransactionId = decodedTransaction.originalTransactionId;
+
+      // Initialize API client for subscription status checks
+      client = new AppStoreServerAPIClient(
+        privateKey,
+        APPLE_APP_STORE_KEY_ID,
+        APPLE_APP_STORE_ISSUER_ID,
+        APPLE_BUNDLE_ID,
+        environment
+      );
+
+      logger.info('JWS transaction verified successfully', {
+        transactionId: decodedTransaction.transactionId,
+        originalTransactionId,
         environment: environment === Environment.SANDBOX ? 'Sandbox' : 'Production',
       });
+
+    } else {
+      // OLD PATH: Extract transaction ID from App Receipt (Legacy)
+      logger.info('Verifying legacy App Receipt', { productId });
+
+      // Start with a best-guess environment for API client initialization
+      environment = receipt.includes('Sandbox') ? Environment.SANDBOX : Environment.PRODUCTION;
+
+      // Initialize App Store Server API Client
+      client = new AppStoreServerAPIClient(
+        privateKey,
+        APPLE_APP_STORE_KEY_ID,
+        APPLE_APP_STORE_ISSUER_ID,
+        APPLE_BUNDLE_ID,
+        environment
+      );
+
+      // Extract transaction ID from old-format receipt
+      const receiptUtil = new ReceiptUtility();
+      const extractedTransactionId = receiptUtil.extractTransactionIdFromAppReceipt(receipt);
+      
+      if (!extractedTransactionId) {
+        throw new Error('Invalid receipt format - could not extract transaction ID');
+      }
+
+      // Get transaction info from Apple (returns signed transaction string)
+      const transactionInfoResponse = await retryWithBackoff(
+        () => client.getTransactionInfo(extractedTransactionId),
+        3,
+        500
+      );
+      
+      if (!transactionInfoResponse || !transactionInfoResponse.signedTransactionInfo) {
+        throw new Error('Failed to get transaction info from Apple');
+      }
+
+      // Create verifier to decode the signed transaction
+      const appAppleId = environment === Environment.PRODUCTION ? APPLE_APP_ID : undefined;
+      
+      verifier = new SignedDataVerifier(
+        rootCAs,
+        true,
+        environment,
+        APPLE_BUNDLE_ID,
+        appAppleId
+      );
+
+      // Decode and verify the signed transaction
+      decodedTransaction = await verifier.verifyAndDecodeTransaction(
+        transactionInfoResponse.signedTransactionInfo
+      );
+      
+      if (!decodedTransaction) {
+        throw new Error('Failed to decode transaction from Apple');
+      }
+
+      originalTransactionId = decodedTransaction.originalTransactionId;
+
+      // For legacy path, double-check environment from decoded transaction
+      if (decodedTransaction.environment) {
+        const actualEnvironment = decodedTransaction.environment === 'Sandbox' ? Environment.SANDBOX : Environment.PRODUCTION;
+        if (actualEnvironment !== environment) {
+          logger.info('Using actual environment from transaction (different from initial guess)', {
+            initialGuess: environment === Environment.SANDBOX ? 'Sandbox' : 'Production',
+            actualEnvironment: decodedTransaction.environment,
+          });
+          environment = actualEnvironment;
+        }
+      }
     }
 
     // Extract real transaction details from decoded data
-    const originalTransactionId = decodedTransaction.originalTransactionId;
     const transactionId = decodedTransaction.transactionId;
     const expiresDate = decodedTransaction.expiresDate ? new Date(decodedTransaction.expiresDate) : null;
     const purchaseDate = decodedTransaction.purchaseDate ? new Date(decodedTransaction.purchaseDate) : new Date();
@@ -373,7 +444,7 @@ async function verifyAppleReceipt(
         tier,
         billingPeriod,
         provider: 'apple',
-        transactionId: originalTransactionId || transactionId || extractedTransactionId,
+        transactionId: originalTransactionId || transactionId,
         currentPeriodStart,
         currentPeriodEnd,
         priceAmount: pricing?.priceAmount,
