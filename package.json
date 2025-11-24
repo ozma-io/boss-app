@@ -12,6 +12,8 @@
     "build:web": "expo export --platform web",
     "test": "jest",
     "check:keyboard": "node scripts/check-keyboard-imports.js",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "eas-build-post-install": "bash .eas/build/eas-build-post-install.sh"
   },
   "dependencies": {

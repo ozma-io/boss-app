@@ -29,7 +29,6 @@ export default function SubscriptionScreen() {
   const [plansError, setPlansError] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
@@ -109,7 +108,6 @@ export default function SubscriptionScreen() {
     if (!user?.id) return;
 
     try {
-      setSyncing(true);
       const syncResult = await checkAndSyncSubscription(user.id);
       
       // Log if sync found purchases but couldn't restore them - THIS IS AN ERROR!
@@ -134,8 +132,6 @@ export default function SubscriptionScreen() {
       // Profile will update automatically via real-time Firestore listener
     } catch (error) {
       logger.error('Failed to sync subscription', { feature: 'SubscriptionScreen', error });
-    } finally {
-      setSyncing(false);
     }
   }
 
@@ -311,6 +307,8 @@ export default function SubscriptionScreen() {
       }
     } catch (error) {
       // Enhanced error logging with detailed context
+      const iapError = error as { code?: string; productId?: string; responseCode?: number; debugMessage?: string };
+      
       const errorDetails = {
         feature: 'SubscriptionScreen',
         action,
@@ -319,10 +317,10 @@ export default function SubscriptionScreen() {
         billingPeriod: plan.billingPeriod,
         errorType: error instanceof Error ? error.constructor.name : typeof error,
         errorMessage: error instanceof Error ? error.message : String(error),
-        errorCode: (error as any)?.code,
-        errorProductId: (error as any)?.productId,
-        errorResponseCode: (error as any)?.responseCode,
-        errorDebugMessage: (error as any)?.debugMessage,
+        errorCode: iapError.code,
+        errorProductId: iapError.productId,
+        errorResponseCode: iapError.responseCode,
+        errorDebugMessage: iapError.debugMessage,
         platform: Platform.OS,
       };
 
@@ -334,7 +332,7 @@ export default function SubscriptionScreen() {
       trackAmplitudeEvent('subscription_purchase_error', {
         action,
         error: error instanceof Error ? error.message : 'Unknown error',
-        errorCode: (error as any)?.code,
+        errorCode: iapError.code,
       });
 
       Alert.alert(
@@ -643,7 +641,9 @@ export default function SubscriptionScreen() {
               contentContainerStyle={styles.plansContainer}
               testID="plans-container"
             >
-              {plans.map((plan) => renderPlanCard(plan))}
+              {plans
+                .filter(plan => plan.billingPeriod !== profile?.subscription?.billingPeriod)
+                .map((plan) => renderPlanCard(plan))}
             </ScrollView>
           ) : (
             <>
