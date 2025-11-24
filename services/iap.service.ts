@@ -127,6 +127,46 @@ function setupPurchaseListener(): void {
 }
 
 /**
+ * Get available purchases with retry logic
+ * Handles race condition where initConnection() completes but native module isn't ready yet
+ */
+async function getAvailablePurchasesWithRetry(options?: {
+  onlyIncludeActiveItemsIOS?: boolean;
+}): Promise<any[]> {
+  if (!RNIap) {
+    return [];
+  }
+
+  const maxAttempts = 3;
+  const retryDelay = 100;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await RNIap.getAvailablePurchases(options || {});
+    } catch (error: any) {
+      const isInitConnectionError = 
+        error?.message?.includes('Connection not initialized') ||
+        error?.message?.includes('initConnection') ||
+        error?.code === 'initConnection';
+
+      if (isInitConnectionError && attempt < maxAttempts - 1) {
+        logger.info('IAP connection not ready, retrying...', { 
+          attempt: attempt + 1,
+          maxAttempts,
+          errorMessage: error?.message,
+          errorCode: error?.code,
+        });
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  return [];
+}
+
+/**
  * Get available products from store
  * 
  * @param productIds - Array of product IDs to fetch
@@ -749,7 +789,7 @@ export async function checkAndSyncSubscription(userId: string): Promise<SyncSubs
 
       // Get current purchases from device
       // onlyIncludeActiveItemsIOS: true prevents returning expired subscriptions on iOS
-      const availablePurchases = await RNIap.getAvailablePurchases({
+      const availablePurchases = await getAvailablePurchasesWithRetry({
         onlyIncludeActiveItemsIOS: true,
       });
 
@@ -1063,7 +1103,7 @@ export async function checkAndSyncSubscription(userId: string): Promise<SyncSubs
 
       // Get current purchases from device
       // onlyIncludeActiveItemsIOS: true prevents returning expired subscriptions (iOS only, no effect on Android)
-      const availablePurchases = await RNIap.getAvailablePurchases({
+      const availablePurchases = await getAvailablePurchasesWithRetry({
         onlyIncludeActiveItemsIOS: true,
       });
 
@@ -1400,7 +1440,7 @@ export async function restorePurchases(): Promise<IAPPurchaseResult> {
         await initializeIAP();
       }
 
-      const purchases = await RNIap.getAvailablePurchases();
+      const purchases = await getAvailablePurchasesWithRetry();
 
       if (purchases.length === 0) {
         return {
@@ -1427,7 +1467,7 @@ export async function restorePurchases(): Promise<IAPPurchaseResult> {
         await initializeIAP();
       }
 
-      const purchases = await RNIap.getAvailablePurchases();
+      const purchases = await getAvailablePurchasesWithRetry();
 
       if (purchases.length === 0) {
         return {
