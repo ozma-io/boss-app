@@ -75,7 +75,7 @@ def add_assistant_message_to_chat(
     if thread_id is None:
         threads_ref = db.collection('users').document(user_id).collection('chatThreads')  # type: ignore
         existing_threads = list(threads_ref.stream())  # type: ignore
-        thread_count = len(existing_threads)
+        thread_count = len(existing_threads) # type: ignore
         
         if thread_count == 0:
             # No threads - create default "main" thread
@@ -84,12 +84,12 @@ def add_assistant_message_to_chat(
             
         elif thread_count == 1:
             # Exactly one thread - use it
-            thread_id = existing_threads[0].id
+            thread_id = existing_threads[0].id # type: ignore
             info("Found single thread, using it", {"user_id": user_id, "thread_id": thread_id})
             
         else:
             # Multiple threads - this shouldn't happen in MVP, send to Sentry
-            thread_ids = [thread.id for thread in existing_threads]
+            thread_ids = [thread.id for thread in existing_threads] # type: ignore
             
             error(
                 "UNEXPECTED: User has multiple chat threads (MVP expects single thread)",
@@ -113,10 +113,10 @@ def add_assistant_message_to_chat(
             
             # Add message to ALL threads to ensure user sees it
             message_ids: list[str] = []
-            for thread in existing_threads:
-                tid = thread.id
+            for thread in existing_threads: # type: ignore
+                tid = thread.id # type: ignore
                 warn(f"Adding message to thread {tid}", {"user_id": user_id, "thread_id": tid})
-                mid = _add_message_to_thread(db, user_id, tid, message_text, now)
+                mid = _add_message_to_thread(db, user_id, tid, message_text, now) # type: ignore
                 message_ids.append(mid)
             
             info(
@@ -131,7 +131,7 @@ def add_assistant_message_to_chat(
             return message_ids[0]  # Return first message ID
     
     # Add message to single thread
-    message_id = _add_message_to_thread(db, user_id, thread_id, message_text, now)
+    message_id = _add_message_to_thread(db, user_id, thread_id, message_text, now) # type: ignore
     
     info(
         "Assistant message added to chat successfully",
