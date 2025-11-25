@@ -172,39 +172,3 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
         error("Error in notification orchestrator", {"error": str(e)})
         raise
 
-
-# ============================================================================
-# CONVENIENCE WRAPPERS - For backward compatibility
-# ============================================================================
-
-def create_notification_email(user_id: str, email: str, subject: str, body: str) -> str:
-    """
-    Convenience wrapper that gets db client and calls create_email_document.
-    
-    Args:
-        user_id: User ID
-        email: Recipient email address
-        subject: Email subject
-        body: Email body text
-        
-    Returns:
-        Email document ID
-    """
-    db = get_firestore_client()
-    return create_email_document(db, user_id, email, subject, body)
-
-
-def create_notification_message(user_id: str, content: str) -> str:
-    """
-    Convenience wrapper that gets db client and calls create_chat_message.
-    
-    Args:
-        user_id: User ID
-        content: Message content
-        
-    Returns:
-        Message document ID
-    """
-    db = get_firestore_client()
-    return create_chat_message(db, user_id, content)
-
