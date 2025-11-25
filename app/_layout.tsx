@@ -12,6 +12,7 @@ import { initializeFacebookSdk, parseDeepLinkParams, sendAppInstallEventDual } f
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
+import { updateUserPresence } from '@/services/user.service';
 import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import { Manrope_400Regular, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -320,6 +321,29 @@ function RootLayoutNav() {
           unsubscribe();
         }
       });
+    };
+  }, [user?.id]);
+
+  // Global heartbeat to update lastActivityAt for notification orchestrator
+  // This tracks user activity across ALL screens, not just chat
+  // Used by notification orchestrator to determine if user is active (last 6 days)
+  useEffect(() => {
+    if (!user) return;
+
+    logger.debug('Starting global activity heartbeat', { feature: 'RootLayout', userId: user.id });
+
+    // Update immediately on app start
+    updateUserPresence(user.id, null); // null = don't change currentScreen
+
+    // Setup heartbeat to keep activity timestamp fresh (every 5 minutes)
+    const heartbeatInterval = setInterval(() => {
+      updateUserPresence(user.id, null);
+      logger.debug('Activity heartbeat updated', { feature: 'RootLayout', userId: user.id });
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => {
+      logger.debug('Stopping global activity heartbeat', { feature: 'RootLayout', userId: user.id });
+      clearInterval(heartbeatInterval);
     };
   }, [user?.id]);
 

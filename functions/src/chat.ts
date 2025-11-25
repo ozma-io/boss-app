@@ -149,6 +149,20 @@ async function fetchUserContext(userId: string): Promise<string> {
     entries.push({ id: entryDoc.id, ...entryDoc.data() });
   });
   
+  // Fetch last 15 sent emails
+  const emailsSnapshot = await db
+    .collection('users').doc(userId)
+    .collection('emails')
+    .where('state', '==', 'SENT')
+    .orderBy('sentAt', 'desc')
+    .limit(15)
+    .get();
+  
+  const emails: any[] = [];
+  emailsSnapshot.forEach((emailDoc) => {
+    emails.push({ id: emailDoc.id, ...emailDoc.data() });
+  });
+  
   // Build context string
   const contextParts: string[] = [];
   
@@ -206,6 +220,16 @@ async function fetchUserContext(userId: string): Promise<string> {
       if (entry.content) {
         contextParts.push(`  Content: ${entry.content}`);
       }
+    }
+  }
+  
+  // Add sent email history
+  if (emails.length > 0) {
+    contextParts.push('\n## Previous Email Notifications Sent to User');
+    for (const email of emails) {
+      contextParts.push(`\n### Email sent at ${email.sentAt}`);
+      contextParts.push(`Subject: ${email.subject}`);
+      contextParts.push(`Body:\n${email.body_markdown}`);
     }
   }
   
