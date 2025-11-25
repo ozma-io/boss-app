@@ -43,8 +43,8 @@ Let's build your career together! 🚀`;
 /**
  * Default boss data for new users
  */
-export const DEFAULT_BOSS_NAME = 'My Boss';
-export const DEFAULT_BOSS_POSITION = 'Manager';
+export const DEFAULT_BOSS_NAME = '';
+export const DEFAULT_BOSS_POSITION = '';
 
 /**
  * System prompt for the AI assistant

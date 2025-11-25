@@ -13,13 +13,13 @@ import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, TextStyle, View } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
 import { KeyboardAwareScrollView, KeyboardController } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function PersonalInfoScreen() {
+export default function PersonalInfoScreen(): React.JSX.Element {
   const { user } = useAuth();
   const { profile, loading, error, updateProfile } = useUserProfile();
   const insets = useSafeAreaInsets();
@@ -151,7 +151,7 @@ export default function PersonalInfoScreen() {
         setTimeout(async () => {
           try {
             await signOut();
-          } catch (error) {
+          } catch { 
             // Ignore signout errors as account is already deleted
             logger.info('Sign out after deletion (expected to fail)', { feature: 'PersonalInfoScreen' });
           }
@@ -331,7 +331,7 @@ export default function PersonalInfoScreen() {
                 <Text style={styles.label} testID="label-name">Name</Text>
                 {isEditingName ? (
                   <TextInput
-                    style={[styles.valueInput, { outlineStyle: 'none' } as any]}
+                    style={[styles.valueInput, { outlineStyle: 'none' } as unknown as TextStyle]}
                     value={name}
                     onChangeText={setName}
                     onBlur={handleBlurName}
@@ -339,7 +339,7 @@ export default function PersonalInfoScreen() {
                     testID="input-name"
                   />
                 ) : (
-                  <Text style={styles.value} testID="value-name">{name || 'Not set'}</Text>
+                  <Text style={[styles.value, !name && styles.placeholderValue]} testID="value-name">{name || 'Me'}</Text>
                 )}
               </View>
             </Pressable>
@@ -486,7 +486,7 @@ export default function PersonalInfoScreen() {
           </Text>
           
           <TextInput
-            style={[styles.modalInput, { outlineStyle: 'none' } as any]}
+            style={[styles.modalInput, { outlineStyle: 'none' } as unknown as TextStyle]}
             value={deleteConfirmationText}
             onChangeText={setDeleteConfirmationText}
             placeholder="DELETE MY ACCOUNT"
@@ -617,6 +617,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
     fontFamily: 'Manrope-Regular',
+  },
+  placeholderValue: {
+    fontStyle: 'italic',
+    color: '#bbb',
   },
   valueInput: {
     fontSize: 16,

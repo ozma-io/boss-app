@@ -377,7 +377,7 @@ export default function BossScreen() {
                     bossId: boss.id,
                   });
                 }}
-                placeholder="Enter boss name"
+                placeholder="My Boss"
                 testID="boss-name"
                 style={styles.bossName}
               />
@@ -430,7 +430,7 @@ export default function BossScreen() {
                     value={positionValue}
                     onChangeText={setPositionValue}
                     onBlur={handleBlurPosition}
-                    placeholder="Enter position"
+                    placeholder="Manager"
                     placeholderTextColor="rgba(0, 0, 0, 0.3)"
                     testID="position-input"
                   />
@@ -446,7 +446,7 @@ export default function BossScreen() {
                     value={managementStyleValue}
                     onChangeText={setManagementStyleValue}
                     onBlur={handleBlurManagementStyle}
-                    placeholder="Enter management style"
+                    placeholder="Unknown"
                     placeholderTextColor="rgba(0, 0, 0, 0.3)"
                     testID="management-style-input"
                   />

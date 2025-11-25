@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleProp, StyleSheet, Text, TextInput, TextStyle } from 'react-native';
 
 interface InlineEditableHeadingProps {
@@ -15,7 +15,7 @@ export function InlineEditableHeading({
   placeholder,
   testID,
   style,
-}: InlineEditableHeadingProps) {
+}: InlineEditableHeadingProps): React.JSX.Element {
   const [isEditing, setIsEditing] = useState(false);
   const [text, setText] = useState('');
   const [localValue, setLocalValue] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export function InlineEditableHeading({
     >
       {isEditing ? (
         <TextInput
-          style={[styles.defaultText, style, styles.input, { outlineStyle: 'none' } as any]}
+          style={[styles.defaultText, style, styles.input, { outlineStyle: 'none' } as TextStyle & { outlineStyle?: string }]}
           value={text}
           onChangeText={setText}
           onBlur={handleBlur}
@@ -52,7 +52,9 @@ export function InlineEditableHeading({
           testID={`${testID}-input`}
         />
       ) : (
-        <Text style={[styles.defaultText, style]} testID={`${testID}-text`}>{displayValue}</Text>
+        <Text style={[styles.defaultText, style, displayValue ? {} : styles.placeholderText]} testID={`${testID}-text`}>
+          {displayValue || placeholder}
+        </Text>
       )}
     </Pressable>
   );
@@ -70,6 +72,10 @@ const styles = StyleSheet.create({
     margin: 0,
     borderWidth: 0,
     textAlign: 'center',
+  },
+  placeholderText: {
+    color: '#999',
+    fontStyle: 'italic',
   },
 });
 

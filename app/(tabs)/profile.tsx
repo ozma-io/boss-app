@@ -392,14 +392,14 @@ export default function ProfileScreen() {
                 />
               </View>
               <InlineEditableHeading
-                value={profile.displayName || 'User'}
+                value={profile.displayName || ''}
                 onSave={async (newName) => {
                   await updateProfile({ displayName: newName });
                   trackAmplitudeEvent('profile_field_edited', {
                     field: 'displayName',
                   });
                 }}
-                placeholder="Enter your name"
+                placeholder="Me"
                 testID="username"
                 style={styles.username}
               />

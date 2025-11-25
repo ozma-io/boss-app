@@ -221,8 +221,8 @@ export async function createBoss(userId: string): Promise<string> {
     const now = new Date().toISOString();
     
     const newBoss = {
-      name: 'My Boss',
-      position: 'Manager',
+      name: '',
+      position: '',
       birthday: '',
       managementStyle: '',
       startedAt: now,

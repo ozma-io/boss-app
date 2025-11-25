@@ -327,8 +327,8 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
       // This ensures every user has at least one boss
       const bossesRef = collection(db, 'users', userId, 'bosses');
       const defaultBoss = {
-        name: 'My Boss',
-        position: 'Manager',
+        name: '',
+        position: '',
         birthday: '',
         managementStyle: '',
         startedAt: now,
