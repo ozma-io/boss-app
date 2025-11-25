@@ -23,6 +23,7 @@ init_sentry()
 
 # Define secrets
 mailgun_api_key = SecretParam('MAILGUN_API_KEY')
+openai_api_key = SecretParam('OPENAI_API_KEY')
 
 
 def get_firestore_client() -> Any:
@@ -59,7 +60,8 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
 
 @firestore_fn.on_document_created(
     document="users/{userId}/chatThreads/{threadId}/messages/{messageId}",
-    region="us-central1"
+    region="us-central1",
+    secrets=[mailgun_api_key, openai_api_key]
 )
 def onChatMessageCreatedSendWelcomeEmail(
     event: firestore_fn.Event[firestore_fn.DocumentSnapshot | None]  # type: ignore
