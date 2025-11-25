@@ -29,33 +29,44 @@ Implementation note: Sync Mailgun unsubscribe list at function start, update Fir
 
 STEP 2: CHOOSE SCENARIO
 
-Scenarios determine content context and CTA:
+Each scenario defines content context, channel, and CTA:
 
 A. EMAIL_ONLY_USER
-   - Never logged into app (last_login_at is null)
-   - Content context: career coaching based on onboarding data - show value through actionable advice
+   - Trigger: never logged into app (last_login_at is null)
+   - Channel: EMAIL
+   - Content: career coaching based on onboarding data - show value through actionable advice
    - CTA: "App is more convenient, you can ask questions to your AI, download and try it"
    - Note: First email sent immediately via HTTP endpoint when user submits web form
 
-B. NEW_USER
-   - Logged into app within first N days (TBD threshold)
-   - Content context: early career coaching guidance, help establish good habits
-   - CTA: depends on channel (see CTA logic below)
+B. NEW_USER_PUSH
+   - Trigger: logged into app within first N days (TBD) + notifications_enabled=true
+   - Channel: PUSH
+   - Content: early career coaching guidance, help establish good habits
+   - CTA: none (user is already engaged)
 
-C. ACTIVE_USER
-   - Regular app usage, no unread messages piling up
-   - Content context: ongoing career coaching - help user grow professionally (leadership, communication skills, career development)
-   - CTA: depends on channel (see CTA logic below)
+C. NEW_USER_EMAIL
+   - Trigger: logged into app within first N days + notifications_enabled=false
+   - Channel: EMAIL
+   - Content: early career coaching guidance, help establish good habits
+   - CTA: "Enable notifications for better experience, promise not to spam"
 
-D. INACTIVE_USER
-   - Has unread messages AND last_seen_at > N days ago
-   - Content context: career growth advice + gentle reminder about continuing conversation in app
-   - CTA: "You have unread messages in app" (regardless of channel)
+D. ACTIVE_USER_PUSH
+   - Trigger: regular app usage, no unread messages piling up + notifications_enabled=true
+   - Channel: PUSH
+   - Content: ongoing career coaching - help user grow professionally (leadership, communication skills, career development)
+   - CTA: none (user is already engaged)
 
-CTA Logic (for scenarios B, C):
-- If channel=EMAIL + notifications_enabled=false: "Enable notifications for better experience, promise not to spam"
-- If channel=EMAIL + notifications_enabled=true: "Open app to continue conversation"
-- If channel=PUSH: no CTA - focus purely on career growth advice (user is already engaged in app)
+E. ACTIVE_USER_EMAIL
+   - Trigger: regular app usage + notifications_enabled=false
+   - Channel: EMAIL
+   - Content: ongoing career coaching - help user grow professionally
+   - CTA: "Enable notifications for better experience, promise not to spam"
+
+F. INACTIVE_USER
+   - Trigger: has unread messages AND last_seen_at > N days ago
+   - Channel: EMAIL (fallback even if notifications_enabled=true, since user is ignoring app)
+   - Content: career growth advice + gentle reminder about continuing conversation in app
+   - CTA: "You have unread messages in app"
 
 STEP 3: GENERATE CONTENT
 
