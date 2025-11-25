@@ -44,7 +44,7 @@ def fetch_mailgun_unsubscribes(mailgun_api_key: str, mailgun_domain: str) -> lis
         # Safety check: prevent infinite loops
         if page_count > 100:
             error("Too many pages fetched, stopping", {"page_count": page_count})
-            break
+            raise ValueError(f"Mailgun pagination limit exceeded: {page_count} pages. Cannot safely sync unsubscribes.")
         
         # Check if we're repeating the same URL (infinite loop protection)
         if previous_url == url:
