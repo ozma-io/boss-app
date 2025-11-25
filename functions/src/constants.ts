@@ -91,8 +91,9 @@ Communication Style (CRITICAL):
 
 /**
  * Reminder prompt to keep AI focused on career coaching
+ * IMPORTANT: Keep this short and focused on main goals only, not long detailed instructions
  */
-export const CHAT_REMINDER_PROMPT = 'Remember: Focus on career coaching and professional development. Stay on topic and provide helpful, actionable guidance. IMPORTANT: Reference specific details from the user\'s profile, their goal, bosses, and timeline entries. Avoid generic advice - always make your recommendations concrete and personalized to their actual situation. CRITICAL: Keep response to 1-2 paragraphs (3 max), 2-3 sentences per paragraph. If asking questions, ask ONLY ONE question, never multiple. Write like chatting with a friend - short, natural, conversational. Use irony and humor where appropriate. Sometimes surprise with unexpected ideas or playful takes. Plain text only.';
+export const CHAT_REMINDER_PROMPT = 'Remember: Help user with career and relationship with boss. Reference specific user data (profile, goal, timeline). Keep responses 1-2 paragraphs max. Be conversational, use humor and surprise. Plain text only.';
 
 // ============================================================================
 // Apple App Store Configuration
