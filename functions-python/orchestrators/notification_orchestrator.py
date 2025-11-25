@@ -21,7 +21,7 @@ See functions/src/constants.ts (CHAT_SYSTEM_PROMPT) for AI behavior details.
 STEP 1: CHOOSE CHANNEL
 
 Decision logic:
-- PUSH: if notifications_enabled=true AND fcm_token exists AND user was active in app in last 6 days (last_seen_at)
+- PUSH: if notifications_enabled=true AND fcm_token exists AND user was active in app in last 6 days (lastActivityAt)
 - EMAIL: if push not available AND email_unsubscribed=false
 - NO CHANNEL: if push disabled/inactive AND email_unsubscribed=true → log error to Sentry, skip user
 
@@ -32,7 +32,7 @@ STEP 2: CHOOSE SCENARIO
 Each scenario defines content context, channel, and CTA:
 
 A. EMAIL_ONLY_USER
-   - Trigger: never logged into app (last_login_at is null)
+   - Trigger: never logged into app (lastActivityAt is null)
    - Channel: EMAIL
    - Content: career coaching based on onboarding data - show value through actionable advice
    - CTA: "App is more convenient, you can ask questions to your AI, download and try it"
@@ -63,7 +63,7 @@ E. ACTIVE_USER_EMAIL
    - CTA: "Enable notifications for better experience, promise not to spam"
 
 F. INACTIVE_USER
-   - Trigger: has unread messages AND last_seen_at > N days ago
+   - Trigger: has unread messages AND lastActivityAt > N days ago
    - Channel: EMAIL (fallback even if notifications_enabled=true, since user is ignoring app)
    - Content: career growth advice + gentle reminder about continuing conversation in app
    - CTA: "You have unread messages in app"
