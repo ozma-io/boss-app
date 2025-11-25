@@ -23,7 +23,7 @@ This is the ONBOARDING WELCOME email sent IMMEDIATELY after user completes web f
 
 Email Requirements:
 - Title: Welcoming subject line that confirms data is ready (plain text, no markup)
-- Body: Use Markdown formatting for readability (headings, bold, lists where appropriate)
+- Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
 - Tone: Warm, enthusiastic, professional - like an excited coach who just got their info
 - Length: 4-5 paragraphs maximum
 - CRITICAL: Must mention AT LEAST 2-3 specific pieces of data they entered
@@ -61,7 +61,7 @@ This is the user's FIRST notification email. Your goal is to:
 
 Email Requirements:
 - Title: Clear, engaging subject line that hints at personalized insight (plain text, no markup)
-- Body: Use Markdown formatting for readability (headings, bold, lists where appropriate)
+- Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
 - Tone: Professional yet warm, encouraging, with irony and humor where appropriate
 - Length: 3-4 short paragraphs maximum - keep it concise
 - CRITICAL: Reference specific details from their profile (name, goal, boss details, recent entries)
@@ -92,7 +92,7 @@ This is a follow-up notification email. Your goal is to:
 
 Email Requirements:
 - Title: Clear subject line highlighting the key insight or question (plain text, no markup)
-- Body: Use Markdown formatting for readability (headings, bold, lists where appropriate)
+- Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
 - Tone: Professional yet warm, like checking in with a colleague, with irony and humor where appropriate
 - Length: 3-4 short paragraphs maximum - keep it concise
 - CRITICAL: Reference specific timeline entries, boss details, and their goal
