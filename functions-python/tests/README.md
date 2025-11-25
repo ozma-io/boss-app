@@ -75,6 +75,29 @@ Each test displays:
 
 If LangFuse keys are configured, traces are available in LangFuse dashboard with session ID: `test_session_{user_id}`
 
+### test_email_sending.py
+
+Sends a test email to the test user (test@ozma.io) by creating an email document in Firestore.
+
+**Requirements:**
+- Test user with email test@ozma.io must exist in database
+
+**Usage:**
+```bash
+source .venv/bin/activate
+python tests/test_email_sending.py
+```
+
+**What it does:**
+1. Finds user with email test@ozma.io in Firestore
+2. Creates email document with state PLANNED in users/{userId}/emails collection
+3. TypeScript trigger then processes the email (Markdown → HTML → template → Mailgun)
+
+**Output:**
+- Email document ID
+- User ID and email
+- Firestore path to monitor (state changes from PLANNED to SENT or FAILED)
+
 ## Authentication
 
 Tests use Google Application Default Credentials. Make sure you've run:

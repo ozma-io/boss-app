@@ -1,6 +1,9 @@
 {
   "venvPath": ".",
   "venv": ".venv",
+  "exclude": [
+    "tests/**"
+  ],
   "typeCheckingMode": "off",
   "reportMissingImports": "none",
   "reportMissingTypeStubs": "none",

@@ -168,7 +168,7 @@ Configured in `functions/src/constants.ts`:
 export const MAILGUN_CONFIG = {
   apiKey: process.env.MAILGUN_API_KEY || '', // From Secret Manager
   domain: 'mg.ozma.io', // Hardcoded, not a secret
-  from: 'BossUp <hello@ozma.io>',
+  from: 'BossUp <bossup@ozma.io>',
 };
 ```
 
