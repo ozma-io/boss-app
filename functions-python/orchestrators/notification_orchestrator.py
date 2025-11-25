@@ -7,6 +7,23 @@ Core business logic for notification orchestration:
 3. Create messages and email operations
 
 All functions are pure and take db client as parameter for testability.
+
+HIGH-LEVEL SCENARIOS:
+
+Scenario 1: Email-only user (never logged into app)
+- Send AI career coaching advice via email based on data they provided during onboarding
+- Always include CTA at bottom: app is more convenient, you can ask questions to your AI, download and try it
+
+Scenario 2: Active app user with notifications enabled
+- Send AI coaching advice via push notifications
+- Frequency: every 2 days (may increase frequency initially)
+
+Scenario 3: App user with notifications disabled
+- Send AI coaching advice via email (fallback channel)
+- Include reminder at bottom: notifications are disabled, enable them for better experience, promise not to spam
+
+All messages are from AI assistant persona, providing personalized career coaching.
+See functions/src/constants.ts (CHAT_SYSTEM_PROMPT) for AI assistant behavior details.
 """
 
 from typing import Any
