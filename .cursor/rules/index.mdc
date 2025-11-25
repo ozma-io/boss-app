@@ -47,6 +47,8 @@ npx eas-cli@latest workflow:run create-production-builds.yml
 - `utils/` - helper functions
 - `functions/` - Firebase Cloud Functions (TypeScript)
 - `functions-python/` - Firebase Cloud Functions (Python) - layered architecture: `orchestrators/` (business logic), `data/` (Firestore operations), `utils/` (logger, sentry)
+  - **Virtual Environment**: Uses `.venv` (configured in `pyrightconfig.json`)
+  - Install dependencies: `cd functions-python && source .venv/bin/activate && pip install -r requirements.txt`
 - `firestore/` - Firebase config, database migrations (run from root: `npx tsx firestore/migrations/run-migration.ts <name> --yes`)
 - `docs/templates/` - store submission materials (app review instructions, release notes, screenshots, etc.)
 
