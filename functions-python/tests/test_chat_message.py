@@ -1,32 +1,30 @@
 # pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownParameterType=false, reportUnknownArgumentType=false, reportMissingTypeStubs=false, reportMissingImports=false, reportMissingParameterType=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
 
 """
-Test script to send push notification to test user using production LLM functions.
+Test script to create chat message for test user using production LLM functions.
 
 This script:
-1. Generates push notification content using generate_first_push_notification() (production function)
+1. Generates chat message content using generate_first_push_notification() (production function)
 2. Adds assistant message to chat thread using add_assistant_message_to_chat()
 3. The Firestore trigger detects the new message and sends FCM push notification automatically
 
 This tests the full pipeline including:
 - LLM-based content generation (OpenAI structured output)
 - Chat message creation
-- Firestore trigger for push notification
-- FCM delivery to device
+- Firestore trigger (automatically sends push notification)
 
 Requirements:
 1. Set GOOGLE_APPLICATION_CREDENTIALS environment variable
 2. Set OPENAI_API_KEY environment variable (in .env file)
 3. Install dependencies: pip install -r requirements.txt
 4. Test user (test@ozma.io) must exist in the database
-5. Test user must have FCM token configured (notifications_enabled=true)
 
 Usage:
     export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
-    python tests/test_push_sending.py [--wait]
+    python tests/test_chat_message.py [--wait]
     
 Options:
-    --wait    Wait and monitor message status until delivered or failed (max 60 seconds)
+    --wait    Wait and verify message was created in chat (max 10 seconds)
 """
 
 import logging
@@ -108,16 +106,16 @@ def find_test_user(db) -> tuple[str, str] | None:
         raise
 
 
-def check_push_notification_setup(db, user_id: str) -> bool:
+def check_user_data(db, user_id: str) -> bool:
     """
-    Check if user has push notifications configured.
+    Check if user document exists and has basic data.
     
     Args:
         db: Firestore client
         user_id: User document ID
         
     Returns:
-        True if push notifications are configured, False otherwise
+        True if user exists, False otherwise
     """
     try:
         user_ref = db.collection("users").document(user_id)
@@ -132,32 +130,17 @@ def check_push_notification_setup(db, user_id: str) -> bool:
             logger.error(f"User {user_id} has no data")
             return False
         
-        notifications_enabled = user_data.get("notifications_enabled", False)
-        fcm_token = user_data.get("fcm_token")
-        
-        if not notifications_enabled:
-            logger.warning(f"User {user_id} has notifications disabled (notifications_enabled=false)")
-            return False
-        
-        if not fcm_token:
-            logger.warning(f"User {user_id} has no FCM token")
-            return False
-        
-        logger.info(f"User {user_id} has push notifications configured")
+        logger.info(f"User {user_id} exists with data")
         return True
         
     except Exception as error:
-        logger.error(f"Failed to check push notification setup: {error}")
+        logger.error(f"Failed to check user data: {error}")
         raise
 
 
 def monitor_message_status(db, user_id: str, thread_id: str, message_id: str, max_wait_seconds: int) -> None:
     """
     Monitor chat message document to verify it was created.
-    
-    Note: FCM delivery status is not directly tracked in Firestore,
-    so we can only verify the message was created in the chat thread.
-    The actual FCM notification is sent by the TypeScript trigger.
     
     Args:
         db: Firestore client
@@ -167,7 +150,7 @@ def monitor_message_status(db, user_id: str, thread_id: str, message_id: str, ma
         max_wait_seconds: Maximum seconds to wait
     """
     print("\n" + "-" * 100)
-    print("Monitoring message status...")
+    print("Verifying message in chat thread...")
     print("-" * 100)
     
     message_ref = db.collection("users").document(user_id).collection("chatThreads").document(thread_id).collection("messages").document(message_id)
@@ -179,7 +162,7 @@ def monitor_message_status(db, user_id: str, thread_id: str, message_id: str, ma
         
         if elapsed >= max_wait_seconds:
             print(f"\n⏱️  Timeout after {max_wait_seconds} seconds")
-            print("   Message is in chat thread, FCM notification should have been sent")
+            print("   Message should be in chat thread")
             print(f"   Check manually: users/{user_id}/chatThreads/{thread_id}/messages/{message_id}")
             break
         
@@ -200,11 +183,11 @@ def monitor_message_status(db, user_id: str, thread_id: str, message_id: str, ma
             print(f"   [{int(elapsed)}s] Message exists in chat (role: {role})", end="\r")
             
             if role == "assistant" and timestamp:
-                print("\n\n✅ Message created successfully in chat thread!")
+                print("\n\n✅ Message verified in chat thread!")
                 print(f"   Time taken: {int(elapsed)} seconds")
                 print(f"   Timestamp: {timestamp}")
-                print("\n📱 FCM push notification should have been sent by the TypeScript trigger")
-                print("   Check your device to verify notification delivery")
+                print("\n💬 Message is successfully stored in Firestore")
+                print("   TypeScript trigger will handle push notification automatically")
                 break
             
             time.sleep(check_interval)
@@ -217,12 +200,12 @@ def monitor_message_status(db, user_id: str, thread_id: str, message_id: str, ma
 
 
 def main() -> None:
-    """Run test to send push notification to test user."""
+    """Run test to create chat message for test user."""
     # Check for --wait flag
     wait_for_result = "--wait" in sys.argv
     
     print("\n" + "=" * 100)
-    print("  Testing Push Notification Sending to test@ozma.io")
+    print("  Testing Chat Message Creation for test@ozma.io")
     print("=" * 100)
     
     # Check credentials
@@ -252,11 +235,10 @@ def main() -> None:
     
     user_id, user_email = user_info
     
-    # Check push notification setup
-    if not check_push_notification_setup(db, user_id):
-        print("\n⚠️  Warning: Push notifications may not be properly configured for this user")
-        print("   The script will continue, but FCM notification may not be delivered")
-        print()
+    # Check user data exists
+    if not check_user_data(db, user_id):
+        logger.error("Cannot proceed without valid user data")
+        sys.exit(1)
     
     # Import required functions
     try:
@@ -266,16 +248,16 @@ def main() -> None:
         logger.error(f"Failed to import functions: {error}")
         sys.exit(1)
     
-    # Generate push notification content using production LLM function
+    # Generate chat message content using production LLM function
     print("\n" + "-" * 100)
-    print("Generating push notification content using LLM (first push notification)...")
+    print("Generating chat message content using LLM (first push notification prompt)...")
     print("-" * 100)
     
     try:
         push_content = generate_first_push_notification(
             db=db,
             user_id=user_id,
-            session_id="test_push_sending_script",
+            session_id="test_chat_message_script",
         )
         
         message_text = push_content.message
@@ -288,9 +270,9 @@ def main() -> None:
         logger.error(f"Content generation failed: {error}")
         sys.exit(1)
     
-    # Send push notification
+    # Create assistant message in chat
     print("\n" + "-" * 100)
-    print(f"Adding assistant message to chat for: {user_email}")
+    print(f"Creating assistant message in chat for: {user_email}")
     print("-" * 100)
     
     try:
@@ -302,14 +284,14 @@ def main() -> None:
             thread_id=thread_id,
         )
         
-        print("\n✅ Message added to chat successfully!")
+        print("\n✅ Assistant message created successfully!")
         print(f"   User ID: {user_id}")
         print(f"   Thread ID: {thread_id}")
         print(f"   Message ID: {message_id}")
         print(f"   Message: {message_text}")
-        print("\n📱 Push notification trigger should fire automatically (TypeScript trigger)")
+        print("\n💬 Message is now in chat thread")
         print(f"   Check Firestore: users/{user_id}/chatThreads/{thread_id}/messages/{message_id}")
-        print("   Check your device for push notification")
+        print("   TypeScript trigger will automatically send push notification")
         
         # Wait for message to be verified if --wait flag is provided
         if wait_for_result:
