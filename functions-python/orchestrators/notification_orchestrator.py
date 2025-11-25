@@ -24,6 +24,48 @@ Scenario 3: App user with notifications disabled
 
 All messages are from AI assistant persona, providing personalized career coaching.
 See functions/src/constants.ts (CHAT_SYSTEM_PROMPT) for AI assistant behavior details.
+
+SCENARIOS TAXONOMY (Decision Tree):
+
+1. Email unsubscribed?
+   → YES: SKIP (do not send anything)
+   → NO: continue to step 2
+   
+   Implementation: Sync unsubscribe list from Mailgun API at start of each run,
+   update Firestore users with email_unsubscribed flag, then use cached flag.
+   One API call per function run, not per user.
+
+2. Has user ever logged into app (last_login_at exists)?
+   → NO: SCENARIO A (email-only user)
+       └─ Channel: EMAIL
+       └─ CTA: "Download app to chat with AI"
+       └─ Frequency: may be more frequent initially
+   
+   → YES: continue to step 3
+
+3. FCM token exists + notifications_enabled?
+   → YES: continue to step 4
+   → NO: SCENARIO B (app user, notifications disabled)
+       └─ Channel: EMAIL
+       └─ CTA: "Enable notifications for better experience, promise not to spam"
+
+4. Is user ignoring app? (last_seen_at > N days ago AND unread_messages_count > 0)
+   → YES: SCENARIO C (inactive app user with unread messages)
+       └─ Channel: EMAIL (fallback to re-engage)
+       └─ CTA: "You have unread messages in app"
+   
+   → NO: SCENARIO D (active app user)
+       └─ Channel: PUSH
+       └─ No special CTA (user is already engaged)
+
+TIMING:
+- Function runs every 2 hours
+- Send if 48+ hours passed since last_notification_at (no timezone logic needed)
+- Some scenarios may have more frequent communication initially
+
+AI RESPONSIBILITY:
+- AI generates ONLY content (title + body in markdown)
+- Code handles: scenario detection, channel selection, CTA/disclaimer wrapping, timing logic
 """
 
 from typing import Any
