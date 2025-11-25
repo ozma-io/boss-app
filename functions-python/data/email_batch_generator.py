@@ -184,6 +184,62 @@ def _generate_single_email(
         )
 
 
+def _update_notification_counters_for_chunk(
+    db: firestore.Client,  # type: ignore
+    user_ids: list[str],
+) -> None:
+    """
+    Update notification counters for a chunk of users.
+    
+    CRITICAL: This must be called immediately after successfully writing messages
+    to prevent spam if subsequent operations fail.
+    
+    Args:
+        db: Firestore client instance
+        user_ids: List of user IDs to update (from one chunk)
+    """
+    if not user_ids:
+        return
+    
+    from datetime import datetime, timezone
+    
+    now = datetime.now(timezone.utc).isoformat()
+    batch = db.batch()  # type: ignore
+    
+    for user_id in user_ids:
+        user_ref = db.collection('users').document(user_id)  # type: ignore
+        batch.update(user_ref, {  # type: ignore
+            'notification_state.last_notification_at': now,
+            'notification_state.notification_count': firestore.Increment(1),  # type: ignore
+        })
+    
+    try:
+        batch.commit()  # type: ignore
+        info(
+            "Notification counters updated for chunk",
+            {"count": len(user_ids)}
+        )
+    except Exception as err:
+        # CRITICAL: Log to Sentry but don't raise
+        # Messages already sent - better to skip counter update than spam users
+        error(
+            "CRITICAL: Failed to update notification counters (messages already sent)",
+            {
+                "user_count": len(user_ids),
+                "error": str(err),
+            }
+        )
+        
+        with sentry_sdk.push_scope() as scope:  # type: ignore
+            scope.set_extra("user_count", len(user_ids))  # type: ignore
+            scope.set_extra("user_ids_sample", user_ids[:10])  # type: ignore
+            scope.set_level("error")  # type: ignore
+            sentry_sdk.capture_message(  # type: ignore
+                "Failed to update notification counters after sending messages",
+                level="error"
+            )
+
+
 def _write_emails_batch(
     db: firestore.Client,  # type: ignore
     prepared_emails: list[tuple[UserEmailTask, dict[str, Any]]],
@@ -193,6 +249,9 @@ def _write_emails_batch(
     
     Uses Firestore batch writes for efficiency (up to 500 operations per batch).
     Each email document triggers TypeScript Cloud Function for sending.
+    
+    CRITICAL: Updates notification counters immediately after each chunk to prevent
+    spam if subsequent operations fail.
     
     Args:
         db: Firestore client instance
@@ -250,6 +309,12 @@ def _write_emails_batch(
                     "total_chunks": len(chunks),
                 }
             )
+            
+            # CRITICAL: Update notification counters immediately after successful write
+            # to prevent spam if subsequent operations fail
+            user_ids = [task.user_id for task, _ in chunk]
+            _update_notification_counters_for_chunk(db, user_ids) # type: ignore
+            
         except Exception as err:
             error(
                 "Failed to commit batch write",

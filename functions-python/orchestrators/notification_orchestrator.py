@@ -89,10 +89,7 @@ TIMING (Progressive Intervals):
 - No timezone logic needed (UTC timestamps)
 """
 
-from datetime import datetime, timezone
 from typing import Any
-
-from firebase_admin import firestore  # type: ignore
 
 from data.batch_models import UserChatTask, UserEmailTask
 from data.chat_batch_generator import generate_chat_messages_in_parallel # type: ignore
@@ -106,75 +103,6 @@ from orchestrators.notification_logic import (
     should_send_notification,
 )
 from utils.logger import error, info, warn
-
-
-def chunk_list(items: list[Any], chunk_size: int) -> list[list[Any]]:
-    """
-    Split a list into chunks of specified size.
-    
-    Args:
-        items: List to split
-        chunk_size: Size of each chunk
-        
-    Returns:
-        List of chunks
-    """
-    chunks: list[list[Any]] = []
-    for i in range(0, len(items), chunk_size):
-        chunks.append(items[i:i + chunk_size])
-    return chunks
-
-
-def update_notification_states_batch(
-    db: Any,
-    user_ids: list[str]
-) -> None:
-    """
-    Update notification_state for all successfully sent notifications.
-    
-    Updates:
-    - notification_state.last_notification_at to current timestamp
-    - notification_state.notification_count incremented by 1
-    
-    Uses Firestore batch API for efficiency (up to 500 updates per batch).
-    
-    Args:
-        db: Firestore client instance
-        user_ids: List of user IDs to update
-    """
-    if not user_ids:
-        return
-    
-    now = datetime.now(timezone.utc).isoformat()
-    chunks = chunk_list(user_ids, 500)  # Firestore batch limit
-    
-    info("Updating notification states in batches", {
-        "total_users": len(user_ids),
-        "num_batches": len(chunks),
-    })
-    
-    for batch_idx, chunk in enumerate(chunks):
-        batch = db.batch()  # type: ignore
-        
-        for user_id in chunk:
-            user_ref = db.collection('users').document(user_id)  # type: ignore
-            batch.update(user_ref, {  # type: ignore
-                'notification_state.last_notification_at': now,
-                'notification_state.notification_count': firestore.Increment(1),  # type: ignore
-            })
-        
-        try:
-            batch.commit()  # type: ignore
-            info("Notification states batch committed", {
-                "batch_index": batch_idx + 1,
-                "batch_size": len(chunk),
-            })
-        except Exception as err:
-            error("Failed to commit notification states batch", {
-                "batch_index": batch_idx + 1,
-                "error": str(err),
-            })
-            raise
 
 
 def process_notification_orchestration(db: Any) -> dict[str, Any]:
@@ -338,27 +266,9 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
     else:
         info("STEP 3b: No push messages to generate", {})
     
-    # === STEP 4: Update notification states ===
-    info("STEP 4: Updating notification states", {})
-    
-    # Collect all successfully sent notifications (use set to prevent duplicates)
-    successful_user_ids: set[str] = set()
-    if email_result:
-        successful_user_ids.update([e.user_id for e in email_result.successful])
-    if push_result:
-        successful_user_ids.update([p.user_id for p in push_result.successful])
-    
-    successful_user_ids_list = list(successful_user_ids)
-    
-    if successful_user_ids_list:
-        try:
-            update_notification_states_batch(db, successful_user_ids_list)
-            info("Notification states updated", {"count": len(successful_user_ids_list)})
-        except Exception as err:
-            error("Failed to update notification states", {"error": str(err)})
-            # Don't raise - notifications were sent successfully
-    else:
-        info("No notification states to update", {})
+    # NOTE: Notification counters are now updated inside batch generators
+    # immediately after each chunk write to prevent spam if subsequent operations fail.
+    # See _update_notification_counters_for_chunk in email_batch_generator.py and chat_batch_generator.py
     
     # === Final statistics ===
     stats = {
@@ -440,6 +350,12 @@ def send_onboarding_welcome_email(db: Any, user_id: str) -> None:
             "user_id": user_id,
             "email_id": email_id,
         })
+        
+        # NOTE: We intentionally do NOT update notification_state.notification_count here.
+        # This counter is for PROACTIVE communication (AI reaching out to user).
+        # Onboarding email is REACTIVE communication - user submitted their email
+        # in the web funnel and expects to receive this welcome email.
+        # This is not spam risk - it's a direct response to user's action.
         
     except Exception as e:
         error("Failed to send onboarding welcome email", {
