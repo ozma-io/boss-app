@@ -130,11 +130,71 @@ def process_notification_orchestration(db: Any) -> int:
         # STUB: Notification logic placeholder
         # TODO: Implement 4-step flow (see docstring):
         # 1. Choose channel (PUSH vs EMAIL)
-        # 2. Choose scenario (A/B/C/D)
+        # 2. Choose scenario (A/B/C/D/E/F)
         # 3. Generate content (AI)
-        # 4. Send notification
+        # 4. Create Firestore document (triggers handle actual sending)
         # TODO: Add single-user mode for HTTP endpoint (immediate welcome email)
         # TODO: Add logic to sync mailgun unsubscribe list at function start
+        
+        # EXAMPLE CODE (commented out - will be uncommented when implementing):
+        # 
+        # from data.notification_content import (
+        #     generate_first_email_notification,
+        #     generate_ongoing_email_notification,
+        #     generate_first_push_notification,
+        #     generate_ongoing_push_notification,
+        # )
+        # from data.chat_operations import add_assistant_message_to_chat
+        # from data.email_operations import create_email_for_sending
+        # 
+        # # Example for EMAIL scenario (e.g., EMAIL_ONLY_USER or NEW_USER_EMAIL):
+        # if channel == 'EMAIL':
+        #     # Generate email content via AI (returns title and body_markdown)
+        #     ai_content = generate_first_email_notification(
+        #         db=db,
+        #         user_id=user_id,
+        #         session_id=None,
+        #     )
+        #     
+        #     # Create email document in Firestore
+        #     # TypeScript trigger will convert Markdown to HTML, wrap in template, and send via Mailgun
+        #     user_email = user_data.get('email', '')
+        #     create_email_for_sending(
+        #         db=db,
+        #         user_id=user_id,
+        #         to_email=user_email,
+        #         subject=ai_content.title,
+        #         body_markdown=ai_content.body,
+        #     )
+        #     
+        #     # Update notification state
+        #     db.collection('users').document(user_id).update({
+        #         'notification_state.last_notification_at': firestore.SERVER_TIMESTAMP,
+        #         'notification_state.notification_count': firestore.Increment(1),
+        #     })
+        # 
+        # # Example for PUSH scenario (e.g., NEW_USER_PUSH or ACTIVE_USER_PUSH):
+        # elif channel == 'PUSH':
+        #     # Generate push content via AI
+        #     ai_content = generate_first_push_notification(
+        #         db=db,
+        #         user_id=user_id,
+        #         session_id=None,
+        #     )
+        #     
+        #     # Add message to chat (Firestore trigger sends push notification automatically)
+        #     add_assistant_message_to_chat(
+        #         db=db,
+        #         user_id=user_id,
+        #         message_text=ai_content.message,
+        #         thread_id='default',
+        #     )
+        #     
+        #     # Update notification state
+        #     db.collection('users').document(user_id).update({
+        #         'notification_state.last_notification_at': firestore.SERVER_TIMESTAMP,
+        #         'notification_state.notification_count': firestore.Increment(1),
+        #     })
         
         info("Processed user", {"user_id": user_id})
         processed_count += 1
