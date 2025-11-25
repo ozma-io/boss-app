@@ -44,16 +44,6 @@ python tests/test_intervals.py
 - Statistics: interval distribution and ready count
 - Shows which users will receive notifications based on progressive interval logic
 
-### test_local.py
-
-Tests the complete notification orchestration logic locally without deploying.
-
-**Usage:**
-```bash
-source .venv/bin/activate
-python tests/test_local.py
-```
-
 ## Authentication
 
 Tests use Google Application Default Credentials. Make sure you've run:
