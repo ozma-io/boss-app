@@ -89,7 +89,10 @@ TIMING (Progressive Intervals):
 - No timezone logic needed (UTC timestamps)
 """
 
+from datetime import datetime, timezone
 from typing import Any
+
+import sentry_sdk  # type: ignore
 
 from data.batch_models import UserChatTask, UserEmailTask
 from data.chat_batch_generator import generate_chat_messages_in_parallel # type: ignore
@@ -124,6 +127,41 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
     Returns:
         Statistics dict with counts of sent/failed notifications
     """
+    start_time = datetime.now(timezone.utc)
+    slow_execution_alerted = False
+    max_duration_minutes = 20
+    
+    def check_execution_time(step_name: str) -> None:
+        """Check if execution time exceeds threshold and alert to Sentry once."""
+        nonlocal slow_execution_alerted
+        
+        if slow_execution_alerted:
+            return
+        
+        elapsed = datetime.now(timezone.utc) - start_time
+        elapsed_minutes = elapsed.total_seconds() / 60
+        
+        if elapsed_minutes >= max_duration_minutes:
+            warn(
+                f"Notification orchestration is running slowly (>{max_duration_minutes}min)",
+                {
+                    "elapsed_minutes": round(elapsed_minutes, 2),
+                    "current_step": step_name,
+                }
+            )
+            
+            with sentry_sdk.push_scope() as scope:  # type: ignore
+                scope.set_extra("elapsed_minutes", round(elapsed_minutes, 2))  # type: ignore
+                scope.set_extra("current_step", step_name)  # type: ignore
+                scope.set_extra("max_duration_minutes", max_duration_minutes)  # type: ignore
+                scope.set_level("warning")  # type: ignore
+                sentry_sdk.capture_message(  # type: ignore
+                    f"Notification orchestration exceeds {max_duration_minutes} minutes",
+                    level="warning"
+                )
+            
+            slow_execution_alerted = True
+    
     info("=== Starting Notification Orchestration ===", {})
     
     # === STEP 0: Sync Mailgun unsubscribes ===
@@ -133,6 +171,8 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
         info("Mailgun sync complete", {"unsubscribed_count": unsubscribe_count})
     except Exception as err:
         error("Mailgun sync failed, continuing anyway", {"error": str(err)})
+    
+    check_execution_time("STEP 0: Mailgun sync")
     
     # === STEP 1: Query all users ===
     info("STEP 1: Querying users from Firestore", {})
@@ -157,6 +197,8 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
     except Exception as err:
         error("Failed to query users", {"error": str(err)})
         raise
+    
+    check_execution_time("STEP 1: User query")
     
     # === STEP 2: Filter and categorize users ===
     info("STEP 2: Filtering and categorizing users", {})
@@ -225,6 +267,8 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
         "skipped_no_channel": skipped_no_channel,
     })
     
+    check_execution_time("STEP 2: Categorization")
+    
     # === STEP 3a: Batch generate emails ===
     email_result = None
     if email_tasks:
@@ -246,6 +290,8 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
     else:
         info("STEP 3a: No emails to generate", {})
     
+    check_execution_time("STEP 3a: Email generation")
+    
     # === STEP 3b: Batch generate push notifications ===
     push_result = None
     if push_tasks:
@@ -266,11 +312,17 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
     else:
         info("STEP 3b: No push messages to generate", {})
     
+    check_execution_time("STEP 3b: Push generation")
+    
     # NOTE: Notification counters are now updated inside batch generators
     # immediately after each chunk write to prevent spam if subsequent operations fail.
     # See _update_notification_counters_for_chunk in email_batch_generator.py and chat_batch_generator.py
     
     # === Final statistics ===
+    end_time = datetime.now(timezone.utc)
+    total_duration = end_time - start_time
+    duration_minutes = total_duration.total_seconds() / 60
+    
     stats = {
         "total_users": len(all_users),
         "emails_sent": email_result.success_count if email_result else 0,
@@ -279,6 +331,7 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
         "pushes_failed": push_result.failure_count if push_result else 0,
         "skipped_timing": skipped_timing,
         "skipped_no_channel": skipped_no_channel,
+        "duration_minutes": round(duration_minutes, 2),
     }
     
     info("=== Notification Orchestration Complete ===", stats)
