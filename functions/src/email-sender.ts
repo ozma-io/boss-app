@@ -17,7 +17,7 @@ import { markdownToHtml } from './markdown-renderer';
 const mailgunApiKey = defineSecret('MAILGUN_API_KEY');
 
 // Mailgun configuration
-const MAILGUN_DOMAIN = 'mg.ozma.io';
+const MAILGUN_DOMAIN = 'mailgun.services.ozma.io';
 const MAILGUN_FROM = 'BossUp <hello@ozma.io>';
 
 interface EmailDocument {
