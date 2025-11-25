@@ -112,3 +112,8 @@ AI-powered chat feature with OpenAI GPT-5:
 - **Schema (Source of Truth):** `firestore/schemas/chat.schema.ts` - OpenAI-compatible multimodal format
 - **Types:** `types/index.ts` (imports from schema) + `functions/src/types/chat.types.ts` (imports from schema)
 - **Config:** Message history window (24h), model selection in `functions/src/constants.ts`
+
+## LLM Prompts
+Files containing LLM system prompts:
+- `functions/src/constants.ts`
+- `functions-python/data/notification_prompts.py`
