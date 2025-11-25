@@ -43,14 +43,26 @@ npx eas-cli@latest workflow:run create-production-builds.yml
 - `app/` - routing and screens
 - `components/` - reusable UI components
 - `services/` - Firebase services (auth, firestore, notifications)
-- `types/` - TypeScript type definitions
+- `types/` - TypeScript type definitions (imports from schemas)
 - `utils/` - helper functions
 - `functions/` - Firebase Cloud Functions (TypeScript)
 - `functions-python/` - Firebase Cloud Functions (Python) - layered architecture: `orchestrators/` (business logic), `data/` (Firestore operations), `utils/` (logger, sentry)
   - **Virtual Environment**: Uses `.venv` (configured in `pyrightconfig.json`)
   - Install dependencies: `cd functions-python && source .venv/bin/activate && pip install -r requirements.txt`
-- `firestore/` - Firebase config, database migrations (run from root: `npx tsx firestore/migrations/run-migration.ts <name> --yes`)
+- `firestore/` - Firebase config, database migrations, **schemas (single source of truth)**
+  - `schemas/` - TypeScript schemas defining Firestore document structure (UserSchema, BossSchema, ChatMessageSchema, etc.)
+  - All type definitions for Firestore data originate here
+  - Used by: `types/index.ts` (app), `functions/src/types/` (Cloud Functions)
+  - Run migrations from root: `npx tsx firestore/migrations/run-migration.ts <name> --yes`
 - `docs/templates/` - store submission materials (app review instructions, release notes, screenshots, etc.)
+
+## Type System Architecture
+**Single Source of Truth: `firestore/schemas/`**
+- All Firestore document schemas defined in `firestore/schemas/*.schema.ts`
+- `types/index.ts` imports from schemas and provides derived types for app use
+- `functions/src/types/` imports from schemas for Cloud Functions
+- Custom fields use strict typing: `[key: 'custom_${string}']: string | string[] | number | boolean | null`
+- Never duplicate type definitions - always import from schemas
 
 ## Firebase Data Model
 - Users: `/users/{userId}`
@@ -97,6 +109,6 @@ AI-powered chat feature with OpenAI GPT-5:
 - **Frontend:** `app/chat.tsx` - chat screen with typing indicator
 - **Service:** `services/chat.service.ts` - message management, AI response triggering
 - **Backend:** `functions/src/chat.ts` - Cloud Function with OpenAI API integration
-- **Schema:** `firestore/schemas/chat.schema.ts` - OpenAI-compatible multimodal format
-- **Types:** `types/index.ts` + `functions/src/types/chat.types.ts`
+- **Schema (Source of Truth):** `firestore/schemas/chat.schema.ts` - OpenAI-compatible multimodal format
+- **Types:** `types/index.ts` (imports from schema) + `functions/src/types/chat.types.ts` (imports from schema)
 - **Config:** Message history window (24h), model selection in `functions/src/constants.ts`

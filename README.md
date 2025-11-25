@@ -169,21 +169,70 @@ boss-app/
 ├── services/               # Firebase services (auth, firestore, notifications, chat)
 │   ├── chat.service.ts    # Chat service (messages, AI response triggering)
 │   └── iap.service.ts     # In-app purchase service (iOS/Android)
-├── types/                  # TypeScript type definitions
+├── types/                  # TypeScript type definitions (imports from schemas)
+│   └── index.ts           # Derived types for app use
 ├── functions/              # Firebase Cloud Functions (TypeScript)
 │   └── src/
 │       ├── chat.ts        # OpenAI integration (GPT-5)
 │       ├── iap-verification.ts # IAP receipt verification (Apple/Google)
-│       └── types/chat.types.ts
+│       └── types/chat.types.ts # Cloud Function types (import from schemas)
 ├── functions-python/       # Firebase Cloud Functions (Python) - layered architecture: orchestrators/ (business logic), data/ (Firestore ops), utils/ (logger, sentry)
 ├── firestore/              # Database tooling
-│   ├── schemas/           # TypeScript schemas (not deployed)
-│   │   └── chat.schema.ts # Chat data schemas
+│   ├── schemas/           # **SINGLE SOURCE OF TRUTH** for type definitions
+│   │   ├── user.schema.ts    # User document schema
+│   │   ├── boss.schema.ts    # Boss document schema
+│   │   ├── chat.schema.ts    # Chat data schemas (OpenAI-compatible)
+│   │   ├── entry.schema.ts   # Timeline entry schemas
+│   │   └── index.ts          # Exports all schemas
 │   └── migrations/        # Data migration scripts
 ├── docs/                   # Documentation
 ├── scripts/                # Automation scripts
 ├── firestore.rules         # Firestore Security Rules
 └── firestore.indexes.json  # Firestore Indexes
 ```
+
+### Type System Architecture
+
+**Single Source of Truth: `firestore/schemas/`**
+
+All Firestore document type definitions originate from schemas:
+
+```typescript
+// ✅ CORRECT: Schemas define the structure
+// firestore/schemas/user.schema.ts
+export interface UserSchema {
+  email: string;
+  name: string;
+  // Custom fields with strict typing
+  [key: `custom_${string}`]: string | string[] | number | boolean | null | undefined;
+}
+
+// ✅ CORRECT: App types import from schemas
+// types/index.ts
+import type { UserSchema } from '@/firestore/schemas';
+export type UserProfile = UserSchema;
+
+// ✅ CORRECT: Cloud Functions import from schemas
+// functions/src/types/chat.types.ts
+import type { ChatMessageSchema } from '../../../firestore/schemas';
+export type FirestoreChatMessage = ChatMessageSchema;
+```
+
+**Architecture flow:**
+```
+firestore/schemas/          ← Single Source of Truth
+    ↓ imports
+types/index.ts              ← App types
+    ↓ used by
+app/, services/, components/
+
+firestore/schemas/          ← Single Source of Truth
+    ↓ imports
+functions/src/types/        ← Cloud Function types
+    ↓ used by
+functions/src/*.ts
+```
+
+**Never duplicate types** - always import from `firestore/schemas/`
 
 📖 **For detailed setup, see [SETUP.md](./SETUP.md)**
