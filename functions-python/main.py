@@ -10,6 +10,7 @@ from typing import Any
 import firebase_admin  # type: ignore
 from firebase_admin import firestore  # type: ignore
 from firebase_functions import scheduler_fn, firestore_fn
+from firebase_functions.params import SecretParam
 from orchestrators.notification_orchestrator import (
     process_notification_orchestration,
     send_onboarding_welcome_email,
@@ -19,6 +20,9 @@ from utils.sentry import init_sentry
 
 # Initialize Sentry for error monitoring
 init_sentry()
+
+# Define secrets
+mailgun_api_key = SecretParam('MAILGUN_API_KEY')
 
 
 def get_firestore_client() -> Any:
@@ -32,7 +36,11 @@ def get_firestore_client() -> Any:
     return firestore.client()  # type: ignore
 
 
-@scheduler_fn.on_schedule(schedule="every 2 hours", region="us-central1")
+@scheduler_fn.on_schedule(
+    schedule="every 2 hours",
+    region="us-central1",
+    secrets=[mailgun_api_key]
+)
 def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
     """
     Cloud Function wrapper for notification orchestration.

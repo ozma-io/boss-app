@@ -1,0 +1,287 @@
+"""
+Tests for Notification Logic
+
+SAFE TO RUN - NO REAL NOTIFICATIONS SENT:
+These tests only check pure decision logic functions (timing, channel, scenario).
+They work with test data (Python dicts) without any Firebase connection.
+
+NO connections to:
+- Firebase/Firestore (no real users)
+- OpenAI API (no AI generation)
+- Mailgun (no emails sent)
+- FCM (no push notifications)
+
+Tests timing, channel selection, and scenario detection logic.
+These are pure functions so they're easy to test without mocks.
+
+Safe to run anytime during development!
+"""
+
+from datetime import datetime, timedelta, timezone
+
+from orchestrators.notification_logic import (  # type: ignore
+    determine_channel,  # type: ignore
+    determine_scenario,  # type: ignore
+    is_inactive,  # type: ignore
+    is_new_user,  # type: ignore
+    should_send_notification,  # type: ignore
+    was_active_recently,  # type: ignore
+)
+
+def test_should_send_notification_first_notification() -> None:
+    """Test first notification timing (1 hour after registration)."""
+    now = datetime.now(timezone.utc)
+    
+    # Registered 2 hours ago - should send
+    user_2h_ago = {
+        'createdAt': (now - timedelta(hours=2)).isoformat(),
+        'notification_state': {
+            'notification_count': 0,
+        }
+    }
+    assert should_send_notification(user_2h_ago) is True
+    
+    # Registered 30 minutes ago - too soon
+    user_30m_ago = {
+        'createdAt': (now - timedelta(minutes=30)).isoformat(),
+        'notification_state': {
+            'notification_count': 0,
+        }
+    }
+    assert should_send_notification(user_30m_ago) is False
+
+
+def test_should_send_notification_progressive_intervals():
+    """Test progressive intervals (6h, 24h, 48h)."""
+    now = datetime.now(timezone.utc)
+    
+    # 2nd notification - needs 6 hours
+    user_2nd = {
+        'createdAt': (now - timedelta(days=1)).isoformat(),
+        'notification_state': {
+            'notification_count': 1,
+            'last_notification_at': (now - timedelta(hours=7)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_2nd) is True
+    
+    # 3rd notification - needs 24 hours
+    user_3rd = {
+        'createdAt': (now - timedelta(days=2)).isoformat(),
+        'notification_state': {
+            'notification_count': 2,
+            'last_notification_at': (now - timedelta(hours=25)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_3rd) is True
+    
+    # 4th+ notification - needs 48 hours
+    user_4th_too_soon = {
+        'createdAt': (now - timedelta(days=10)).isoformat(),
+        'notification_state': {
+            'notification_count': 5,
+            'last_notification_at': (now - timedelta(hours=24)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_4th_too_soon) is False
+    
+    user_4th_ok = {
+        'createdAt': (now - timedelta(days=10)).isoformat(),
+        'notification_state': {
+            'notification_count': 5,
+            'last_notification_at': (now - timedelta(hours=49)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_4th_ok) is True
+
+
+def test_was_active_recently():
+    """Test recent activity detection."""
+    now = datetime.now(timezone.utc)
+    
+    user_active = {
+        'lastActivityAt': (now - timedelta(days=3)).isoformat(),
+    }
+    assert was_active_recently(user_active, days=6) is True
+    assert was_active_recently(user_active, days=2) is False
+    
+    user_no_activity = {
+        'lastActivityAt': None,
+    }
+    assert was_active_recently(user_no_activity, days=6) is False
+
+
+def test_is_new_user():
+    """Test new user detection."""
+    now = datetime.now(timezone.utc)
+    
+    user_new = {
+        'createdAt': (now - timedelta(days=7)).isoformat(),
+    }
+    assert is_new_user(user_new, days=14) is True
+    assert is_new_user(user_new, days=5) is False
+    
+    user_old = {
+        'createdAt': (now - timedelta(days=30)).isoformat(),
+    }
+    assert is_new_user(user_old, days=14) is False
+
+
+def test_is_inactive():
+    """Test inactive user detection."""
+    now = datetime.now(timezone.utc)
+    
+    user_inactive = {
+        'lastActivityAt': (now - timedelta(days=10)).isoformat(),
+    }
+    assert is_inactive(user_inactive, days=7) is True
+    assert is_inactive(user_inactive, days=14) is False
+    
+    user_never_logged_in = {
+        'lastActivityAt': None,
+    }
+    assert is_inactive(user_never_logged_in, days=7) is False
+
+
+def test_determine_channel_push():
+    """Test PUSH channel selection."""
+    now = datetime.now(timezone.utc)
+    
+    user_push_eligible = {
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': 'valid_token',
+        'lastActivityAt': (now - timedelta(days=3)).isoformat(),
+    }
+    assert determine_channel(user_push_eligible) == 'PUSH'
+
+
+def test_determine_channel_email():
+    """Test EMAIL channel selection."""
+    now = datetime.now(timezone.utc)
+    
+    # No FCM token - fall back to email
+    user_email_no_token = {
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': None,
+        'lastActivityAt': (now - timedelta(days=3)).isoformat(),
+        'email_unsubscribed': False,
+    }
+    assert determine_channel(user_email_no_token) == 'EMAIL'
+    
+    # Inactive - fall back to email
+    user_email_inactive = {
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': 'valid_token',
+        'lastActivityAt': (now - timedelta(days=10)).isoformat(),
+        'email_unsubscribed': False,
+    }
+    assert determine_channel(user_email_inactive) == 'EMAIL'
+
+
+def test_determine_channel_none():
+    """Test no channel available."""
+    user_no_channel = {
+        'notificationPermissionStatus': 'denied',
+        'fcmToken': None,
+        'email_unsubscribed': True,
+    }
+    assert determine_channel(user_no_channel) is None
+
+
+def test_determine_scenario_email_only_user():
+    """Test EMAIL_ONLY_USER scenario."""
+    user_never_logged_in = {
+        'lastActivityAt': None,
+        'createdAt': '2025-11-20T10:00:00Z',
+    }
+    assert determine_scenario(user_never_logged_in, 'EMAIL') == 'EMAIL_ONLY_USER'
+
+
+def test_determine_scenario_new_user():
+    """Test NEW_USER scenarios."""
+    now = datetime.now(timezone.utc)
+    
+    user_new = {
+        'lastActivityAt': (now - timedelta(days=5)).isoformat(),
+        'createdAt': (now - timedelta(days=7)).isoformat(),
+    }
+    
+    assert determine_scenario(user_new, 'PUSH') == 'NEW_USER_PUSH'
+    assert determine_scenario(user_new, 'EMAIL') == 'NEW_USER_EMAIL'
+
+
+def test_determine_scenario_active_user():
+    """Test ACTIVE_USER scenarios."""
+    now = datetime.now(timezone.utc)
+    
+    user_active = {
+        'lastActivityAt': (now - timedelta(days=2)).isoformat(),
+        'createdAt': (now - timedelta(days=30)).isoformat(),
+    }
+    
+    assert determine_scenario(user_active, 'PUSH') == 'ACTIVE_USER_PUSH'
+    assert determine_scenario(user_active, 'EMAIL') == 'ACTIVE_USER_EMAIL'
+
+
+def test_determine_scenario_inactive_user():
+    """Test INACTIVE_USER scenario."""
+    now = datetime.now(timezone.utc)
+    
+    # Note: INACTIVE_USER requires unread messages
+    # For now, get_unread_count() returns 0, so this won't trigger
+    # This test is placeholder for when unread count is implemented
+    user_inactive = {
+        'lastActivityAt': (now - timedelta(days=10)).isoformat(),
+        'createdAt': (now - timedelta(days=60)).isoformat(),
+    }
+    
+    # Will be ACTIVE_USER_EMAIL until unread count is implemented
+    # TODO: Update when get_unread_count() is implemented
+    assert determine_scenario(user_inactive, 'EMAIL') == 'ACTIVE_USER_EMAIL'
+
+
+if __name__ == '__main__':
+    print("Running notification logic tests...")
+    
+    # Timing tests
+    test_should_send_notification_first_notification()
+    print("✓ First notification timing")
+    
+    test_should_send_notification_progressive_intervals()
+    print("✓ Progressive intervals")
+    
+    # Helper function tests
+    test_was_active_recently()
+    print("✓ Recent activity detection")
+    
+    test_is_new_user()
+    print("✓ New user detection")
+    
+    test_is_inactive()
+    print("✓ Inactive user detection")
+    
+    # Channel selection tests
+    test_determine_channel_push()
+    print("✓ PUSH channel selection")
+    
+    test_determine_channel_email()
+    print("✓ EMAIL channel selection")
+    
+    test_determine_channel_none()
+    print("✓ No channel detection")
+    
+    # Scenario tests
+    test_determine_scenario_email_only_user()
+    print("✓ EMAIL_ONLY_USER scenario")
+    
+    test_determine_scenario_new_user()
+    print("✓ NEW_USER scenarios")
+    
+    test_determine_scenario_active_user()
+    print("✓ ACTIVE_USER scenarios")
+    
+    test_determine_scenario_inactive_user()
+    print("✓ INACTIVE_USER scenario (placeholder)")
+    
+    print("\n✅ All tests passed!")
+

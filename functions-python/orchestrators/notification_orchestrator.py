@@ -89,16 +89,103 @@ TIMING (Progressive Intervals):
 - No timezone logic needed (UTC timestamps)
 """
 
+from datetime import datetime, timezone
 from typing import Any
 
+from firebase_admin import firestore  # type: ignore
+
+from data.batch_models import UserChatTask, UserEmailTask
+from data.chat_batch_generator import generate_chat_messages_in_parallel # type: ignore
+from data.email_batch_generator import generate_emails_in_parallel # type: ignore
 from data.email_operations import create_email_for_sending  # type: ignore
 from data.notification_content import generate_onboarding_welcome_email  # type: ignore
+from data.notification_data import sync_mailgun_unsubscribes
+from orchestrators.notification_logic import (
+    determine_channel,
+    determine_scenario,
+    should_send_notification,
+)
 from utils.logger import error, info, warn
 
 
-def process_notification_orchestration(db: Any) -> int:
+def chunk_list(items: list[Any], chunk_size: int) -> list[list[Any]]:
+    """
+    Split a list into chunks of specified size.
+    
+    Args:
+        items: List to split
+        chunk_size: Size of each chunk
+        
+    Returns:
+        List of chunks
+    """
+    chunks: list[list[Any]] = []
+    for i in range(0, len(items), chunk_size):
+        chunks.append(items[i:i + chunk_size])
+    return chunks
+
+
+def update_notification_states_batch(
+    db: Any,
+    user_ids: list[str]
+) -> None:
+    """
+    Update notification_state for all successfully sent notifications.
+    
+    Updates:
+    - notification_state.last_notification_at to current timestamp
+    - notification_state.notification_count incremented by 1
+    
+    Uses Firestore batch API for efficiency (up to 500 updates per batch).
+    
+    Args:
+        db: Firestore client instance
+        user_ids: List of user IDs to update
+    """
+    if not user_ids:
+        return
+    
+    now = datetime.now(timezone.utc).isoformat()
+    chunks = chunk_list(user_ids, 500)  # Firestore batch limit
+    
+    info("Updating notification states in batches", {
+        "total_users": len(user_ids),
+        "num_batches": len(chunks),
+    })
+    
+    for batch_idx, chunk in enumerate(chunks):
+        batch = db.batch()  # type: ignore
+        
+        for user_id in chunk:
+            user_ref = db.collection('users').document(user_id)  # type: ignore
+            batch.update(user_ref, {  # type: ignore
+                'notification_state.last_notification_at': now,
+                'notification_state.notification_count': firestore.Increment(1),  # type: ignore
+            })
+        
+        try:
+            batch.commit()  # type: ignore
+            info("Notification states batch committed", {
+                "batch_index": batch_idx + 1,
+                "batch_size": len(chunk),
+            })
+        except Exception as err:
+            error("Failed to commit notification states batch", {
+                "batch_index": batch_idx + 1,
+                "error": str(err),
+            })
+            raise
+
+
+def process_notification_orchestration(db: Any) -> dict[str, Any]:
     """
     Core business logic for notification orchestration.
+    
+    Runs every 2 hours. Implements 4-step notification flow:
+    1. Query all users
+    2. Filter + categorize (timing, channel, scenario)
+    3. Batch generate notifications (parallel)
+    4. Update notification states
     
     Pure function that takes db client and processes notifications.
     Can be tested independently without Cloud Function decorators.
@@ -107,102 +194,162 @@ def process_notification_orchestration(db: Any) -> int:
         db: Firestore client instance
         
     Returns:
-        Number of users processed
+        Statistics dict with counts of sent/failed notifications
     """
-    info("Starting notification orchestration logic", {})
+    info("=== Starting Notification Orchestration ===", {})
     
-    # STUB: Query users (will add filtering logic later)
-    users_ref = db.collection('users')  # type: ignore
-    users = users_ref.limit(10).stream()  # type: ignore
+    # === STEP 0: Sync Mailgun unsubscribes ===
+    info("STEP 0: Syncing Mailgun unsubscribes", {})
+    try:
+        unsubscribe_count = sync_mailgun_unsubscribes(db)
+        info("Mailgun sync complete", {"unsubscribed_count": unsubscribe_count})
+    except Exception as err:
+        error("Mailgun sync failed, continuing anyway", {"error": str(err)})
     
-    processed_count: int = 0
-    for user_doc in users:  # type: ignore
-        user_id: str = user_doc.id  # type: ignore
-        user_data: dict[str, Any] | None = user_doc.to_dict()  # type: ignore
+    # === STEP 1: Query all users ===
+    info("STEP 1: Querying users from Firestore", {})
+    try:
+        users_ref = db.collection('users')  # type: ignore
+        users_snapshot = users_ref.stream()  # type: ignore
+        all_users: list[tuple[str, dict[str, Any]]] = []
         
-        if user_data is None:
-            warn("User has no data, skipping", {"user_id": user_id})
+        for user_doc in users_snapshot:  # type: ignore
+            user_id: str = user_doc.id  # type: ignore
+            user_data = user_doc.to_dict()  # type: ignore
+            
+            if user_data is None:
+                warn("User has no data, skipping", {"user_id": user_id})
+                continue
+            
+            # Add user_id to data for convenience in logic functions
+            user_data['id'] = user_id
+            all_users.append((user_id, user_data))
+        
+        info("User query complete", {"total_users": len(all_users)})
+    except Exception as err:
+        error("Failed to query users", {"error": str(err)})
+        raise
+    
+    # === STEP 2: Filter and categorize users ===
+    info("STEP 2: Filtering and categorizing users", {})
+    
+    email_tasks: list[UserEmailTask] = []
+    push_tasks: list[UserChatTask] = []
+    skipped_timing = 0
+    skipped_no_channel = 0
+    
+    for user_id, user_data in all_users:
+        # Check if enough time has passed for next notification
+        if not should_send_notification(user_data):
+            skipped_timing += 1
             continue
         
-        # STUB: Check if user is eligible for notifications
-        if user_data.get('email_unsubscribed', False):  # type: ignore
-            info("User is unsubscribed, skipping", {"user_id": user_id})
+        # Determine notification channel (PUSH or EMAIL)
+        channel = determine_channel(user_data)
+        if channel is None:
+            skipped_no_channel += 1
             continue
         
-        # STUB: Notification logic placeholder
-        # TODO: Implement 4-step flow (see docstring):
-        # 1. Choose channel (PUSH vs EMAIL)
-        # 2. Choose scenario (A/B/C/D/E/F)
-        # 3. Generate content (AI)
-        # 4. Create Firestore document (triggers handle actual sending)
-        # TODO: Add single-user mode for HTTP endpoint (immediate welcome email)
-        # TODO: Add logic to sync mailgun unsubscribe list at function start
+        # Determine scenario based on user state and channel
+        scenario = determine_scenario(user_data, channel)
         
-        # EXAMPLE CODE (commented out - will be uncommented when implementing):
-        # 
-        # from data.notification_content import (
-        #     generate_first_email_notification,
-        #     generate_ongoing_email_notification,
-        #     generate_first_push_notification,
-        #     generate_ongoing_push_notification,
-        # )
-        # from data.chat_operations import add_assistant_message_to_chat
-        # from data.email_operations import create_email_for_sending
-        # 
-        # # Example for EMAIL scenario (e.g., EMAIL_ONLY_USER or NEW_USER_EMAIL):
-        # if channel == 'EMAIL':
-        #     # Generate email content via AI (returns title and body_markdown)
-        #     ai_content = generate_first_email_notification(
-        #         db=db,
-        #         user_id=user_id,
-        #         session_id=None,
-        #     )
-        #     
-        #     # Create email document in Firestore
-        #     # TypeScript trigger will convert Markdown to HTML, wrap in template, and send via Mailgun
-        #     user_email = user_data.get('email', '')
-        #     create_email_for_sending(
-        #         db=db,
-        #         user_id=user_id,
-        #         to_email=user_email,
-        #         subject=ai_content.title,
-        #         body_markdown=ai_content.body,
-        #     )
-        #     
-        #     # Update notification state
-        #     db.collection('users').document(user_id).update({
-        #         'notification_state.last_notification_at': firestore.SERVER_TIMESTAMP,
-        #         'notification_state.notification_count': firestore.Increment(1),
-        #     })
-        # 
-        # # Example for PUSH scenario (e.g., NEW_USER_PUSH or ACTIVE_USER_PUSH):
-        # elif channel == 'PUSH':
-        #     # Generate push content via AI
-        #     ai_content = generate_first_push_notification(
-        #         db=db,
-        #         user_id=user_id,
-        #         session_id=None,
-        #     )
-        #     
-        #     # Add message to chat (Firestore trigger sends push notification automatically)
-        #     add_assistant_message_to_chat(
-        #         db=db,
-        #         user_id=user_id,
-        #         message_text=ai_content.message,
-        #         thread_id='default',
-        #     )
-        #     
-        #     # Update notification state
-        #     db.collection('users').document(user_id).update({
-        #         'notification_state.last_notification_at': firestore.SERVER_TIMESTAMP,
-        #         'notification_state.notification_count': firestore.Increment(1),
-        #     })
-        
-        info("Processed user", {"user_id": user_id})
-        processed_count += 1
+        # Create appropriate task for batch processing
+        if channel == 'EMAIL':
+            email_tasks.append(UserEmailTask(
+                user_id=user_id,
+                user_email=user_data.get('email', ''),
+                scenario=scenario,
+            ))
+        elif channel == 'PUSH':
+            push_tasks.append(UserChatTask(
+                user_id=user_id,
+                fcm_token=user_data.get('fcmToken', ''),
+                scenario=scenario,
+                thread_id=None,  # Auto-detect thread
+            ))
     
-    info("Notification orchestration completed", {"processed_count": processed_count})
-    return processed_count
+    info("Categorization complete", {
+        "total_users": len(all_users),
+        "eligible_emails": len(email_tasks),
+        "eligible_pushes": len(push_tasks),
+        "skipped_timing": skipped_timing,
+        "skipped_no_channel": skipped_no_channel,
+    })
+    
+    # === STEP 3a: Batch generate emails ===
+    email_result = None
+    if email_tasks:
+        info("STEP 3a: Generating emails in parallel", {"count": len(email_tasks)})
+        try:
+            email_result = generate_emails_in_parallel(
+                db=db,  # type: ignore
+                user_tasks=email_tasks,
+                batch_size=20,
+                max_workers=20,
+            )
+            info("Email generation complete", {
+                "successful": email_result.success_count,
+                "failed": email_result.failure_count,
+            })
+        except Exception as err:
+            error("Email generation failed", {"error": str(err)})
+            # Continue with push notifications even if emails failed
+    else:
+        info("STEP 3a: No emails to generate", {})
+    
+    # === STEP 3b: Batch generate push notifications ===
+    push_result = None
+    if push_tasks:
+        info("STEP 3b: Generating push messages in parallel", {"count": len(push_tasks)})
+        try:
+            push_result = generate_chat_messages_in_parallel(
+                db=db,  # type: ignore
+                user_tasks=push_tasks,
+                batch_size=10,
+                max_workers=10,
+            )
+            info("Push generation complete", {
+                "successful": push_result.success_count,
+                "failed": push_result.failure_count,
+            })
+        except Exception as err:
+            error("Push generation failed", {"error": str(err)})
+    else:
+        info("STEP 3b: No push messages to generate", {})
+    
+    # === STEP 4: Update notification states ===
+    info("STEP 4: Updating notification states", {})
+    
+    # Collect all successfully sent notifications
+    successful_user_ids: list[str] = []
+    if email_result:
+        successful_user_ids.extend([e.user_id for e in email_result.successful])
+    if push_result:
+        successful_user_ids.extend([p.user_id for p in push_result.successful])
+    
+    if successful_user_ids:
+        try:
+            update_notification_states_batch(db, successful_user_ids)
+            info("Notification states updated", {"count": len(successful_user_ids)})
+        except Exception as err:
+            error("Failed to update notification states", {"error": str(err)})
+            # Don't raise - notifications were sent successfully
+    else:
+        info("No notification states to update", {})
+    
+    # === Final statistics ===
+    stats = {
+        "total_users": len(all_users),
+        "emails_sent": email_result.success_count if email_result else 0,
+        "emails_failed": email_result.failure_count if email_result else 0,
+        "pushes_sent": push_result.success_count if push_result else 0,
+        "pushes_failed": push_result.failure_count if push_result else 0,
+        "skipped_timing": skipped_timing,
+        "skipped_no_channel": skipped_no_channel,
+    }
+    
+    info("=== Notification Orchestration Complete ===", stats)
+    return stats
 
 
 def send_onboarding_welcome_email(db: Any, user_id: str) -> None:
