@@ -44,6 +44,37 @@ python tests/test_intervals.py
 - Statistics: interval distribution and ready count
 - Shows which users will receive notifications based on progressive interval logic
 
+### test_content_generation.py
+
+Tests AI-powered notification content generation with OpenAI structured output.
+
+**Requirements:**
+- OPENAI_API_KEY in `.env` file
+- (Optional) LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY for observability
+
+**Usage:**
+```bash
+source .venv/bin/activate
+python tests/test_content_generation.py [user_id]
+```
+
+If no user_id provided, uses the first user found in database.
+
+**Output:**
+Tests all four content generation functions:
+1. First email notification (welcome email) - EmailNotificationContent
+2. Ongoing email notification (follow-up email) - EmailNotificationContent
+3. First push notification (welcome push) - ChatNotificationContent
+4. Ongoing push notification (follow-up push) - ChatNotificationContent
+
+Each test displays:
+- Reasoning (AI's chain-of-thought, first 200 chars)
+- Generated content (title/body or message)
+- Content length statistics
+- Success/failure status
+
+If LangFuse keys are configured, traces are available in LangFuse dashboard with session ID: `test_session_{user_id}`
+
 ## Authentication
 
 Tests use Google Application Default Credentials. Make sure you've run:
