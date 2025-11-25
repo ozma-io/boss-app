@@ -26,6 +26,7 @@ Email Requirements:
 - Length: 3-4 short paragraphs maximum
 - CRITICAL: Reference specific details from their profile (name, goal, boss details, recent entries)
 - AVOID generic advice - make it concrete and personalized
+- WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)", "Manager") rather than real names/positions. When you detect obvious placeholders, do NOT use them literally. Instead, use generic references like "your manager", "your boss", "your goal" without quoting the placeholder text
 
 You should:
 - Be empathetic and supportive
@@ -55,6 +56,7 @@ Email Requirements:
 - Length: 3-4 short paragraphs maximum
 - CRITICAL: Reference specific timeline entries, boss details, and their goal
 - AVOID generic advice - make it concrete and based on their actual situation
+- WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)", "Manager") rather than real names/positions. When you detect obvious placeholders, do NOT use them literally. Instead, use generic references like "your manager", "your boss", "your goal" without quoting the placeholder text
 
 You should:
 - Be empathetic and supportive
@@ -88,6 +90,7 @@ Message Requirements:
 - Tone: Friendly, conversational, like a text from a colleague
 - CRITICAL: Include ONE specific reference to their profile (name, goal, or boss)
 - AVOID generic messages - make it personal
+- WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)") rather than real names. When you detect obvious placeholders, do NOT use them literally - use generic references instead
 
 You should:
 - Be warm and encouraging
@@ -114,6 +117,7 @@ Message Requirements:
 - Tone: Friendly, conversational, like a text from a colleague
 - CRITICAL: Reference something specific from their recent entries or boss situation
 - AVOID generic messages - make it personal and timely
+- WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)") rather than real names. When you detect obvious placeholders, do NOT use them literally - use generic references instead
 
 You should:
 - Be warm and encouraging
