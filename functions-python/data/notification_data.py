@@ -24,13 +24,19 @@ NotificationScenario = Literal[
 
 
 class UserNotificationData(BaseModel):
-    """User data needed for notification orchestration"""
+    """
+    User data needed for notification orchestration.
+    
+    Note: last_notification_at comes from notification_state which tracks ONLY proactive
+    notifications (not reactive chat responses). This count includes both EMAIL and PUSH
+    notifications sent by the notification orchestrator.
+    """
     user_id: str
     email: str
     fcm_token: str | None
     notification_permission_status: str | None
     email_unsubscribed: bool
-    last_notification_at: str | None
+    last_notification_at: str | None  # From notification_state.last_notification_at (proactive only)
     last_activity_at: str | None
     created_at: str
     
@@ -38,7 +44,7 @@ class UserNotificationData(BaseModel):
     unread_count: int
     
     # Calculated fields
-    hours_since_last_communication: float
+    hours_since_last_communication: float  # Time since last PROACTIVE notification
 
 
 class UserContextData(BaseModel):
@@ -49,20 +55,52 @@ class UserContextData(BaseModel):
     chat_thread_data: dict[str, Any] | None
 
 
+def calculate_notification_interval(notification_count: int) -> int:
+    """
+    Calculate notification interval in hours based on notification count.
+    
+    Progressive engagement strategy:
+    - 1st notification: 1 hour after registration
+    - 2nd notification: 6 hours after 1st
+    - 3rd notification: 24 hours after 2nd
+    - 4+ notifications: 48 hours between each
+    
+    Args:
+        notification_count: Number of notifications already sent (0 = never sent)
+        
+    Returns:
+        Hours to wait before next notification
+    """
+    if notification_count == 0:
+        return 1  # First notification after 1 hour
+    elif notification_count == 1:
+        return 6  # Second notification after 6 hours
+    elif notification_count == 2:
+        return 24  # Third notification after 24 hours
+    else:
+        return 48  # All subsequent notifications after 48 hours
+
+
 def get_users_needing_notifications(db: Any, hours_threshold: int = 48) -> list[UserNotificationData]:
     """
-    Fetch all users who need notifications (48+ hours since last communication).
+    Fetch all users who need notifications based on progressive interval strategy.
     
     Pure function that takes db client as parameter.
     
+    Progressive intervals:
+    - 1st notification: 1 hour after registration
+    - 2nd notification: 6 hours after 1st
+    - 3rd notification: 24 hours after 2nd
+    - 4+ notifications: 48 hours between each
+    
     Args:
         db: Firestore client instance
-        hours_threshold: Minimum hours since last communication (default 48)
+        hours_threshold: Unused (kept for backward compatibility, intervals are dynamic now)
         
     Returns:
         List of users needing notifications with all required data
     """
-    info("Fetching users needing notifications", {"hours_threshold": hours_threshold})
+    info("Fetching users needing notifications (progressive intervals)", {})
     
     users_ref = db.collection('users')  # type: ignore
     all_users = users_ref.stream()  # type: ignore
@@ -82,10 +120,15 @@ def get_users_needing_notifications(db: Any, hours_threshold: int = 48) -> list[
         if user_data.get('email_unsubscribed', False):
             continue
         
-        # Get last communication time
+        # Get notification state
         notification_state = user_data.get('notification_state', {})
         last_notification_at_str = notification_state.get('last_notification_at')
+        notification_count = notification_state.get('notification_count', 0)
         
+        # Calculate required interval for this user based on their notification count
+        required_interval_hours = calculate_notification_interval(notification_count)
+        
+        # Determine last communication time
         if last_notification_at_str:
             last_communication_time = datetime.fromisoformat(last_notification_at_str.replace('Z', '+00:00'))
         else:
@@ -98,8 +141,8 @@ def get_users_needing_notifications(db: Any, hours_threshold: int = 48) -> list[
         
         hours_since = (current_time - last_communication_time).total_seconds() / 3600
         
-        # Skip if not enough time passed
-        if hours_since < hours_threshold:
+        # Skip if not enough time passed for this user's interval
+        if hours_since < required_interval_hours:
             continue
         
         # Get unread count from chat thread
@@ -309,6 +352,37 @@ def get_user_context_data(db: Any, user_id: str) -> UserContextData:
         boss_data=boss_data,
         chat_thread_data=chat_thread_data
     )
+
+
+def update_notification_state_after_send(db: Any, user_id: str) -> None:
+    """
+    Update notification state after successfully sending a PROACTIVE notification.
+    
+    This function should ONLY be called after proactive notifications (email or push).
+    Do NOT call this for reactive chat responses from the assistant.
+    
+    Updates:
+    - notification_state.last_notification_at (server timestamp)
+    - notification_state.notification_count (atomic increment)
+    
+    Args:
+        db: Firestore client instance
+        user_id: User ID
+    """
+    from firebase_admin import firestore  # type: ignore
+    
+    user_ref = db.collection('users').document(user_id)  # type: ignore
+    
+    # Atomic update with FieldValue.increment()
+    user_ref.update({  # type: ignore
+        'notification_state.last_notification_at': firestore.SERVER_TIMESTAMP,  # type: ignore
+        'notification_state.notification_count': firestore.Increment(1)  # type: ignore
+    })
+    
+    info("Updated notification state after proactive notification", {
+        "user_id": user_id,
+        "type": "proactive_notification"
+    })
 
 
 def sync_mailgun_unsubscribes(db: Any, mailgun_client: Any) -> int:

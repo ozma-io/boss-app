@@ -114,8 +114,11 @@ interface UserProfileBase {
   
   // Notification settings
   email_unsubscribed?: boolean;
+  // Tracks PROACTIVE notifications sent by the system (not reactive chat responses)
+  // Counts both EMAIL and PUSH notifications together for progressive interval calculation
   notification_state?: {
-    last_notification_at?: string;
+    last_notification_at?: string; // ISO 8601 timestamp - last proactive notification sent
+    notification_count?: number; // Total proactive notifications sent (email + push combined)
   };
   
   // Field metadata for custom fields

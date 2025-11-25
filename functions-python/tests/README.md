@@ -29,6 +29,21 @@ python tests/test_channels_scenarios.py
 - Table showing User ID, Email, Channel (PUSH/EMAIL/NONE), Scenario, and Hours since last communication
 - Statistics: channel distribution and scenario distribution
 
+### test_intervals.py
+
+Displays progressive notification intervals for all users.
+
+**Usage:**
+```bash
+source .venv/bin/activate
+python tests/test_intervals.py
+```
+
+**Output:**
+- Table showing User ID, Email, Notification Count, Required Interval, Hours Since Last, Ready status
+- Statistics: interval distribution and ready count
+- Shows which users will receive notifications based on progressive interval logic
+
 ### test_local.py
 
 Tests the complete notification orchestration logic locally without deploying.

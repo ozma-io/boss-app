@@ -79,10 +79,14 @@ STEP 4: SEND
 - Email via Mailgun
 - Update notification_state.last_notification_at
 
-TIMING:
+TIMING (Progressive Intervals):
 - Function runs every 2 hours
-- Send if 48+ hours passed since last_notification_at (no timezone logic needed)
-- Some scenarios may have more frequent communication initially (TBD)
+- Intervals depend on notification_count:
+  * 1st notification: 1 hour after registration
+  * 2nd notification: 6 hours after 1st
+  * 3rd notification: 24 hours after 2nd
+  * 4+ notifications: 48 hours between each
+- No timezone logic needed (UTC timestamps)
 """
 
 from typing import Any
