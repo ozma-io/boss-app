@@ -13,6 +13,8 @@ import { EMAIL_MONITORING_RECIPIENT } from './constants';
 import { renderEmailTemplate } from './email-template';
 import { logger } from './logger';
 import { markdownToHtml } from './markdown-renderer';
+import { retryWithBackoff } from './retry';
+import { Sentry } from './sentry';
 
 // Define Mailgun API key secret
 const mailgunApiKey = defineSecret('MAILGUN_API_KEY');
@@ -95,7 +97,7 @@ export const onEmailUpdated = onDocumentUpdated(
 );
 
 /**
- * Send email via Mailgun
+ * Send email via Mailgun with automatic retries
  */
 async function sendEmail(userId: string, emailId: string, emailData: EmailDocument): Promise<void> {
   const emailRef = admin.firestore().collection('users').doc(userId).collection('emails').doc(emailId);
@@ -122,7 +124,7 @@ async function sendEmail(userId: string, emailId: string, emailData: EmailDocume
       });
     });
 
-    logger.info('Sending email via Mailgun', {
+    logger.info('Sending email via Mailgun with retries', {
       feature: 'EmailSender',
       userId,
       emailId,
@@ -144,14 +146,20 @@ async function sendEmail(userId: string, emailId: string, emailData: EmailDocume
       key: mailgunApiKey.value(),
     });
 
-    // Send email via Mailgun
-    const result = await mg.messages.create(MAILGUN_DOMAIN, {
-      from: MAILGUN_FROM,
-      to: emailData.to,
-      bcc: EMAIL_MONITORING_RECIPIENT,
-      subject: emailData.subject,
-      html: html,
-    });
+    // Send email via Mailgun with 3 retry attempts and exponential backoff
+    const result = await retryWithBackoff(
+      async () => {
+        return await mg.messages.create(MAILGUN_DOMAIN, {
+          from: MAILGUN_FROM,
+          to: emailData.to,
+          bcc: EMAIL_MONITORING_RECIPIENT,
+          subject: emailData.subject,
+          html: html,
+        });
+      },
+      3, // maxRetries
+      1000 // initialDelayMs (1 second)
+    );
 
     logger.info('Email sent successfully via Mailgun', {
       feature: 'EmailSender',
@@ -168,11 +176,28 @@ async function sendEmail(userId: string, emailId: string, emailData: EmailDocume
     });
   } catch (error) {
     const err = error as Error;
-    logger.error('Failed to send email', {
+    
+    // Log error with full context (automatically sends to Sentry via logger.error)
+    logger.error('Failed to send email after 3 retry attempts', {
       feature: 'EmailSender',
       userId,
       emailId,
+      to: emailData.to,
+      subject: emailData.subject,
       error: err,
+    });
+
+    // Also send to Sentry with additional context
+    Sentry.captureException(err, {
+      level: 'error',
+      extra: {
+        feature: 'EmailSender',
+        userId,
+        emailId,
+        to: emailData.to,
+        subject: emailData.subject,
+        errorMessage: err.message,
+      },
     });
 
     // Update state to FAILED
