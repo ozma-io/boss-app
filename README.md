@@ -170,11 +170,12 @@ boss-app/
 │   ├── chat.service.ts    # Chat service (messages, AI response triggering)
 │   └── iap.service.ts     # In-app purchase service (iOS/Android)
 ├── types/                  # TypeScript type definitions
-├── functions/              # Firebase Cloud Functions
+├── functions/              # Firebase Cloud Functions (TypeScript)
 │   └── src/
 │       ├── chat.ts        # OpenAI integration (GPT-5)
 │       ├── iap-verification.ts # IAP receipt verification (Apple/Google)
 │       └── types/chat.types.ts
+├── functions-python/       # Firebase Cloud Functions (Python) - layered architecture: orchestrators/ (business logic), data/ (Firestore ops), utils/ (logger, sentry)
 ├── firestore/              # Database tooling
 │   ├── schemas/           # TypeScript schemas (not deployed)
 │   │   └── chat.schema.ts # Chat data schemas
