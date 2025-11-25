@@ -9,7 +9,9 @@ import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import Mailgun from 'mailgun.js';
+import { renderEmailTemplate } from './email-template';
 import { logger } from './logger';
+import { markdownToHtml } from './markdown-renderer';
 
 // Define Mailgun API key secret
 const mailgunApiKey = defineSecret('MAILGUN_API_KEY');
@@ -21,7 +23,7 @@ const MAILGUN_FROM = 'BossUp <hello@ozma.io>';
 interface EmailDocument {
   to: string;
   subject: string;
-  body_text: string;
+  body_markdown: string;
   state: 'PLANNED' | 'SENDING' | 'SENT' | 'FAILED';
   sentAt?: string;
   lastErrorMessage?: string;
@@ -125,7 +127,14 @@ async function sendEmail(userId: string, emailId: string, emailData: EmailDocume
       emailId,
       to: emailData.to,
       subject: emailData.subject,
+      bodyLength: emailData.body_markdown.length,
     });
+
+    // Convert Markdown to HTML
+    const bodyHtml = markdownToHtml(emailData.body_markdown);
+    
+    // Wrap in email template
+    const html = renderEmailTemplate(emailData.subject, bodyHtml);
 
     // Initialize Mailgun client with API key from Secret Manager
     const mailgun = new Mailgun(FormData);
@@ -139,7 +148,7 @@ async function sendEmail(userId: string, emailId: string, emailData: EmailDocume
       from: MAILGUN_FROM,
       to: emailData.to,
       subject: emailData.subject,
-      text: emailData.body_text,
+      html: html,
     });
 
     logger.info('Email sent successfully via Mailgun', {
