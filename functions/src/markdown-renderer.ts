@@ -2,72 +2,100 @@
  * Markdown to HTML Renderer
  * 
  * Converts Markdown to HTML with inline styles for email compatibility.
- * Uses a lightweight, zero-dependency approach suitable for email clients.
+ * Uses markdown-it with custom rendering rules optimized for email clients.
  */
+
+import MarkdownIt from 'markdown-it';
 
 /**
- * Convert Markdown to HTML with inline styles
+ * Configure markdown-it with custom renderer rules for email inline styles
  */
-export function markdownToHtml(markdown: string): string {
-  let html = markdown;
-
-  // Headers (must be done before paragraphs)
-  html = html.replace(/^#### (.+)$/gm, '<h4 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;">$1</h4>');
-  html = html.replace(/^### (.+)$/gm, '<h3 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;">$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;">$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1 style="margin: 0 0 16px 0; font-size: 28px; font-weight: 700; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;">$1</h1>');
-
-  // Bold and italic (must be done before other inline elements)
-  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong style="font-weight: 600; color: #000000;"><em style="font-style: italic;">$1</em></strong>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight: 600; color: #000000;">$1</strong>');
-  html = html.replace(/\*(.+?)\*/g, '<em style="font-style: italic;">$1</em>');
-
-  // Links
-  html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" style="color: #000000; text-decoration: underline;">$1</a>');
-
-  // Inline code
-  html = html.replace(/`(.+?)`/g, '<code style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #000000;">$1</code>');
-
-  // Horizontal rules
-  html = html.replace(/^---$/gm, '<hr style="border: none; border-top: 1px solid #f0f0f0; margin: 24px 0;">');
-
-  // Unordered lists
-  html = html.replace(/^- (.+)$/gm, '<li style="margin-bottom: 8px; line-height: 1.6;">$1</li>');
-  html = html.replace(/(<li[^>]*>.*<\/li>)/s, (match) => {
-    return '<ul style="margin: 0 0 16px 0; padding-left: 24px; color: #666666;">' + match + '</ul>';
+function createEmailMarkdownRenderer(): MarkdownIt {
+  const md = new MarkdownIt({
+    html: false,
+    linkify: true,
+    typographer: true,
   });
 
-  // Ordered lists
-  html = html.replace(/^\d+\. (.+)$/gm, '<li style="margin-bottom: 8px; line-height: 1.6;">$1</li>');
-  // Note: This regex won't perfectly handle ordered lists, but it's a reasonable approximation
-  // For production use, consider using a proper markdown library like 'marked'
+  // Paragraph
+  md.renderer.rules.paragraph_open = (): string => {
+    return '<p style="margin: 0 0 16px 0; color: #666666; font-size: 16px; line-height: 1.6; font-family: \'Manrope\', sans-serif;">';
+  };
+  md.renderer.rules.paragraph_close = (): string => '</p>';
 
-  // Blockquotes
-  html = html.replace(/^> (.+)$/gm, '<blockquote style="margin: 0 0 16px 0; padding: 12px 20px; border-left: 4px solid #f0f0f0; background-color: #fafafa; color: #666666; font-style: italic;">$1</blockquote>');
+  // Headings
+  md.renderer.rules.heading_open = (tokens, idx): string => {
+    const level = tokens[idx].tag;
+    const styles: Record<string, string> = {
+      h1: 'margin: 0 0 16px 0; font-size: 28px; font-weight: 700; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;',
+      h2: 'margin: 0 0 16px 0; font-size: 24px; font-weight: 700; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;',
+      h3: 'margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;',
+      h4: 'margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;',
+    };
+    return `<${level} style="${styles[level] || styles.h4}">`;
+  };
+  md.renderer.rules.heading_close = (tokens, idx): string => `</${tokens[idx].tag}>`;
 
-  // Paragraphs (last to avoid breaking other elements)
-  // Split by double newlines, wrap non-tag content in <p>
-  const lines = html.split('\n\n');
-  html = lines
-    .map((line) => {
-      const trimmed = line.trim();
-      // Don't wrap if it's already a block element
-      if (
-        trimmed.startsWith('<h') ||
-        trimmed.startsWith('<ul') ||
-        trimmed.startsWith('<ol') ||
-        trimmed.startsWith('<blockquote') ||
-        trimmed.startsWith('<hr') ||
-        trimmed.length === 0
-      ) {
-        return trimmed;
-      }
-      // Replace single newlines with <br> within paragraphs
-      const withBreaks = trimmed.replace(/\n/g, '<br>');
-      return `<p style="margin: 0 0 16px 0; color: #666666; font-size: 16px; line-height: 1.6; font-family: 'Manrope', sans-serif;">${withBreaks}</p>`;
-    })
-    .join('\n');
+  // Strong (bold)
+  md.renderer.rules.strong_open = (): string => '<strong style="font-weight: 600; color: #000000;">';
+  md.renderer.rules.strong_close = (): string => '</strong>';
 
-  return html;
+  // Emphasis (italic)
+  md.renderer.rules.em_open = (): string => '<em style="font-style: italic;">';
+  md.renderer.rules.em_close = (): string => '</em>';
+
+  // Links
+  md.renderer.rules.link_open = (tokens, idx): string => {
+    const href = tokens[idx].attrGet('href') || '';
+    return `<a href="${href}" style="color: #000000; text-decoration: underline;">`;
+  };
+  md.renderer.rules.link_close = (): string => '</a>';
+
+  // Unordered list
+  md.renderer.rules.bullet_list_open = (): string => {
+    return '<ul style="margin: 0 0 16px 0; padding-left: 24px; color: #666666;">';
+  };
+  md.renderer.rules.bullet_list_close = (): string => '</ul>';
+
+  // Ordered list
+  md.renderer.rules.ordered_list_open = (): string => {
+    return '<ol style="margin: 0 0 16px 0; padding-left: 24px; color: #666666;">';
+  };
+  md.renderer.rules.ordered_list_close = (): string => '</ol>';
+
+  // List item
+  md.renderer.rules.list_item_open = (): string => {
+    return '<li style="margin-bottom: 8px; line-height: 1.6;">';
+  };
+  md.renderer.rules.list_item_close = (): string => '</li>';
+
+  // Code inline
+  md.renderer.rules.code_inline = (tokens, idx): string => {
+    const content = tokens[idx].content;
+    return `<code style="background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 14px; color: #000000;">${content}</code>`;
+  };
+
+  // Blockquote
+  md.renderer.rules.blockquote_open = (): string => {
+    return '<blockquote style="margin: 0 0 16px 0; padding: 12px 20px; border-left: 4px solid #f0f0f0; background-color: #fafafa; color: #666666; font-style: italic;">';
+  };
+  md.renderer.rules.blockquote_close = (): string => '</blockquote>';
+
+  // Horizontal rule
+  md.renderer.rules.hr = (): string => {
+    return '<hr style="border: none; border-top: 1px solid #f0f0f0; margin: 24px 0;">';
+  };
+
+  return md;
+}
+
+// Create singleton instance
+const emailMarkdownRenderer = createEmailMarkdownRenderer();
+
+/**
+ * Convert Markdown to HTML with inline styles optimized for email clients
+ */
+export function markdownToHtml(markdown: string): string {
+  return emailMarkdownRenderer.render(markdown);
 }
 
