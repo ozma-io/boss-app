@@ -204,6 +204,13 @@ def _write_chat_messages_batch(
     - If thread_id is None: use "main" thread (default)
     - Creates thread if it doesn't exist
     
+    Pre-checks thread existence to optimize batch operations:
+    - Checks all threads once before batch write
+    - Creates missing threads efficiently
+    - Each message requires 2 operations (set message + update thread)
+    - New threads require 3 operations (set thread + set message + update thread)
+    - Safe batch size: 250 messages (worst case: 250 × 3 = 750, but realistically much less)
+    
     Args:
         db: Firestore client instance
         prepared_messages: List of (task, message_data) tuples ready for writing
@@ -222,33 +229,68 @@ def _write_chat_messages_batch(
         {"count": len(prepared_messages)}
     )
     
-    # Split into chunks of 500 (Firestore batch limit)
-    # Note: each message also updates thread metadata, so effective limit is ~250 messages
-    # But we'll keep 500 for now as thread updates are lightweight
-    chunks = chunk_list(prepared_messages, 250)  # Conservative for thread updates
+    # Split into chunks of 250 (conservative for thread updates)
+    chunks = chunk_list(prepared_messages, 250)
     all_results: list[GeneratedChatMessage] = []
     
     for chunk_idx, chunk in enumerate(chunks):
-        batch = db.batch()  # type: ignore
-        chunk_results: list[GeneratedChatMessage] = []
+        # === STEP 1: Pre-check thread existence for all messages in chunk ===
+        info(
+            "Pre-checking thread existence",
+            {
+                "chunk_index": chunk_idx + 1,
+                "chunk_size": len(chunk),
+            }
+        )
+        
+        # Build map of (user_id, thread_id) -> thread_ref and check existence
+        thread_refs: dict[tuple[str, str], Any] = {}
+        thread_exists: dict[tuple[str, str], bool] = {}
         
         for task, message_data in chunk:
-            # Determine thread ID
             thread_id = task.thread_id if task.thread_id else "main"
+            key = (task.user_id, thread_id)
             
-            # References
-            thread_ref = ( # type: ignore
+            # Skip if already checked
+            if key in thread_exists:
+                continue
+            
+            # Get thread reference
+            thread_ref = (  # type: ignore
                 db.collection('users')  # type: ignore
                 .document(task.user_id)  # type: ignore
                 .collection('chatThreads')  # type: ignore
                 .document(thread_id)  # type: ignore
             )
+            thread_refs[key] = thread_ref
             
-            # Check if thread exists (read outside batch)
+            # Check if thread exists
             thread_doc = thread_ref.get()  # type: ignore
+            thread_exists[key] = thread_doc.exists  # type: ignore
+        
+        # Count how many new threads we need to create
+        new_threads_count = sum(1 for exists in thread_exists.values() if not exists)
+        info(
+            "Thread existence check complete",
+            {
+                "total_threads": len(thread_exists),
+                "existing_threads": len(thread_exists) - new_threads_count,
+                "new_threads": new_threads_count,
+                "estimated_operations": len(chunk) * 2 + new_threads_count,
+            }
+        )
+        
+        # === STEP 2: Build batch with all operations ===
+        batch = db.batch()  # type: ignore
+        chunk_results: list[GeneratedChatMessage] = []
+        
+        for task, message_data in chunk:
+            thread_id = task.thread_id if task.thread_id else "main"
+            key = (task.user_id, thread_id)
+            thread_ref = thread_refs[key]
             
-            if not thread_doc.exists:  # type: ignore
-                # Create thread in batch
+            # Create thread if it doesn't exist (only once per unique thread)
+            if not thread_exists[key]:
                 batch.set(thread_ref, {  # type: ignore
                     'createdAt': message_data['timestamp'],
                     'updatedAt': message_data['timestamp'],
@@ -259,6 +301,8 @@ def _write_chat_messages_batch(
                     'lastMessageAt': None,
                     'lastMessageRole': None,
                 })
+                # Mark as created so we don't create it again in this batch
+                thread_exists[key] = True
             
             # Create message reference
             messages_ref = thread_ref.collection('messages')  # type: ignore
@@ -287,7 +331,7 @@ def _write_chat_messages_batch(
                 )
             )
         
-        # Commit batch
+        # === STEP 3: Commit batch ===
         try:
             batch.commit()  # type: ignore
             all_results.extend(chunk_results)
@@ -297,6 +341,7 @@ def _write_chat_messages_batch(
                     "chunk_index": chunk_idx + 1,
                     "chunk_size": len(chunk),
                     "total_chunks": len(chunks),
+                    "new_threads_created": new_threads_count,
                 }
             )
         except Exception as err:
