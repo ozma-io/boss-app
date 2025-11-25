@@ -20,7 +20,8 @@
     "build",
     ".expo",
     "functions",
-    "coverage"
+    "coverage",
+    "temp"
   ],
   "references": [
     { "path": "./functions" }
