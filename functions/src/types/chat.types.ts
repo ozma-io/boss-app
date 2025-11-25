@@ -1,41 +1,32 @@
 /**
  * Type definitions for Chat Cloud Functions
  * 
- * Provides type safety for OpenAI integration and Cloud Function interfaces
+ * Imports types from shared schemas (single source of truth)
+ * and provides Cloud Function-specific interfaces
  */
 
 import type { ChatCompletionMessageParam } from 'openai/resources/chat';
+import type {
+  MessageRole,
+  ContentType,
+  ContentItemSchema,
+  ChatMessageSchema,
+} from '../../../firestore/schemas';
 
 /**
- * Message role type
+ * Re-export types from schemas for convenience
  */
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type { MessageRole, ContentType };
 
 /**
- * Content item type
+ * Content item structure (alias to schema)
  */
-export type ContentType = 'text' | 'image_url';
+export type ContentItem = ContentItemSchema;
 
 /**
- * Content item structure (multimodal format)
+ * Firestore chat message structure (alias to schema)
  */
-export interface ContentItem {
-  type: ContentType;
-  text?: string;
-  image_url?: {
-    url: string;
-    detail?: 'auto' | 'low' | 'high';
-  };
-}
-
-/**
- * Firestore chat message structure
- */
-export interface FirestoreChatMessage {
-  role: MessageRole;
-  content: ContentItem[];
-  timestamp: string;
-}
+export type FirestoreChatMessage = ChatMessageSchema;
 
 /**
  * Request data for generateChatResponse callable function
@@ -63,4 +54,3 @@ export interface GenerateChatResponseResponse {
  * Re-export OpenAI types for convenience
  */
 export type { ChatCompletionMessageParam };
-

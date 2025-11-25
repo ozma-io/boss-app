@@ -1,12 +1,27 @@
-// Type for custom field values based on field type
-export type CustomFieldValue = 
-  | string        // text, multiline, date, select
-  | string[]      // multiselect
-  | number        // potential numeric fields
-  | boolean       // potential checkbox fields
-  | null;         // deleted field
+// === IMPORTS FROM SCHEMAS (Single Source of Truth) ===
+import type { 
+  UserSchema,
+  BossSchema,
+  ChatThreadSchema,
+  ChatMessageSchema,
+  ContentItemSchema,
+  MessageRole,
+  ContentType,
+  NoteEntrySchema,
+  NoteSubtype,
+  EmailSchema
+} from '@/firestore/schemas';
 
-// Type for field metadata
+// === DERIVED TYPES ===
+
+// Custom field types
+export type CustomFieldValue = 
+  | string
+  | string[]
+  | number
+  | boolean
+  | null;
+
 export interface CustomFieldMetadata {
   label: string;
   type: 'text' | 'select' | 'date' | 'multiline' | 'multiselect';
@@ -17,214 +32,71 @@ export interface CustomFieldMetadata {
   options?: string[];
 }
 
-// Boss base interface with known fields only
-interface BossBase {
-  id: string;
-  
-  // Core fields (required)
-  name: string;
-  position: string;
-  birthday: string;
-  managementStyle: string;
-  startedAt: string;
-  createdAt: string;
-  updatedAt: string;
-  
-  // Optional core fields
-  department?: string;
-  workingHours?: string;
-  
-  // Legacy fields (deprecated, kept for compatibility)
-  currentMood?: string;
-  favoriteColor?: string;
-  communicationPreference?: string;
-  meetingFrequency?: string;
-  keyInterests?: string[];
-  
-  // Field metadata for custom fields
-  _fieldsMeta?: {
-    [fieldKey: string]: CustomFieldMetadata;
-  };
-}
+// === USER TYPES ===
 
-// Boss type definition synced with BossSchema
-export interface Boss extends BossBase {
-  // Allow ONLY custom_ prefixed fields with typed values
-  [key: `custom_${string}`]: CustomFieldValue;
-}
-
-// Type for Boss updates (allows Firestore dot notation and FieldValue)
-// 
-// WHY 'any' IS REQUIRED HERE:
-// 1. Firestore dot notation: '_fieldsMeta.custom_age.label' - impossible to type statically
-// 2. Firestore FieldValue: deleteField(), serverTimestamp() - special non-data types
-// 3. Dynamic keys: [generateUniqueFieldKey()]: value - runtime-generated field names
-// 
-// SAFETY: Boss interface itself is strictly typed - 'any' only for update operations
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BossUpdate = Record<string, any>
-
-// Timeline entry types
-export type TimelineEntryType = 'note';
-
-// Note subtypes for different kinds of text-based entries
-export type NoteSubtype = 'note' | 'interaction' | 'feedback' | 'achievement' | 'challenge' | 'other';
-
-// Base entry interface
-interface BaseEntry {
-  id: string;
-  timestamp: string;
-  title: string;
-  content: string;
-  icon?: string;
-  source?: 'onboarding_funnel' | 'user_added' | 'ai_added';
-}
-
-// Note entry - text-based timeline entry with subtypes
-export interface NoteEntry extends BaseEntry {
-  type: 'note';
-  subtype: NoteSubtype;
-}
-
-// Discriminated union for all timeline entries
-export type TimelineEntry = NoteEntry;
-
-// User type definition (for authentication state - minimal data from Firebase Auth)
+// Minimal user type for auth state (subset of UserSchema)
 export interface User {
   id: string;
   email: string;
   createdAt: string;
-  currentScreen: string | null; // Current screen user is viewing ('chat', 'support', etc)
-  lastActivityAt: string | null; // Last activity timestamp for presence timeout
+  currentScreen: string | null;
+  lastActivityAt: string | null;
 }
 
-// User Profile base interface with known fields only
-interface UserProfileBase {
-  email: string;
-  name: string;
-  goal: string;
-  position: string;
-  displayName?: string;
-  photoURL?: string;
-  createdAt: string;
-  updatedAt?: string;
-  
-  // Subscription data
-  subscription?: UserSubscription;
-  
-  // Notification settings
-  email_unsubscribed?: boolean;
-  // Tracks PROACTIVE notifications sent by the system (not reactive chat responses)
-  // Counts both EMAIL and PUSH notifications together for progressive interval calculation
-  notification_state?: {
-    last_notification_at?: string; // ISO 8601 timestamp - last proactive notification sent
-    notification_count?: number; // Total proactive notifications sent (email + push combined)
-  };
-  
-  // Field metadata for custom fields
-  _fieldsMeta?: {
-    [fieldKey: string]: CustomFieldMetadata;
-  };
-}
+// Full user profile type (alias to UserSchema)
+export type UserProfile = UserSchema;
 
-// User Profile type definition (for Firestore data)
-export interface UserProfile extends UserProfileBase {
-  // Allow ONLY custom_ prefixed fields with typed values
-  [key: `custom_${string}`]: CustomFieldValue;
-}
-
-// Type for UserProfile updates (allows Firestore dot notation and FieldValue)
-// 
-// WHY 'any' IS REQUIRED HERE:
-// 1. Firestore dot notation: 'subscription.status', '_fieldsMeta.custom_age.label' - impossible to type statically
-// 2. Firestore FieldValue: deleteField(), serverTimestamp() - special non-data types
-// 3. Dynamic keys: [generateUniqueFieldKey()]: value - runtime-generated field names
-// 
-// SAFETY: UserProfile interface itself is strictly typed - 'any' only for update operations
+// Update type (keep 'any' for Firestore flexibility)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type UserProfileUpdate = Record<string, any>
+export type UserProfileUpdate = Record<string, any>;
 
-// Auth state type
-export type AuthState = 'authenticated' | 'unauthenticated' | 'loading';
+// === BOSS TYPES ===
 
-// Unsubscribe function type for Firestore subscriptions
-export type Unsubscribe = () => void;
-
-// Notification permission types
-export type NotificationPermissionStatus = 'granted' | 'denied' | 'not_asked';
-
-export interface NotificationPromptHistoryItem {
-  timestamp: string;
-  action: 'shown' | 'granted' | 'denied';
+// Boss type (alias to BossSchema with id)
+export interface Boss extends BossSchema {
+  id: string;
 }
 
-export interface UserNotificationData {
-  notificationPermissionStatus: NotificationPermissionStatus;
-  lastNotificationPromptAt: string | null;
-  notificationPromptHistory: NotificationPromptHistoryItem[];
+// Update type (keep 'any' for Firestore flexibility)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type BossUpdate = Record<string, any>;
+
+// === CHAT TYPES ===
+
+export type { MessageRole, ContentType };
+
+export interface ContentItem extends ContentItemSchema {}
+
+export interface ChatMessage extends ChatMessageSchema {}
+
+export interface ChatThread extends ChatThreadSchema {}
+
+// === TIMELINE TYPES ===
+
+export type TimelineEntryType = 'note';
+
+export type { NoteSubtype };
+
+export interface NoteEntry extends NoteEntrySchema {
+  id: string;
 }
 
-// Retry options for network operations
-export interface RetryOptions {
-  maxRetries: number;
-  initialDelayMs: number;
-  shouldRetry: (error: Error) => boolean;
-}
+export type TimelineEntry = NoteEntry;
 
-// Chat types (OpenAI-compatible multimodal format)
-export interface ChatThread {
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-  assistantIsTyping: boolean;
-  currentGenerationId?: string;
-  
-  // Unread message tracking
-  unreadCount: number;
-  lastReadAt: string | null;
-  lastMessageAt: string | null;
-  lastMessageRole: MessageRole | null;
-}
+// === EMAIL TYPES ===
 
-export type MessageRole = 'user' | 'assistant' | 'system';
-export type ContentType = 'text' | 'image_url';
+export type EmailState = 'PLANNED' | 'SENDING' | 'SENT' | 'FAILED';
 
-export interface ContentItem {
-  type: ContentType;
-  text?: string;
-  image_url?: {
-    url: string;
-    detail?: 'auto' | 'low' | 'high';
-  };
-}
+export interface Email extends EmailSchema {}
 
-export interface ChatMessage {
-  role: MessageRole;
-  content: ContentItem[];
-  timestamp: string;
-}
+// === SUBSCRIPTION TYPES ===
 
-// Result type for loading older messages with pagination
-export interface LoadMessagesResult {
-  messages: ChatMessage[];
-  hasMore: boolean;
-}
-
-// Request data for generateChatResponse Cloud Function
-export interface GenerateChatResponseRequest {
-  userId: string;
-  threadId: string;
-  messageId: string;
-  sessionId?: string; // Optional app session ID for LangFuse grouping
-}
-
-// Subscription types (aligned with UserSchema)
+// Extract from UserSchema.subscription
 export type SubscriptionStatus = 'none' | 'active' | 'trial' | 'cancelled' | 'expired' | 'grace_period';
 export type SubscriptionTier = 'basic' | 'pro' | 'ultra' | 'enterprise';
 export type SubscriptionBillingPeriod = 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'lifetime';
 export type SubscriptionProvider = 'none' | 'stripe' | 'apple' | 'google';
 
-// User subscription data (stored in Firestore)
 export interface UserSubscription {
   status: SubscriptionStatus;
   tier?: SubscriptionTier;
@@ -304,6 +176,57 @@ export interface CancelSubscriptionResponse {
   error?: string;
 }
 
+// === AUTH TYPES ===
+
+// Auth state type
+export type AuthState = 'authenticated' | 'unauthenticated' | 'loading';
+
+// Unsubscribe function type for Firestore subscriptions
+export type Unsubscribe = () => void;
+
+// === NOTIFICATION TYPES ===
+
+// Notification permission types
+export type NotificationPermissionStatus = 'granted' | 'denied' | 'not_asked';
+
+export interface NotificationPromptHistoryItem {
+  timestamp: string;
+  action: 'shown' | 'granted' | 'denied';
+}
+
+export interface UserNotificationData {
+  notificationPermissionStatus: NotificationPermissionStatus;
+  lastNotificationPromptAt: string | null;
+  notificationPromptHistory: NotificationPromptHistoryItem[];
+}
+
+// === RETRY TYPES ===
+
+// Retry options for network operations
+export interface RetryOptions {
+  maxRetries: number;
+  initialDelayMs: number;
+  shouldRetry: (error: Error) => boolean;
+}
+
+// === CHAT REQUEST TYPES ===
+
+// Result type for loading older messages with pagination
+export interface LoadMessagesResult {
+  messages: ChatMessage[];
+  hasMore: boolean;
+}
+
+// Request data for generateChatResponse Cloud Function
+export interface GenerateChatResponseRequest {
+  userId: string;
+  threadId: string;
+  messageId: string;
+  sessionId?: string; // Optional app session ID for LangFuse grouping
+}
+
+// === ACCOUNT DELETION TYPES ===
+
 // Account deletion types
 export interface DeleteAccountRequest {
   confirmationText: string; // Must be "DELETE MY ACCOUNT"
@@ -313,17 +236,3 @@ export interface DeleteAccountResponse {
   success: boolean;
   error?: string;
 }
-
-// Email notification types
-export type EmailState = 'PLANNED' | 'SENDING' | 'SENT' | 'FAILED';
-
-export interface Email {
-  to: string;
-  subject: string;
-  body_text: string;
-  state: EmailState;
-  sentAt?: string;
-  lastErrorMessage?: string;
-  createdAt: string;
-}
-

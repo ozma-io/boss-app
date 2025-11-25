@@ -75,8 +75,8 @@ export interface BossSchema {
   // custom_feelingValued?: string;
   // ... any other user-defined fields
   
-  // Allow any custom field
-  [key: string]: any;
+  // Custom fields are strictly typed with custom_ prefix
+  [key: `custom_${string}`]: string | string[] | number | boolean | null | undefined;
   
   // === FIELD METADATA ===
   

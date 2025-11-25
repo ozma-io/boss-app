@@ -137,6 +137,7 @@ export interface UserSchema {
     currentPeriodEnd?: string;    // ISO 8601
     trialEnd?: string;            // ISO 8601
     cancelledAt?: string;         // ISO 8601
+    cancellationReason?: 'migration' | 'user_request';
     
     // === STRIPE SPECIFIC (hidden from iOS app) ===
     stripeCustomerId?: string;
@@ -149,6 +150,8 @@ export interface UserSchema {
     appleProductId?: string;       // e.g., 'com.ozmaio.bossup.basic.monthly'
     appleReceiptData?: string;
     appleEnvironment?: 'Sandbox' | 'Production';
+    appleRevocationDate?: string; // ISO 8601
+    appleRevocationReason?: number;
     
     // === GOOGLE PLAY SPECIFIC ===
     googlePlayPurchaseToken?: string;
@@ -184,8 +187,8 @@ export interface UserSchema {
   // custom_learningSupport?: string;
   // ... any other user-defined or funnel-created fields
   
-  // Allow any custom field
-  [key: string]: any;
+  // Custom fields are strictly typed with custom_ prefix
+  [key: `custom_${string}`]: string | string[] | number | boolean | null | undefined;
   
   // === FIELD METADATA ===
   
@@ -194,21 +197,21 @@ export interface UserSchema {
    * 
    * Each custom field should have an entry here with:
    * - label: Display name for UI
-   * - type: Field type (text, select, date, multiline)
+   * - type: Field type (text, select, date, multiline, multiselect)
    * - category: Optional grouping (Demographics, Career, etc.)
    * - source: Where field was created (onboarding_funnel, user_added)
    * - createdAt: When field was added
-   * - options: Available options for select type
+   * - options: Available options for select/multiselect type
    */
   _fieldsMeta?: {
     [fieldKey: string]: {
       label: string;
-      type: 'text' | 'select' | 'date' | 'multiline';
+      type: 'text' | 'select' | 'date' | 'multiline' | 'multiselect';
       category?: string;
       source?: 'onboarding_funnel' | 'user_added';
       createdAt: string; // ISO 8601 timestamp
       displayOrder?: number; // For custom ordering of fields
-      options?: string[]; // For select type
+      options?: string[]; // For select/multiselect type
     };
   };
 }
