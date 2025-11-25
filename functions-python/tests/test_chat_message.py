@@ -276,28 +276,45 @@ def main() -> None:
     print("-" * 100)
     
     try:
-        thread_id = "default"
+        # Auto-detect thread (if user has exactly 1 thread, use it; if multiple, add to all)
         message_id = add_assistant_message_to_chat(
             db=db,
             user_id=user_id,
             message_text=message_text,
-            thread_id=thread_id,
+            thread_id=None,  # Auto-detect
         )
         
-        print("\n✅ Assistant message created successfully!")
-        print(f"   User ID: {user_id}")
-        print(f"   Thread ID: {thread_id}")
-        print(f"   Message ID: {message_id}")
-        print(f"   Message: {message_text}")
-        print("\n💬 Message is now in chat thread")
-        print(f"   Check Firestore: users/{user_id}/chatThreads/{thread_id}/messages/{message_id}")
-        print("   TypeScript trigger will automatically send push notification")
+        # Find which thread(s) the message was added to
+        threads = db.collection('users').document(user_id).collection('chatThreads').get()
+        thread_count = len(threads)
         
-        # Wait for message to be verified if --wait flag is provided
-        if wait_for_result:
-            monitor_message_status(db, user_id, thread_id, message_id, max_wait_seconds=10)
+        if thread_count == 1:
+            thread_id = threads[0].id
+            print("\n✅ Assistant message created successfully!")
+            print(f"   User ID: {user_id}")
+            print(f"   Thread ID: {thread_id} (auto-detected)")
+            print(f"   Message ID: {message_id}")
+            print(f"   Message: {message_text}")
+            print("\n💬 Message is now in chat thread")
+            print(f"   Check Firestore: users/{user_id}/chatThreads/{thread_id}/messages/{message_id}")
+            print("   TypeScript trigger will automatically send push notification")
+            
+            # Wait for message to be verified if --wait flag is provided
+            if wait_for_result:
+                monitor_message_status(db, user_id, thread_id, message_id, max_wait_seconds=10)
+            else:
+                print("\n💡 Tip: Use --wait flag to verify message creation")
+                print()
         else:
-            print("\n💡 Tip: Use --wait flag to verify message creation")
+            thread_ids = [t.id for t in threads]
+            print("\n⚠️  Multiple threads detected - message added to all threads!")
+            print(f"   User ID: {user_id}")
+            print(f"   Thread count: {thread_count}")
+            print(f"   Thread IDs: {', '.join(thread_ids)}")
+            print(f"   Message ID: {message_id} (first thread)")
+            print(f"   Message: {message_text}")
+            print("\n💬 Messages added to all threads (Sentry alert sent)")
+            print(f"   Check Firestore: users/{user_id}/chatThreads/*/messages/")
             print()
         
     except Exception as error:
