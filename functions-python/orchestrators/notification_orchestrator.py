@@ -8,24 +8,10 @@ Core business logic for notification orchestration:
 
 All functions are pure and take db client as parameter for testability.
 
-HIGH-LEVEL SCENARIOS:
-
-Scenario 1: Email-only user (never logged into app)
-- Send AI career coaching advice via email based on data they provided during onboarding
-- Always include CTA at bottom: app is more convenient, you can ask questions to your AI, download and try it
-
-Scenario 2: Active app user with notifications enabled
-- Send AI coaching advice via push notifications
-- Frequency: every 2 days (may increase frequency initially)
-
-Scenario 3: App user with notifications disabled
-- Send AI coaching advice via email (fallback channel)
-- Include reminder at bottom: notifications are disabled, enable them for better experience, promise not to spam
-
-All messages are from AI assistant persona, providing personalized career coaching.
-See functions/src/constants.ts (CHAT_SYSTEM_PROMPT) for AI assistant behavior details.
-
 SCENARIOS TAXONOMY (Decision Tree):
+
+All messages are from AI assistant persona providing personalized career coaching.
+See functions/src/constants.ts (CHAT_SYSTEM_PROMPT) for AI behavior details.
 
 1. Email unsubscribed?
    → YES: SKIP (do not send anything)
@@ -36,27 +22,31 @@ SCENARIOS TAXONOMY (Decision Tree):
    One API call per function run, not per user.
 
 2. Has user ever logged into app (last_login_at exists)?
-   → NO: SCENARIO A (email-only user)
+   → NO: SCENARIO A (email-only user, never logged into app)
        └─ Channel: EMAIL
-       └─ CTA: "Download app to chat with AI"
-       └─ Frequency: may be more frequent initially
+       └─ Content: AI career coaching advice based on data from onboarding
+       └─ CTA: "App is more convenient, you can ask questions to your AI, download and try it"
+       └─ Frequency: may be more frequent initially (every 2 days or more)
    
    → YES: continue to step 3
 
 3. FCM token exists + notifications_enabled?
    → YES: continue to step 4
    → NO: SCENARIO B (app user, notifications disabled)
-       └─ Channel: EMAIL
+       └─ Channel: EMAIL (fallback channel)
+       └─ Content: AI career coaching advice
        └─ CTA: "Enable notifications for better experience, promise not to spam"
 
 4. Is user ignoring app? (last_seen_at > N days ago AND unread_messages_count > 0)
    → YES: SCENARIO C (inactive app user with unread messages)
        └─ Channel: EMAIL (fallback to re-engage)
+       └─ Content: AI career coaching advice
        └─ CTA: "You have unread messages in app"
    
-   → NO: SCENARIO D (active app user)
-       └─ Channel: PUSH
-       └─ No special CTA (user is already engaged)
+   → NO: SCENARIO D (active app user with notifications enabled)
+       └─ Channel: PUSH notification
+       └─ Content: AI career coaching advice
+       └─ CTA: No special CTA (user is already engaged)
 
 TIMING:
 - Function runs every 2 hours
