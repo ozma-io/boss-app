@@ -331,7 +331,7 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
         position: '',
         birthday: '',
         managementStyle: '',
-        startedAt: now,
+        startedAt: '',
         createdAt: now,
         updatedAt: now,
         _fieldsMeta: {},

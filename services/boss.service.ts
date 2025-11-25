@@ -225,7 +225,7 @@ export async function createBoss(userId: string): Promise<string> {
       position: '',
       birthday: '',
       managementStyle: '',
-      startedAt: now,
+      startedAt: '',
       createdAt: now,
       updatedAt: now,
       _fieldsMeta: {},
