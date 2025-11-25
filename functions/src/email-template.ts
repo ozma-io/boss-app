@@ -43,6 +43,27 @@ export function renderEmailTemplate(title: string, bodyHtml: string): string {
                         </td>
                     </tr>
                     
+                    <!-- App Download CTA -->
+                    <tr>
+                        <td style="padding: 24px 32px; background-color: #F8F6F0; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <p style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #000000; font-family: 'Manrope', sans-serif;">
+                                            💬 Get More from BossUp
+                                        </p>
+                                        <p style="margin: 0 0 20px 0; font-size: 14px; color: #666666; line-height: 1.5; font-family: 'Manrope', sans-serif;">
+                                            Download the BossUp app to communicate with your AI assistant directly and get instant answers to your career questions — no need to wait for emails!
+                                        </p>
+                                        <a href="https://discovery.ozma.io/go-app/the-boss" style="display: inline-block; padding: 12px 32px; background-color: #000000; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 600; font-family: 'Manrope', sans-serif;">
+                                            Download App
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 32px; border-top: 1px solid #f0f0f0; text-align: center;">
