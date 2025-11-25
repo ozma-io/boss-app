@@ -157,22 +157,43 @@ def is_inactive(user_data: dict[str, Any], days: int) -> bool:
         return False
 
 
-def get_unread_count(user_data: dict[str, Any]) -> int:
+def get_unread_count(db: Any, user_id: str) -> int:
     """
     Get total unread message count from user's chat threads.
     
-    Note: In current implementation, this would require a subcollection query.
-    For MVP, we can return 0 and implement later when needed for INACTIVE_USER scenario.
+    Queries the main chat thread for unread message count.
     
     Args:
-        user_data: User document data
+        db: Firestore client instance
+        user_id: User document ID
         
     Returns:
-        Number of unread messages (0 for now)
+        Number of unread messages
     """
-    # TODO: Implement when INACTIVE_USER scenario needs it
-    # Would need to query chatThreads subcollection and sum unreadCount
-    return 0
+    try:
+        thread_ref = (
+            db.collection('users')  # type: ignore
+            .document(user_id)  # type: ignore
+            .collection('chatThreads')  # type: ignore
+            .document('main')  # type: ignore
+        )
+        thread_doc = thread_ref.get()  # type: ignore
+        
+        if not thread_doc.exists:  # type: ignore
+            return 0
+        
+        thread_data = thread_doc.to_dict()  # type: ignore
+        if not thread_data:
+            return 0
+        
+        return thread_data.get('unreadCount', 0)
+        
+    except Exception as err:
+        warn("Failed to fetch unread count", {
+            "user_id": user_id,
+            "error": str(err)
+        })
+        return 0
 
 
 def determine_channel(user_data: dict[str, Any]) -> NotificationChannel:
@@ -233,6 +254,8 @@ def determine_channel(user_data: dict[str, Any]) -> NotificationChannel:
 
 
 def determine_scenario(
+    db: Any,
+    user_id: str,
     user_data: dict[str, Any],
     channel: NotificationChannel
 ) -> NotificationScenario:
@@ -249,6 +272,8 @@ def determine_scenario(
     F. INACTIVE_USER - has unread messages AND lastActivityAt > N days ago (always EMAIL)
     
     Args:
+        db: Firestore client instance
+        user_id: User document ID
         user_data: User document data from Firestore
         channel: Selected notification channel ('PUSH' or 'EMAIL')
         
@@ -259,7 +284,7 @@ def determine_scenario(
         raise ValueError("Cannot determine scenario without channel")
     
     last_activity = user_data.get('lastActivityAt')
-    unread_count = get_unread_count(user_data)
+    unread_count = get_unread_count(db, user_id)
     
     # A. EMAIL_ONLY_USER - never logged into app
     if not last_activity and channel == 'EMAIL':

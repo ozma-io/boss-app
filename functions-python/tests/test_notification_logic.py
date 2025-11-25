@@ -18,6 +18,7 @@ Safe to run anytime during development!
 """
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock
 
 from orchestrators.notification_logic import (  # type: ignore
     determine_channel,  # type: ignore
@@ -27,6 +28,27 @@ from orchestrators.notification_logic import (  # type: ignore
     should_send_notification,  # type: ignore
     was_active_recently,  # type: ignore
 )
+
+
+def create_mock_db(unread_count: int = 0) -> MagicMock:
+    """
+    Create a mock Firestore db client for testing.
+    
+    Args:
+        unread_count: Number of unread messages to return (default: 0)
+        
+    Returns:
+        Mock db that returns specified unread count
+    """
+    mock_db = MagicMock()
+    mock_thread_doc = MagicMock()
+    mock_thread_doc.exists = True
+    mock_thread_doc.to_dict.return_value = {'unreadCount': unread_count}
+    
+    # Setup chain: db.collection().document().collection().document().get()
+    mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.get.return_value = mock_thread_doc
+    
+    return mock_db
 
 def test_should_send_notification_first_notification() -> None:
     """Test first notification timing (1 hour after registration)."""
@@ -190,15 +212,17 @@ def test_determine_channel_none():
 
 def test_determine_scenario_email_only_user():
     """Test EMAIL_ONLY_USER scenario."""
+    mock_db = create_mock_db(unread_count=0)
     user_never_logged_in = {
         'lastActivityAt': None,
         'createdAt': '2025-11-20T10:00:00Z',
     }
-    assert determine_scenario(user_never_logged_in, 'EMAIL') == 'EMAIL_ONLY_USER'
+    assert determine_scenario(mock_db, 'test_user_id', user_never_logged_in, 'EMAIL') == 'EMAIL_ONLY_USER'
 
 
 def test_determine_scenario_new_user():
     """Test NEW_USER scenarios."""
+    mock_db = create_mock_db(unread_count=0)
     now = datetime.now(timezone.utc)
     
     user_new = {
@@ -206,12 +230,13 @@ def test_determine_scenario_new_user():
         'createdAt': (now - timedelta(days=7)).isoformat(),
     }
     
-    assert determine_scenario(user_new, 'PUSH') == 'NEW_USER_PUSH'
-    assert determine_scenario(user_new, 'EMAIL') == 'NEW_USER_EMAIL'
+    assert determine_scenario(mock_db, 'test_user_id', user_new, 'PUSH') == 'NEW_USER_PUSH'
+    assert determine_scenario(mock_db, 'test_user_id', user_new, 'EMAIL') == 'NEW_USER_EMAIL'
 
 
 def test_determine_scenario_active_user():
     """Test ACTIVE_USER scenarios."""
+    mock_db = create_mock_db(unread_count=0)
     now = datetime.now(timezone.utc)
     
     user_active = {
@@ -219,25 +244,26 @@ def test_determine_scenario_active_user():
         'createdAt': (now - timedelta(days=30)).isoformat(),
     }
     
-    assert determine_scenario(user_active, 'PUSH') == 'ACTIVE_USER_PUSH'
-    assert determine_scenario(user_active, 'EMAIL') == 'ACTIVE_USER_EMAIL'
+    assert determine_scenario(mock_db, 'test_user_id', user_active, 'PUSH') == 'ACTIVE_USER_PUSH'
+    assert determine_scenario(mock_db, 'test_user_id', user_active, 'EMAIL') == 'ACTIVE_USER_EMAIL'
 
 
 def test_determine_scenario_inactive_user():
     """Test INACTIVE_USER scenario."""
     now = datetime.now(timezone.utc)
     
-    # Note: INACTIVE_USER requires unread messages
-    # For now, get_unread_count() returns 0, so this won't trigger
-    # This test is placeholder for when unread count is implemented
     user_inactive = {
         'lastActivityAt': (now - timedelta(days=10)).isoformat(),
         'createdAt': (now - timedelta(days=60)).isoformat(),
     }
     
-    # Will be ACTIVE_USER_EMAIL until unread count is implemented
-    # TODO: Update when get_unread_count() is implemented
-    assert determine_scenario(user_inactive, 'EMAIL') == 'ACTIVE_USER_EMAIL'
+    # Test with no unread messages - should be ACTIVE_USER_EMAIL
+    mock_db_no_unread = create_mock_db(unread_count=0)
+    assert determine_scenario(mock_db_no_unread, 'test_user_id', user_inactive, 'EMAIL') == 'ACTIVE_USER_EMAIL'
+    
+    # Test with unread messages - should be INACTIVE_USER (priority scenario)
+    mock_db_with_unread = create_mock_db(unread_count=5)
+    assert determine_scenario(mock_db_with_unread, 'test_user_id', user_inactive, 'EMAIL') == 'INACTIVE_USER'
 
 
 if __name__ == '__main__':

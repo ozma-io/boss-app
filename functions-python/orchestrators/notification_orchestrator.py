@@ -251,7 +251,7 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
             continue
         
         # Determine scenario based on user state and channel
-        scenario = determine_scenario(user_data, channel)
+        scenario = determine_scenario(db, user_id, user_data, channel)
         
         # Create appropriate task for batch processing
         if channel == 'EMAIL':

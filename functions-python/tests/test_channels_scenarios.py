@@ -85,8 +85,8 @@ def main() -> None:
         
         # Import functions
         from main import get_firestore_client
-        from data.notification_data import (
-            get_users_needing_notifications,
+        from data.notification_data import get_users_needing_notifications
+        from orchestrators.notification_logic import (
             determine_channel,
             determine_scenario
         )
@@ -115,9 +115,18 @@ def main() -> None:
         scenario_stats: dict[str, int] = {}
         
         for user in users:
+            # Build user_data dict for notification_logic functions
+            user_data = {
+                'lastActivityAt': user.last_activity_at,
+                'createdAt': user.created_at,
+                'notificationPermissionStatus': user.notification_permission_status,
+                'fcmToken': user.fcm_token,
+                'email_unsubscribed': user.email_unsubscribed,
+            }
+            
             # Determine channel and scenario
-            channel = determine_channel(user)
-            scenario = determine_scenario(user, channel)
+            channel = determine_channel(user_data)
+            scenario = determine_scenario(db, user.user_id, user_data, channel)
             
             # Update statistics
             channel_stats[channel] = channel_stats.get(channel, 0) + 1
