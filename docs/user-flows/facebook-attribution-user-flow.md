@@ -169,7 +169,7 @@ User installs app
   - Username (mock data: "Mike_reex")
   - User's email address
 - **Goal Card** (green background `#B8E986`):
-  - 🚩 Flag icon + "Your Goal:" label
+  - 🚩 Flag icon + "Goal:" label
   - ✏️ Edit button (right side)
   - Goal description text (editable on tap)
 - **Position Card** (white background):

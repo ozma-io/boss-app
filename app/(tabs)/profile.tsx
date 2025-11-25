@@ -415,7 +415,7 @@ export default function ProfileScreen() {
                   testID="goal-flag-icon"
                 />
                 <View style={styles.cardContent} testID="goal-content">
-                  <Text style={styles.cardLabel} testID="goal-label">Your Goal: </Text>
+                  <Text style={styles.cardLabel} testID="goal-label">Goal: </Text>
                   <TextInput
                     style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
                     value={goalValue}
