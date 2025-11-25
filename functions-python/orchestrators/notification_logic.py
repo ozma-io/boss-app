@@ -205,6 +205,9 @@ def determine_channel(user_data: dict[str, Any]) -> NotificationChannel:
     - EMAIL: if push not available AND email_unsubscribed=false
     - None: if push disabled/inactive AND email_unsubscribed=true (log to Sentry)
     
+    IMPORTANT: PUSH requires activity within last 6 days. This means INACTIVE_USER scenario
+    (inactive > 7 days) will ALWAYS get EMAIL channel, never PUSH (mutually exclusive).
+    
     Args:
         user_data: User document data from Firestore
         
@@ -212,6 +215,7 @@ def determine_channel(user_data: dict[str, Any]) -> NotificationChannel:
         'PUSH', 'EMAIL', or None if no channel available
     """
     # Check PUSH eligibility
+    # PUSH requires activity within last 6 days
     has_notifications = user_data.get('notificationPermissionStatus') == 'granted'
     has_fcm_token = bool(user_data.get('fcmToken'))
     is_active = was_active_recently(user_data, days=6)
@@ -269,7 +273,12 @@ def determine_scenario(
     C. NEW_USER_EMAIL - logged into app within first N days + EMAIL channel
     D. ACTIVE_USER_PUSH - regular app usage + PUSH channel
     E. ACTIVE_USER_EMAIL - regular app usage + EMAIL channel
-    F. INACTIVE_USER - has unread messages AND lastActivityAt > N days ago (always EMAIL)
+    F. INACTIVE_USER - has unread messages AND lastActivityAt > 7 days ago
+    
+    IMPORTANT: INACTIVE_USER will ALWAYS have channel=EMAIL due to mutually exclusive logic:
+    - INACTIVE_USER requires: lastActivityAt > 7 days ago (is_inactive(days=7))
+    - PUSH channel requires: lastActivityAt <= 6 days ago (was_active_recently(days=6))
+    These conditions cannot both be true, so INACTIVE_USER can never have PUSH channel.
     
     Args:
         db: Firestore client instance
@@ -292,8 +301,23 @@ def determine_scenario(
     
     # F. INACTIVE_USER - priority check (overrides other scenarios)
     # Has unread messages AND inactive for more than 7 days
-    # NOTE: Always use EMAIL for inactive users (per docstring)
+    # IMPORTANT: Channel will ALWAYS be EMAIL here because:
+    # - INACTIVE_USER requires: lastActivityAt > 7 days ago
+    # - PUSH channel requires: lastActivityAt <= 6 days ago
+    # These conditions are mutually exclusive, so channel can never be PUSH here.
     if unread_count > 0 and is_inactive(user_data, days=7):
+        # Sanity check: verify channel is EMAIL (should always be true)
+        if channel != 'EMAIL':
+            error(
+                "UNEXPECTED: INACTIVE_USER with non-EMAIL channel (logic bug)",
+                {
+                    "user_id": user_data.get('id'),
+                    "channel": channel,
+                    "last_activity": user_data.get('lastActivityAt'),
+                }
+            )
+            # This should never happen due to mutually exclusive conditions,
+            # but if it does, we log the error and continue with EMAIL scenario
         return 'INACTIVE_USER'
     
     # B. NEW_USER_PUSH - logged in recently + new user

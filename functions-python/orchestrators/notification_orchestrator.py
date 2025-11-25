@@ -245,12 +245,15 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
             continue
         
         # Determine notification channel (PUSH or EMAIL)
+        # Note: PUSH requires activity within last 6 days, EMAIL is fallback
         channel = determine_channel(user_data)
         if channel is None:
             skipped_no_channel += 1
             continue
         
         # Determine scenario based on user state and channel
+        # Note: INACTIVE_USER scenario (inactive > 7 days) will ALWAYS have channel=EMAIL
+        # because PUSH requires activity within 6 days (mutually exclusive conditions)
         scenario = determine_scenario(db, user_id, user_data, channel)
         
         # Create appropriate task for batch processing
