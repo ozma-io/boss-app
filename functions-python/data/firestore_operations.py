@@ -8,7 +8,7 @@ All functions take db client as first parameter for dependency injection.
 from typing import Any
 
 from firebase_admin import firestore  # type: ignore
-from logger import info
+from utils.logger import info
 
 
 def create_email_document(db: Any, user_id: str, email: str, subject: str, body: str) -> str:

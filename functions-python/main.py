@@ -10,9 +10,9 @@ from typing import Any
 import firebase_admin  # type: ignore
 from firebase_admin import firestore  # type: ignore
 from firebase_functions import scheduler_fn
-from logger import error
-from notification_orchestrator import process_notification_orchestration
-from sentry import init_sentry
+from orchestrators.notification_orchestrator import process_notification_orchestration
+from utils.logger import error
+from utils.sentry import init_sentry
 
 # Initialize Sentry for error monitoring
 init_sentry()

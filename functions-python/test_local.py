@@ -56,7 +56,8 @@ def main() -> None:
     
     try:
         # Import business logic functions
-        from main import get_firestore_client, process_notification_orchestration
+        from main import get_firestore_client
+        from orchestrators.notification_orchestrator import process_notification_orchestration
         
         # Get Firestore client
         logger.info("Initializing Firestore client...")

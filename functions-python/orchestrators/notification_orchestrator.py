@@ -11,7 +11,7 @@ All functions are pure and take db client as parameter for testability.
 
 from typing import Any
 
-from logger import info, warn
+from utils.logger import info, warn
 
 
 def process_notification_orchestration(db: Any) -> int:
