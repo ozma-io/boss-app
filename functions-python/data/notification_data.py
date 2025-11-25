@@ -385,25 +385,137 @@ def update_notification_state_after_send(db: Any, user_id: str) -> None:
     })
 
 
-def sync_mailgun_unsubscribes(db: Any, mailgun_client: Any) -> int:
+def fetch_mailgun_unsubscribes(mailgun_api_key: str, mailgun_domain: str) -> list[str]:
+    """
+    Fetch list of unsubscribed emails from Mailgun Suppressions API.
+    
+    This function is safe to test in production - it only reads data, doesn't modify anything.
+    
+    Args:
+        mailgun_api_key: Mailgun API key for authentication
+        mailgun_domain: Mailgun domain (e.g., 'mailgun.services.ozma.io')
+        
+    Returns:
+        List of email addresses that have unsubscribed
+        
+    Raises:
+        ValueError: If API returns non-200 status
+        requests.RequestException: If network request fails
+    """
+    import requests
+    from typing import Dict, Any as TypeAny
+    
+    info("Fetching Mailgun unsubscribes", {"domain": mailgun_domain})
+    
+    # Fetch unsubscribes from Mailgun Suppressions API
+    url = f'https://api.mailgun.net/v3/{mailgun_domain}/unsubscribes'
+    response = requests.get(
+        url,
+        auth=('api', mailgun_api_key),
+        params={'limit': 1000}  # Max results per request
+    )
+    
+    if response.status_code != 200:
+        error("Failed to fetch Mailgun unsubscribes", {
+            "status_code": response.status_code,
+            "response": response.text
+        })
+        raise ValueError(f"Mailgun API returned status {response.status_code}")
+    
+    data = response.json()
+    unsubscribes: list[Dict[str, TypeAny]] = data.get('items', [])
+    
+    # Extract emails from unsubscribes
+    unsubscribed_emails = [item['address'] for item in unsubscribes if 'address' in item]
+    
+    info("Fetched Mailgun unsubscribes", {
+        "total_items": len(unsubscribes),
+        "email_count": len(unsubscribed_emails)
+    })
+    
+    return unsubscribed_emails
+
+
+def sync_mailgun_unsubscribes(db: Any) -> int:
     """
     Sync unsubscribe list from Mailgun and update Firestore.
     
-    STUB: Mailgun integration to be implemented later.
+    Implementation:
+    1. Fetch suppressions list from Mailgun API
+    2. For each unsubscribed email, find user in Firestore
+    3. Batch update email_unsubscribed=true for all matching users
+    4. Return count of updated users
     
     Args:
         db: Firestore client instance
-        mailgun_client: Mailgun API client
         
     Returns:
         Number of users updated
     """
-    info("Syncing Mailgun unsubscribes (STUB)", {})
+    import os
     
-    # TODO: Implement Mailgun API integration
-    # 1. Fetch unsubscribe list from Mailgun
-    # 2. For each unsubscribed email, find user and set email_unsubscribed=true
-    # 3. Return count of updated users
+    info("Syncing Mailgun unsubscribes", {})
     
-    return 0
+    # Get Mailgun API credentials from environment
+    mailgun_api_key = os.environ.get('MAILGUN_API_KEY')
+    if not mailgun_api_key:
+        error("MAILGUN_API_KEY not found in environment", {})
+        raise ValueError("MAILGUN_API_KEY not configured")
+    
+    mailgun_domain = 'mailgun.services.ozma.io'
+    
+    # Fetch unsubscribed emails from Mailgun
+    try:
+        unsubscribed_emails = fetch_mailgun_unsubscribes(mailgun_api_key, mailgun_domain)
+    except Exception as e:
+        error("Failed to fetch Mailgun unsubscribes", {"error": str(e)})
+        raise
+    
+    if not unsubscribed_emails:
+        info("No unsubscribes found in Mailgun", {})
+        return 0
+    
+    # Find and update users in Firestore
+    updated_count = 0
+    batch = db.batch()
+    batch_count = 0
+    max_batch_size = 500  # Firestore batch write limit
+    
+    for email in unsubscribed_emails:
+        # Query users by email
+        users_ref = db.collection('users')
+        query = users_ref.where('email', '==', email).limit(10)
+        users = query.stream()
+        
+        for user_doc in users:
+            user_data = user_doc.to_dict()
+            
+            # Skip if already marked as unsubscribed
+            if user_data.get('email_unsubscribed'):
+                continue
+            
+            # Add update to batch
+            user_ref = users_ref.document(user_doc.id)
+            batch.update(user_ref, {'email_unsubscribed': True})
+            batch_count += 1
+            updated_count += 1
+            
+            # Commit batch if reaching limit
+            if batch_count >= max_batch_size:
+                batch.commit()
+                info("Committed batch update", {"count": batch_count})
+                batch = db.batch()
+                batch_count = 0
+    
+    # Commit remaining updates
+    if batch_count > 0:
+        batch.commit()
+        info("Committed final batch update", {"count": batch_count})
+    
+    info("Mailgun unsubscribes sync complete", {
+        "total_unsubscribed_emails": len(unsubscribed_emails),
+        "users_updated": updated_count
+    })
+    
+    return updated_count
 

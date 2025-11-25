@@ -22,6 +22,7 @@ def fetch_user_context(db: Any, user_id: str) -> dict[str, Any]:
     - User profile document
     - All bosses (ordered by createdAt)
     - Last 50 timeline entries (ordered by timestamp desc)
+    - Last 15 sent emails (ordered by sentAt desc)
     
     Args:
         db: Firestore client instance
@@ -32,6 +33,7 @@ def fetch_user_context(db: Any, user_id: str) -> dict[str, Any]:
             - user: User document data (dict or None)
             - bosses: List of boss documents with IDs
             - entries: List of timeline entry documents with IDs
+            - emails: List of sent email documents with IDs
     """
     try:
         # Fetch user profile
@@ -65,12 +67,29 @@ def fetch_user_context(db: Any, user_id: str) -> dict[str, Any]:
                 entry_dict["id"] = entry_doc.id
                 entries_data.append(entry_dict)
         
+        # Fetch last 15 sent emails
+        emails_ref = (
+            user_ref.collection("emails")
+            .where("state", "==", "SENT")  # type: ignore
+            .order_by("sentAt", direction=firestore.Query.DESCENDING)  # type: ignore
+            .limit(15)
+        )
+        emails_snapshot = emails_ref.get()
+        
+        emails_data: list[dict[str, Any]] = []
+        for email_doc in emails_snapshot:
+            email_dict = email_doc.to_dict()
+            if email_dict:
+                email_dict["id"] = email_doc.id
+                emails_data.append(email_dict)
+        
         info(
             "User context fetched successfully",
             {
                 "user_id": user_id,
                 "bosses_count": len(bosses_data),
                 "entries_count": len(entries_data),
+                "emails_count": len(emails_data),
             }
         )
         
@@ -78,6 +97,7 @@ def fetch_user_context(db: Any, user_id: str) -> dict[str, Any]:
             "user": user_data,
             "bosses": bosses_data,
             "entries": entries_data,
+            "emails": emails_data,
         }
         
     except Exception as err:
@@ -99,9 +119,10 @@ def format_user_context_as_text(context: dict[str, Any]) -> str:
     - User Profile (including custom fields)
     - Bosses (including custom fields for each)
     - Timeline Entries (recent activity)
+    - Previous Email Notifications (sent to user)
     
     Args:
-        context: Dictionary from fetch_user_context containing user, bosses, entries
+        context: Dictionary from fetch_user_context containing user, bosses, entries, emails
         
     Returns:
         Formatted text string ready for AI consumption
@@ -111,6 +132,7 @@ def format_user_context_as_text(context: dict[str, Any]) -> str:
     user_data = context.get("user")
     bosses_data = context.get("bosses", [])
     entries_data = context.get("entries", [])
+    emails_data = context.get("emails", [])
     
     # User profile section
     if user_data:
@@ -168,6 +190,18 @@ def format_user_context_as_text(context: dict[str, Any]) -> str:
             content = entry.get("content")
             if content:
                 context_parts.append(f"  Content: {content}")
+    
+    # Previous email notifications section
+    if emails_data:
+        context_parts.append("\n## Previous Email Notifications Sent to User")
+        for email in emails_data:
+            sent_at = email.get("sentAt", "Unknown time")
+            subject = email.get("subject", "No subject")
+            body = email.get("body_markdown", "")
+            
+            context_parts.append(f"\n### Email sent at {sent_at}")
+            context_parts.append(f"Subject: {subject}")
+            context_parts.append(f"Body:\n{body}")
     
     return "\n".join(context_parts)
 
