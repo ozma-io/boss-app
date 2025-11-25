@@ -91,7 +91,9 @@ TIMING (Progressive Intervals):
 
 from typing import Any
 
-from utils.logger import info, warn
+from data.email_operations import create_email_for_sending  # type: ignore
+from data.notification_content import generate_onboarding_welcome_email  # type: ignore
+from utils.logger import error, info, warn
 
 
 def process_notification_orchestration(db: Any) -> int:
@@ -201,4 +203,78 @@ def process_notification_orchestration(db: Any) -> int:
     
     info("Notification orchestration completed", {"processed_count": processed_count})
     return processed_count
+
+
+def send_onboarding_welcome_email(db: Any, user_id: str) -> None:
+    """
+    Send onboarding welcome email immediately after web funnel completion.
+    
+    Pure function that generates AI email content and creates Firestore email document.
+    Called by Firestore trigger when chat welcome message is created (last step in funnel).
+    
+    IMPORTANT: This function assumes all Firebase records are already created:
+    - User document (with email, name, goal, custom fields)
+    - Boss document (with boss details, custom fields)
+    - Timeline entries (with onboarding assessments)
+    - Chat thread with welcome message
+    
+    The web funnel creates these in order, with chat being last, so by the time
+    this trigger fires, all data is guaranteed to exist for AI context generation.
+    
+    Args:
+        db: Firestore client instance
+        user_id: User document ID
+        
+    Raises:
+        Exception: If email generation or sending fails
+    """
+    info("Starting onboarding welcome email", {"user_id": user_id})
+    
+    try:
+        # Get user document to retrieve email
+        user_ref = db.collection('users').document(user_id)  # type: ignore
+        user_doc = user_ref.get()  # type: ignore
+        
+        if not user_doc.exists:  # type: ignore
+            error("User not found for onboarding email", {"user_id": user_id})
+            raise ValueError(f"User not found: {user_id}")
+        
+        user_data = user_doc.to_dict()  # type: ignore
+        if not user_data:
+            error("User has no data for onboarding email", {"user_id": user_id})
+            raise ValueError(f"User has no data: {user_id}")
+        
+        user_email = user_data.get('email')
+        if not user_email:
+            error("User has no email for onboarding email", {"user_id": user_id})
+            raise ValueError(f"User has no email: {user_id}")
+        
+        # Generate email content using AI
+        email_content = generate_onboarding_welcome_email(
+            db=db,
+            user_id=user_id,
+            session_id="onboarding_funnel",
+        )
+        
+        # Create email document in Firestore
+        # TypeScript trigger will convert Markdown to HTML and send via Mailgun
+        email_id = create_email_for_sending(
+            db=db,
+            user_id=user_id,
+            to_email=user_email,
+            subject=email_content.title,
+            body_markdown=email_content.body,
+        )
+        
+        info("Onboarding welcome email created successfully", {
+            "user_id": user_id,
+            "email_id": email_id,
+        })
+        
+    except Exception as e:
+        error("Failed to send onboarding welcome email", {
+            "user_id": user_id,
+            "error": str(e),
+        })
+        raise
 

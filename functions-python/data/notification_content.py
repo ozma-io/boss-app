@@ -19,6 +19,7 @@ from data.notification_prompts import (
     FIRST_PUSH_SYSTEM_PROMPT,
     ONGOING_EMAIL_SYSTEM_PROMPT,
     ONGOING_PUSH_SYSTEM_PROMPT,
+    ONBOARDING_WELCOME_EMAIL_PROMPT,
     build_notification_prompt,
 )
 from data.user_context import fetch_user_context, format_user_context_as_text
@@ -258,6 +259,60 @@ def generate_ongoing_push_notification(
             "user_id": user_id,
             "scenario": scenario,
             "message_length": len(content.message),
+        }
+    )
+    
+    return content
+
+
+def generate_onboarding_welcome_email(
+    db: firestore.Client,  # type: ignore
+    user_id: str,
+    session_id: str | None = None,
+) -> EmailNotificationContent:
+    """
+    Generate onboarding welcome email sent immediately after funnel completion.
+    
+    This email is sent right after user submits email in web funnel and all
+    Firebase records are created (User, Boss, Timeline entries, Chat).
+    Heavily emphasizes app download and references their onboarding data.
+    
+    Args:
+        db: Firestore client instance
+        user_id: User document ID
+        session_id: Optional session ID for LangFuse tracking
+        
+    Returns:
+        EmailNotificationContent with reasoning, title, and body fields
+    """
+    info(
+        "Generating onboarding welcome email",
+        {"user_id": user_id, "session_id": session_id}
+    )
+    
+    # Fetch and format user context
+    context = fetch_user_context(db, user_id)
+    context_text = format_user_context_as_text(context)
+    
+    # Build prompt with new onboarding-specific system prompt
+    prompt = build_notification_prompt(ONBOARDING_WELCOME_EMAIL_PROMPT, context_text)
+    
+    # Generate content with structured output
+    content = call_openai_with_structured_output(
+        prompt=prompt,
+        response_model=EmailNotificationContent,
+        user_id=user_id,
+        session_id=session_id,
+        generation_name="onboarding_welcome_email",
+        metadata={"notification_type": "onboarding_welcome"},
+    )
+    
+    info(
+        "Onboarding welcome email generated successfully",
+        {
+            "user_id": user_id,
+            "title_length": len(content.title),
+            "body_length": len(content.body),
         }
     )
     

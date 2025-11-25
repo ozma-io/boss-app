@@ -22,10 +22,11 @@ Requirements:
 
 Usage:
     export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account-key.json"
-    python tests/test_email_sending.py [--wait]
+    python tests/test_email_sending.py [--wait] [--onboarding]
     
 Options:
-    --wait    Wait and monitor email status until sent or failed (max 60 seconds)
+    --wait        Wait and monitor email status until sent or failed (max 60 seconds)
+    --onboarding  Test onboarding welcome email instead of first notification email
 """
 
 import logging
@@ -173,11 +174,13 @@ def monitor_email_status(db, user_id: str, email_id: str, max_wait_seconds: int)
 
 def main() -> None:
     """Run test to send email to test user."""
-    # Check for --wait flag
+    # Check for flags
     wait_for_result = "--wait" in sys.argv
+    test_onboarding = "--onboarding" in sys.argv
     
+    email_type = "Onboarding Welcome" if test_onboarding else "First Notification"
     print("\n" + "=" * 100)
-    print("  Testing Email Sending to test@ozma.io")
+    print(f"  Testing Email Sending to test@ozma.io ({email_type})")
     print("=" * 100)
     
     # Check credentials
@@ -210,22 +213,32 @@ def main() -> None:
     # Import required functions
     try:
         from data.email_operations import create_email_for_sending
-        from data.notification_content import generate_first_email_notification
+        from data.notification_content import (
+            generate_first_email_notification,
+            generate_onboarding_welcome_email,
+        )
     except Exception as error:
         logger.error(f"Failed to import functions: {error}")
         sys.exit(1)
     
     # Generate email content using production LLM function
     print("\n" + "-" * 100)
-    print("Generating email content using LLM (first email notification)...")
+    print(f"Generating email content using LLM ({email_type.lower()})...")
     print("-" * 100)
     
     try:
-        email_content = generate_first_email_notification(
-            db=db,
-            user_id=user_id,
-            session_id="test_email_sending_script",
-        )
+        if test_onboarding:
+            email_content = generate_onboarding_welcome_email(
+                db=db,
+                user_id=user_id,
+                session_id="test_onboarding_email_script",
+            )
+        else:
+            email_content = generate_first_email_notification(
+                db=db,
+                user_id=user_id,
+                session_id="test_email_sending_script",
+            )
         
         subject = email_content.title
         body_markdown = email_content.body
