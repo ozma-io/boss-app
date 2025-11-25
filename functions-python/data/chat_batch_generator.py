@@ -1,8 +1,10 @@
 """
-Parallel Email Generation with Batching and Rate Limiting
+Parallel Chat Message Generation with Batching and Rate Limiting
 
-Generates emails for multiple users in parallel using ThreadPoolExecutor.
-Implements batching to respect OpenAI API rate limits and error isolation
+Generates chat messages for multiple users in parallel using ThreadPoolExecutor.
+Messages trigger push notifications automatically via Firestore triggers.
+
+Implements batching to respect OpenAI rate limits and error isolation
 to ensure one failure doesn't block the entire batch.
 
 Key Features:
@@ -11,6 +13,7 @@ Key Features:
 - Per-user error isolation
 - Firestore batch writes for efficiency
 - Built-in retry logic via openai_client
+- Automatic push notifications via triggers
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -21,14 +24,14 @@ import sentry_sdk  # type: ignore
 from firebase_admin import firestore  # type: ignore
 
 from data.batch_models import (
-    BatchGenerationResult,
-    FailedGeneration,
-    GeneratedEmail,
-    UserEmailTask,
+    ChatBatchGenerationResult,
+    FailedChatGeneration,
+    GeneratedChatMessage,
+    UserChatTask,
 )
 from data.notification_content import (
-    generate_first_email_notification, # type: ignore
-    generate_ongoing_email_notification, # type: ignore
+    generate_first_push_notification,  # type: ignore
+    generate_ongoing_push_notification,  # type: ignore
 )
 from utils.logger import error, info, warn
 
@@ -56,37 +59,35 @@ def chunk_list(items: list[Any], chunk_size: int) -> list[list[Any]]:
     return chunks
 
 
-def _generate_single_email(
+def _generate_single_chat_message(
     db: firestore.Client,  # type: ignore
-    task: UserEmailTask,
-) -> tuple[UserEmailTask, dict[str, Any]] | FailedGeneration:
+    task: UserChatTask,
+) -> tuple[UserChatTask, dict[str, Any]] | FailedChatGeneration:
     """
-    Generate a single email for one user with full error isolation.
+    Generate a single chat message for one user with full error isolation.
     
     Fetches user context, calls appropriate AI generation function based on
-    scenario, and prepares email data. All errors are caught and returned
-    as FailedGeneration objects to prevent one failure from blocking others.
+    scenario, and prepares message data. All errors are caught and returned
+    as FailedChatGeneration objects to prevent one failure from blocking others.
     
     Args:
         db: Firestore client instance
-        task: User email task with user_id, email, and scenario
+        task: User chat task with user_id, fcm_token, and scenario
         
     Returns:
-        Tuple of (task, email_data) on success, FailedGeneration on any error
+        Tuple of (task, message_data) on success, FailedChatGeneration on any error
     """
     try:
         info(
-            "Generating email for user",
+            "Generating chat message for user",
             {
                 "user_id": task.user_id,
                 "scenario": task.scenario,
-                "email": task.user_email,
+                "thread_id": task.thread_id,
             }
         )
         
-        # Validate user context exists (required by all AI generation functions)
-        # fetch_user_context is called inside the AI generation functions
-        # We don't need to fetch it here, just validate the user exists
+        # Validate user exists (AI generation functions will fetch full context)
         try:
             user_ref = db.collection('users').document(task.user_id)  # type: ignore
             user_doc = user_ref.get()  # type: ignore
@@ -95,23 +96,23 @@ def _generate_single_email(
         except Exception as err:
             error_msg = f"Failed to validate user exists: {str(err)}"
             error(error_msg, {"user_id": task.user_id, "error": str(err)})
-            return FailedGeneration(
+            return FailedChatGeneration(
                 user_id=task.user_id,
-                user_email=task.user_email,
+                fcm_token=task.fcm_token,
                 scenario=task.scenario,
                 error_message=error_msg,
             )
         
         # Route to appropriate AI generation function based on scenario
         try:
-            if task.scenario == "EMAIL_ONLY_USER":
-                email_content = generate_first_email_notification(
+            if task.scenario == "NEW_USER_PUSH":
+                chat_content = generate_first_push_notification(
                     db=db,  # type: ignore
                     user_id=task.user_id,
                     session_id=f"batch_generation_{task.scenario}",
                 )
-            elif task.scenario in ["NEW_USER_EMAIL", "ACTIVE_USER_EMAIL", "INACTIVE_USER"]:
-                email_content = generate_ongoing_email_notification(
+            elif task.scenario in ["ACTIVE_USER_PUSH"]:
+                chat_content = generate_ongoing_push_notification(
                     db=db,  # type: ignore
                     user_id=task.user_id,
                     scenario=task.scenario,
@@ -131,40 +132,44 @@ def _generate_single_email(
             with sentry_sdk.push_scope() as scope:  # type: ignore
                 scope.set_extra("user_id", task.user_id)  # type: ignore
                 scope.set_extra("scenario", task.scenario)  # type: ignore
-                scope.set_extra("user_email", task.user_email)  # type: ignore
+                scope.set_extra("fcm_token", task.fcm_token)  # type: ignore
                 sentry_sdk.capture_exception(err)  # type: ignore
             
-            return FailedGeneration(
+            return FailedChatGeneration(
                 user_id=task.user_id,
-                user_email=task.user_email,
+                fcm_token=task.fcm_token,
                 scenario=task.scenario,
                 error_message=error_msg,
             )
         
-        # Prepare email data structure (not written yet, just prepared)
-        email_data = {
-            "to": task.user_email,
-            "subject": email_content.title,
-            "body_markdown": email_content.body,
-            "state": "PLANNED",
-            "createdAt": datetime.now(timezone.utc).isoformat(),
+        # Prepare message data structure (OpenAI-compatible format)
+        # Note: thread_id will be determined during write phase
+        message_data = {
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "text",
+                    "text": chat_content.message,
+                }
+            ],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         
         info(
-            "Email generated successfully",
+            "Chat message generated successfully",
             {
                 "user_id": task.user_id,
-                "subject": email_content.title,
-                "body_length": len(email_content.body),
+                "message_length": len(chat_content.message),
+                "message_preview": chat_content.message[:50],
             }
         )
         
-        # Return task and prepared email data for batch write
-        return (task, email_data)
+        # Return task and prepared message data for batch write
+        return (task, message_data)
         
     except Exception as err:
         # Catch-all for any unexpected errors
-        error_msg = f"Unexpected error in email generation: {str(err)}"
+        error_msg = f"Unexpected error in chat message generation: {str(err)}"
         error(error_msg, {
             "user_id": task.user_id,
             "scenario": task.scenario,
@@ -176,65 +181,109 @@ def _generate_single_email(
             scope.set_extra("scenario", task.scenario)  # type: ignore
             sentry_sdk.capture_exception(err)  # type: ignore
         
-        return FailedGeneration(
+        return FailedChatGeneration(
             user_id=task.user_id,
-            user_email=task.user_email,
+            fcm_token=task.fcm_token,
             scenario=task.scenario,
             error_message=error_msg,
         )
 
 
-def _write_emails_batch(
+def _write_chat_messages_batch(
     db: firestore.Client,  # type: ignore
-    prepared_emails: list[tuple[UserEmailTask, dict[str, Any]]],
-) -> list[GeneratedEmail]:
+    prepared_messages: list[tuple[UserChatTask, dict[str, Any]]],
+) -> list[GeneratedChatMessage]:
     """
-    Write multiple email documents to Firestore using batch API.
+    Write multiple chat message documents to Firestore using batch API.
     
     Uses Firestore batch writes for efficiency (up to 500 operations per batch).
-    Each email document triggers TypeScript Cloud Function for sending.
+    Each message document triggers Firestore Cloud Function for push notification.
+    
+    Handles thread detection logic:
+    - If thread_id specified in task: use it
+    - If thread_id is None: use "main" thread (default)
+    - Creates thread if it doesn't exist
     
     Args:
         db: Firestore client instance
-        prepared_emails: List of (task, email_data) tuples ready for writing
+        prepared_messages: List of (task, message_data) tuples ready for writing
         
     Returns:
-        List of GeneratedEmail objects with email_id set
+        List of GeneratedChatMessage objects with message_id and thread_id set
         
     Raises:
         Exception: If batch write fails (all or nothing)
     """
-    if not prepared_emails:
+    if not prepared_messages:
         return []
     
     info(
-        "Writing emails batch to Firestore",
-        {"count": len(prepared_emails)}
+        "Writing chat messages batch to Firestore",
+        {"count": len(prepared_messages)}
     )
     
     # Split into chunks of 500 (Firestore batch limit)
-    chunks = chunk_list(prepared_emails, 500)
-    all_results: list[GeneratedEmail] = []
+    # Note: each message also updates thread metadata, so effective limit is ~250 messages
+    # But we'll keep 500 for now as thread updates are lightweight
+    chunks = chunk_list(prepared_messages, 250)  # Conservative for thread updates
+    all_results: list[GeneratedChatMessage] = []
     
     for chunk_idx, chunk in enumerate(chunks):
         batch = db.batch()  # type: ignore
-        chunk_results: list[GeneratedEmail] = []
+        chunk_results: list[GeneratedChatMessage] = []
         
-        for task, email_data in chunk:
-            # Create reference for new email document
-            emails_ref = db.collection('users').document(task.user_id).collection('emails')  # type: ignore
-            email_ref = emails_ref.document()  # type: ignore
+        for task, message_data in chunk:
+            # Determine thread ID
+            thread_id = task.thread_id if task.thread_id else "main"
             
-            # Add to batch
-            batch.set(email_ref, email_data)  # type: ignore
+            # References
+            thread_ref = ( # type: ignore
+                db.collection('users')  # type: ignore
+                .document(task.user_id)  # type: ignore
+                .collection('chatThreads')  # type: ignore
+                .document(thread_id)  # type: ignore
+            )
+            
+            # Check if thread exists (read outside batch)
+            thread_doc = thread_ref.get()  # type: ignore
+            
+            if not thread_doc.exists:  # type: ignore
+                # Create thread in batch
+                batch.set(thread_ref, {  # type: ignore
+                    'createdAt': message_data['timestamp'],
+                    'updatedAt': message_data['timestamp'],
+                    'messageCount': 0,
+                    'assistantIsTyping': False,
+                    'unreadCount': 0,
+                    'lastReadAt': None,
+                    'lastMessageAt': None,
+                    'lastMessageRole': None,
+                })
+            
+            # Create message reference
+            messages_ref = thread_ref.collection('messages')  # type: ignore
+            message_ref = messages_ref.document()  # type: ignore
+            
+            # Add message to batch
+            batch.set(message_ref, message_data)  # type: ignore
+            
+            # Update thread metadata in batch
+            batch.update(thread_ref, {  # type: ignore
+                'updatedAt': message_data['timestamp'],
+                'messageCount': firestore.Increment(1),  # type: ignore
+                'unreadCount': firestore.Increment(1),  # type: ignore
+                'lastMessageAt': message_data['timestamp'],
+                'lastMessageRole': 'assistant',
+            })
             
             # Store result for return
+            message_preview = message_data['content'][0]['text'][:50]
             chunk_results.append(
-                GeneratedEmail(
+                GeneratedChatMessage(
                     user_id=task.user_id,
-                    email_id=email_ref.id,  # type: ignore
-                    user_email=task.user_email,
-                    subject=email_data["subject"],
+                    message_id=message_ref.id,  # type: ignore
+                    thread_id=thread_id,
+                    message_preview=message_preview,
                 )
             )
         
@@ -243,7 +292,7 @@ def _write_emails_batch(
             batch.commit()  # type: ignore
             all_results.extend(chunk_results)
             info(
-                "Batch write committed successfully",
+                "Chat messages batch write committed successfully",
                 {
                     "chunk_index": chunk_idx + 1,
                     "chunk_size": len(chunk),
@@ -252,7 +301,7 @@ def _write_emails_batch(
             )
         except Exception as err:
             error(
-                "Failed to commit batch write",
+                "Failed to commit chat messages batch write",
                 {
                     "chunk_index": chunk_idx + 1,
                     "chunk_size": len(chunk),
@@ -266,13 +315,13 @@ def _write_emails_batch(
 
 def _generate_batch(
     db: firestore.Client,  # type: ignore
-    batch_tasks: list[UserEmailTask],
+    batch_tasks: list[UserChatTask],
     max_workers: int,
-) -> tuple[list[tuple[UserEmailTask, dict[str, Any]]], list[FailedGeneration]]:
+) -> tuple[list[tuple[UserChatTask, dict[str, Any]]], list[FailedChatGeneration]]:
     """
     Process one batch of users in parallel using ThreadPoolExecutor.
     
-    Generates email content for multiple users concurrently while respecting
+    Generates chat message content for multiple users concurrently while respecting
     the max_workers limit to avoid overwhelming the OpenAI API.
     
     Args:
@@ -281,15 +330,15 @@ def _generate_batch(
         max_workers: Maximum number of concurrent threads
         
     Returns:
-        Tuple of (successful_emails, failed_generations)
-        - successful_emails: List of (task, email_data) ready for batch write
-        - failed_generations: List of FailedGeneration objects
+        Tuple of (successful_messages, failed_generations)
+        - successful_messages: List of (task, message_data) ready for batch write
+        - failed_generations: List of FailedChatGeneration objects
     """
-    successful_emails: list[tuple[UserEmailTask, dict[str, Any]]] = []
-    failed_generations: list[FailedGeneration] = []
+    successful_messages: list[tuple[UserChatTask, dict[str, Any]]] = []
+    failed_generations: list[FailedChatGeneration] = []
     
     info(
-        "Processing batch in parallel",
+        "Processing chat message batch in parallel",
         {
             "batch_size": len(batch_tasks),
             "max_workers": max_workers,
@@ -300,7 +349,7 @@ def _generate_batch(
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Submit all tasks
         future_to_task = {
-            executor.submit(_generate_single_email, db, task): task # type: ignore
+            executor.submit(_generate_single_chat_message, db, task): task  # type: ignore
             for task in batch_tasks
         }
         
@@ -311,82 +360,86 @@ def _generate_batch(
             try:
                 result = future.result()
                 
-                if isinstance(result, FailedGeneration):
+                if isinstance(result, FailedChatGeneration):
                     failed_generations.append(result)
                     warn(
-                        "Email generation failed for user",
+                        "Chat message generation failed for user",
                         {
                             "user_id": task.user_id,
                             "error": result.error_message,
                         }
                     )
                 else:
-                    # Success - result is (task, email_data) tuple
-                    successful_emails.append(result)
+                    # Success - result is (task, message_data) tuple
+                    successful_messages.append(result)
                     info(
-                        "Email generated for user",
+                        "Chat message generated for user",
                         {
                             "user_id": task.user_id,
-                            "subject": result[1]["subject"],
+                            "message_preview": result[1]['content'][0]['text'][:50],
                         }
                     )
                     
             except Exception as err:
-                # Should not happen since _generate_single_email catches all errors
+                # Should not happen since _generate_single_chat_message catches all errors
                 error_msg = f"Unexpected error processing future: {str(err)}"
                 error(error_msg, {"user_id": task.user_id, "error": str(err)})
                 failed_generations.append(
-                    FailedGeneration(
+                    FailedChatGeneration(
                         user_id=task.user_id,
-                        user_email=task.user_email,
+                        fcm_token=task.fcm_token,
                         scenario=task.scenario,
                         error_message=error_msg,
                     )
                 )
     
-    return successful_emails, failed_generations
+    return successful_messages, failed_generations
 
 
-def generate_emails_in_parallel(
+def generate_chat_messages_in_parallel(
     db: firestore.Client,  # type: ignore
-    user_tasks: list[UserEmailTask],
+    user_tasks: list[UserChatTask],
     batch_size: int = 10,
     max_workers: int = 10,
-) -> BatchGenerationResult:
+) -> ChatBatchGenerationResult:
     """
-    Generate emails for multiple users in parallel with batching and rate limiting.
+    Generate chat messages for multiple users in parallel with batching and rate limiting.
     
-    Core public API for parallel email generation. Processes users in batches
+    Core public API for parallel chat message generation. Processes users in batches
     to respect OpenAI rate limits, generates content concurrently within each
     batch, and writes results efficiently using Firestore batch API.
     
+    Push notifications are sent automatically by Firestore trigger when assistant
+    messages are created.
+    
     Args:
         db: Firestore client instance
-        user_tasks: List of UserEmailTask objects to process
-        batch_size: Number of users to process per batch (default: 10)
-        max_workers: Max concurrent threads per batch (default: 10)
+        user_tasks: List of UserChatTask objects to process
+        batch_size: Number of users to process per batch (default: 15)
+        max_workers: Max concurrent threads per batch (default: 15)
         
     Returns:
-        BatchGenerationResult with successful/failed lists and statistics
+        ChatBatchGenerationResult with successful/failed lists and statistics
         
     Example:
         >>> tasks = [
-        ...     UserEmailTask(
+        ...     UserChatTask(
         ...         user_id="u1",
-        ...         user_email="user1@example.com",
-        ...         scenario="EMAIL_ONLY_USER"
+        ...         fcm_token="token1",
+        ...         scenario="NEW_USER_PUSH"
         ...     ),
-        ...     UserEmailTask(
+        ...     UserChatTask(
         ...         user_id="u2",
-        ...         user_email="user2@example.com",
-        ...         scenario="NEW_USER_EMAIL"
+        ...         fcm_token="token2",
+        ...         scenario="ACTIVE_USER_PUSH",
+        ...         thread_id="main"
         ...     ),
         ... ]
-        >>> result = generate_emails_in_parallel(db, tasks)
+        >>> result = generate_chat_messages_in_parallel(db, tasks)
         >>> print(f"Success: {result.success_count}, Failed: {result.failure_count}")
     """
     info(
-        "Starting parallel email generation",
+        "Starting parallel chat message generation",
         {
             "total_users": len(user_tasks),
             "batch_size": batch_size,
@@ -394,14 +447,14 @@ def generate_emails_in_parallel(
         }
     )
     
-    all_successful: list[GeneratedEmail] = []
-    all_failed: list[FailedGeneration] = []
+    all_successful: list[GeneratedChatMessage] = []
+    all_failed: list[FailedChatGeneration] = []
     
     # Split into batches to respect rate limits
     batches = chunk_list(user_tasks, batch_size)
     
     info(
-        "Processing batches",
+        "Processing chat message batches",
         {
             "total_batches": len(batches),
             "batch_size": batch_size,
@@ -410,7 +463,7 @@ def generate_emails_in_parallel(
     
     for batch_idx, batch_tasks in enumerate(batches):
         info(
-            "Processing batch",
+            "Processing chat message batch",
             {
                 "batch_index": batch_idx + 1,
                 "total_batches": len(batches),
@@ -418,34 +471,34 @@ def generate_emails_in_parallel(
             }
         )
         
-        # Generate emails in parallel for this batch
-        successful_emails, failed_generations = _generate_batch(
+        # Generate chat messages in parallel for this batch
+        successful_messages, failed_generations = _generate_batch(
             db=db,  # type: ignore
             batch_tasks=batch_tasks,
             max_workers=max_workers,
         )
         
-        # Write successful emails to Firestore in batch
-        if successful_emails:
+        # Write successful messages to Firestore in batch
+        if successful_messages:
             try:
-                written_emails = _write_emails_batch(db, successful_emails)  # type: ignore
-                all_successful.extend(written_emails)
+                written_messages = _write_chat_messages_batch(db, successful_messages)  # type: ignore
+                all_successful.extend(written_messages)
             except Exception as err:
                 # If batch write fails, mark all as failed
                 error(
-                    "Batch write failed, marking all as failed",
+                    "Chat messages batch write failed, marking all as failed",
                     {
                         "batch_index": batch_idx + 1,
-                        "count": len(successful_emails),
+                        "count": len(successful_messages),
                         "error": str(err),
                     }
                 )
                 
-                for task, _ in successful_emails:
+                for task, _ in successful_messages:
                     all_failed.append(
-                        FailedGeneration(
+                        FailedChatGeneration(
                             user_id=task.user_id,
-                            user_email=task.user_email,
+                            fcm_token=task.fcm_token,
                             scenario=task.scenario,
                             error_message=f"Batch write failed: {str(err)}",
                         )
@@ -454,7 +507,7 @@ def generate_emails_in_parallel(
         # Collect failed generations
         all_failed.extend(failed_generations)
     
-    result = BatchGenerationResult(
+    result = ChatBatchGenerationResult(
         successful=all_successful,
         failed=all_failed,
         total_count=len(user_tasks),
@@ -463,7 +516,7 @@ def generate_emails_in_parallel(
     )
     
     info(
-        "Parallel email generation completed",
+        "Parallel chat message generation completed",
         {
             "total": result.total_count,
             "successful": result.success_count,
