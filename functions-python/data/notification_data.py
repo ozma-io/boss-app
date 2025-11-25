@@ -146,45 +146,80 @@ def sync_mailgun_unsubscribes(db: Any) -> int:
         info("No unsubscribes found in Mailgun", {})
         return 0
     
-    # Find and update users in Firestore
+    # Find and update users in Firestore using batched WHERE IN queries
+    # Firestore supports up to 30 values in WHERE IN clause, so we chunk emails
     updated_count = 0
-    batch = db.batch()
-    batch_count = 0
-    max_batch_size = 500  # Firestore batch write limit
+    chunk_size = 30  # Firestore WHERE IN limit
+    email_chunks = [unsubscribed_emails[i:i + chunk_size] for i in range(0, len(unsubscribed_emails), chunk_size)]
     
-    for email in unsubscribed_emails:
-        # Query users by email
-        users_ref = db.collection('users')
-        query = users_ref.where('email', '==', email)
-        users_list = list(query.stream())
+    info("Querying users by email in chunks", {
+        "total_emails": len(unsubscribed_emails),
+        "total_chunks": len(email_chunks),
+        "chunk_size": chunk_size,
+    })
+    
+    # Fetch all matching users using chunked WHERE IN queries
+    all_user_docs: list[Any] = []
+    users_ref = db.collection('users')
+    
+    for chunk_idx, email_chunk in enumerate(email_chunks):
+        query = users_ref.where('email', 'in', email_chunk)
+        chunk_users = list(query.stream())
+        all_user_docs.extend(chunk_users)
         
-        # Check for multiple users with same email (data integrity issue)
-        if len(users_list) > 1:
+        info("Fetched users chunk", {
+            "chunk_index": chunk_idx + 1,
+            "total_chunks": len(email_chunks),
+            "users_found": len(chunk_users),
+        })
+    
+    info("All users fetched", {"total_users": len(all_user_docs)})
+    
+    # Check for duplicate emails (data integrity)
+    email_to_users: dict[str, list[Any]] = {}
+    for user_doc in all_user_docs:
+        user_data = user_doc.to_dict()
+        if not user_data:
+            continue
+        user_email = user_data.get('email')
+        if not user_email:
+            continue
+        if user_email not in email_to_users:
+            email_to_users[user_email] = []
+        email_to_users[user_email].append(user_doc)
+    
+    for email, user_docs_list in email_to_users.items():
+        if len(user_docs_list) > 1:
             error("Multiple users with same email found", {
                 "email": email,
-                "count": len(users_list),
-                "user_ids": [user_doc.id for user_doc in users_list],
+                "count": len(user_docs_list),
+                "user_ids": [doc.id for doc in user_docs_list],
             })
+    
+    # Update users in batches (Firestore batch write limit: 500)
+    batch = db.batch()
+    batch_count = 0
+    max_batch_size = 500
+    
+    for user_doc in all_user_docs:
+        user_data = user_doc.to_dict()
         
-        for user_doc in users_list:
-            user_data = user_doc.to_dict()
-            
-            # Skip if already marked as unsubscribed
-            if user_data.get('email_unsubscribed'):
-                continue
-            
-            # Add update to batch
-            user_ref = users_ref.document(user_doc.id)
-            batch.update(user_ref, {'email_unsubscribed': True})
-            batch_count += 1
-            updated_count += 1
-            
-            # Commit batch if reaching limit
-            if batch_count >= max_batch_size:
-                batch.commit()
-                info("Committed batch update", {"count": batch_count})
-                batch = db.batch()
-                batch_count = 0
+        # Skip if already marked as unsubscribed
+        if user_data and user_data.get('email_unsubscribed'):
+            continue
+        
+        # Add update to batch
+        user_ref = users_ref.document(user_doc.id)
+        batch.update(user_ref, {'email_unsubscribed': True})
+        batch_count += 1
+        updated_count += 1
+        
+        # Commit batch if reaching limit
+        if batch_count >= max_batch_size:
+            batch.commit()
+            info("Committed batch update", {"count": batch_count})
+            batch = db.batch()
+            batch_count = 0
     
     # Commit remaining updates
     if batch_count > 0:
