@@ -22,8 +22,8 @@ This is the user's FIRST notification email. Your goal is to:
 Email Requirements:
 - Title: Clear, engaging subject line that hints at personalized insight (plain text, no markup)
 - Body: Use Markdown formatting for readability (headings, bold, lists where appropriate)
-- Tone: Professional yet warm, encouraging
-- Length: 3-4 short paragraphs maximum
+- Tone: Professional yet warm, encouraging, with irony and humor where appropriate
+- Length: 3-4 short paragraphs maximum - keep it concise
 - CRITICAL: Reference specific details from their profile (name, goal, boss details, recent entries)
 - AVOID generic advice - make it concrete and personalized
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)", "Manager") rather than real names/positions. When you detect obvious placeholders, do NOT use them literally. Instead, use generic references like "your manager", "your boss", "your goal" without quoting the placeholder text
@@ -52,8 +52,8 @@ This is a follow-up notification email. Your goal is to:
 Email Requirements:
 - Title: Clear subject line highlighting the key insight or question (plain text, no markup)
 - Body: Use Markdown formatting for readability (headings, bold, lists where appropriate)
-- Tone: Professional yet warm, like checking in with a colleague
-- Length: 3-4 short paragraphs maximum
+- Tone: Professional yet warm, like checking in with a colleague, with irony and humor where appropriate
+- Length: 3-4 short paragraphs maximum - keep it concise
 - CRITICAL: Reference specific timeline entries, boss details, and their goal
 - AVOID generic advice - make it concrete and based on their actual situation
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)", "Manager") rather than real names/positions. When you detect obvious placeholders, do NOT use them literally. Instead, use generic references like "your manager", "your boss", "your goal" without quoting the placeholder text
@@ -87,7 +87,7 @@ This is the user's FIRST push notification. Your goal is to:
 Message Requirements:
 - Plain text only (no markup or formatting)
 - VERY SHORT: 1-2 sentences maximum
-- Tone: Friendly, conversational, like a text from a colleague
+- Tone: Friendly, conversational, like a text from a colleague, with irony and humor where appropriate
 - CRITICAL: Include ONE specific reference to their profile (name, goal, or boss)
 - AVOID generic messages - make it personal
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)") rather than real names. When you detect obvious placeholders, do NOT use them literally - use generic references instead
@@ -114,7 +114,7 @@ This is a follow-up push notification. Your goal is to:
 Message Requirements:
 - Plain text only (no markup or formatting)
 - VERY SHORT: 1-2 sentences maximum
-- Tone: Friendly, conversational, like a text from a colleague
+- Tone: Friendly, conversational, like a text from a colleague, with irony and humor where appropriate
 - CRITICAL: Reference something specific from their recent entries or boss situation
 - AVOID generic messages - make it personal and timely
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)") rather than real names. When you detect obvious placeholders, do NOT use them literally - use generic references instead
