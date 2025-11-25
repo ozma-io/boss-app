@@ -155,10 +155,18 @@ def sync_mailgun_unsubscribes(db: Any) -> int:
     for email in unsubscribed_emails:
         # Query users by email
         users_ref = db.collection('users')
-        query = users_ref.where('email', '==', email).limit(10)
-        users = query.stream()
+        query = users_ref.where('email', '==', email)
+        users_list = list(query.stream())
         
-        for user_doc in users:
+        # Check for multiple users with same email (data integrity issue)
+        if len(users_list) > 1:
+            error("Multiple users with same email found", {
+                "email": email,
+                "count": len(users_list),
+                "user_ids": [user_doc.id for user_doc in users_list],
+            })
+        
+        for user_doc in users_list:
             user_data = user_doc.to_dict()
             
             # Skip if already marked as unsubscribed

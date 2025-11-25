@@ -258,15 +258,33 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
         
         # Create appropriate task for batch processing
         if channel == 'EMAIL':
+            user_email = user_data.get('email', '').strip()
+            if not user_email:
+                error("User has EMAIL channel but no valid email address", {
+                    "user_id": user_id,
+                    "channel": channel,
+                })
+                skipped_no_channel += 1
+                continue
+            
             email_tasks.append(UserEmailTask(
                 user_id=user_id,
-                user_email=user_data.get('email', ''),
+                user_email=user_email,
                 scenario=scenario,
             ))
         elif channel == 'PUSH':
+            fcm_token = user_data.get('fcmToken', '').strip()
+            if not fcm_token:
+                error("User has PUSH channel but no valid FCM token", {
+                    "user_id": user_id,
+                    "channel": channel,
+                })
+                skipped_no_channel += 1
+                continue
+            
             push_tasks.append(UserChatTask(
                 user_id=user_id,
-                fcm_token=user_data.get('fcmToken', ''),
+                fcm_token=fcm_token,
                 scenario=scenario,
                 thread_id=None,  # Auto-detect thread
             ))
@@ -323,17 +341,19 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
     # === STEP 4: Update notification states ===
     info("STEP 4: Updating notification states", {})
     
-    # Collect all successfully sent notifications
-    successful_user_ids: list[str] = []
+    # Collect all successfully sent notifications (use set to prevent duplicates)
+    successful_user_ids: set[str] = set()
     if email_result:
-        successful_user_ids.extend([e.user_id for e in email_result.successful])
+        successful_user_ids.update([e.user_id for e in email_result.successful])
     if push_result:
-        successful_user_ids.extend([p.user_id for p in push_result.successful])
+        successful_user_ids.update([p.user_id for p in push_result.successful])
     
-    if successful_user_ids:
+    successful_user_ids_list = list(successful_user_ids)
+    
+    if successful_user_ids_list:
         try:
-            update_notification_states_batch(db, successful_user_ids)
-            info("Notification states updated", {"count": len(successful_user_ids)})
+            update_notification_states_batch(db, successful_user_ids_list)
+            info("Notification states updated", {"count": len(successful_user_ids_list)})
         except Exception as err:
             error("Failed to update notification states", {"error": str(err)})
             # Don't raise - notifications were sent successfully
