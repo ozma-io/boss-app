@@ -142,3 +142,13 @@ export const GOOGLE_PLAY_PACKAGE_NAME = 'com.ozmaio.bossup';
  * Contains JSON key file with private_key and client_email
  */
 
+// ============================================================================
+// Email Configuration
+// ============================================================================
+
+/**
+ * Internal monitoring recipient for quality control
+ * All outgoing emails are BCC'd to this address for internal review
+ */
+export const EMAIL_MONITORING_RECIPIENT = 'kmarkin@ozma.io';
+

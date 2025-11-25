@@ -9,6 +9,7 @@ import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import Mailgun from 'mailgun.js';
+import { EMAIL_MONITORING_RECIPIENT } from './constants';
 import { renderEmailTemplate } from './email-template';
 import { logger } from './logger';
 import { markdownToHtml } from './markdown-renderer';
@@ -147,6 +148,7 @@ async function sendEmail(userId: string, emailId: string, emailData: EmailDocume
     const result = await mg.messages.create(MAILGUN_DOMAIN, {
       from: MAILGUN_FROM,
       to: emailData.to,
+      bcc: EMAIL_MONITORING_RECIPIENT,
       subject: emailData.subject,
       html: html,
     });
