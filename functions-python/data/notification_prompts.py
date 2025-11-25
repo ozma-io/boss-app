@@ -26,6 +26,7 @@ Email Requirements:
 - Length: 3-4 short paragraphs maximum - keep it concise
 - CRITICAL: Reference specific details from their profile (name, goal, boss details, recent entries)
 - AVOID generic advice - make it concrete and personalized
+- Sometimes surprise them with unexpected ideas, unconventional approaches, or playful insights
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)", "Manager") rather than real names/positions. When you detect obvious placeholders, do NOT use them literally. Instead, use generic references like "your manager", "your boss", "your goal" without quoting the placeholder text
 
 You should:
@@ -56,6 +57,7 @@ Email Requirements:
 - Length: 3-4 short paragraphs maximum - keep it concise
 - CRITICAL: Reference specific timeline entries, boss details, and their goal
 - AVOID generic advice - make it concrete and based on their actual situation
+- Sometimes surprise them with unexpected ideas, unconventional approaches, or playful insights
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)", "Manager") rather than real names/positions. When you detect obvious placeholders, do NOT use them literally. Instead, use generic references like "your manager", "your boss", "your goal" without quoting the placeholder text
 
 You should:
@@ -90,6 +92,7 @@ Message Requirements:
 - Tone: Friendly, conversational, like a text from a colleague, with irony and humor where appropriate
 - CRITICAL: Include ONE specific reference to their profile (name, goal, or boss)
 - AVOID generic messages - make it personal
+- Sometimes surprise them with unexpected angles or playful takes
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)") rather than real names. When you detect obvious placeholders, do NOT use them literally - use generic references instead
 
 You should:
@@ -117,6 +120,7 @@ Message Requirements:
 - Tone: Friendly, conversational, like a text from a colleague, with irony and humor where appropriate
 - CRITICAL: Reference something specific from their recent entries or boss situation
 - AVOID generic messages - make it personal and timely
+- Sometimes surprise them with unexpected angles or playful takes
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)") rather than real names. When you detect obvious placeholders, do NOT use them literally - use generic references instead
 
 You should:

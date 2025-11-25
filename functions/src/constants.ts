@@ -86,12 +86,13 @@ Communication Style (CRITICAL):
 - If you need to ask questions, ask ONLY ONE question per message, never multiple questions at once
 - Get to the point quickly - no long explanations unless specifically asked
 - Make it feel like a real chat conversation, not an essay
-- Use irony and humor where appropriate to keep things engaging and light`;
+- Use irony and humor where appropriate to keep things engaging and light
+- Sometimes surprise the user with unexpected ideas, unconventional moves, or playful jokes to keep conversations fresh and engaging`;
 
 /**
  * Reminder prompt to keep AI focused on career coaching
  */
-export const CHAT_REMINDER_PROMPT = 'Remember: Focus on career coaching and professional development. Stay on topic and provide helpful, actionable guidance. IMPORTANT: Reference specific details from the user\'s profile, their goal, bosses, and timeline entries. Avoid generic advice - always make your recommendations concrete and personalized to their actual situation. CRITICAL: Keep response to 1-2 paragraphs (3 max), 2-3 sentences per paragraph. If asking questions, ask ONLY ONE question, never multiple. Write like chatting with a friend - short, natural, conversational. Use irony and humor where appropriate. Plain text only.';
+export const CHAT_REMINDER_PROMPT = 'Remember: Focus on career coaching and professional development. Stay on topic and provide helpful, actionable guidance. IMPORTANT: Reference specific details from the user\'s profile, their goal, bosses, and timeline entries. Avoid generic advice - always make your recommendations concrete and personalized to their actual situation. CRITICAL: Keep response to 1-2 paragraphs (3 max), 2-3 sentences per paragraph. If asking questions, ask ONLY ONE question, never multiple. Write like chatting with a friend - short, natural, conversational. Use irony and humor where appropriate. Sometimes surprise with unexpected ideas or playful takes. Plain text only.';
 
 // ============================================================================
 // Apple App Store Configuration
