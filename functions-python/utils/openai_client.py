@@ -60,7 +60,13 @@ def call_openai_with_structured_output(
         error(error_msg, {})
         raise ValueError(error_msg)
     
+    # Set LangFuse host (US region, matches TypeScript config)
+    # LangFuse OpenAI wrapper reads this from environment
+    os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
+    
     # Initialize OpenAI client (with LangFuse wrapper)
+    # LangFuse automatically uses env vars: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST
+    # If keys not set, LangFuse observability is disabled (client works as standard OpenAI)
     client = OpenAI(api_key=api_key)
     
     # Build messages array
