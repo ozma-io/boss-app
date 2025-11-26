@@ -5,6 +5,8 @@ Infrastructure layer that defines Cloud Function decorators and entry points.
 All business logic is delegated to separate modules for testability.
 """
 
+import base64
+import os
 from typing import Any
 
 import firebase_admin  # type: ignore
@@ -15,7 +17,7 @@ from orchestrators.notification_orchestrator import (
     process_notification_orchestration,
     send_onboarding_welcome_email,
 )
-from utils.logger import error, info
+from utils.logger import error, info, warn
 from utils.sentry import init_sentry
 
 # Initialize Sentry for error monitoring
@@ -26,6 +28,89 @@ mailgun_api_key = SecretParam('MAILGUN_API_KEY')
 openai_api_key = SecretParam('OPENAI_API_KEY')
 langfuse_public_key = SecretParam('LANGFUSE_PUBLIC_KEY')
 langfuse_secret_key = SecretParam('LANGFUSE_SECRET_KEY')
+
+
+def _clean_environment_secrets() -> None:
+    """
+    Clean Firebase secrets from trailing newlines and whitespace.
+    
+    Firebase Functions secrets sometimes contain trailing newlines (\n)
+    which break API authentication. This function cleans all secrets
+    at the entry point before any module uses them.
+    
+    Called once per Cloud Function invocation before any business logic.
+    """
+    secrets_to_clean = [
+        'MAILGUN_API_KEY',
+        'OPENAI_API_KEY',
+        'LANGFUSE_PUBLIC_KEY',
+        'LANGFUSE_SECRET_KEY',
+    ]
+    
+    for secret_name in secrets_to_clean:
+        original_value = os.getenv(secret_name)
+        if original_value:
+            cleaned_value = original_value.strip()
+            if original_value != cleaned_value:
+                os.environ[secret_name] = cleaned_value
+                warn(f"{secret_name} contained whitespace characters (cleaned)", {
+                    "secret_name": secret_name,
+                    "had_leading_space": original_value != original_value.lstrip(),
+                    "had_trailing_space": original_value != original_value.rstrip(),
+                })
+
+
+def _configure_langfuse() -> None:
+    """
+    Configure Langfuse environment variables for SDK singleton.
+    
+    Sets up OTLP exporter configuration and Langfuse host.
+    Called once per Cloud Function invocation after cleaning secrets.
+    
+    The Langfuse SDK will automatically create a singleton client
+    using these environment variables when get_client() is called.
+    """
+    public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
+    secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+    
+    if not public_key or not secret_key:
+        warn("Langfuse keys not found - observability disabled", {
+            "has_public_key": bool(public_key),
+            "has_secret_key": bool(secret_key),
+        })
+        return
+    
+    # Set Langfuse host (US region)
+    os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
+    
+    # Configure OpenTelemetry OTLP exporter for Langfuse
+    # This enables full observability with traces sent via OTLP protocol
+    langfuse_auth = base64.b64encode(
+        f"{public_key}:{secret_key}".encode()
+    ).decode()
+    
+    os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "https://us.cloud.langfuse.com/api/public/otel"
+    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {langfuse_auth}"
+    os.environ["OTEL_EXPORTER_OTLP_TIMEOUT"] = "30000"  # 30 seconds (default: 5)
+    
+    info("Langfuse environment configured", {
+        "host": os.environ["LANGFUSE_HOST"],
+        "public_key_prefix": public_key[:7] if len(public_key) > 7 else "invalid",
+    })
+
+
+def _initialize_cloud_function() -> None:
+    """
+    Initialize Cloud Function environment.
+    
+    Called at the start of each Cloud Function invocation to:
+    1. Clean Firebase secrets from trailing whitespace/newlines
+    2. Configure Langfuse SDK environment variables
+    
+    This ensures all modules have clean environment variables.
+    """
+    _clean_environment_secrets()
+    _configure_langfuse()
 
 
 def get_firestore_client() -> Any:
@@ -52,6 +137,9 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
     Triggered automatically every 2 hours by Cloud Scheduler.
     """
     try:
+        # Initialize environment (clean secrets, configure Langfuse)
+        _initialize_cloud_function()
+        
         db = get_firestore_client()
         process_notification_orchestration(db)
         
@@ -86,6 +174,9 @@ def onChatMessageCreatedSendWelcomeEmail(
     This ensures we only send onboarding email to web funnel users, not app users.
     """
     try:
+        # Initialize environment (clean secrets, configure Langfuse)
+        _initialize_cloud_function()
+        
         # Extract user ID from document path
         if not event.params:
             return

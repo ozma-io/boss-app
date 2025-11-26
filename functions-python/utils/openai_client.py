@@ -6,9 +6,11 @@ Includes retry logic for parsing errors and Sentry integration for failures.
 
 Uses modern Langfuse @observe decorator for proper trace management with
 user_id and session_id tracking as first-class trace attributes.
+
+NOTE: Langfuse environment configuration is done in main.py at Cloud Function entry point.
+This module simply uses get_client() to access the singleton Langfuse client.
 """
 
-import base64
 import os
 import time
 from typing import Any, Type, TypeVar
@@ -17,7 +19,7 @@ import sentry_sdk  # type: ignore
 from openai import APIError, APIConnectionError, APITimeoutError, RateLimitError, OpenAI  # type: ignore
 from pydantic import BaseModel
 
-from langfuse import Langfuse, observe, get_client  # type: ignore
+from langfuse import observe, get_client  # type: ignore
 
 from .logger import error, info, warn
 
@@ -25,89 +27,6 @@ T = TypeVar('T', bound=BaseModel)
 
 # Default model for content generation
 DEFAULT_MODEL = "gpt-5"
-
-# Initialize Langfuse global client at module import time
-# This ensures @observe decorator has access to properly configured client
-def _initialize_langfuse() -> None:
-    """
-    Initialize Langfuse global client with environment credentials.
-    
-    Called once at module import to ensure @observe decorator has access
-    to properly configured client before any functions are called.
-    """
-    # Strip Langfuse keys if present (common issue with Firebase secrets containing newlines)
-    langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-    langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    
-    if langfuse_public_key and langfuse_secret_key:
-        # Strip and validate keys
-        cleaned_public = langfuse_public_key.strip()
-        cleaned_secret = langfuse_secret_key.strip()
-        
-        # Detect whitespace in original keys
-        public_had_whitespace = langfuse_public_key != cleaned_public
-        secret_had_whitespace = langfuse_secret_key != cleaned_secret
-        
-        # Update environment with cleaned keys
-        os.environ["LANGFUSE_PUBLIC_KEY"] = cleaned_public
-        os.environ["LANGFUSE_SECRET_KEY"] = cleaned_secret
-        
-        # Set host (US region)
-        os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
-        
-        # Configure OpenTelemetry OTLP exporter for Langfuse
-        # This enables full observability with traces sent to Langfuse via OTLP protocol
-        langfuse_auth = base64.b64encode(
-            f"{cleaned_public}:{cleaned_secret}".encode()
-        ).decode()
-        
-        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "https://us.cloud.langfuse.com/api/public/otel"
-        os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {langfuse_auth}"
-        
-        # Set generous timeouts for OTLP exporter (30 seconds instead of default 5)
-        # This prevents ReadTimeoutError when sending large traces or on slow networks
-        os.environ["OTEL_EXPORTER_OTLP_TIMEOUT"] = "30000"  # milliseconds
-        
-        # Log key status
-        if public_had_whitespace or secret_had_whitespace:
-            warn("Langfuse keys contained whitespace characters (stripped)", {
-                "public_had_whitespace": public_had_whitespace,
-                "secret_had_whitespace": secret_had_whitespace,
-            })
-        
-        # Initialize Langfuse global client with explicit credentials
-        # This client will be used by @observe decorator and get_client()
-        try:
-            _ = Langfuse(
-                public_key=cleaned_public,
-                secret_key=cleaned_secret,
-                host="https://us.cloud.langfuse.com",
-                debug=False,
-                # Increase timeouts for better reliability in serverless environments
-                flush_at=15,  # Number of events before auto-flush (default: 15)
-                flush_interval=5.0,  # Seconds between auto-flushes (default: 0.5)
-                timeout=30,  # HTTP timeout in seconds (default: 20)
-            )
-            info("Langfuse global client initialized at module import", {
-                "host": "https://us.cloud.langfuse.com",
-                "public_key_prefix": cleaned_public[:7] if len(cleaned_public) > 7 else "invalid",
-                "flush_at": 100,
-                "flush_interval": 5.0,
-                "timeout": 30,
-            })
-        except Exception as langfuse_init_error:
-            error("Failed to initialize Langfuse client at module import", {
-                "error": str(langfuse_init_error),
-                "error_type": type(langfuse_init_error).__name__,
-            })
-    else:
-        warn("Langfuse keys not found at module import - observability disabled", {
-            "has_public_key": bool(langfuse_public_key),
-            "has_secret_key": bool(langfuse_secret_key),
-        })
-
-# Initialize Langfuse immediately at module import
-_initialize_langfuse()
 
 
 @observe(as_type="generation")
@@ -144,18 +63,15 @@ def call_openai_with_structured_output(
     Raises:
         Exception: After max_retries failed attempts (also sent to Sentry)
     """
-    # Load API keys from environment
+    # Get OpenAI API key (cleaned by main.py at function entry)
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         error_msg = "OPENAI_API_KEY not found in environment"
         error(error_msg, {})
         raise ValueError(error_msg)
     
-    # Strip whitespace and newlines from API key (common issue with secrets management)
-    api_key = api_key.strip()
-    
-    # Get Langfuse client for trace management (from @observe decorator context)
-    # Client was initialized at module import time, so @observe has proper access
+    # Get Langfuse client singleton (configured by main.py at function entry)
+    # The SDK automatically creates a singleton client from environment variables
     langfuse_client = get_client()
     
     # Update trace with user_id, session_id, and generation name
