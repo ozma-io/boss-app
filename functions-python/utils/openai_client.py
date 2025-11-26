@@ -147,6 +147,20 @@ def call_openai_with_structured_output(
                 }
             )
             
+            # Flush Langfuse events immediately after successful generation
+            # Critical for serverless environments where background tasks are terminated
+            try:
+                from langfuse import get_client
+                langfuse_client = get_client()
+                langfuse_client.flush()
+            except Exception as flush_error:
+                # Don't fail the function if flush fails, just log it
+                warn("Failed to flush Langfuse events", {
+                    "flush_error": str(flush_error),
+                    "user_id": user_id,
+                    "session_id": session_id,
+                })
+            
             # Type assertion: parsed_response is guaranteed to be T at this point
             return parsed_response  # type: ignore
             
