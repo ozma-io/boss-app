@@ -262,7 +262,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         apiKey: openaiApiKey.value().trim(),
       }),
       {
-        generationName: 'chat-completion',
+        generationName: 'chat_completion',
         // Use sessionId for LangFuse session grouping (app visits)
         // Fall back to threadId if sessionId is not provided
         sessionId: sessionId || threadId,
