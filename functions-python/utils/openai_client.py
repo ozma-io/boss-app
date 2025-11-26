@@ -42,7 +42,7 @@ def call_openai_with_structured_output(
     Args:
         prompt: User prompt to send to OpenAI
         response_model: Pydantic model defining expected response structure
-        model: OpenAI model to use (default: gpt-4o-2024-08-06)
+        model: OpenAI model to use
         user_id: User ID for LangFuse tracking
         session_id: Session ID for LangFuse tracking
         generation_name: Name for this generation in LangFuse
