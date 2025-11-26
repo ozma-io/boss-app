@@ -163,6 +163,10 @@ def get_unread_count(db: Any, user_id: str) -> int:
     
     Queries the main chat thread for unread message count.
     
+    TODO: Optimize by storing unreadCount at user document level (denormalize from chatThreads subcollection)
+          to avoid N+1 queries when processing all users in notification orchestration.
+    TODO: Handle dynamic threadId - currently hardcoded to 'main' but schema allows multiple threads.
+    
     Args:
         db: Firestore client instance
         user_id: User document ID
@@ -196,37 +200,39 @@ def get_unread_count(db: Any, user_id: str) -> int:
         return 0
 
 
-def determine_channel(user_data: dict[str, Any]) -> NotificationChannel:
+def determine_channel(user_data: dict[str, Any], unread_count: int) -> NotificationChannel:
     """
     Determine which channel to use for notification (PUSH or EMAIL).
     
     Decision logic from orchestrator docstring STEP 1:
-    - PUSH: if notifications_enabled=true AND fcm_token exists AND user was active in last 6 days
-    - EMAIL: if push not available AND email_unsubscribed=false
-    - None: if push disabled/inactive AND email_unsubscribed=true (log to Sentry)
+    - PUSH: if notifications_enabled=true AND fcm_token exists AND (user was active in last 6 days OR unread_count=0)
+    - EMAIL: if user inactive >6 days AND unread_count>0 AND email_unsubscribed=false
+    - None: if no channel available (log to Sentry)
     
-    IMPORTANT: PUSH requires activity within last 6 days. This means INACTIVE_USER scenario
-    (inactive > 7 days) will ALWAYS get EMAIL channel, never PUSH (mutually exclusive).
+    IMPORTANT: PUSH is now available for inactive users without unread messages.
+    EMAIL is used only when there are unread messages to follow up on.
     
     Args:
         user_data: User document data from Firestore
+        unread_count: Number of unread chat messages
         
     Returns:
         'PUSH', 'EMAIL', or None if no channel available
     """
     # Check PUSH eligibility
-    # PUSH requires activity within last 6 days
+    # PUSH available if: notifications enabled + token exists + (active recently OR no unread messages)
     has_notifications = user_data.get('notificationPermissionStatus') == 'granted'
     has_fcm_token = bool(user_data.get('fcmToken'))
     is_active = was_active_recently(user_data, days=6)
     
-    if has_notifications and has_fcm_token and is_active:
+    if has_notifications and has_fcm_token and (is_active or unread_count == 0):
         return 'PUSH'
     
     # Check EMAIL eligibility
+    # EMAIL used when user is inactive AND has unread messages to follow up on
     is_unsubscribed = user_data.get('email_unsubscribed', False)
     
-    if not is_unsubscribed:
+    if not is_unsubscribed and unread_count > 0:
         return 'EMAIL'
     
     # No channel available - log to Sentry
@@ -239,6 +245,7 @@ def determine_channel(user_data: dict[str, Any]) -> NotificationChannel:
             "has_fcm_token": has_fcm_token,
             "is_active": is_active,
             "is_unsubscribed": is_unsubscribed,
+            "unread_count": unread_count,
         }
     )
     
@@ -273,12 +280,10 @@ def determine_scenario(
     C. NEW_USER_EMAIL - logged into app within first N days + EMAIL channel
     D. ACTIVE_USER_PUSH - regular app usage + PUSH channel
     E. ACTIVE_USER_EMAIL - regular app usage + EMAIL channel
-    F. INACTIVE_USER - has unread messages AND lastActivityAt > 7 days ago
+    F. INACTIVE_USER - has unread messages AND lastActivityAt > 6 days ago
     
-    IMPORTANT: INACTIVE_USER will ALWAYS have channel=EMAIL due to mutually exclusive logic:
-    - INACTIVE_USER requires: lastActivityAt > 7 days ago (is_inactive(days=7))
-    - PUSH channel requires: lastActivityAt <= 6 days ago (was_active_recently(days=6))
-    These conditions cannot both be true, so INACTIVE_USER can never have PUSH channel.
+    IMPORTANT: With new channel logic, INACTIVE_USER will have channel=EMAIL only when unread messages exist.
+    PUSH can be used for inactive users without unread messages.
     
     Args:
         db: Firestore client instance
@@ -300,13 +305,11 @@ def determine_scenario(
         return 'EMAIL_ONLY_USER'
     
     # F. INACTIVE_USER - priority check (overrides other scenarios)
-    # Has unread messages AND inactive for more than 7 days
-    # IMPORTANT: Channel will ALWAYS be EMAIL here because:
-    # - INACTIVE_USER requires: lastActivityAt > 7 days ago
-    # - PUSH channel requires: lastActivityAt <= 6 days ago
-    # These conditions are mutually exclusive, so channel can never be PUSH here.
-    if unread_count > 0 and is_inactive(user_data, days=7):
-        # Sanity check: verify channel is EMAIL (should always be true)
+    # Has unread messages AND inactive for more than 6 days
+    # IMPORTANT: Channel will ALWAYS be EMAIL here because determine_channel only returns EMAIL
+    # when unread_count > 0, which matches this scenario's requirements.
+    if unread_count > 0 and is_inactive(user_data, days=6):
+        # Sanity check: verify channel is EMAIL (should always be true with current logic)
         if channel != 'EMAIL':
             error(
                 "UNEXPECTED: INACTIVE_USER with non-EMAIL channel (logic bug)",
@@ -316,7 +319,7 @@ def determine_scenario(
                     "last_activity": user_data.get('lastActivityAt'),
                 }
             )
-            # This should never happen due to mutually exclusive conditions,
+            # This should never happen due to channel selection logic,
             # but if it does, we log the error and continue with EMAIL scenario
         return 'INACTIVE_USER'
     

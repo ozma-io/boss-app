@@ -169,45 +169,63 @@ def test_determine_channel_push():
     """Test PUSH channel selection."""
     now = datetime.now(timezone.utc)
     
+    # Active user with unread messages - PUSH
     user_push_eligible = {
         'notificationPermissionStatus': 'granted',
         'fcmToken': 'valid_token',
         'lastActivityAt': (now - timedelta(days=3)).isoformat(),
     }
-    assert determine_channel(user_push_eligible) == 'PUSH'
+    assert determine_channel(user_push_eligible, unread_count=5) == 'PUSH'
+    
+    # Inactive user without unread messages - PUSH
+    user_inactive_no_unread = {
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': 'valid_token',
+        'lastActivityAt': (now - timedelta(days=10)).isoformat(),
+    }
+    assert determine_channel(user_inactive_no_unread, unread_count=0) == 'PUSH'
 
 
 def test_determine_channel_email():
     """Test EMAIL channel selection."""
     now = datetime.now(timezone.utc)
     
-    # No FCM token - fall back to email
+    # No FCM token but has unread messages - EMAIL
     user_email_no_token = {
         'notificationPermissionStatus': 'granted',
         'fcmToken': None,
         'lastActivityAt': (now - timedelta(days=3)).isoformat(),
         'email_unsubscribed': False,
     }
-    assert determine_channel(user_email_no_token) == 'EMAIL'
+    assert determine_channel(user_email_no_token, unread_count=3) == 'EMAIL'
     
-    # Inactive - fall back to email
+    # Inactive with unread messages - EMAIL
     user_email_inactive = {
         'notificationPermissionStatus': 'granted',
         'fcmToken': 'valid_token',
         'lastActivityAt': (now - timedelta(days=10)).isoformat(),
         'email_unsubscribed': False,
     }
-    assert determine_channel(user_email_inactive) == 'EMAIL'
+    assert determine_channel(user_email_inactive, unread_count=5) == 'EMAIL'
 
 
 def test_determine_channel_none():
     """Test no channel available."""
+    # No PUSH (denied) and no EMAIL (unsubscribed or no unread messages)
     user_no_channel = {
         'notificationPermissionStatus': 'denied',
         'fcmToken': None,
         'email_unsubscribed': True,
     }
-    assert determine_channel(user_no_channel) is None
+    assert determine_channel(user_no_channel, unread_count=0) is None
+    
+    # No unread messages and can't use PUSH
+    user_no_unread = {
+        'notificationPermissionStatus': 'denied',
+        'fcmToken': None,
+        'email_unsubscribed': False,
+    }
+    assert determine_channel(user_no_unread, unread_count=0) is None
 
 
 def test_determine_scenario_email_only_user():

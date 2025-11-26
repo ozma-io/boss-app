@@ -21,9 +21,9 @@ See functions/src/constants.ts (CHAT_SYSTEM_PROMPT) for AI behavior details.
 STEP 1: CHOOSE CHANNEL
 
 Decision logic:
-- PUSH: if notifications_enabled=true AND fcm_token exists AND user was active in app in last 6 days (lastActivityAt)
-- EMAIL: if push not available AND email_unsubscribed=false
-- NO CHANNEL: if push disabled/inactive AND email_unsubscribed=true → log error to Sentry, skip user
+- PUSH: if notifications_enabled=true AND fcm_token exists AND (user was active in last 6 days OR unread_count=0)
+- EMAIL: if user inactive >6 days AND unread_count>0 AND email_unsubscribed=false
+- NO CHANNEL: if no channel available → log error to Sentry, skip user
 
 Implementation note: Sync Mailgun unsubscribe list at function start, update Firestore email_unsubscribed flags.
 
@@ -63,8 +63,8 @@ E. ACTIVE_USER_EMAIL
    - CTA: "Enable notifications for better experience, promise not to spam"
 
 F. INACTIVE_USER
-   - Trigger: has unread messages AND lastActivityAt > N days ago
-   - Channel: EMAIL (fallback even if notifications_enabled=true, since user is ignoring app)
+   - Trigger: has unread messages AND lastActivityAt > 6 days ago
+   - Channel: EMAIL (only available when there are unread messages to follow up on)
    - Content: career growth advice + gentle reminder about continuing conversation in app
    - CTA: "You have unread messages in app"
 
@@ -103,6 +103,7 @@ from data.notification_data import sync_mailgun_unsubscribes
 from orchestrators.notification_logic import (
     determine_channel,
     determine_scenario,
+    get_unread_count,
     should_send_notification,
 )
 from utils.logger import error, info, warn
@@ -214,16 +215,19 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
             skipped_timing += 1
             continue
         
+        # Get unread count for channel determination and scenario selection
+        unread_count = get_unread_count(db, user_id)
+        
         # Determine notification channel (PUSH or EMAIL)
-        # Note: PUSH requires activity within last 6 days, EMAIL is fallback
-        channel = determine_channel(user_data)
+        # Note: PUSH available if active OR no unread messages
+        # EMAIL used when inactive AND has unread messages to follow up on
+        channel = determine_channel(user_data, unread_count)
         if channel is None:
             skipped_no_channel += 1
             continue
         
         # Determine scenario based on user state and channel
-        # Note: INACTIVE_USER scenario (inactive > 7 days) will ALWAYS have channel=EMAIL
-        # because PUSH requires activity within 6 days (mutually exclusive conditions)
+        # Note: INACTIVE_USER scenario (inactive > 6 days + unread messages) will have channel=EMAIL
         scenario = determine_scenario(db, user_id, user_data, channel)
         
         # Create appropriate task for batch processing

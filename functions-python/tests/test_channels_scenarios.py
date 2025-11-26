@@ -88,7 +88,8 @@ def main() -> None:
         from data.notification_data import get_users_needing_notifications
         from orchestrators.notification_logic import (
             determine_channel,
-            determine_scenario
+            determine_scenario,
+            get_unread_count,
         )
         
         # Get Firestore client
@@ -124,8 +125,11 @@ def main() -> None:
                 'email_unsubscribed': user.email_unsubscribed,
             }
             
+            # Get unread count for channel determination
+            unread_count = get_unread_count(db, user.user_id)
+            
             # Determine channel and scenario
-            channel = determine_channel(user_data)
+            channel = determine_channel(user_data, unread_count)
             scenario = determine_scenario(db, user.user_id, user_data, channel)
             
             # Update statistics
