@@ -64,6 +64,10 @@ def _initialize_langfuse() -> None:
         os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "https://us.cloud.langfuse.com/api/public/otel"
         os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {langfuse_auth}"
         
+        # Set generous timeouts for OTLP exporter (30 seconds instead of default 5)
+        # This prevents ReadTimeoutError when sending large traces or on slow networks
+        os.environ["OTEL_EXPORTER_OTLP_TIMEOUT"] = "30000"  # milliseconds
+        
         # Log key status
         if public_had_whitespace or secret_had_whitespace:
             warn("Langfuse keys contained whitespace characters (stripped)", {
@@ -79,10 +83,17 @@ def _initialize_langfuse() -> None:
                 secret_key=cleaned_secret,
                 host="https://us.cloud.langfuse.com",
                 debug=False,
+                # Increase timeouts for better reliability in serverless environments
+                flush_at=15,  # Number of events before auto-flush (default: 15)
+                flush_interval=5.0,  # Seconds between auto-flushes (default: 0.5)
+                timeout=30,  # HTTP timeout in seconds (default: 20)
             )
             info("Langfuse global client initialized at module import", {
                 "host": "https://us.cloud.langfuse.com",
                 "public_key_prefix": cleaned_public[:7] if len(cleaned_public) > 7 else "invalid",
+                "flush_at": 100,
+                "flush_interval": 5.0,
+                "timeout": 30,
             })
         except Exception as langfuse_init_error:
             error("Failed to initialize Langfuse client at module import", {
