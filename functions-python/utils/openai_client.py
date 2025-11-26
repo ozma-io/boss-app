@@ -155,7 +155,7 @@ def call_openai_with_structured_output(
                 langfuse_client.flush()
             except Exception as flush_error:
                 # Don't fail the function if flush fails, just log it
-                warn("Failed to flush Langfuse events", {
+                error("Failed to flush Langfuse events", {
                     "flush_error": str(flush_error),
                     "user_id": user_id,
                     "session_id": session_id,
