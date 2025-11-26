@@ -65,6 +65,15 @@ def call_openai_with_structured_output(
     # Strip whitespace and newlines from API key (common issue with secrets management)
     api_key = api_key.strip()
     
+    # Strip Langfuse keys if present (common issue with Firebase secrets containing newlines)
+    langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
+    langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+    
+    if langfuse_public_key:
+        os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key.strip()
+    if langfuse_secret_key:
+        os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key.strip()
+    
     # Set LangFuse host (US region, matches TypeScript config)
     # LangFuse OpenAI wrapper reads this from environment
     os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
