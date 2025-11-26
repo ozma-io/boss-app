@@ -133,6 +133,9 @@ def sync_mailgun_unsubscribes(db: Any) -> int:
         error("MAILGUN_API_KEY not found in environment", {})
         raise ValueError("MAILGUN_API_KEY not configured")
     
+    # Strip whitespace and newlines from API key (common issue with secrets management)
+    mailgun_api_key = mailgun_api_key.strip()
+    
     mailgun_domain = 'mailgun.services.ozma.io'
     
     # Fetch unsubscribed emails from Mailgun

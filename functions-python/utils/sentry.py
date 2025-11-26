@@ -38,7 +38,10 @@ def get_version() -> str:
 
 def get_environment() -> str:
     """Detect environment based on FUNCTIONS_EMULATOR"""
-    return "development" if os.getenv("FUNCTIONS_EMULATOR") == "true" else "production"
+    emulator_flag = os.getenv("FUNCTIONS_EMULATOR")
+    # Strip whitespace for reliable comparison
+    emulator_flag = emulator_flag.strip() if emulator_flag else ""
+    return "development" if emulator_flag == "true" else "production"
 
 
 def init_sentry() -> None:

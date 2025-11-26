@@ -62,6 +62,9 @@ def call_openai_with_structured_output(
         error(error_msg, {})
         raise ValueError(error_msg)
     
+    # Strip whitespace and newlines from API key (common issue with secrets management)
+    api_key = api_key.strip()
+    
     # Set LangFuse host (US region, matches TypeScript config)
     # LangFuse OpenAI wrapper reads this from environment
     os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
