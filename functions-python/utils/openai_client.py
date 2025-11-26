@@ -6,9 +6,11 @@ Includes retry logic for parsing errors and Sentry integration for failures.
 """
 
 import os
+import time
 from typing import Any, Type, TypeVar
 
 import sentry_sdk  # type: ignore
+from openai import APIError, APIConnectionError, APITimeoutError, RateLimitError  # type: ignore
 from pydantic import BaseModel
 
 from langfuse.openai import OpenAI  # type: ignore
@@ -82,6 +84,7 @@ def call_openai_with_structured_output(
         merged_metadata["session_id"] = session_id
     
     last_error = None
+    last_error_details = {}
     
     for attempt in range(max_retries):
         try:
@@ -96,6 +99,9 @@ def call_openai_with_structured_output(
                 }
             )
             
+            # Track request start time for latency measurement
+            request_start_time = time.time()
+            
             # Call OpenAI with structured output
             # The response_format parameter forces OpenAI to return valid JSON
             # matching the Pydantic model schema
@@ -108,11 +114,24 @@ def call_openai_with_structured_output(
                 metadata=merged_metadata if merged_metadata else None,  # type: ignore
             )
             
+            # Calculate request duration
+            request_duration_ms = int((time.time() - request_start_time) * 1000)
+            
             # Extract parsed response (already validated Pydantic model)
             parsed_response: T | None = completion.choices[0].message.parsed  # type: ignore
             
             if parsed_response is None:
                 raise ValueError("OpenAI returned null parsed response")
+            
+            # Extract token usage for monitoring
+            usage = getattr(completion, 'usage', None)  # type: ignore
+            usage_info = {}
+            if usage:
+                usage_info = {
+                    "prompt_tokens": getattr(usage, 'prompt_tokens', None),  # type: ignore
+                    "completion_tokens": getattr(usage, 'completion_tokens', None),  # type: ignore
+                    "total_tokens": getattr(usage, 'total_tokens', None),  # type: ignore
+                }
             
             info(
                 "OpenAI API call successful",
@@ -120,6 +139,8 @@ def call_openai_with_structured_output(
                     "attempt": attempt + 1,
                     "model": model,
                     "response_model": response_model.__name__,
+                    "duration_ms": request_duration_ms,
+                    **usage_info,
                 }
             )
             
@@ -130,13 +151,55 @@ def call_openai_with_structured_output(
             last_error = err
             error_message = str(err)
             
+            # Collect detailed error information for Sentry
+            error_details = {
+                "error_type": type(err).__name__,
+                "error_message": error_message,
+                "model": model,
+                "response_model": response_model.__name__,
+                "attempt": attempt + 1,
+            }
+            
+            # Extract OpenAI-specific error details
+            if isinstance(err, APIConnectionError):
+                error_details["error_category"] = "connection_error"
+                error_details["is_retryable"] = True
+            elif isinstance(err, APITimeoutError):
+                error_details["error_category"] = "timeout_error"
+                error_details["is_retryable"] = True
+            elif isinstance(err, RateLimitError):
+                error_details["error_category"] = "rate_limit_error"
+                error_details["is_retryable"] = True
+            elif isinstance(err, APIError):
+                error_details["error_category"] = "api_error"
+                # Extract HTTP status code and headers if available
+                if hasattr(err, 'status_code'):  # type: ignore
+                    error_details["http_status_code"] = err.status_code  # type: ignore
+                if hasattr(err, 'response'):  # type: ignore
+                    response = err.response  # type: ignore
+                    if hasattr(response, 'headers'):  # type: ignore
+                        # Extract useful headers for debugging
+                        headers = response.headers  # type: ignore
+                        useful_headers_list: list[str] = []
+                        for header_name in ['retry-after', 'x-ratelimit-remaining', 'x-ratelimit-reset', 'x-request-id']:
+                            if header_name in headers:
+                                useful_headers_list.append(f"{header_name}: {headers[header_name]}")  # type: ignore
+                        if useful_headers_list:
+                            error_details["response_headers"] = "; ".join(useful_headers_list)  # type: ignore
+                    if hasattr(response, 'text'):  # type: ignore
+                        # Truncate response body to avoid huge logs
+                        response_text = response.text[:500]  # type: ignore
+                        if response_text:
+                            error_details["response_body"] = response_text
+            else:
+                error_details["error_category"] = "unknown_error"
+            
+            # Store for final Sentry report
+            last_error_details = error_details
+            
             warn(
                 f"OpenAI API call failed on attempt {attempt + 1}/{max_retries}",
-                {
-                    "error": error_message,
-                    "model": model,
-                    "response_model": response_model.__name__,
-                }
+                error_details
             )
             
             # On retry, append error feedback to messages to help model fix the issue
@@ -159,17 +222,30 @@ def call_openai_with_structured_output(
         "generation_name": generation_name,
         "max_retries": max_retries,
         "last_error": str(last_error),
+        "last_error_type": type(last_error).__name__,
     }
+    
+    # Merge detailed error information
+    if last_error_details:
+        error_context.update(last_error_details)
     
     error(
         f"OpenAI API call failed after {max_retries} attempts",
         error_context
     )
     
-    # Capture in Sentry with full context
+    # Capture in Sentry with full context and proper tags
     with sentry_sdk.push_scope() as scope:  # type: ignore
+        # Set tags for better filtering in Sentry
+        scope.set_tag("openai_error_type", error_context.get("error_type", "unknown"))  # type: ignore
+        scope.set_tag("openai_error_category", error_context.get("error_category", "unknown"))  # type: ignore
+        scope.set_tag("openai_model", model)  # type: ignore
+        
+        # Set all context as extra data
         for key, value in error_context.items():
             scope.set_extra(key, value)  # type: ignore
+        
+        # Capture the original exception (preserves stack trace)
         sentry_sdk.capture_exception(last_error)  # type: ignore
     
     raise Exception(
