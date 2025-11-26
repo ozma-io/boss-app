@@ -34,7 +34,8 @@ def should_send_notification(user_data: dict[str, Any]) -> bool:
     - 1st notification: 1 hour after registration
     - 2nd notification: 6 hours after 1st
     - 3rd notification: 24 hours after 2nd
-    - 4+ notifications: 48 hours between each
+    - 4th notification: 48 hours after 3rd
+    - 5+ notifications: 7 days between each
     
     Args:
         user_data: User document data from Firestore
@@ -78,8 +79,11 @@ def should_send_notification(user_data: dict[str, Any]) -> bool:
         required_interval = timedelta(hours=6)
     elif notification_count == 2:
         required_interval = timedelta(hours=24)
-    else:
+    elif notification_count == 3:
         required_interval = timedelta(hours=48)
+    else:
+        # 5+ notifications: weekly interval
+        required_interval = timedelta(days=7)
     
     return time_since_last >= required_interval
 

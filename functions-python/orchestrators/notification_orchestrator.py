@@ -85,7 +85,8 @@ TIMING (Progressive Intervals):
   * 1st notification: 1 hour after registration
   * 2nd notification: 6 hours after 1st
   * 3rd notification: 24 hours after 2nd
-  * 4+ notifications: 48 hours between each
+  * 4th notification: 48 hours after 3rd
+  * 5+ notifications: 7 days between each
 - No timezone logic needed (UTC timestamps)
 """
 

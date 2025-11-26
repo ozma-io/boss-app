@@ -74,7 +74,7 @@ def test_should_send_notification_first_notification() -> None:
 
 
 def test_should_send_notification_progressive_intervals():
-    """Test progressive intervals (6h, 24h, 48h)."""
+    """Test progressive intervals (6h, 24h, 48h, 7 days)."""
     now = datetime.now(timezone.utc)
     
     # 2nd notification - needs 6 hours
@@ -97,11 +97,11 @@ def test_should_send_notification_progressive_intervals():
     }
     assert should_send_notification(user_3rd) is True
     
-    # 4th+ notification - needs 48 hours
+    # 4th notification - needs 48 hours
     user_4th_too_soon = {
         'createdAt': (now - timedelta(days=10)).isoformat(),
         'notification_state': {
-            'notification_count': 5,
+            'notification_count': 3,
             'last_notification_at': (now - timedelta(hours=24)).isoformat(),
         }
     }
@@ -110,11 +110,30 @@ def test_should_send_notification_progressive_intervals():
     user_4th_ok = {
         'createdAt': (now - timedelta(days=10)).isoformat(),
         'notification_state': {
-            'notification_count': 5,
+            'notification_count': 3,
             'last_notification_at': (now - timedelta(hours=49)).isoformat(),
         }
     }
     assert should_send_notification(user_4th_ok) is True
+    
+    # 5+ notifications - needs 7 days (168 hours)
+    user_5th_too_soon = {
+        'createdAt': (now - timedelta(days=30)).isoformat(),
+        'notification_state': {
+            'notification_count': 8,
+            'last_notification_at': (now - timedelta(days=3)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_5th_too_soon) is False
+    
+    user_5th_ok = {
+        'createdAt': (now - timedelta(days=30)).isoformat(),
+        'notification_state': {
+            'notification_count': 8,
+            'last_notification_at': (now - timedelta(days=8)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_5th_ok) is True
 
 
 def test_was_active_recently():
