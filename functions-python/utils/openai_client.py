@@ -66,13 +66,51 @@ def call_openai_with_structured_output(
     api_key = api_key.strip()
     
     # Strip Langfuse keys if present (common issue with Firebase secrets containing newlines)
+    # Langfuse SDK fails silently with invalid keys (becomes no-op), so we need explicit handling
     langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
     
-    if langfuse_public_key:
-        os.environ["LANGFUSE_PUBLIC_KEY"] = langfuse_public_key.strip()
-    if langfuse_secret_key:
-        os.environ["LANGFUSE_SECRET_KEY"] = langfuse_secret_key.strip()
+    if langfuse_public_key and langfuse_secret_key:
+        # Strip and validate keys
+        cleaned_public = langfuse_public_key.strip()
+        cleaned_secret = langfuse_secret_key.strip()
+        
+        # Detect whitespace in original keys
+        public_had_whitespace = langfuse_public_key != cleaned_public
+        secret_had_whitespace = langfuse_secret_key != cleaned_secret
+        
+        # Update environment with cleaned keys
+        os.environ["LANGFUSE_PUBLIC_KEY"] = cleaned_public
+        os.environ["LANGFUSE_SECRET_KEY"] = cleaned_secret
+        
+        # Prepare log context
+        log_context: dict[str, Any] = {
+            "public_key_prefix": cleaned_public[:7] if len(cleaned_public) > 7 else "invalid",
+            "public_key_suffix": cleaned_public[-4:] if len(cleaned_public) > 4 else "invalid",
+            "secret_key_prefix": cleaned_secret[:7] if len(cleaned_secret) > 7 else "invalid",
+            "public_key_length": len(cleaned_public),
+            "secret_key_length": len(cleaned_secret),
+        }
+        
+        # Log details about whitespace if found (security: only show repr of first/last chars)
+        if public_had_whitespace or secret_had_whitespace:
+            warn("Langfuse keys contained whitespace characters (stripped)", {
+                **log_context,
+                "public_had_whitespace": public_had_whitespace,
+                "secret_had_whitespace": secret_had_whitespace,
+                # Show repr of first/last 3 chars to reveal hidden characters like \n
+                "public_key_first_chars": repr(langfuse_public_key[:3]) if public_had_whitespace else None,
+                "public_key_last_chars": repr(langfuse_public_key[-3:]) if public_had_whitespace else None,
+                "secret_key_first_chars": repr(langfuse_secret_key[:3]) if secret_had_whitespace else None,
+                "secret_key_last_chars": repr(langfuse_secret_key[-3:]) if secret_had_whitespace else None,
+            })
+        else:
+            info("Langfuse keys configured successfully", log_context)
+    else:
+        error("Langfuse keys not found - observability will be disabled", {
+            "has_public_key": bool(langfuse_public_key),
+            "has_secret_key": bool(langfuse_secret_key),
+        })
     
     # Set LangFuse host (US region, matches TypeScript config)
     # LangFuse OpenAI wrapper reads this from environment
@@ -162,10 +200,16 @@ def call_openai_with_structured_output(
                 from langfuse import get_client
                 langfuse_client = get_client()
                 langfuse_client.flush()
+                info("Langfuse events flushed successfully", {
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "generation_name": generation_name,
+                })
             except Exception as flush_error:
                 # Don't fail the function if flush fails, just log it
                 error("Failed to flush Langfuse events", {
                     "flush_error": str(flush_error),
+                    "flush_error_type": type(flush_error).__name__,
                     "user_id": user_id,
                     "session_id": session_id,
                 })
