@@ -198,11 +198,23 @@ def call_openai_with_structured_output(
             # matching the Pydantic model schema
             # Note: We use standard OpenAI client (not Langfuse wrapper)
             # The @observe decorator handles tracing automatically
-            completion = client.beta.chat.completions.parse(  # type: ignore
-                model=model,
-                messages=messages,  # type: ignore
-                response_format=response_model,
-            )
+            #
+            # IMPORTANT: Pass user_id as 'user' parameter to OpenAI
+            # This helps OpenAI monitor and detect abuse at the end-user level,
+            # so if a user violates policies, OpenAI blocks them (not our entire org)
+            
+            # Build API call parameters
+            api_params: dict[str, Any] = {
+                "model": model,
+                "messages": messages,
+                "response_format": response_model,
+            }
+            
+            # Add user identifier if available (for abuse monitoring)
+            if user_id:
+                api_params["user"] = user_id
+            
+            completion = client.beta.chat.completions.parse(**api_params)  # type: ignore
             
             # Calculate request duration
             request_duration_ms = int((time.time() - request_start_time) * 1000)
