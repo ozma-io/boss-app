@@ -21,8 +21,8 @@ See functions/src/constants.ts (CHAT_SYSTEM_PROMPT) for AI behavior details.
 STEP 1: CHOOSE CHANNEL
 
 Decision logic:
-- PUSH: if notifications_enabled=true AND fcm_token exists AND (user was active in last 6 days OR unread_count=0)
-- EMAIL: if user inactive >6 days AND unread_count>0 AND email_unsubscribed=false
+- PUSH: if notifications_enabled=true AND fcm_token exists
+- EMAIL: if no PUSH available AND email_unsubscribed=false
 - NO CHANNEL: if no channel available → log error to Sentry, skip user
 
 Implementation note: Sync Mailgun unsubscribe list at function start, update Firestore email_unsubscribed flags.
@@ -39,25 +39,25 @@ A. EMAIL_ONLY_USER
    - Note: First email sent immediately via HTTP endpoint when user submits web form
 
 B. NEW_USER_PUSH
-   - Trigger: logged into app within first N days (TBD) + notifications_enabled=true
+   - Trigger: logged into app within first N days (TBD)
    - Channel: PUSH
    - Content: early career coaching guidance, help establish good habits
    - CTA: none (user is already engaged)
 
 C. NEW_USER_EMAIL
-   - Trigger: logged into app within first N days + notifications_enabled=false
+   - Trigger: logged into app within first N days
    - Channel: EMAIL
    - Content: early career coaching guidance, help establish good habits
    - CTA: "Enable notifications for better experience, promise not to spam"
 
 D. ACTIVE_USER_PUSH
-   - Trigger: regular app usage, no unread messages piling up + notifications_enabled=true
+   - Trigger: regular app usage
    - Channel: PUSH
    - Content: ongoing career coaching - help user grow professionally (leadership, communication skills, career development)
    - CTA: none (user is already engaged)
 
 E. ACTIVE_USER_EMAIL
-   - Trigger: regular app usage + notifications_enabled=false
+   - Trigger: regular app usage
    - Channel: EMAIL
    - Content: ongoing career coaching - help user grow professionally
    - CTA: "Enable notifications for better experience, promise not to spam"
@@ -220,15 +220,15 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
         unread_count = get_unread_count(db, user_id)
         
         # Determine notification channel (PUSH or EMAIL)
-        # Note: PUSH available if active OR no unread messages
-        # EMAIL used when inactive AND has unread messages to follow up on
+        # Note: PUSH if user has notification permission and FCM token
+        # EMAIL as fallback if PUSH unavailable and user not unsubscribed
         channel = determine_channel(user_data, unread_count)
         if channel is None:
             skipped_no_channel += 1
             continue
         
         # Determine scenario based on user state and channel
-        # Note: INACTIVE_USER scenario (inactive > 6 days + unread messages) will have channel=EMAIL
+        # Note: Scenario selection now focuses on user activity and unread count, not channel constraints
         scenario = determine_scenario(db, user_id, user_data, channel)
         
         # Create appropriate task for batch processing

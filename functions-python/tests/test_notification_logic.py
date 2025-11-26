@@ -169,28 +169,39 @@ def test_determine_channel_push():
     """Test PUSH channel selection."""
     now = datetime.now(timezone.utc)
     
-    # Active user with unread messages - PUSH
+    # User with push permission and token - PUSH (regardless of activity/unread)
     user_push_eligible = {
         'notificationPermissionStatus': 'granted',
         'fcmToken': 'valid_token',
         'lastActivityAt': (now - timedelta(days=3)).isoformat(),
     }
     assert determine_channel(user_push_eligible, unread_count=5) == 'PUSH'
+    assert determine_channel(user_push_eligible, unread_count=0) == 'PUSH'
     
-    # Inactive user without unread messages - PUSH
-    user_inactive_no_unread = {
+    # Even inactive users get PUSH if they have permission and token
+    user_inactive_with_push = {
         'notificationPermissionStatus': 'granted',
         'fcmToken': 'valid_token',
         'lastActivityAt': (now - timedelta(days=10)).isoformat(),
     }
-    assert determine_channel(user_inactive_no_unread, unread_count=0) == 'PUSH'
+    assert determine_channel(user_inactive_with_push, unread_count=3) == 'PUSH'
 
 
 def test_determine_channel_email():
-    """Test EMAIL channel selection."""
+    """Test EMAIL channel selection as fallback."""
     now = datetime.now(timezone.utc)
     
-    # No FCM token but has unread messages - EMAIL
+    # No push permission, but not unsubscribed - EMAIL fallback
+    user_email_no_push_permission = {
+        'notificationPermissionStatus': 'denied',
+        'fcmToken': None,
+        'lastActivityAt': (now - timedelta(days=3)).isoformat(),
+        'email_unsubscribed': False,
+    }
+    assert determine_channel(user_email_no_push_permission, unread_count=0) == 'EMAIL'
+    assert determine_channel(user_email_no_push_permission, unread_count=5) == 'EMAIL'
+    
+    # Has push permission but no FCM token - EMAIL fallback
     user_email_no_token = {
         'notificationPermissionStatus': 'granted',
         'fcmToken': None,
@@ -198,34 +209,18 @@ def test_determine_channel_email():
         'email_unsubscribed': False,
     }
     assert determine_channel(user_email_no_token, unread_count=3) == 'EMAIL'
-    
-    # Inactive with unread messages - EMAIL
-    user_email_inactive = {
-        'notificationPermissionStatus': 'granted',
-        'fcmToken': 'valid_token',
-        'lastActivityAt': (now - timedelta(days=10)).isoformat(),
-        'email_unsubscribed': False,
-    }
-    assert determine_channel(user_email_inactive, unread_count=5) == 'EMAIL'
 
 
 def test_determine_channel_none():
     """Test no channel available."""
-    # No PUSH (denied) and no EMAIL (unsubscribed or no unread messages)
+    # No PUSH (denied/no token) and no EMAIL (unsubscribed) - no channel
     user_no_channel = {
         'notificationPermissionStatus': 'denied',
         'fcmToken': None,
         'email_unsubscribed': True,
     }
     assert determine_channel(user_no_channel, unread_count=0) is None
-    
-    # No unread messages and can't use PUSH
-    user_no_unread = {
-        'notificationPermissionStatus': 'denied',
-        'fcmToken': None,
-        'email_unsubscribed': False,
-    }
-    assert determine_channel(user_no_unread, unread_count=0) is None
+    assert determine_channel(user_no_channel, unread_count=5) is None
 
 
 def test_determine_scenario_email_only_user():
@@ -235,7 +230,9 @@ def test_determine_scenario_email_only_user():
         'lastActivityAt': None,
         'createdAt': '2025-11-20T10:00:00Z',
     }
+    # EMAIL_ONLY_USER can work with any channel now
     assert determine_scenario(mock_db, 'test_user_id', user_never_logged_in, 'EMAIL') == 'EMAIL_ONLY_USER'
+    assert determine_scenario(mock_db, 'test_user_id', user_never_logged_in, 'PUSH') == 'EMAIL_ONLY_USER'
 
 
 def test_determine_scenario_new_user():
@@ -275,13 +272,16 @@ def test_determine_scenario_inactive_user():
         'createdAt': (now - timedelta(days=60)).isoformat(),
     }
     
-    # Test with no unread messages - should be ACTIVE_USER_EMAIL
+    # Test with no unread messages - should be ACTIVE_USER_* (not INACTIVE_USER)
     mock_db_no_unread = create_mock_db(unread_count=0)
     assert determine_scenario(mock_db_no_unread, 'test_user_id', user_inactive, 'EMAIL') == 'ACTIVE_USER_EMAIL'
+    assert determine_scenario(mock_db_no_unread, 'test_user_id', user_inactive, 'PUSH') == 'ACTIVE_USER_PUSH'
     
     # Test with unread messages - should be INACTIVE_USER (priority scenario)
+    # Can work with both PUSH and EMAIL channels now
     mock_db_with_unread = create_mock_db(unread_count=5)
     assert determine_scenario(mock_db_with_unread, 'test_user_id', user_inactive, 'EMAIL') == 'INACTIVE_USER'
+    assert determine_scenario(mock_db_with_unread, 'test_user_id', user_inactive, 'PUSH') == 'INACTIVE_USER'
 
 
 if __name__ == '__main__':
