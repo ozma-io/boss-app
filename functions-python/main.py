@@ -52,7 +52,7 @@ def _clean_environment_secrets() -> None:
             cleaned_value = original_value.strip()
             if original_value != cleaned_value:
                 os.environ[secret_name] = cleaned_value
-                warn(f"{secret_name} contained whitespace characters (cleaned)", {
+                info(f"{secret_name} contained whitespace characters (cleaned)", {
                     "secret_name": secret_name,
                     "had_leading_space": original_value != original_value.lstrip(),
                     "had_trailing_space": original_value != original_value.rstrip(),
