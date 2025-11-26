@@ -106,6 +106,26 @@ def call_openai_with_structured_output(
             })
         else:
             info("Langfuse keys configured successfully", log_context)
+        
+        # Initialize Langfuse global client with explicit credentials BEFORE OpenAI client
+        # This ensures Langfuse SDK uses cleaned keys, not potentially corrupted env vars
+        # The OpenAI wrapper will use this global client for tracing
+        try:
+            from langfuse import Langfuse
+            langfuse_client = Langfuse(
+                public_key=cleaned_public,
+                secret_key=cleaned_secret,
+                host="https://us.cloud.langfuse.com",
+                debug=False,
+            )
+            info("Langfuse global client initialized with explicit credentials", {
+                "host": "https://us.cloud.langfuse.com",
+            })
+        except Exception as langfuse_init_error:
+            error("Failed to initialize Langfuse client", {
+                "error": str(langfuse_init_error),
+                "error_type": type(langfuse_init_error).__name__,
+            })
     else:
         error("Langfuse keys not found - observability will be disabled", {
             "has_public_key": bool(langfuse_public_key),
@@ -113,12 +133,11 @@ def call_openai_with_structured_output(
         })
     
     # Set LangFuse host (US region, matches TypeScript config)
-    # LangFuse OpenAI wrapper reads this from environment
     os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
     
     # Initialize OpenAI client (with LangFuse wrapper)
-    # LangFuse automatically uses env vars: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST
-    # If keys not set, LangFuse observability is disabled (client works as standard OpenAI)
+    # LangFuse wrapper will use the global client initialized above
+    # If Langfuse client not initialized, wrapper works as standard OpenAI (silent fallback)
     client = OpenAI(api_key=api_key)
     
     # Build messages array
