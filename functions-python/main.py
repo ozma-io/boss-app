@@ -5,7 +5,6 @@ Infrastructure layer that defines Cloud Function decorators and entry points.
 All business logic is delegated to separate modules for testability.
 """
 
-import base64
 import os
 from typing import Any
 
@@ -62,13 +61,13 @@ def _clean_environment_secrets() -> None:
 
 def _configure_langfuse() -> None:
     """
-    Configure Langfuse environment variables for SDK singleton.
+    Configure Langfuse environment for SDK singleton.
     
-    Sets up OTLP exporter configuration and Langfuse host.
-    Called once per Cloud Function invocation after cleaning secrets.
-    
+    Sets Langfuse host (US region) if not already set.
     The Langfuse SDK will automatically create a singleton client
-    using these environment variables when get_client() is called.
+    using LANGFUSE_* environment variables when get_client() is called.
+    
+    Note: @observe decorator uses native Langfuse API automatically.
     """
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     secret_key = os.getenv("LANGFUSE_SECRET_KEY")
@@ -80,18 +79,8 @@ def _configure_langfuse() -> None:
         })
         return
     
-    # Set Langfuse host (US region)
+    # Set Langfuse host (US region) - SDK will use this automatically
     os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
-    
-    # Configure OpenTelemetry OTLP exporter for Langfuse
-    # This enables full observability with traces sent via OTLP protocol
-    langfuse_auth = base64.b64encode(
-        f"{public_key}:{secret_key}".encode()
-    ).decode()
-    
-    os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "https://us.cloud.langfuse.com/api/public/otel"
-    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {langfuse_auth}"
-    os.environ["OTEL_EXPORTER_OTLP_TIMEOUT"] = "30000"  # 30 seconds (default: 5)
     
     info("Langfuse environment configured", {
         "host": os.environ["LANGFUSE_HOST"],
