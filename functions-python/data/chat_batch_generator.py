@@ -16,6 +16,7 @@ Key Features:
 - Automatic push notifications via triggers
 """
 
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Any
@@ -104,19 +105,23 @@ def _generate_single_chat_message(
             )
         
         # Route to appropriate AI generation function based on scenario
+        # Generate unique session ID per user (format: notification_<scenario>_<user_id>_<uuid>)
+        # This ensures proper tracking in Langfuse with unique session per notification
+        session_id = f"notification_{task.scenario}_{task.user_id}_{uuid.uuid4().hex[:8]}"
+        
         try:
             if task.scenario == "NEW_USER_PUSH":
                 chat_content = generate_first_push_notification(
                     db=db,  # type: ignore
                     user_id=task.user_id,
-                    session_id=f"batch_generation_{task.scenario}",
+                    session_id=session_id,
                 )
             elif task.scenario in ["ACTIVE_USER_PUSH"]:
                 chat_content = generate_ongoing_push_notification(
                     db=db,  # type: ignore
                     user_id=task.user_id,
                     scenario=task.scenario,
-                    session_id=f"batch_generation_{task.scenario}",
+                    session_id=session_id,
                 )
             else:
                 raise ValueError(f"Unknown scenario: {task.scenario}")

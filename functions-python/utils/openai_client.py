@@ -3,17 +3,21 @@ OpenAI Client with LangFuse Integration and Retry Logic
 
 Provides structured output from OpenAI with automatic observability via LangFuse.
 Includes retry logic for parsing errors and Sentry integration for failures.
+
+Uses modern Langfuse @observe decorator for proper trace management with
+user_id and session_id tracking as first-class trace attributes.
 """
 
+import base64
 import os
 import time
 from typing import Any, Type, TypeVar
 
 import sentry_sdk  # type: ignore
-from openai import APIError, APIConnectionError, APITimeoutError, RateLimitError  # type: ignore
+from openai import APIError, APIConnectionError, APITimeoutError, RateLimitError, OpenAI  # type: ignore
 from pydantic import BaseModel
 
-from langfuse.openai import OpenAI  # type: ignore
+from langfuse import Langfuse, observe, get_client  # type: ignore
 
 from .logger import error, info, warn
 
@@ -22,7 +26,80 @@ T = TypeVar('T', bound=BaseModel)
 # Default model for content generation
 DEFAULT_MODEL = "gpt-5"
 
+# Initialize Langfuse global client at module import time
+# This ensures @observe decorator has access to properly configured client
+def _initialize_langfuse() -> None:
+    """
+    Initialize Langfuse global client with environment credentials.
+    
+    Called once at module import to ensure @observe decorator has access
+    to properly configured client before any functions are called.
+    """
+    # Strip Langfuse keys if present (common issue with Firebase secrets containing newlines)
+    langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
+    langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+    
+    if langfuse_public_key and langfuse_secret_key:
+        # Strip and validate keys
+        cleaned_public = langfuse_public_key.strip()
+        cleaned_secret = langfuse_secret_key.strip()
+        
+        # Detect whitespace in original keys
+        public_had_whitespace = langfuse_public_key != cleaned_public
+        secret_had_whitespace = langfuse_secret_key != cleaned_secret
+        
+        # Update environment with cleaned keys
+        os.environ["LANGFUSE_PUBLIC_KEY"] = cleaned_public
+        os.environ["LANGFUSE_SECRET_KEY"] = cleaned_secret
+        
+        # Set host (US region)
+        os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
+        
+        # Configure OpenTelemetry OTLP exporter for Langfuse
+        # This enables full observability with traces sent to Langfuse via OTLP protocol
+        langfuse_auth = base64.b64encode(
+            f"{cleaned_public}:{cleaned_secret}".encode()
+        ).decode()
+        
+        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "https://us.cloud.langfuse.com/api/public/otel"
+        os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {langfuse_auth}"
+        
+        # Log key status
+        if public_had_whitespace or secret_had_whitespace:
+            warn("Langfuse keys contained whitespace characters (stripped)", {
+                "public_had_whitespace": public_had_whitespace,
+                "secret_had_whitespace": secret_had_whitespace,
+            })
+        
+        # Initialize Langfuse global client with explicit credentials
+        # This client will be used by @observe decorator and get_client()
+        try:
+            _ = Langfuse(
+                public_key=cleaned_public,
+                secret_key=cleaned_secret,
+                host="https://us.cloud.langfuse.com",
+                debug=False,
+            )
+            info("Langfuse global client initialized at module import", {
+                "host": "https://us.cloud.langfuse.com",
+                "public_key_prefix": cleaned_public[:7] if len(cleaned_public) > 7 else "invalid",
+            })
+        except Exception as langfuse_init_error:
+            error("Failed to initialize Langfuse client at module import", {
+                "error": str(langfuse_init_error),
+                "error_type": type(langfuse_init_error).__name__,
+            })
+    else:
+        warn("Langfuse keys not found at module import - observability disabled", {
+            "has_public_key": bool(langfuse_public_key),
+            "has_secret_key": bool(langfuse_secret_key),
+        })
 
+# Initialize Langfuse immediately at module import
+_initialize_langfuse()
+
+
+@observe(as_type="generation")
 def call_openai_with_structured_output(
     prompt: str,
     response_model: Type[T],
@@ -36,15 +113,16 @@ def call_openai_with_structured_output(
     """
     Call OpenAI API with structured output and retry logic.
     
-    Uses LangFuse for automatic observability when available.
+    Uses modern Langfuse @observe decorator for automatic observability.
+    Properly sets user_id and session_id as trace-level attributes.
     Retries up to max_retries times on parsing failures.
     
     Args:
         prompt: User prompt to send to OpenAI
         response_model: Pydantic model defining expected response structure
         model: OpenAI model to use
-        user_id: User ID for LangFuse tracking
-        session_id: Session ID for LangFuse tracking
+        user_id: User ID for LangFuse tracking (set as trace attribute)
+        session_id: Session ID for LangFuse tracking (set as trace attribute)
         generation_name: Name for this generation in LangFuse
         metadata: Additional metadata for LangFuse
         max_retries: Maximum number of retry attempts
@@ -65,92 +143,36 @@ def call_openai_with_structured_output(
     # Strip whitespace and newlines from API key (common issue with secrets management)
     api_key = api_key.strip()
     
-    # Strip Langfuse keys if present (common issue with Firebase secrets containing newlines)
-    # Langfuse SDK fails silently with invalid keys (becomes no-op), so we need explicit handling
-    langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
-    langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+    # Get Langfuse client for trace management (from @observe decorator context)
+    # Client was initialized at module import time, so @observe has proper access
+    langfuse_client = get_client()
     
-    if langfuse_public_key and langfuse_secret_key:
-        # Strip and validate keys
-        cleaned_public = langfuse_public_key.strip()
-        cleaned_secret = langfuse_secret_key.strip()
-        
-        # Detect whitespace in original keys
-        public_had_whitespace = langfuse_public_key != cleaned_public
-        secret_had_whitespace = langfuse_secret_key != cleaned_secret
-        
-        # Update environment with cleaned keys
-        os.environ["LANGFUSE_PUBLIC_KEY"] = cleaned_public
-        os.environ["LANGFUSE_SECRET_KEY"] = cleaned_secret
-        
-        # Prepare log context
-        log_context: dict[str, Any] = {
-            "public_key_prefix": cleaned_public[:7] if len(cleaned_public) > 7 else "invalid",
-            "public_key_suffix": cleaned_public[-4:] if len(cleaned_public) > 4 else "invalid",
-            "secret_key_prefix": cleaned_secret[:7] if len(cleaned_secret) > 7 else "invalid",
-            "public_key_length": len(cleaned_public),
-            "secret_key_length": len(cleaned_secret),
-        }
-        
-        # Log details about whitespace if found (security: only show repr of first/last chars)
-        if public_had_whitespace or secret_had_whitespace:
-            warn("Langfuse keys contained whitespace characters (stripped)", {
-                **log_context,
-                "public_had_whitespace": public_had_whitespace,
-                "secret_had_whitespace": secret_had_whitespace,
-                # Show repr of first/last 3 chars to reveal hidden characters like \n
-                "public_key_first_chars": repr(langfuse_public_key[:3]) if public_had_whitespace else None,
-                "public_key_last_chars": repr(langfuse_public_key[-3:]) if public_had_whitespace else None,
-                "secret_key_first_chars": repr(langfuse_secret_key[:3]) if secret_had_whitespace else None,
-                "secret_key_last_chars": repr(langfuse_secret_key[-3:]) if secret_had_whitespace else None,
-            })
-        else:
-            info("Langfuse keys configured successfully", log_context)
-        
-        # Initialize Langfuse global client with explicit credentials BEFORE OpenAI client
-        # This ensures Langfuse SDK uses cleaned keys, not potentially corrupted env vars
-        # The OpenAI wrapper will use this global client for tracing
-        try:
-            from langfuse import Langfuse
-            langfuse_client = Langfuse(
-                public_key=cleaned_public,
-                secret_key=cleaned_secret,
-                host="https://us.cloud.langfuse.com",
-                debug=False,
-            )
-            info("Langfuse global client initialized with explicit credentials", {
-                "host": "https://us.cloud.langfuse.com",
-            })
-        except Exception as langfuse_init_error:
-            error("Failed to initialize Langfuse client", {
-                "error": str(langfuse_init_error),
-                "error_type": type(langfuse_init_error).__name__,
-            })
-    else:
-        error("Langfuse keys not found - observability will be disabled", {
-            "has_public_key": bool(langfuse_public_key),
-            "has_secret_key": bool(langfuse_secret_key),
-        })
+    # Update trace with user_id, session_id, and generation name
+    # This sets them as first-class trace attributes (not just metadata)
+    trace_tags = ["notification", "openai", response_model.__name__]
+    if metadata:
+        # Add scenario or notification_type as tags for better filtering
+        if "scenario" in metadata:
+            trace_tags.append(f"scenario:{metadata['scenario']}")
+        if "notification_type" in metadata:
+            trace_tags.append(f"type:{metadata['notification_type']}")
     
-    # Set LangFuse host (US region, matches TypeScript config)
-    os.environ.setdefault("LANGFUSE_HOST", "https://us.cloud.langfuse.com")
+    langfuse_client.update_current_trace(
+        name=generation_name or f"openai_{response_model.__name__}",
+        user_id=user_id,
+        session_id=session_id,
+        tags=trace_tags,
+        metadata=metadata,
+    )
     
-    # Initialize OpenAI client (with LangFuse wrapper)
-    # LangFuse wrapper will use the global client initialized above
-    # If Langfuse client not initialized, wrapper works as standard OpenAI (silent fallback)
+    # Initialize standard OpenAI client (not wrapped)
+    # The @observe decorator handles tracing automatically
     client = OpenAI(api_key=api_key)
     
     # Build messages array
     messages = [
         {"role": "system", "content": prompt}
     ]
-    
-    # Merge user_id and session_id into metadata for LangFuse tracking
-    merged_metadata = metadata.copy() if metadata else {}
-    if user_id:
-        merged_metadata["user_id"] = user_id
-    if session_id:
-        merged_metadata["session_id"] = session_id
     
     last_error = None
     last_error_details = {}
@@ -174,13 +196,12 @@ def call_openai_with_structured_output(
             # Call OpenAI with structured output
             # The response_format parameter forces OpenAI to return valid JSON
             # matching the Pydantic model schema
-            # LangFuse wrapper adds tracking parameters (name, metadata)
+            # Note: We use standard OpenAI client (not Langfuse wrapper)
+            # The @observe decorator handles tracing automatically
             completion = client.beta.chat.completions.parse(  # type: ignore
                 model=model,
                 messages=messages,  # type: ignore
                 response_format=response_model,
-                name=generation_name,  # type: ignore
-                metadata=merged_metadata if merged_metadata else None,  # type: ignore
             )
             
             # Calculate request duration
@@ -194,13 +215,33 @@ def call_openai_with_structured_output(
             
             # Extract token usage for monitoring
             usage = getattr(completion, 'usage', None)  # type: ignore
-            usage_info = {}
+            usage_details = None
             if usage:
-                usage_info = {
-                    "prompt_tokens": getattr(usage, 'prompt_tokens', None),  # type: ignore
-                    "completion_tokens": getattr(usage, 'completion_tokens', None),  # type: ignore
-                    "total_tokens": getattr(usage, 'total_tokens', None),  # type: ignore
+                usage_details = {
+                    "input": getattr(usage, 'prompt_tokens', 0),  # type: ignore
+                    "output": getattr(usage, 'completion_tokens', 0),  # type: ignore
+                    "total": getattr(usage, 'total_tokens', 0),  # type: ignore
                 }
+            
+            # Update current generation with model details and usage
+            # This enriches the Langfuse trace with generation-specific metadata
+            try:
+                model_params: dict[str, Any] = {
+                    "temperature": "1.0",  # OpenAI default for structured output (as string for Langfuse)
+                    "response_format": response_model.__name__,
+                }
+                langfuse_client.update_current_generation(
+                    model=model,
+                    model_parameters=model_params,
+                    usage_details=usage_details,
+                    output=parsed_response.model_dump() if hasattr(parsed_response, 'model_dump') else None,
+                )
+            except Exception as update_error:
+                # Don't fail if Langfuse update fails
+                warn("Failed to update Langfuse generation metadata", {
+                    "error": str(update_error),
+                    "error_type": type(update_error).__name__,
+                })
             
             info(
                 "OpenAI API call successful",
@@ -209,15 +250,13 @@ def call_openai_with_structured_output(
                     "model": model,
                     "response_model": response_model.__name__,
                     "duration_ms": request_duration_ms,
-                    **usage_info,
+                    **(usage_details if usage_details else {}),
                 }
             )
             
             # Flush Langfuse events immediately after successful generation
             # Critical for serverless environments where background tasks are terminated
             try:
-                from langfuse import get_client
-                langfuse_client = get_client()
                 langfuse_client.flush()
                 info("Langfuse events flushed successfully", {
                     "user_id": user_id,

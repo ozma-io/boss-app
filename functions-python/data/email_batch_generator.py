@@ -13,6 +13,7 @@ Key Features:
 - Built-in retry logic via openai_client
 """
 
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from typing import Any
@@ -103,19 +104,23 @@ def _generate_single_email(
             )
         
         # Route to appropriate AI generation function based on scenario
+        # Generate unique session ID per user (format: notification_<scenario>_<user_id>_<uuid>)
+        # This ensures proper tracking in Langfuse with unique session per notification
+        session_id = f"notification_{task.scenario}_{task.user_id}_{uuid.uuid4().hex[:8]}"
+        
         try:
             if task.scenario == "EMAIL_ONLY_USER":
                 email_content = generate_first_email_notification(
                     db=db,  # type: ignore
                     user_id=task.user_id,
-                    session_id=f"batch_generation_{task.scenario}",
+                    session_id=session_id,
                 )
             elif task.scenario in ["NEW_USER_EMAIL", "ACTIVE_USER_EMAIL", "INACTIVE_USER"]:
                 email_content = generate_ongoing_email_notification(
                     db=db,  # type: ignore
                     user_id=task.user_id,
                     scenario=task.scenario,
-                    session_id=f"batch_generation_{task.scenario}",
+                    session_id=session_id,
                 )
             else:
                 raise ValueError(f"Unknown scenario: {task.scenario}")

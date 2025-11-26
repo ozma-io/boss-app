@@ -89,6 +89,7 @@ TIMING (Progressive Intervals):
 - No timezone logic needed (UTC timestamps)
 """
 
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -387,10 +388,14 @@ def send_onboarding_welcome_email(db: Any, user_id: str) -> None:
             raise ValueError(f"User has no email: {user_id}")
         
         # Generate email content using AI
+        # Use unique session ID (format: onboarding_<user_id>_<uuid>)
+        # This ensures proper tracking in Langfuse with unique session per onboarding
+        session_id = f"onboarding_{user_id}_{uuid.uuid4().hex[:8]}"
+        
         email_content = generate_onboarding_welcome_email(
             db=db,
             user_id=user_id,
-            session_id="onboarding_funnel",
+            session_id=session_id,
         )
         
         # Create email document in Firestore
