@@ -35,7 +35,21 @@ async function handleDidRenew(
       .get();
 
     if (usersSnapshot.empty) {
-      logger.warn('User not found for renewal notification', { originalTransactionId });
+      logger.warn('User not found for renewal notification', {
+        originalTransactionId,
+        transactionId: transactionInfo.transactionId,
+        productId: transactionInfo.productId,
+        environment,
+        expiresDate: transactionInfo.expiresDate 
+          ? new Date(transactionInfo.expiresDate).toISOString() 
+          : null,
+        purchaseDate: transactionInfo.purchaseDate 
+          ? new Date(transactionInfo.purchaseDate).toISOString() 
+          : null,
+        offerType: transactionInfo.offerType,
+        isUpgraded: transactionInfo.isUpgraded,
+        bundleId: transactionInfo.bundleId,
+      });
       return;
     }
 
@@ -58,6 +72,9 @@ async function handleDidRenew(
     logger.info('Subscription renewed successfully', {
       userId,
       originalTransactionId,
+      transactionId: transactionInfo.transactionId,
+      productId: transactionInfo.productId,
+      environment,
       expiresDate,
     });
   } catch (error) {
@@ -81,7 +98,18 @@ async function handleExpired(
       .get();
 
     if (usersSnapshot.empty) {
-      logger.warn('User not found for expiration notification', { originalTransactionId });
+      logger.warn('User not found for expiration notification', {
+        originalTransactionId,
+        transactionId: transactionInfo.transactionId,
+        productId: transactionInfo.productId,
+        expiresDate: transactionInfo.expiresDate 
+          ? new Date(transactionInfo.expiresDate).toISOString() 
+          : null,
+        purchaseDate: transactionInfo.purchaseDate 
+          ? new Date(transactionInfo.purchaseDate).toISOString() 
+          : null,
+        bundleId: transactionInfo.bundleId,
+      });
       return;
     }
 
@@ -119,7 +147,19 @@ async function handleRefund(
       .get();
 
     if (usersSnapshot.empty) {
-      logger.warn('User not found for refund notification', { originalTransactionId });
+      logger.warn('User not found for refund notification', {
+        originalTransactionId,
+        transactionId: transactionInfo.transactionId,
+        productId: transactionInfo.productId,
+        revocationDate: transactionInfo.revocationDate 
+          ? new Date(transactionInfo.revocationDate).toISOString() 
+          : null,
+        revocationReason: transactionInfo.revocationReason,
+        purchaseDate: transactionInfo.purchaseDate 
+          ? new Date(transactionInfo.purchaseDate).toISOString() 
+          : null,
+        bundleId: transactionInfo.bundleId,
+      });
       return;
     }
 
@@ -164,7 +204,18 @@ async function handleDidFailToRenew(
       .get();
 
     if (usersSnapshot.empty) {
-      logger.warn('User not found for failed renewal notification', { originalTransactionId });
+      logger.warn('User not found for failed renewal notification', {
+        originalTransactionId,
+        transactionId: transactionInfo.transactionId,
+        productId: transactionInfo.productId,
+        expiresDate: transactionInfo.expiresDate 
+          ? new Date(transactionInfo.expiresDate).toISOString() 
+          : null,
+        purchaseDate: transactionInfo.purchaseDate 
+          ? new Date(transactionInfo.purchaseDate).toISOString() 
+          : null,
+        bundleId: transactionInfo.bundleId,
+      });
       return;
     }
 
@@ -203,7 +254,18 @@ async function handleGracePeriodExpired(
       .get();
 
     if (usersSnapshot.empty) {
-      logger.warn('User not found for grace period expiration', { originalTransactionId });
+      logger.warn('User not found for grace period expiration', {
+        originalTransactionId,
+        transactionId: transactionInfo.transactionId,
+        productId: transactionInfo.productId,
+        expiresDate: transactionInfo.expiresDate 
+          ? new Date(transactionInfo.expiresDate).toISOString() 
+          : null,
+        purchaseDate: transactionInfo.purchaseDate 
+          ? new Date(transactionInfo.purchaseDate).toISOString() 
+          : null,
+        bundleId: transactionInfo.bundleId,
+      });
       return;
     }
 
@@ -241,7 +303,13 @@ async function handleDidChangeRenewalStatus(
       .get();
 
     if (usersSnapshot.empty) {
-      logger.warn('User not found for renewal status change', { originalTransactionId });
+      logger.warn('User not found for renewal status change', {
+        originalTransactionId,
+        productId: renewalInfo?.productId,
+        autoRenewStatus: renewalInfo?.autoRenewStatus,
+        expirationIntent: renewalInfo?.expirationIntent,
+        isInBillingRetryPeriod: renewalInfo?.isInBillingRetryPeriod,
+      });
       return;
     }
 
