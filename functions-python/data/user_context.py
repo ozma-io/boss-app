@@ -11,7 +11,7 @@ from typing import Any
 
 from firebase_admin import firestore  # type: ignore
 from google.api_core.retry import Retry  # type: ignore
-from google.api_core.exceptions import DeadlineExceeded, RetryError  # type: ignore
+from google.api_core.exceptions import DeadlineExceeded, RetryError, ServerError  # type: ignore
 
 from utils.logger import error, info, warn
 
@@ -43,8 +43,8 @@ def fetch_user_context(db: Any, user_id: str) -> dict[str, Any]:
         initial=1.0,  # Initial delay of 1 second
         maximum=10.0,  # Maximum delay of 10 seconds
         multiplier=2.0,  # Double the delay each time
-        timeout=60.0,  # Total timeout of 60 seconds
-        predicate=lambda exc: isinstance(exc, (DeadlineExceeded, RetryError))
+        timeout=30.0,  # Reduced timeout to 30 seconds
+        predicate=lambda exc: isinstance(exc, (DeadlineExceeded, RetryError, ServerError))
     )
     
     try:
