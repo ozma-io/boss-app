@@ -13,8 +13,11 @@
 import { AMPLITUDE_API_KEY } from '@/constants/amplitude.config';
 import { Platform } from 'react-native';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let amplitude: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let webAmplitude: any = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let SessionReplayPlugin: any = null;
 let isInitialized = false;
 
@@ -22,12 +25,14 @@ let isInitialized = false;
 type QueuedEvent = {
   type: 'event';
   eventName: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   eventProperties?: Record<string, any>;
 } | {
   type: 'setUserId';
   userId: string;
 } | {
   type: 'setUserProperties';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties: Record<string, any>;
 };
 
@@ -60,11 +65,15 @@ export async function initializeAmplitude(): Promise<void> {
       console.log('[Amplitude] Initializing Web SDK with Session Replay');
       
       // Check if the script is loaded
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (typeof window !== 'undefined' && (window as any).amplitude) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         webAmplitude = (window as any).amplitude;
         
         // Add Session Replay plugin BEFORE init (as per official docs)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if ((window as any).sessionReplay && (window as any).sessionReplay.plugin) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const sessionReplayPlugin = (window as any).sessionReplay.plugin({
             sampleRate: 1 // Record 100% of sessions
           });
@@ -195,6 +204,7 @@ export async function setAmplitudeUserId(userId: string): Promise<void> {
  * @param properties - Key-value pairs of user properties to set
  */
 export async function setAmplitudeUserProperties(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   properties: Record<string, any>
 ): Promise<void> {
   if (!isInitialized) {
@@ -236,6 +246,7 @@ export async function setAmplitudeUserProperties(
  */
 export function trackAmplitudeEvent(
   eventName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   eventProperties?: Record<string, any>
 ): void {
   if (!isInitialized) {
