@@ -1,6 +1,6 @@
 import { db } from '@/constants/firebase.config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { logger } from './logger.service';
 
 const ATTRIBUTION_STORAGE_KEY = '@boss_app_attribution_data';
@@ -70,15 +70,54 @@ export async function clearAttributionData(): Promise<void> {
 
 /**
  * Link attribution data to user document in Firestore
+ * 
+ * IMPORTANT: This function MERGES new attribution data with existing data
+ * to preserve Facebook tracking data from web-funnel when user installs mobile app.
  */
 export async function linkAttributionToUser(userId: string, attributionData: AttributionData): Promise<void> {
   try {
     const userDocRef = doc(db, 'users', userId);
+    
+    // Get existing user document to preserve existing attribution data
+    const existingUserDoc = await getDoc(userDocRef);
+    const existingAttribution = existingUserDoc.exists() ? existingUserDoc.data()?.attribution || {} : {};
+    
+    // Filter out empty/null values from new attribution data to prevent overwriting good data
+    const cleanAttributionData = Object.fromEntries(
+      Object.entries(attributionData as Record<string, unknown>).filter(([_key, value]) => {
+        const isEmpty = value === null || value === undefined || value === '';
+        return !isEmpty; // Only keep non-empty values
+      })
+    ) as Partial<AttributionData>;
+    
+    // Merge attribution data (only clean new data takes priority for overlapping keys)
+    const mergedAttribution = {
+      ...existingAttribution,  // Keep existing Facebook/UTM data from web-funnel
+      ...cleanAttributionData, // Add only non-empty new data from mobile app
+    };
+    
     await updateDoc(userDocRef, {
-      attribution: attributionData,
+      attribution: mergedAttribution,
       updatedAt: new Date().toISOString(),
     });
-    logger.info('Attribution data linked to user', { feature: 'AttributionService', userId, attributionData });
+    
+    // Calculate filtered out data for logging
+    const filteredOutKeys = Object.keys(attributionData).filter(key => {
+      const value = (attributionData as Record<string, unknown>)[key];
+      return value === null || value === undefined || value === '';
+    });
+    
+    logger.info('Attribution data linked to user', { 
+      feature: 'AttributionService', 
+      userId,
+      existingKeys: Object.keys(existingAttribution),
+      rawNewKeys: Object.keys(attributionData),
+      cleanNewKeys: Object.keys(cleanAttributionData),
+      filteredOutKeys,
+      mergedKeys: Object.keys(mergedAttribution),
+      hadExistingData: Object.keys(existingAttribution).length > 0,
+      filteredCount: filteredOutKeys.length
+    });
   } catch (error) {
     logger.error('Error linking attribution to user', { feature: 'AttributionService', userId, error });
     throw error;
