@@ -96,7 +96,7 @@ export async function checkAndApplyUpdates(
     const isFetchTimeout = errorMessage.includes(UPDATE_FETCH_TIMEOUT_ERROR);
     
     if (isCheckTimeout) {
-      logger.error('Update check timed out, UPDATE_CHECK_TIMEOUT_MS constant may need adjustment', { 
+      logger.warn('Update check timed out, UPDATE_CHECK_TIMEOUT_MS constant may need adjustment', { 
         feature: 'Updates',
         timeoutMs,
         currentTimeout: UPDATE_CHECK_TIMEOUT_MS,
@@ -113,7 +113,7 @@ export async function checkAndApplyUpdates(
         });
       });
     } else if (isFetchTimeout) {
-      logger.error('Update download timed out, fetch timeout constant may need adjustment', { 
+      logger.warn('Update download timed out, fetch timeout constant may need adjustment', { 
         feature: 'Updates',
         checkTimeout: timeoutMs,
         fetchTimeout: timeoutMs * 4,
