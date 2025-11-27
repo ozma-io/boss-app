@@ -150,5 +150,5 @@ export const GOOGLE_PLAY_PACKAGE_NAME = 'com.ozmaio.bossup';
  * Internal monitoring recipient for quality control
  * All outgoing emails are BCC'd to this address for internal review
  */
-export const EMAIL_MONITORING_RECIPIENT = '';
+export const EMAIL_MONITORING_RECIPIENT = 'kmarkin@ozma.io';
 

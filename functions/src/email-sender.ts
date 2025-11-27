@@ -163,7 +163,7 @@ async function sendEmail(userId: string, emailId: string, emailData: EmailDocume
         };
         
         // Only add BCC if EMAIL_MONITORING_RECIPIENT is not empty
-        if (EMAIL_MONITORING_RECIPIENT !== '') {
+        if (EMAIL_MONITORING_RECIPIENT.length > 0) {
           messageOptions.bcc = EMAIL_MONITORING_RECIPIENT;
         }
         
