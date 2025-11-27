@@ -47,11 +47,15 @@ export function renderEmailTemplate(title: string, bodyHtml: string): string {
             .main-card tr td { border-color: #333333 !important; }
         }
         
-        /* Remove left/right padding on mobile for CTA section and main container */
+        /* Mobile optimizations - remove padding and rounded corners */
         @media only screen and (max-width: 480px) {
             .mobile-no-side-padding {
                 padding-left: 0 !important;
                 padding-right: 0 !important;
+                padding-top: 0 !important;
+            }
+            .main-card {
+                border-radius: 0 !important;
             }
         }
     </style>
