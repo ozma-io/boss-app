@@ -10,8 +10,10 @@ Ported from TypeScript: functions/src/chat.ts (fetchUserContext)
 from typing import Any
 
 from firebase_admin import firestore  # type: ignore
+from google.api_core.retry import Retry  # type: ignore
+from google.api_core.exceptions import DeadlineExceeded, RetryError  # type: ignore
 
-from utils.logger import error, info
+from utils.logger import error, info, warn
 
 
 def fetch_user_context(db: Any, user_id: str) -> dict[str, Any]:
@@ -35,53 +37,89 @@ def fetch_user_context(db: Any, user_id: str) -> dict[str, Any]:
             - entries: List of timeline entry documents with IDs
             - emails: List of sent email documents with IDs
     """
+    # Configure retry policy for Firestore operations
+    # Retry up to 3 times with exponential backoff to handle transient failures
+    retry_policy = Retry(
+        initial=1.0,  # Initial delay of 1 second
+        maximum=10.0,  # Maximum delay of 10 seconds
+        multiplier=2.0,  # Double the delay each time
+        timeout=60.0,  # Total timeout of 60 seconds
+        predicate=lambda exc: isinstance(exc, (DeadlineExceeded, RetryError))
+    )
+    
     try:
         # Fetch user profile
         user_ref = db.collection("users").document(user_id)
-        user_doc = user_ref.get()
-        user_data = user_doc.to_dict() if user_doc.exists else None
+        try:
+            user_doc = user_ref.get(retry=retry_policy)
+            user_data = user_doc.to_dict() if user_doc.exists else None
+        except (DeadlineExceeded, RetryError) as err:
+            warn(
+                "Failed to fetch user profile, continuing with empty data",
+                {"user_id": user_id, "error": str(err)}
+            )
+            user_data = None
         
         # Fetch all bosses
-        bosses_ref = user_ref.collection("bosses").order_by("createdAt", direction=firestore.Query.ASCENDING)  # type: ignore
-        bosses_snapshot = bosses_ref.get()
-        
         bosses_data: list[dict[str, Any]] = []
-        for boss_doc in bosses_snapshot:
-            boss_dict = boss_doc.to_dict()
-            if boss_dict:
-                boss_dict["id"] = boss_doc.id
-                bosses_data.append(boss_dict)
+        try:
+            bosses_ref = user_ref.collection("bosses").order_by("createdAt", direction=firestore.Query.ASCENDING)  # type: ignore
+            bosses_snapshot = bosses_ref.get(retry=retry_policy)
+            
+            for boss_doc in bosses_snapshot:
+                boss_dict = boss_doc.to_dict()
+                if boss_dict:
+                    boss_dict["id"] = boss_doc.id
+                    bosses_data.append(boss_dict)
+        except (DeadlineExceeded, RetryError) as err:
+            warn(
+                "Failed to fetch bosses, continuing with empty data",
+                {"user_id": user_id, "error": str(err)}
+            )
         
         # Fetch last 50 timeline entries
-        entries_ref = (
-            user_ref.collection("entries")
-            .order_by("timestamp", direction=firestore.Query.DESCENDING)  # type: ignore
-            .limit(50)
-        )
-        entries_snapshot = entries_ref.get()
-        
         entries_data: list[dict[str, Any]] = []
-        for entry_doc in entries_snapshot:
-            entry_dict = entry_doc.to_dict()
-            if entry_dict:
-                entry_dict["id"] = entry_doc.id
-                entries_data.append(entry_dict)
+        try:
+            entries_ref = (
+                user_ref.collection("entries")
+                .order_by("timestamp", direction=firestore.Query.DESCENDING)  # type: ignore
+                .limit(50)
+            )
+            entries_snapshot = entries_ref.get(retry=retry_policy)
+            
+            for entry_doc in entries_snapshot:
+                entry_dict = entry_doc.to_dict()
+                if entry_dict:
+                    entry_dict["id"] = entry_doc.id
+                    entries_data.append(entry_dict)
+        except (DeadlineExceeded, RetryError) as err:
+            warn(
+                "Failed to fetch entries, continuing with empty data",
+                {"user_id": user_id, "error": str(err)}
+            )
         
         # Fetch last 15 sent emails
-        emails_ref = (
-            user_ref.collection("emails")
-            .where("state", "==", "SENT")  # type: ignore
-            .order_by("sentAt", direction=firestore.Query.DESCENDING)  # type: ignore
-            .limit(15)
-        )
-        emails_snapshot = emails_ref.get()
-        
         emails_data: list[dict[str, Any]] = []
-        for email_doc in emails_snapshot:
-            email_dict = email_doc.to_dict()
-            if email_dict:
-                email_dict["id"] = email_doc.id
-                emails_data.append(email_dict)
+        try:
+            emails_ref = (
+                user_ref.collection("emails")
+                .where("state", "==", "SENT")  # type: ignore
+                .order_by("sentAt", direction=firestore.Query.DESCENDING)  # type: ignore
+                .limit(15)
+            )
+            emails_snapshot = emails_ref.get(retry=retry_policy)
+        except (DeadlineExceeded, RetryError) as err:
+            warn(
+                "Failed to fetch emails, continuing with empty data",
+                {"user_id": user_id, "error": str(err)}
+            )
+            emails_snapshot = []
+            
+            for email_doc in emails_snapshot:  # type: ignore
+                email_dict = email_doc.to_dict()  # type: ignore
+                if email_dict:
+                    email_dict["id"] = email_doc.id  # type: ignore
+                    emails_data.append(email_dict)  # type: ignore
         
         info(
             "User context fetched successfully",
