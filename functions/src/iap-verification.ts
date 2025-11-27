@@ -841,6 +841,26 @@ async function updateUserSubscription(
 
   await admin.firestore().collection('users').doc(userId).update(updateData);
 
+  // Save transaction mapping for reliable user lookup in webhooks
+  // This allows us to find userId even if subscription is deleted from user profile
+  if (subscriptionData.provider === 'apple' && subscriptionData.transactionId) {
+    await admin.firestore()
+      .collection('apple_transaction_mapping')
+      .doc(subscriptionData.transactionId)
+      .set({
+        userId,
+        productId,
+        environment,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+    
+    logger.info('Saved Apple transaction mapping', {
+      userId,
+      originalTransactionId: subscriptionData.transactionId,
+      environment,
+    });
+  }
+
   logger.info('Updated user subscription in Firestore', {
     userId,
     provider: subscriptionData.provider,

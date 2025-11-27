@@ -24,6 +24,94 @@ import {
 import { logger } from './logger';
 
 /**
+ * Find userId by originalTransactionId only (for renewalInfo notifications)
+ * 
+ * Strategy:
+ * 1. Try transaction mapping collection (fast, always available after purchase)
+ * 2. Try user subscription field (slower query, may not exist if subscription deleted)
+ * 
+ * @returns userId or null if not found
+ */
+async function findUserByTransactionId(originalTransactionId: string): Promise<string | null> {
+  // Strategy 1: Check transaction mapping collection
+  try {
+    const mappingDoc = await admin.firestore()
+      .collection('apple_transaction_mapping')
+      .doc(originalTransactionId)
+      .get();
+
+    if (mappingDoc.exists) {
+      const userId = mappingDoc.data()?.userId;
+      if (userId) {
+        logger.info('Found userId from transaction mapping', {
+          userId,
+          originalTransactionId,
+        });
+        return userId;
+      }
+    }
+  } catch (error) {
+    logger.warn('Failed to check transaction mapping', {
+      error,
+      originalTransactionId,
+    });
+  }
+
+  // Strategy 2: Query users by appleOriginalTransactionId (fallback for old purchases)
+  try {
+    const usersSnapshot = await admin.firestore()
+      .collection('users')
+      .where('subscription.appleOriginalTransactionId', '==', originalTransactionId)
+      .limit(1)
+      .get();
+
+    if (!usersSnapshot.empty) {
+      const userId = usersSnapshot.docs[0].id;
+      logger.info('Found userId from user subscription field', {
+        userId,
+        originalTransactionId,
+      });
+      return userId;
+    }
+  } catch (error) {
+    logger.warn('Failed to query users by transaction ID', {
+      error,
+      originalTransactionId,
+    });
+  }
+
+  // User not found with any strategy
+  return null;
+}
+
+/**
+ * Find userId by Apple transaction using multiple strategies
+ * 
+ * Strategy:
+ * 1. Try appAccountToken (fastest, most reliable)
+ * 2. Try transaction mapping collection (fast, always available after purchase)
+ * 3. Try user subscription field (slower query, may not exist if subscription deleted)
+ * 
+ * @returns userId or null if not found
+ */
+async function findUserByAppleTransaction(
+  originalTransactionId: string,
+  transactionInfo: JWSTransactionDecodedPayload
+): Promise<string | null> {
+  // Strategy 1: Check appAccountToken (added in new purchases)
+  if (transactionInfo.appAccountToken) {
+    logger.info('Found userId from appAccountToken', {
+      userId: transactionInfo.appAccountToken,
+      originalTransactionId,
+    });
+    return transactionInfo.appAccountToken;
+  }
+
+  // Strategy 2 & 3: Use the fallback function
+  return findUserByTransactionId(originalTransactionId);
+}
+
+/**
  * Process subscription renewal event
  */
 async function handleDidRenew(
@@ -32,14 +120,10 @@ async function handleDidRenew(
   environment: string
 ): Promise<void> {
   try {
-    // Find user by original transaction ID
-    const usersSnapshot = await admin.firestore()
-      .collection('users')
-      .where('subscription.appleOriginalTransactionId', '==', originalTransactionId)
-      .limit(1)
-      .get();
+    // Find user using multiple strategies (appAccountToken, mapping, query)
+    const userId = await findUserByAppleTransaction(originalTransactionId, transactionInfo);
 
-    if (usersSnapshot.empty) {
+    if (!userId) {
       logger.warn('User not found for renewal notification', {
         originalTransactionId,
         transactionId: transactionInfo.transactionId,
@@ -54,12 +138,10 @@ async function handleDidRenew(
         offerType: transactionInfo.offerType,
         isUpgraded: transactionInfo.isUpgraded,
         bundleId: transactionInfo.bundleId,
+        appAccountToken: transactionInfo.appAccountToken || null,
       });
       return;
     }
-
-    const userDoc = usersSnapshot.docs[0];
-    const userId = userDoc.id;
 
     // Update subscription with new expiration date
     const expiresDate = transactionInfo.expiresDate 
@@ -95,14 +177,10 @@ async function handleExpired(
   transactionInfo: JWSTransactionDecodedPayload
 ): Promise<void> {
   try {
-    // Find user by original transaction ID
-    const usersSnapshot = await admin.firestore()
-      .collection('users')
-      .where('subscription.appleOriginalTransactionId', '==', originalTransactionId)
-      .limit(1)
-      .get();
+    // Find user using multiple strategies
+    const userId = await findUserByAppleTransaction(originalTransactionId, transactionInfo);
 
-    if (usersSnapshot.empty) {
+    if (!userId) {
       logger.warn('User not found for expiration notification', {
         originalTransactionId,
         transactionId: transactionInfo.transactionId,
@@ -114,12 +192,10 @@ async function handleExpired(
           ? new Date(transactionInfo.purchaseDate).toISOString() 
           : null,
         bundleId: transactionInfo.bundleId,
+        appAccountToken: transactionInfo.appAccountToken || null,
       });
       return;
     }
-
-    const userDoc = usersSnapshot.docs[0];
-    const userId = userDoc.id;
 
     // Mark subscription as expired
     await admin.firestore().collection('users').doc(userId).update({
@@ -144,14 +220,10 @@ async function handleRefund(
   transactionInfo: JWSTransactionDecodedPayload
 ): Promise<void> {
   try {
-    // Find user by original transaction ID
-    const usersSnapshot = await admin.firestore()
-      .collection('users')
-      .where('subscription.appleOriginalTransactionId', '==', originalTransactionId)
-      .limit(1)
-      .get();
+    // Find user using multiple strategies
+    const userId = await findUserByAppleTransaction(originalTransactionId, transactionInfo);
 
-    if (usersSnapshot.empty) {
+    if (!userId) {
       logger.warn('User not found for refund notification', {
         originalTransactionId,
         transactionId: transactionInfo.transactionId,
@@ -164,12 +236,10 @@ async function handleRefund(
           ? new Date(transactionInfo.purchaseDate).toISOString() 
           : null,
         bundleId: transactionInfo.bundleId,
+        appAccountToken: transactionInfo.appAccountToken || null,
       });
       return;
     }
-
-    const userDoc = usersSnapshot.docs[0];
-    const userId = userDoc.id;
 
     // Mark subscription as expired due to refund
     const revocationDate = transactionInfo.revocationDate 
@@ -201,14 +271,10 @@ async function handleDidFailToRenew(
   transactionInfo: JWSTransactionDecodedPayload
 ): Promise<void> {
   try {
-    // Find user by original transaction ID
-    const usersSnapshot = await admin.firestore()
-      .collection('users')
-      .where('subscription.appleOriginalTransactionId', '==', originalTransactionId)
-      .limit(1)
-      .get();
+    // Find user using multiple strategies
+    const userId = await findUserByAppleTransaction(originalTransactionId, transactionInfo);
 
-    if (usersSnapshot.empty) {
+    if (!userId) {
       logger.warn('User not found for failed renewal notification', {
         originalTransactionId,
         transactionId: transactionInfo.transactionId,
@@ -220,12 +286,10 @@ async function handleDidFailToRenew(
           ? new Date(transactionInfo.purchaseDate).toISOString() 
           : null,
         bundleId: transactionInfo.bundleId,
+        appAccountToken: transactionInfo.appAccountToken || null,
       });
       return;
     }
-
-    const userDoc = usersSnapshot.docs[0];
-    const userId = userDoc.id;
 
     // Keep subscription active during billing retry period
     // Apple will continue to retry the payment
@@ -251,14 +315,10 @@ async function handleGracePeriodExpired(
   transactionInfo: JWSTransactionDecodedPayload
 ): Promise<void> {
   try {
-    // Find user by original transaction ID
-    const usersSnapshot = await admin.firestore()
-      .collection('users')
-      .where('subscription.appleOriginalTransactionId', '==', originalTransactionId)
-      .limit(1)
-      .get();
+    // Find user using multiple strategies
+    const userId = await findUserByAppleTransaction(originalTransactionId, transactionInfo);
 
-    if (usersSnapshot.empty) {
+    if (!userId) {
       logger.warn('User not found for grace period expiration', {
         originalTransactionId,
         transactionId: transactionInfo.transactionId,
@@ -270,12 +330,10 @@ async function handleGracePeriodExpired(
           ? new Date(transactionInfo.purchaseDate).toISOString() 
           : null,
         bundleId: transactionInfo.bundleId,
+        appAccountToken: transactionInfo.appAccountToken || null,
       });
       return;
     }
-
-    const userDoc = usersSnapshot.docs[0];
-    const userId = userDoc.id;
 
     // Mark subscription as expired - user loses access
     await admin.firestore().collection('users').doc(userId).update({
@@ -300,14 +358,10 @@ async function handleDidChangeRenewalStatus(
   renewalInfo: JWSRenewalInfoDecodedPayload
 ): Promise<void> {
   try {
-    // Find user by original transaction ID
-    const usersSnapshot = await admin.firestore()
-      .collection('users')
-      .where('subscription.appleOriginalTransactionId', '==', originalTransactionId)
-      .limit(1)
-      .get();
+    // Find user using transaction ID lookup
+    const userId = await findUserByTransactionId(originalTransactionId);
 
-    if (usersSnapshot.empty) {
+    if (!userId) {
       logger.warn('User not found for renewal status change', {
         originalTransactionId,
         productId: renewalInfo?.productId,
@@ -318,8 +372,8 @@ async function handleDidChangeRenewalStatus(
       return;
     }
 
-    const userDoc = usersSnapshot.docs[0];
-    const userId = userDoc.id;
+    // Get user data to check current subscription status
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
     const userData = userDoc.data();
 
     // Check if auto-renew is enabled (1) or disabled (0)

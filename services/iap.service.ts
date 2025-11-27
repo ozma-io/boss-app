@@ -266,12 +266,14 @@ export async function getAvailableProducts(productIds: string[]): Promise<IAPPro
  * @param productId - Product ID to purchase (e.g., com.ozmaio.bossup.basic.monthly)
  * @param tier - Subscription tier (e.g., 'basic')
  * @param billingPeriod - Billing period (e.g., 'monthly')
+ * @param userId - Current user ID for linking purchase to user account
  * @returns Purchase result with success status
  */
 export async function purchaseSubscription(
   productId: string,
   tier: string,
-  billingPeriod: string
+  billingPeriod: string,
+  userId: string
 ): Promise<IAPPurchaseResult> {
   if (!RNIap) {
     throw new Error('IAP not supported on this platform');
@@ -283,14 +285,15 @@ export async function purchaseSubscription(
         await initializeIAP();
       }
 
-      logger.info('Starting subscription purchase', { productId, tier, billingPeriod });
+      logger.info('Starting subscription purchase', { productId, tier, billingPeriod, userId });
 
-      // Request subscription
+      // Request subscription with appAccountToken for user linking
       const purchaseResult = await RNIap.requestPurchase({
         type: 'subs',
         request: {
           ios: {
             sku: productId,
+            appAccountToken: userId,  // Link purchase to user account
           },
         },
       });
@@ -451,7 +454,7 @@ export async function purchaseSubscription(
         await initializeIAP();
       }
 
-      logger.info('Starting Android subscription purchase', { productId, tier, billingPeriod });
+      logger.info('Starting Android subscription purchase', { productId, tier, billingPeriod, userId });
 
       // First, fetch the subscription product to get offerToken
       const products = await RNIap.fetchProducts({ skus: [productId], type: 'subs' });
@@ -488,6 +491,8 @@ export async function purchaseSubscription(
       }
 
       // Request subscription with offerToken
+      // Note: obfuscatedAccountId is not supported in current react-native-iap version
+      // We'll rely on backend mapping collection for Android purchases
       const purchaseResult = await RNIap.requestPurchase({
         type: 'subs',
         request: {

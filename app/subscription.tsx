@@ -259,10 +259,16 @@ export default function SubscriptionScreen(): React.JSX.Element {
       });
 
       // Purchase subscription
+      if (!user) {
+        logger.error('User not authenticated', { feature: 'SubscriptionScreen' });
+        return;
+      }
+
       const result = await purchaseSubscription(
         plan.appleProductId,
         plan.tier,
-        plan.billingPeriod
+        plan.billingPeriod,
+        user.id
       );
 
       if (result.success) {
