@@ -212,8 +212,9 @@ def sync_mailgun_unsubscribes(db: Any) -> int:
             continue
         
         # Add update to batch
+        # Use set() with merge=True to handle users without email_unsubscribed field
         user_ref = users_ref.document(user_doc.id)
-        batch.update(user_ref, {'email_unsubscribed': True})
+        batch.set(user_ref, {'email_unsubscribed': True}, merge=True)
         batch_count += 1
         updated_count += 1
         

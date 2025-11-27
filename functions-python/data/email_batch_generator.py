@@ -199,6 +199,9 @@ def _update_notification_counters_for_chunk(
     CRITICAL: This must be called immediately after successfully writing messages
     to prevent spam if subsequent operations fail.
     
+    IMPORTANT: Uses set() with merge=True to handle users without notification_state field.
+    Many users don't have this field initially, and update() would fail silently.
+    
     Args:
         db: Firestore client instance
         user_ids: List of user IDs to update (from one chunk)
@@ -209,40 +212,47 @@ def _update_notification_counters_for_chunk(
     from datetime import datetime, timezone
     
     now = datetime.now(timezone.utc).isoformat()
-    batch = db.batch()  # type: ignore
     
+    # Process users individually to handle both first-time and existing notification_state
     for user_id in user_ids:
-        user_ref = db.collection('users').document(user_id)  # type: ignore
-        batch.update(user_ref, {  # type: ignore
-            'notification_state.last_notification_at': now,
-            'notification_state.notification_count': firestore.Increment(1),  # type: ignore
-        })
-    
-    try:
-        batch.commit()  # type: ignore
-        info(
-            "Notification counters updated for chunk",
-            {"count": len(user_ids)}
-        )
-    except Exception as err:
-        # CRITICAL: Log to Sentry but don't raise
-        # Messages already sent - better to skip counter update than spam users
-        error(
-            "CRITICAL: Failed to update notification counters (messages already sent)",
-            {
-                "user_count": len(user_ids),
-                "error": str(err),
-            }
-        )
-        
-        with sentry_sdk.push_scope() as scope:  # type: ignore
-            scope.set_extra("user_count", len(user_ids))  # type: ignore
-            scope.set_extra("user_ids_sample", user_ids[:10])  # type: ignore
-            scope.set_level("error")  # type: ignore
-            sentry_sdk.capture_message(  # type: ignore
-                "Failed to update notification counters after sending messages",
-                level="error"
+        try:
+            user_ref = db.collection('users').document(user_id)  # type: ignore
+            
+            # Get current user data to check if notification_state exists
+            user_doc = user_ref.get()  # type: ignore
+            
+            if not user_doc.exists:  # type: ignore
+                error("User document not found when updating notification counters", {
+                    "user_id": user_id
+                })
+                continue
+            
+            user_data = user_doc.to_dict()  # type: ignore
+            notification_state = user_data.get('notification_state', {}) if user_data else {}  # type: ignore
+            current_count = notification_state.get('notification_count', 0)  # type: ignore
+            
+            # Use set() with merge=True to ensure field is created if it doesn't exist
+            user_ref.set({  # type: ignore
+                'notification_state': {
+                    'last_notification_at': now,
+                    'notification_count': current_count + 1,
+                }
+            }, merge=True)  # type: ignore
+            
+        except Exception as err:
+            # Log individual user errors but continue with others
+            error(
+                "Failed to update notification counter for user",
+                {
+                    "user_id": user_id,
+                    "error": str(err),
+                }
             )
+    
+    info(
+        "Notification counters updated for chunk",
+        {"count": len(user_ids)}
+    )
 
 
 def _write_emails_batch(
