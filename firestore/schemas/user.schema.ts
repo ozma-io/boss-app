@@ -100,6 +100,10 @@ export interface UserSchema {
     email?: string | null;
     appUserId?: string | null;
     installedAt?: string; // ISO 8601 timestamp
+    
+    // Facebook tracking cookies for improved attribution quality
+    fbc?: string | null;        // Facebook Cookie (format: fb.1.{timestamp}.{fbclid})
+    fbp?: string | null;        // Facebook Pixel Browser ID
   };
   
   // === SUBSCRIPTION DATA (system-managed) ===
