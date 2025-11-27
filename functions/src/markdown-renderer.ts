@@ -19,7 +19,7 @@ function createEmailMarkdownRenderer(): MarkdownIt {
 
   // Paragraph
   md.renderer.rules.paragraph_open = (): string => {
-    return '<p style="margin: 0 0 16px 0; color: #666666; font-size: 16px; line-height: 1.6; font-family: \'Manrope\', sans-serif;">';
+    return '<p class="markdown-text" style="margin: 0 0 16px 0; color: #666666; font-size: 16px; line-height: 1.6; font-family: \'Manrope\', sans-serif;">';
   };
   md.renderer.rules.paragraph_close = (): string => '</p>';
 
@@ -32,12 +32,12 @@ function createEmailMarkdownRenderer(): MarkdownIt {
       h3: 'margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;',
       h4: 'margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #000000; line-height: 1.3; font-family: \'Manrope\', sans-serif;',
     };
-    return `<${level} style="${styles[level] || styles.h4}">`;
+    return `<${level} class="markdown-heading" style="${styles[level] || styles.h4}">`;
   };
   md.renderer.rules.heading_close = (tokens, idx): string => `</${tokens[idx].tag}>`;
 
   // Strong (bold)
-  md.renderer.rules.strong_open = (): string => '<strong style="font-weight: 600; color: #000000;">';
+  md.renderer.rules.strong_open = (): string => '<strong class="markdown-strong" style="font-weight: 600; color: #000000;">';
   md.renderer.rules.strong_close = (): string => '</strong>';
 
   // Emphasis (italic)
@@ -47,19 +47,19 @@ function createEmailMarkdownRenderer(): MarkdownIt {
   // Links
   md.renderer.rules.link_open = (tokens, idx): string => {
     const href = tokens[idx].attrGet('href') || '';
-    return `<a href="${href}" style="color: #000000; text-decoration: underline;">`;
+    return `<a href="${href}" class="markdown-link" style="color: #000000; text-decoration: underline;">`;
   };
   md.renderer.rules.link_close = (): string => '</a>';
 
   // Unordered list
   md.renderer.rules.bullet_list_open = (): string => {
-    return '<ul style="margin: 0 0 16px 0; padding-left: 24px; color: #666666;">';
+    return '<ul class="markdown-list" style="margin: 0 0 16px 0; padding-left: 24px; color: #666666;">';
   };
   md.renderer.rules.bullet_list_close = (): string => '</ul>';
 
   // Ordered list
   md.renderer.rules.ordered_list_open = (): string => {
-    return '<ol style="margin: 0 0 16px 0; padding-left: 24px; color: #666666;">';
+    return '<ol class="markdown-list" style="margin: 0 0 16px 0; padding-left: 24px; color: #666666;">';
   };
   md.renderer.rules.ordered_list_close = (): string => '</ol>';
 

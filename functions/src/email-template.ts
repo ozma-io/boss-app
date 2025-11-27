@@ -20,12 +20,31 @@ export function renderEmailTemplate(title: string, bodyHtml: string): string {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Force light theme - override dark mode preferences */
+        /* Dark theme support */
         @media (prefers-color-scheme: dark) {
-            body { background-color: #FAF8F0 !important; }
-            .email-container { background-color: #FAF8F0 !important; }
-            .main-card { background-color: #ffffff !important; }
-            .cta-section { background-color: #B6D95C !important; }
+            body { background-color: #0f0f0f !important; }
+            .email-container { background-color: #0f0f0f !important; }
+            .main-card { background-color: #1e1e1e !important; }
+            .cta-section { background-color: #9bc53d !important; }
+            
+            /* Text colors for dark theme */
+            .main-card h1 { color: #ffffff !important; }
+            .main-card td { color: #cccccc !important; }
+            .cta-section p { color: #000000 !important; }
+            .footer-text { color: #cccccc !important; }
+            .footer-brand { color: #ffffff !important; }
+            .footer-small { color: #888888 !important; }
+            .footer-links a { color: #999999 !important; }
+            
+            /* Markdown elements in dark theme */
+            .markdown-text { color: #cccccc !important; }
+            .markdown-heading { color: #ffffff !important; }
+            .markdown-strong { color: #ffffff !important; }
+            .markdown-link { color: #9bc53d !important; }
+            .markdown-list { color: #cccccc !important; }
+            
+            /* Borders for dark theme */
+            .main-card tr td { border-color: #333333 !important; }
         }
         
         /* Remove left/right padding on mobile for CTA section and main container */
@@ -84,13 +103,13 @@ export function renderEmailTemplate(title: string, bodyHtml: string): string {
                     <!-- Footer -->
                     <tr>
                         <td style="padding: 32px; border-top: 1px solid #f0f0f0; text-align: center;">
-                            <p style="margin: 0 0 8px 0; font-size: 14px; color: #666666; font-family: 'Manrope', sans-serif;">
+                            <p class="footer-text" style="margin: 0 0 8px 0; font-size: 14px; color: #666666; font-family: 'Manrope', sans-serif;">
                                 Best regards,
                             </p>
-                            <p style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #000000; font-family: 'Manrope', sans-serif;">
+                            <p class="footer-brand" style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: #000000; font-family: 'Manrope', sans-serif;">
                                 BossUp
                             </p>
-                            <p style="margin: 0; font-size: 12px; color: #999999; line-height: 1.5; font-family: 'Manrope', sans-serif;">
+                            <p class="footer-small" style="margin: 0; font-size: 12px; color: #999999; line-height: 1.5; font-family: 'Manrope', sans-serif;">
                                 You're receiving this email because you signed up for BossUp career coaching.
                             </p>
                         </td>
@@ -101,7 +120,7 @@ export function renderEmailTemplate(title: string, bodyHtml: string): string {
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 20px auto 0;">
                     <tr>
                         <td style="text-align: center; padding: 0 20px;">
-                            <p style="margin: 0; font-size: 12px; color: #999999; line-height: 1.5; font-family: 'Manrope', sans-serif;">
+                            <p class="footer-links" style="margin: 0; font-size: 12px; color: #999999; line-height: 1.5; font-family: 'Manrope', sans-serif;">
                                 <a href="%unsubscribe_url%" style="color: #666666; text-decoration: underline;">Unsubscribe</a>
                                 &nbsp;•&nbsp;
                                 <a href="mailto:support@ozma.io" style="color: #666666; text-decoration: underline;">Contact Support</a>
