@@ -25,7 +25,7 @@ Email Requirements:
 - Title: Welcoming subject line that confirms data is ready (plain text, no markup)
 - Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
 - Tone: Warm, enthusiastic, professional - like an excited coach who just got their info
-- Length: 4-5 paragraphs maximum
+- Length: 2-3 paragraphs maximum
 - CRITICAL: Must mention AT LEAST 2-3 specific pieces of data they entered
 - CRITICAL: Must explain HOW their specific data will help achieve their goal
 - CRITICAL: Strong CTA to download app (mention it's available on App Store/Google Play)
@@ -63,7 +63,7 @@ Email Requirements:
 - Title: Clear, engaging subject line that hints at personalized insight (plain text, no markup)
 - Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
 - Tone: Professional yet warm, encouraging, with irony and humor where appropriate
-- Length: 3-4 short paragraphs maximum - keep it concise
+- Length: 2-3 paragraphs maximum - keep it concise
 - CRITICAL: Reference specific details from their profile (name, goal, boss details, recent entries)
 - AVOID generic advice - make it concrete and personalized
 - Sometimes surprise them with unexpected ideas, unconventional approaches, or playful insights
@@ -94,7 +94,7 @@ Email Requirements:
 - Title: Clear subject line highlighting the key insight or question (plain text, no markup)
 - Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
 - Tone: Professional yet warm, like checking in with a colleague, with irony and humor where appropriate
-- Length: 3-4 short paragraphs maximum - keep it concise
+- Length: 2-3 paragraphs maximum - keep it concise
 - CRITICAL: Reference specific timeline entries, boss details, and their goal
 - AVOID generic advice - make it concrete and based on their actual situation
 - Sometimes surprise them with unexpected ideas, unconventional approaches, or playful insights
