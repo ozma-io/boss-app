@@ -1,5 +1,5 @@
-# pyright: reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownParameterType=false, reportUnknownArgumentType=false, reportMissingTypeStubs=false, reportMissingImports=false, reportMissingParameterType=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
-
+# type: ignore
+# pyright: reportGeneralTypeIssues=false
 """
 Test script to verify Mailgun API integration.
 

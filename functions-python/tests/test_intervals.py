@@ -1,3 +1,5 @@
+# type: ignore
+# pyright: reportGeneralTypeIssues=false
 """
 Test script to display progressive notification intervals for each user.
 

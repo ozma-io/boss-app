@@ -1,3 +1,5 @@
+# type: ignore
+# pyright: reportGeneralTypeIssues=false
 """
 Quick test script to verify AI content generation and Langfuse integration.
 
