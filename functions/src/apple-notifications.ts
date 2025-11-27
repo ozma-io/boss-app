@@ -8,7 +8,12 @@
  * https://us-central1-<project-id>.cloudfunctions.net/appleServerNotification
  */
 
-import { Environment, SignedDataVerifier } from '@apple/app-store-server-library';
+import { 
+  Environment, 
+  SignedDataVerifier,
+  JWSTransactionDecodedPayload,
+  JWSRenewalInfoDecodedPayload,
+} from '@apple/app-store-server-library';
 import * as admin from 'firebase-admin';
 import { onRequest } from 'firebase-functions/v2/https';
 import { downloadAppleRootCertificates } from './apple-helpers';
@@ -23,7 +28,7 @@ import { logger } from './logger';
  */
 async function handleDidRenew(
   originalTransactionId: string,
-  transactionInfo: any,
+  transactionInfo: JWSTransactionDecodedPayload,
   environment: string
 ): Promise<void> {
   try {
@@ -87,7 +92,7 @@ async function handleDidRenew(
  */
 async function handleExpired(
   originalTransactionId: string,
-  transactionInfo: any
+  transactionInfo: JWSTransactionDecodedPayload
 ): Promise<void> {
   try {
     // Find user by original transaction ID
@@ -136,7 +141,7 @@ async function handleExpired(
  */
 async function handleRefund(
   originalTransactionId: string,
-  transactionInfo: any
+  transactionInfo: JWSTransactionDecodedPayload
 ): Promise<void> {
   try {
     // Find user by original transaction ID
@@ -193,7 +198,7 @@ async function handleRefund(
  */
 async function handleDidFailToRenew(
   originalTransactionId: string,
-  transactionInfo: any
+  transactionInfo: JWSTransactionDecodedPayload
 ): Promise<void> {
   try {
     // Find user by original transaction ID
@@ -243,7 +248,7 @@ async function handleDidFailToRenew(
  */
 async function handleGracePeriodExpired(
   originalTransactionId: string,
-  transactionInfo: any
+  transactionInfo: JWSTransactionDecodedPayload
 ): Promise<void> {
   try {
     // Find user by original transaction ID
@@ -292,7 +297,7 @@ async function handleGracePeriodExpired(
  */
 async function handleDidChangeRenewalStatus(
   originalTransactionId: string,
-  renewalInfo: any
+  renewalInfo: JWSRenewalInfoDecodedPayload
 ): Promise<void> {
   try {
     // Find user by original transaction ID
@@ -410,11 +415,14 @@ export const appleServerNotification = onRequest(
         verificationEnvironment = 'Production';
         
         logger.info('Notification verified with Production environment', {});
-      } catch (productionError: any) {
+      } catch (productionError: unknown) {
         // If Production verification failed, try Sandbox
+        const errorMessage = productionError instanceof Error ? productionError.message : 'Unknown error';
+        const errorStatus = (productionError as { status?: number }).status;
+        
         logger.info('Production verification failed, trying Sandbox', { 
-          productionError: productionError.message,
-          status: productionError.status,
+          productionError: errorMessage,
+          status: errorStatus,
         });
         
         try {
@@ -430,11 +438,13 @@ export const appleServerNotification = onRequest(
           verificationEnvironment = 'Sandbox';
           
           logger.info('Notification verified with Sandbox environment', {});
-        } catch (sandboxError: any) {
+        } catch (sandboxError: unknown) {
           // Both verifications failed
+          const sandboxErrorStatus = (sandboxError as { status?: number }).status;
+          
           logger.error('Failed to verify notification with both environments', {
-            productionStatus: productionError.status,
-            sandboxStatus: sandboxError.status,
+            productionStatus: errorStatus,
+            sandboxStatus: sandboxErrorStatus,
           });
           throw new Error('Failed to verify notification with both Production and Sandbox environments');
         }
