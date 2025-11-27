@@ -19,14 +19,31 @@ export function renderEmailTemplate(title: string, bodyHtml: string): string {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Force light theme - override dark mode preferences */
+        @media (prefers-color-scheme: dark) {
+            body { background-color: #FAF8F0 !important; }
+            .email-container { background-color: #FAF8F0 !important; }
+            .main-card { background-color: #ffffff !important; }
+            .cta-section { background-color: #B6D95C !important; }
+        }
+        
+        /* Remove left/right padding on mobile for CTA section and main container */
+        @media only screen and (max-width: 480px) {
+            .mobile-no-side-padding {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+        }
+    </style>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #FAF8F0;">
     <!-- Email Container -->
-    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FAF8F0;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="email-container" style="background-color: #FAF8F0;">
         <tr>
-            <td style="padding: 40px 20px;">
+            <td class="mobile-no-side-padding" style="padding: 40px 20px;">
                 <!-- Main Content Card -->
-                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" class="main-card" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                     <!-- Header -->
                     <tr>
                         <td style="padding: 40px 32px 32px 32px; text-align: center; border-bottom: 1px solid #f0f0f0;">
@@ -45,7 +62,7 @@ export function renderEmailTemplate(title: string, bodyHtml: string): string {
                     
                     <!-- App Download CTA -->
                     <tr>
-                        <td style="padding: 24px 32px; background-color: #B6D95C; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;">
+                        <td class="cta-section" style="padding: 24px 32px; background-color: #B6D95C; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;">
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                                 <tr>
                                     <td style="text-align: center;">
