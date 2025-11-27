@@ -23,7 +23,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function ProfileScreen() {
+export default function ProfileScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const topInset = insets.top;
   
@@ -37,7 +37,7 @@ export default function ProfileScreen() {
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [fieldKeyToEdit, setFieldKeyToEdit] = useState<string | null>(null);
-  const [fieldToEdit, setFieldToEdit] = useState<{label: string; value: any; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'} | null>(null);
+  const [fieldToEdit, setFieldToEdit] = useState<{label: string; value: string | string[] | number | boolean | null; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'} | null>(null);
   
   // State for support loading
   const [isLoadingSupport, setIsLoadingSupport] = useState(false);
@@ -67,7 +67,7 @@ export default function ProfileScreen() {
   // - Interaction mood patterns over time
   // - Survey response trends
   // For now using placeholder values
-  const mockMetrics = {
+  const _mockMetrics = {
     stressLevel: 0.25,
     bossRelationshipChallenges: 0.20,
     selfDoubtConfidenceGap: 0.30,
@@ -88,7 +88,7 @@ export default function ProfileScreen() {
     }
   }, [profile]);
 
-  const handleSignOut = async (): Promise<void> => {
+  const _handleSignOut = async (): Promise<void> => {
     trackAmplitudeEvent('auth_signout_clicked', {
       email: user?.email || '[no_email]',
       screen: 'profile',
@@ -132,19 +132,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Handler for custom fields
-  const handleCustomFieldUpdate = async (fieldKey: string, value: any): Promise<void> => {
-    if (!profile) return;
-    
-    try {
-      await updateProfile({ [fieldKey]: value });
-      trackAmplitudeEvent('profile_field_edited', {
-        field: fieldKey,
-      });
-    } catch (err) {
-      logger.error('Failed to update custom field', { feature: 'ProfileScreen', fieldKey, error: err instanceof Error ? err : new Error(String(err)) });
-    }
-  };
 
   // Handler for creating empty custom field
   const handleCreateEmptyCustomField = useCallback(async (): Promise<string> => {
@@ -196,7 +183,7 @@ export default function ProfileScreen() {
     if (!currentProfile) return;
 
     try {
-      const updatePayload: Record<string, any> = {};
+      const updatePayload: Record<string, string | { label?: string; type?: string }> = {};
 
       // Update value if provided
       if (updates.value !== undefined) {
@@ -280,7 +267,7 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleEditCustomField = (field: { key: string; value: any; metadata: { label: string; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect' } }): void => {
+  const handleEditCustomField = (field: { key: string; value: string | string[] | number | boolean | null; metadata: { label: string; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect' } }): void => {
     setFieldKeyToEdit(field.key);
     setFieldToEdit({
       label: field.metadata.label,
@@ -342,7 +329,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const renderProgressBar = (value: number, color: string, testId: string) => {
+  const _renderProgressBar = (value: number, color: string, testId: string): React.JSX.Element => {
     return (
       <View style={styles.progressBarContainer} testID={`${testId}-container`}>
         <View style={styles.progressBarBackground} testID={`${testId}-background`}>
@@ -419,7 +406,8 @@ export default function ProfileScreen() {
                 <View style={styles.cardContent} testID="goal-content">
                   <Text style={styles.cardLabel} testID="goal-label">Goal: </Text>
                   <TextInput
-                    style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                    // @ts-expect-error - Web-specific style for removing outline
+                    style={[styles.cardValueInput, { outlineStyle: 'none' }]}
                     value={goalValue}
                     onChangeText={setGoalValue}
                     onBlur={handleBlurGoal}
@@ -440,7 +428,8 @@ export default function ProfileScreen() {
                 <View style={styles.cardContent} testID="position-content">
                   <Text style={styles.cardLabel} testID="position-label">Position: </Text>
                   <TextInput
-                    style={[styles.cardValueInput, { outlineStyle: 'none' } as any]}
+                    // @ts-expect-error - Web-specific style for removing outline
+                    style={[styles.cardValueInput, { outlineStyle: 'none' }]}
                     value={positionValue}
                     onChangeText={setPositionValue}
                     onBlur={handleBlurPosition}

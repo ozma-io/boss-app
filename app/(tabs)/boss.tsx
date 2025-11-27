@@ -20,7 +20,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function BossScreen() {
+export default function BossScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const topInset = insets.top;
   
@@ -40,7 +40,7 @@ export default function BossScreen() {
   // State for custom field management
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [fieldKeyToEdit, setFieldKeyToEdit] = useState<string | null>(null);
-  const [fieldToEdit, setFieldToEdit] = useState<{label: string; value: any; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'} | null>(null);
+  const [fieldToEdit, setFieldToEdit] = useState<{label: string; value: string | string[] | number | boolean | null; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect'} | null>(null);
 
   // Ref to always access latest boss value without affecting callback dependencies
   const bossRef = useRef(boss);
@@ -87,7 +87,7 @@ export default function BossScreen() {
     setShowBirthdayPicker(true);
   };
 
-  const handleBirthdayChange = async (event: any, selectedDate?: Date): Promise<void> => {
+  const handleBirthdayChange = async (_event: unknown, selectedDate?: Date): Promise<void> => {
     if (selectedDate && boss) {
       setBirthday(selectedDate);
       try {
@@ -128,7 +128,7 @@ export default function BossScreen() {
     setShowStartedAtPicker(true);
   };
 
-  const handleStartedAtChange = async (event: any, selectedDate?: Date): Promise<void> => {
+  const handleStartedAtChange = async (_event: unknown, selectedDate?: Date): Promise<void> => {
     if (selectedDate && boss) {
       setStartedAt(selectedDate);
       try {
@@ -159,20 +159,6 @@ export default function BossScreen() {
     }
   };
 
-  // Handler for custom fields
-  const handleCustomFieldUpdate = async (fieldKey: string, value: any): Promise<void> => {
-    if (!boss) return;
-    
-    try {
-      await updateBoss({ [fieldKey]: value });
-      trackAmplitudeEvent('boss_field_edited', {
-        field: fieldKey,
-        bossId: boss.id,
-      });
-    } catch (err) {
-      logger.error('Failed to update custom field', { feature: 'BossScreen', bossId: boss.id, fieldKey, error: err instanceof Error ? err : new Error(String(err)) });
-    }
-  };
 
   // Handler for creating empty custom field
   const handleCreateEmptyCustomField = useCallback(async (): Promise<string> => {
@@ -227,7 +213,7 @@ export default function BossScreen() {
     if (!currentBoss) return;
 
     try {
-      const updatePayload: Record<string, any> = {};
+      const updatePayload: Record<string, string | { label?: string; type?: string }> = {};
 
       // Update value if provided
       if (updates.value !== undefined) {
@@ -316,7 +302,7 @@ export default function BossScreen() {
     );
   };
 
-  const handleEditCustomField = (field: { key: string; value: any; metadata: { label: string; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect' } }): void => {
+  const handleEditCustomField = (field: { key: string; value: string | string[] | number | boolean | null; metadata: { label: string; type: 'text' | 'multiline' | 'select' | 'date' | 'multiselect' } }): void => {
     setFieldKeyToEdit(field.key);
     setFieldToEdit({
       label: field.metadata.label,
@@ -428,7 +414,8 @@ export default function BossScreen() {
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel} testID="position-label">Position</Text>
                   <TextInput
-                    style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
+                    // @ts-expect-error - Web-specific style for removing outline
+                    style={[styles.rowValueInput, { outlineStyle: 'none' }]}
                     value={positionValue}
                     onChangeText={setPositionValue}
                     onBlur={handleBlurPosition}
@@ -444,7 +431,8 @@ export default function BossScreen() {
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel} testID="management-style-label">Management style</Text>
                   <TextInput
-                    style={[styles.rowValueInput, { outlineStyle: 'none' } as any]}
+                    // @ts-expect-error - Web-specific style for removing outline
+                    style={[styles.rowValueInput, { outlineStyle: 'none' }]}
                     value={managementStyleValue}
                     onChangeText={setManagementStyleValue}
                     onBlur={handleBlurManagementStyle}
