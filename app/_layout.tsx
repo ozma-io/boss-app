@@ -1,7 +1,7 @@
 import { BackArrowIcon } from '@/components/icons/BackArrowIcon';
 import { AppColors } from '@/constants/Colors';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { NotificationOnboardingProvider, useNotificationOnboarding } from '@/contexts/NotificationOnboardingContext';
+import { NotificationOnboardingProvider } from '@/contexts/NotificationOnboardingContext';
 import { SessionProvider } from '@/contexts/SessionContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { useNotificationHandlers } from '@/hooks/useNotificationHandlers';
@@ -79,7 +79,7 @@ function AnimatedLogo(): React.JSX.Element {
   );
 }
 
-export default function RootLayout() {
+export default function RootLayout(): React.JSX.Element | null {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     'Lobster-Regular': Lobster_400Regular,
@@ -272,9 +272,8 @@ export default function RootLayout() {
   );
 }
 
-function RootLayoutNav() {
+function RootLayoutNav(): React.JSX.Element {
   const { authState, user } = useAuth();
-  const { shouldShowOnboarding: shouldShowNotificationOnboarding } = useNotificationOnboarding();
   const { shouldShowOnboarding: shouldShowTrackingOnboarding } = useTrackingOnboarding();
   const segments = useSegments();
   const router = useRouter();
@@ -297,7 +296,7 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!user) return;
 
-    const registerToken = async () => {
+    const registerToken = async (): Promise<(() => void) | null> => {
       try {
         const { getNotificationPermissionStatus, registerFCMToken, setupFCMTokenRefreshListener } = 
           await import('@/services/notification.service');
@@ -353,7 +352,7 @@ function RootLayoutNav() {
   // Check for attribution email (only once when unauthenticated and not showing tracking onboarding)
   useEffect(() => {
     if (authState === 'unauthenticated' && !hasCheckedAttribution.current && !shouldShowTrackingOnboarding) {
-      const checkAttributionEmail = async () => {
+      const checkAttributionEmail = async (): Promise<void> => {
         hasCheckedAttribution.current = true;
         
         try {
@@ -418,7 +417,7 @@ function RootLayoutNav() {
     // Navigate only if we have a target and it's different from where we are
     if (targetPath) {
       logger.info('Routing to new screen', { feature: 'App', targetPath, from: segments[0] || 'root' });
-      router.replace(targetPath as any);
+      router.replace(targetPath);
     }
   }, [authState, segments, shouldShowTrackingOnboarding, redirectPath]);
 
