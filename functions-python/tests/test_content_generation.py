@@ -1,3 +1,5 @@
+# type: ignore
+# pyright: reportGeneralTypeIssues=false
 """
 Test script to verify AI-powered notification content generation.
 
@@ -215,7 +217,7 @@ def main() -> None:
     
     try:
         content = generate_ongoing_email_notification(
-            db, user_id, "weekly_checkin", test_session_id
+            db, user_id, "ACTIVE_USER_EMAIL", test_session_id
         )
         
         print_field("Reasoning (first 200 chars)", content.reasoning, 200)
@@ -255,7 +257,7 @@ def main() -> None:
     
     try:
         content = generate_ongoing_push_notification(
-            db, user_id, "daily_checkin", test_session_id
+            db, user_id, "ACTIVE_USER_PUSH", test_session_id
         )
         
         print_field("Reasoning (first 200 chars)", content.reasoning, 200)

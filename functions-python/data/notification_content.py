@@ -2,11 +2,19 @@
 AI-Powered Notification Content Generation
 
 Generates personalized notification content using OpenAI structured output.
-Provides four main functions for different notification scenarios:
-- First email notification (for EMAIL_ONLY_USER)
-- Ongoing email notifications (follow-up emails)
-- First push notification (for NEW_USER_PUSH)
-- Ongoing push notifications (follow-up push/chat)
+Provides functions for different notification scenarios:
+
+Email notifications:
+- email_ONBOARDING_WELCOME: Sent once after web funnel completion
+- email_EMAIL_ONLY_USER: For users who never logged into app (can be sent multiple times)
+- email_NEW_USER_EMAIL: For new users who logged in (first 14 days)
+- email_ACTIVE_USER_EMAIL: For regularly active users
+- email_INACTIVE_USER: For users with unread messages (6+ days inactive)
+
+Push notifications:
+- push_NEW_USER_PUSH: For new users who logged in (first 14 days)
+- push_ACTIVE_USER_PUSH: For regularly active users
+- push_INACTIVE_USER: For users with unread messages (6+ days inactive)
 
 All functions use OpenAI structured output for type-safe, validated responses.
 """
@@ -33,7 +41,10 @@ def generate_first_email_notification(
     session_id: str | None = None,
 ) -> EmailNotificationContent:
     """
-    Generate first welcome email notification for new users.
+    Generate email notification for EMAIL_ONLY_USER scenario.
+    
+    For users who never logged into app (lastActivityAt is null).
+    Can be sent multiple times until user activates.
     
     Uses EMAIL_ONLY_USER scenario prompt to create a warm, personalized
     introduction email that demonstrates understanding of the user's situation.
@@ -53,7 +64,7 @@ def generate_first_email_notification(
         # content.reasoning - AI's chain-of-thought (not sent to user)
     """
     info(
-        "Generating first email notification",
+        "Generating EMAIL_ONLY_USER email notification",
         {"user_id": user_id, "session_id": session_id}
     )
     
@@ -70,12 +81,12 @@ def generate_first_email_notification(
         response_model=EmailNotificationContent,
         user_id=user_id,
         session_id=session_id,
-        generation_name="first_email_notification",
-        metadata={"notification_type": "first_email"},
+        generation_name="email_EMAIL_ONLY_USER",
+        metadata={"notification_type": "email", "scenario": "EMAIL_ONLY_USER"},
     )
     
     info(
-        "First email notification generated successfully",
+        "EMAIL_ONLY_USER email notification generated successfully",
         {
             "user_id": user_id,
             "title_length": len(content.title),
@@ -93,7 +104,10 @@ def generate_ongoing_email_notification(
     session_id: str | None = None,
 ) -> EmailNotificationContent:
     """
-    Generate follow-up email notification for existing users.
+    Generate email notification for ongoing scenarios.
+    
+    For users who have logged into app at least once.
+    Scenarios: NEW_USER_EMAIL, ACTIVE_USER_EMAIL, INACTIVE_USER
     
     Uses ONGOING_EMAIL_SYSTEM_PROMPT to create timely, relevant emails
     that reference recent activity and show continuity.
@@ -101,20 +115,20 @@ def generate_ongoing_email_notification(
     Args:
         db: Firestore client instance
         user_id: User document ID
-        scenario: Notification scenario name (for logging/tracking)
+        scenario: Notification scenario name (NEW_USER_EMAIL, ACTIVE_USER_EMAIL, INACTIVE_USER)
         session_id: Optional session ID for LangFuse tracking
         
     Returns:
         EmailNotificationContent with reasoning, title, and body fields
         
     Example:
-        content = generate_ongoing_email_notification(db, "user123", "weekly_checkin")
+        content = generate_ongoing_email_notification(db, "user123", "ACTIVE_USER_EMAIL")
         # content.title - "How did that 1:1 with your boss go?"
         # content.body - Markdown-formatted follow-up email
         # content.reasoning - AI's chain-of-thought (not sent to user)
     """
     info(
-        "Generating ongoing email notification",
+        "Generating email notification",
         {"user_id": user_id, "scenario": scenario, "session_id": session_id}
     )
     
@@ -131,12 +145,12 @@ def generate_ongoing_email_notification(
         response_model=EmailNotificationContent,
         user_id=user_id,
         session_id=session_id,
-        generation_name=f"ongoing_email_{scenario}",
-        metadata={"notification_type": "ongoing_email", "scenario": scenario},
+        generation_name=f"email_{scenario}",
+        metadata={"notification_type": "email", "scenario": scenario},
     )
     
     info(
-        "Ongoing email notification generated successfully",
+        "Email notification generated successfully",
         {
             "user_id": user_id,
             "scenario": scenario,
@@ -154,7 +168,10 @@ def generate_first_push_notification(
     session_id: str | None = None,
 ) -> ChatNotificationContent:
     """
-    Generate first welcome push notification for new users.
+    Generate push notification for NEW_USER_PUSH scenario.
+    
+    For users who logged into app within first 14 days with PUSH channel enabled.
+    Can be sent multiple times during onboarding period.
     
     Uses NEW_USER_PUSH scenario prompt to create a warm, concise
     welcome message that sparks curiosity to open the app.
@@ -173,7 +190,7 @@ def generate_first_push_notification(
         # content.reasoning - AI's chain-of-thought (not sent to user)
     """
     info(
-        "Generating first push notification",
+        "Generating NEW_USER_PUSH push notification",
         {"user_id": user_id, "session_id": session_id}
     )
     
@@ -190,12 +207,12 @@ def generate_first_push_notification(
         response_model=ChatNotificationContent,
         user_id=user_id,
         session_id=session_id,
-        generation_name="first_push_notification",
-        metadata={"notification_type": "first_push"},
+        generation_name="push_NEW_USER_PUSH",
+        metadata={"notification_type": "push", "scenario": "NEW_USER_PUSH"},
     )
     
     info(
-        "First push notification generated successfully",
+        "NEW_USER_PUSH push notification generated successfully",
         {
             "user_id": user_id,
             "message_length": len(content.message),
@@ -212,7 +229,10 @@ def generate_ongoing_push_notification(
     session_id: str | None = None,
 ) -> ChatNotificationContent:
     """
-    Generate follow-up push notification for existing users.
+    Generate push notification for ongoing scenarios.
+    
+    For active users with PUSH channel enabled.
+    Scenarios: ACTIVE_USER_PUSH, INACTIVE_USER
     
     Uses ONGOING_PUSH_SYSTEM_PROMPT to create timely, relevant
     push messages that reference recent activity.
@@ -220,19 +240,19 @@ def generate_ongoing_push_notification(
     Args:
         db: Firestore client instance
         user_id: User document ID
-        scenario: Notification scenario name (for logging/tracking)
+        scenario: Notification scenario name (ACTIVE_USER_PUSH, INACTIVE_USER)
         session_id: Optional session ID for LangFuse tracking
         
     Returns:
         ChatNotificationContent with reasoning and message fields
         
     Example:
-        content = generate_ongoing_push_notification(db, "user123", "daily_checkin")
+        content = generate_ongoing_push_notification(db, "user123", "ACTIVE_USER_PUSH")
         # content.message - "Quick question about yesterday's meeting - how'd it go?"
         # content.reasoning - AI's chain-of-thought (not sent to user)
     """
     info(
-        "Generating ongoing push notification",
+        "Generating push notification",
         {"user_id": user_id, "scenario": scenario, "session_id": session_id}
     )
     
@@ -249,12 +269,12 @@ def generate_ongoing_push_notification(
         response_model=ChatNotificationContent,
         user_id=user_id,
         session_id=session_id,
-        generation_name=f"ongoing_push_{scenario}",
-        metadata={"notification_type": "ongoing_push", "scenario": scenario},
+        generation_name=f"push_{scenario}",
+        metadata={"notification_type": "push", "scenario": scenario},
     )
     
     info(
-        "Ongoing push notification generated successfully",
+        "Push notification generated successfully",
         {
             "user_id": user_id,
             "scenario": scenario,
@@ -271,10 +291,12 @@ def generate_onboarding_welcome_email(
     session_id: str | None = None,
 ) -> EmailNotificationContent:
     """
-    Generate onboarding welcome email sent immediately after funnel completion.
+    Generate email notification for ONBOARDING_WELCOME scenario.
     
-    This email is sent right after user submits email in web funnel and all
-    Firebase records are created (User, Boss, Timeline entries, Chat).
+    Sent ONCE immediately after user submits email in web funnel.
+    This is reactive communication (not proactive), so it does NOT increase notification_count.
+    
+    Firebase records are already created (User, Boss, Timeline entries, Chat).
     Heavily emphasizes app download and references their onboarding data.
     
     Args:
@@ -286,7 +308,7 @@ def generate_onboarding_welcome_email(
         EmailNotificationContent with reasoning, title, and body fields
     """
     info(
-        "Generating onboarding welcome email",
+        "Generating ONBOARDING_WELCOME email notification",
         {"user_id": user_id, "session_id": session_id}
     )
     
@@ -303,12 +325,12 @@ def generate_onboarding_welcome_email(
         response_model=EmailNotificationContent,
         user_id=user_id,
         session_id=session_id,
-        generation_name="onboarding_welcome_email",
-        metadata={"notification_type": "onboarding_welcome"},
+        generation_name="email_ONBOARDING_WELCOME",
+        metadata={"notification_type": "email", "scenario": "ONBOARDING_WELCOME"},
     )
     
     info(
-        "Onboarding welcome email generated successfully",
+        "ONBOARDING_WELCOME email notification generated successfully",
         {
             "user_id": user_id,
             "title_length": len(content.title),
