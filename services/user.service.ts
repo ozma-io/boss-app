@@ -303,9 +303,32 @@ async function createChatWithWelcomeMessage(userId: string): Promise<void> {
  * @param userEmail - Email from Firebase Auth
  */
 export async function ensureUserProfileExists(userId: string, userEmail: string): Promise<void> {
+  const startTime = Date.now();
+  
   try {
+    logger.debug('Starting ensureUserProfileExists', { 
+      feature: 'UserService', 
+      userId, 
+      userEmail,
+      timestamp: new Date().toISOString(),
+    });
+    
     const userDocRef = doc(db, 'users', userId);
+    
+    logger.debug('Attempting to read user document from Firestore', {
+      feature: 'UserService',
+      userId,
+      path: `users/${userId}`,
+    });
+    
     const userDoc = await getDoc(userDocRef);
+    
+    logger.debug('User document read successful', {
+      feature: 'UserService',
+      userId,
+      exists: userDoc.exists(),
+      readDuration: Date.now() - startTime,
+    });
     
     if (!userDoc.exists()) {
       logger.info('Creating user profile document', { feature: 'UserService', userId, userEmail });
@@ -352,7 +375,43 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
       logger.debug('User profile already exists', { feature: 'UserService', userId });
     }
   } catch (error) {
-    logger.error('Error ensuring user profile exists', { feature: 'UserService', userId, error });
+    // Enhanced error logging for permission-denied diagnostics
+    const err = error as Error & { code?: string };
+    const errorDetails = {
+      feature: 'UserService',
+      userId,
+      userEmail,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorCode: err.code,
+      errorStack: err.stack,
+      duration: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Log with all available context
+    logger.error('Error ensuring user profile exists', errorDetails);
+    
+    // Try to get current auth state for additional diagnostics
+    try {
+      const { auth } = await import('@/constants/firebase.config');
+      const currentUser = auth.currentUser;
+      
+      logger.error('Auth state at error time', {
+        feature: 'UserService',
+        hasCurrentUser: !!currentUser,
+        currentUserId: currentUser?.uid,
+        currentUserEmail: currentUser?.email,
+        matchesUserId: currentUser?.uid === userId,
+        matchesEmail: currentUser?.email === userEmail,
+      });
+    } catch (authCheckError) {
+      logger.error('Failed to check auth state', {
+        feature: 'UserService',
+        authCheckError: authCheckError instanceof Error ? authCheckError.message : String(authCheckError),
+      });
+    }
+    
     throw error;
   }
 }
