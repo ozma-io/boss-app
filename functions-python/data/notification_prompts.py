@@ -29,7 +29,7 @@ Email Requirements:
 - Length: 2-3 paragraphs maximum
 - CRITICAL: Must mention AT LEAST 2-3 specific pieces of data they entered
 - CRITICAL: Must explain HOW their specific data will help achieve their goal
-- CRITICAL: Strong CTA to download app (mention it's available on App Store/Google Play) - include this URL in your email text where appropriate: https://discovery.ozma.io/go-app/the-boss
+- CRITICAL: Strong CTA to download app (mention it's available on App Store/Google Play) - include this URL in your email text where appropriate: https://discovery.ozma.io/go-app/the-boss - IMPORTANT: Format the link using Markdown link syntax [link text](URL), where the link text is natural and contextual (e.g., "download the BossUp app here", "get started in the app"), NOT the raw URL
 - First-person voice: "I'm your BossUp AI Assistant", "I've saved your data", "I'm ready to help you"
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)"). When you detect obvious placeholders, use generic references instead
 
@@ -78,7 +78,7 @@ Email Requirements:
 - CRITICAL: Reference specific details from their profile (name, goal, boss details, recent entries)
 - AVOID generic advice - make it concrete and personalized
 - Sometimes surprise them with unexpected ideas, unconventional approaches, or playful insights
-- If appropriate, you can mention the app and include this URL: https://discovery.ozma.io/go-app/the-boss
+- If appropriate, you can mention the app and include this URL: https://discovery.ozma.io/go-app/the-boss - IMPORTANT: Format the link using Markdown link syntax [link text](URL), where the link text is natural and contextual (e.g., "download the BossUp app here", "get started in the app"), NOT the raw URL
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)", "Manager") rather than real names/positions. When you detect obvious placeholders, do NOT use them literally. Instead, use generic references like "your manager", "your boss", "your goal" without quoting the placeholder text
 
 You should:
@@ -120,7 +120,7 @@ Email Requirements:
 - CRITICAL: Reference specific timeline entries, boss details, and their goal
 - AVOID generic advice - make it concrete and based on their actual situation
 - Sometimes surprise them with unexpected ideas, unconventional approaches, or playful insights
-- If appropriate, you can mention the app and include this URL: https://discovery.ozma.io/go-app/the-boss
+- If appropriate, you can mention the app and include this URL: https://discovery.ozma.io/go-app/the-boss - IMPORTANT: Format the link using Markdown link syntax [link text](URL), where the link text is natural and contextual (e.g., "download the BossUp app here", "get started in the app"), NOT the raw URL
 - WARNING: Some data may be placeholder templates (e.g., "My Boss (Manager)", "Manager") rather than real names/positions. When you detect obvious placeholders, do NOT use them literally. Instead, use generic references like "your manager", "your boss", "your goal" without quoting the placeholder text
 
 You should:
