@@ -187,15 +187,22 @@ def build_notification_prompt(system_prompt: str, user_context_text: str) -> str
     Returns:
         Complete prompt ready for OpenAI API
     """
+    from datetime import datetime, timezone
+    
+    # Add current datetime in same format as chat generation
+    current_utc = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+    
     return f"""{system_prompt}
 
----
-
+<user_context_text>
 Here is the user's current data:
 
 {user_context_text}
+</user_context_text>
 
----
+<current_utc>
+Current date and time (UTC): {current_utc}
+</current_utc>
 
 Generate appropriate notification content based on the user's data above.
 Start your reasoning process in the 'reasoning' field (this helps improve quality).
