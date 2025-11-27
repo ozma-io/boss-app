@@ -1,5 +1,5 @@
 import { auth } from '@/constants/firebase.config';
-import { resetAmplitudeUser, setAmplitudeUserId } from '@/services/amplitude.service';
+import { initializeAmplitude, resetAmplitudeUser, setAmplitudeUserId } from '@/services/amplitude.service';
 import { getAttributionData } from '@/services/attribution.service';
 import { onAuthStateChanged, verifyEmailCode } from '@/services/auth.service';
 import { logoutIntercomUser } from '@/services/intercom.service';
@@ -163,9 +163,23 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
           })
           .catch(err => logger.error('Error getting attribution data', { feature: 'AuthContext', error: err }));
         
-        // Set Amplitude user ID
-        setAmplitudeUserId(newUser.id)
-          .catch(err => logger.error('Amplitude setUserId failed', { feature: 'AuthContext', error: err }));
+        // Set Amplitude user ID (or initialize + set for web)
+        if (Platform.OS === 'web') {
+          // Web: initialize Amplitude on first login (deferred from app startup)
+          // Then set user ID
+          (async () => {
+            try {
+              await initializeAmplitude();
+              await setAmplitudeUserId(newUser.id);
+            } catch (err) {
+              logger.error('Amplitude initialization/setUserId failed', { feature: 'AuthContext', error: err });
+            }
+          })();
+        } else {
+          // Native: SDK already initialized at startup, just set userId
+          setAmplitudeUserId(newUser.id)
+            .catch(err => logger.error('Amplitude setUserId failed', { feature: 'AuthContext', error: err }));
+        }
         
         // Note: Intercom user registration moved to lazy loading (when user opens Support)
         // This prevents background timeout issues on iOS

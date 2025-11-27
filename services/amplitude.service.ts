@@ -275,11 +275,17 @@ export async function resetAmplitudeUser(): Promise<void> {
       if (webAmplitude) {
         webAmplitude.reset();
         console.log('[Amplitude] User session reset (web)');
+        
+        // Reset initialization flag for web so SDK can be re-initialized on next login
+        // This ensures proper session handling when different users log in on the same device
+        isInitialized = false;
+        console.log('[Amplitude] Initialization flag reset - ready for next user');
       }
     } else {
       if (amplitude) {
         await amplitude.reset();
         console.log('[Amplitude] User session reset (native)');
+        // Note: Native SDK stays initialized - reset() is sufficient for proper session handling
       }
     }
   } catch (error) {

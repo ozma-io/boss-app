@@ -123,8 +123,11 @@ export default function RootLayout() {
         // Initialize Intercom SDK
         await initializeIntercom();
 
-        // Initialize Amplitude SDK (works on all platforms)
-        await initializeAmplitude();
+        // Initialize Amplitude SDK (native platforms only)
+        // Web: deferred until after authentication (see AuthContext.tsx)
+        if (Platform.OS !== 'web') {
+          await initializeAmplitude();
+        }
 
         // Initialize Google Sign-In (iOS/Android only)
         initializeGoogleSignIn();

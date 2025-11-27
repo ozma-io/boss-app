@@ -94,10 +94,12 @@ await resetAmplitudeUser();
 
 ## Initialization
 
-The SDK is automatically initialized when the app starts in `app/_layout.tsx`:
+The SDK initialization timing differs by platform:
 
-- On **iOS/Android**: initialized via React Native SDK
-- On **Web**: uses global `window.amplitude` object loaded via CDN
+- On **iOS/Android**: initialized at app startup in `app/_layout.tsx` via React Native SDK
+- On **Web**: initialized AFTER authentication in `contexts/AuthContext.tsx` using global `window.amplitude` object loaded via CDN
+
+This approach ensures that web analytics are only active for authenticated users, improving privacy and reducing unnecessary tracking.
 
 ### Event Queue Before Initialization
 
@@ -131,19 +133,44 @@ This ensures that events triggered during app startup (e.g., `welcome_screen_vie
 Amplitude is **automatically integrated** with the authentication system in `contexts/AuthContext.tsx`:
 
 ### On User Login:
-- Automatically calls `setAmplitudeUserId(userId, email)`
-- User ID and email are set immediately after successful authentication
+- **Web**: Amplitude SDK is initialized first, then `setAmplitudeUserId(userId)` is called
+- **iOS/Android**: SDK already initialized at startup, only `setAmplitudeUserId(userId)` is called
+- User ID is set immediately after successful authentication
 - All subsequent events will be linked to this user
 
 ### On User Logout:
 - Automatically calls `resetAmplitudeUser()`
 - User ID is reset
 - Session is cleared
+- **Web**: SDK initialization flag is also reset, allowing re-initialization on next login
+- **iOS/Android**: SDK remains initialized (reset is sufficient for proper session handling)
 - **Important**: This prevents "merging" of different users on the same device
 
 ### Scenario: 2 Users on the Same Device
 
+**Web Platform:**
 ```
+User A logs in
+  ↓
+  initializeAmplitude() + setAmplitudeUserId("user-A-id")
+  ↓
+Events tracked as user-A ✅
+  ↓
+User A logs out
+  ↓
+  resetAmplitudeUser() → reset userId, session, and initialization flag
+  ↓
+User B logs in
+  ↓
+  initializeAmplitude() + setAmplitudeUserId("user-B-id") → fresh SDK initialization
+  ↓
+Events tracked as user-B ✅
+```
+
+**iOS/Android Platform:**
+```
+App starts → initializeAmplitude() once
+  ↓
 User A logs in
   ↓
   setAmplitudeUserId("user-A-id")
@@ -152,7 +179,7 @@ Events tracked as user-A ✅
   ↓
 User A logs out
   ↓
-  resetAmplitudeUser() → reset userId and session
+  resetAmplitudeUser() → reset userId and session (SDK stays initialized)
   ↓
 User B logs in
   ↓
@@ -162,7 +189,7 @@ Events tracked as user-B ✅
 ```
 
 **Without reset()** data from different users could be mixed via device ID.  
-**With reset()** each user is tracked separately.
+**With reset()** each user is tracked separately with proper session isolation.
 
 ## Files
 
@@ -176,10 +203,12 @@ Events tracked as user-B ✅
 
 1. Run the application
 2. The console should display:
-   - iOS/Android: `[Amplitude] Native SDK initialized successfully with Session Replay`
-   - Web: `[Amplitude] Web SDK initialized successfully with Session Replay`
+   - **iOS/Android** (on app start): `[Amplitude] Native SDK initialized successfully with Session Replay`
+   - **Web** (after authentication): `[Amplitude] Web SDK initialized successfully with Session Replay`
 3. When events are sent, the console will show:
    - `[Amplitude] Event tracked (web/native): EventName {...}`
+   
+**Important**: On web platform, Amplitude initialization happens AFTER user authentication. Any events tracked before authentication will be queued and sent once the SDK is initialized.
 
 ## Platforms
 
