@@ -149,13 +149,25 @@ async function sendEmail(userId: string, emailId: string, emailData: EmailDocume
     // Send email via Mailgun with 3 retry attempts and exponential backoff
     const result = await retryWithBackoff(
       async () => {
-        return await mg.messages.create(MAILGUN_DOMAIN, {
+        const messageOptions: {
+          from: string;
+          to: string;
+          subject: string;
+          html: string;
+          bcc?: string;
+        } = {
           from: MAILGUN_FROM,
           to: emailData.to,
-          bcc: EMAIL_MONITORING_RECIPIENT,
           subject: emailData.subject,
           html: html,
-        });
+        };
+        
+        // Only add BCC if EMAIL_MONITORING_RECIPIENT is not empty
+        if (EMAIL_MONITORING_RECIPIENT !== '') {
+          messageOptions.bcc = EMAIL_MONITORING_RECIPIENT;
+        }
+        
+        return await mg.messages.create(MAILGUN_DOMAIN, messageOptions);
       },
       3, // maxRetries
       1000 // initialDelayMs (1 second)
