@@ -14,7 +14,7 @@ function createEmailMarkdownRenderer(): MarkdownIt {
   const md = new MarkdownIt({
     html: false,
     linkify: true,
-    typographer: true,
+    typographer: false, // Disabled to prevent special Unicode characters (em-dash, curly quotes, etc.) in emails
   });
 
   // Paragraph
@@ -93,9 +93,28 @@ function createEmailMarkdownRenderer(): MarkdownIt {
 const emailMarkdownRenderer = createEmailMarkdownRenderer();
 
 /**
+ * Normalize text by replacing special Unicode characters with simple ASCII equivalents
+ * This prevents issues with email clients not rendering special typography correctly
+ */
+function normalizeText(text: string): string {
+  return text
+    // Replace various dash types with regular hyphen-minus
+    .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-') // non-breaking hyphen, en-dash, em-dash, etc.
+    // Replace various quote types with straight quotes
+    .replace(/[\u2018\u2019]/g, "'") // single curly quotes
+    .replace(/[\u201C\u201D]/g, '"') // double curly quotes
+    // Replace ellipsis with three dots
+    .replace(/\u2026/g, '...')
+    // Replace various space types with regular space
+    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ');
+}
+
+/**
  * Convert Markdown to HTML with inline styles optimized for email clients
  */
 export function markdownToHtml(markdown: string): string {
-  return emailMarkdownRenderer.render(markdown);
+  // First normalize the text to remove special Unicode characters
+  const normalizedMarkdown = normalizeText(markdown);
+  return emailMarkdownRenderer.render(normalizedMarkdown);
 }
 

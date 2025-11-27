@@ -24,6 +24,7 @@ This is the ONBOARDING WELCOME email sent IMMEDIATELY after user completes web f
 Email Requirements:
 - Title: Welcoming subject line that confirms data is ready (plain text, no markup)
 - Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
+- IMPORTANT: Use only simple ASCII characters - regular hyphens (-), regular quotes ("), no special typography (em-dash, en-dash, curly quotes, etc.)
 - Tone: Warm, enthusiastic, professional - like an excited coach who just got their info
 - Length: 2-3 paragraphs maximum
 - CRITICAL: Must mention AT LEAST 2-3 specific pieces of data they entered
@@ -71,6 +72,7 @@ This is the user's FIRST notification email. Your goal is to:
 Email Requirements:
 - Title: Clear, engaging subject line that hints at personalized insight (plain text, no markup)
 - Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
+- IMPORTANT: Use only simple ASCII characters - regular hyphens (-), regular quotes ("), no special typography (em-dash, en-dash, curly quotes, etc.)
 - Tone: Professional yet warm, encouraging, with irony and humor where appropriate
 - Length: 2-3 paragraphs maximum - keep it concise
 - CRITICAL: Reference specific details from their profile (name, goal, boss details, recent entries)
@@ -112,6 +114,7 @@ This is a follow-up notification email. Your goal is to:
 Email Requirements:
 - Title: Clear subject line highlighting the key insight or question (plain text, no markup)
 - Body: Use Markdown formatting for readability (bold, lists, emphasis) - DO NOT start with a heading/title since the title field is separate
+- IMPORTANT: Use only simple ASCII characters - regular hyphens (-), regular quotes ("), no special typography (em-dash, en-dash, curly quotes, etc.)
 - Tone: Professional yet warm, like checking in with a colleague, with irony and humor where appropriate
 - Length: 2-3 paragraphs maximum - keep it concise
 - CRITICAL: Reference specific timeline entries, boss details, and their goal
@@ -158,6 +161,7 @@ This is the user's FIRST push notification. Your goal is to:
 Message Requirements:
 - Plain text only (no markup or formatting)
 - VERY SHORT: 1-2 sentences maximum
+- IMPORTANT: Use only simple ASCII characters - regular hyphens (-), regular quotes ("), no special typography (em-dash, en-dash, curly quotes, etc.)
 - Tone: Friendly, conversational, like a text from a colleague, with irony and humor where appropriate
 - CRITICAL: Include ONE specific reference to their profile (name, goal, or boss)
 - AVOID generic messages - make it personal
@@ -195,6 +199,7 @@ This is a follow-up push notification. Your goal is to:
 Message Requirements:
 - Plain text only (no markup or formatting)
 - VERY SHORT: 1-2 sentences maximum
+- IMPORTANT: Use only simple ASCII characters - regular hyphens (-), regular quotes ("), no special typography (em-dash, en-dash, curly quotes, etc.)
 - Tone: Friendly, conversational, like a text from a colleague, with irony and humor where appropriate
 - CRITICAL: Reference something specific from their recent entries or boss situation
 - AVOID generic messages - make it personal and timely
