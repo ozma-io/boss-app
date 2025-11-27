@@ -340,33 +340,31 @@ Firestore user document now contains:
   - `firebase-iap-verifier` for IAP verification in backend
 - ✅ EAS credentials configured with proper separation of concerns
 - ✅ `eas.json` updated with `internal` submit profile
+- ✅ Google Play JSON settings updated in repository for automatic deployment
 
-**Remaining:**
-- [ ] Update Google Play JSON settings in repository for automatic deployment after build and review
-
-### Next: Public Testing Release
+### Public Testing Release
 
 **Goal:** Release app for public beta testing via Facebook Business Manager attribution tracking.
 
-**Status:** 📋 **Planned**
+**Status:** ✅ **Completed** (2025-11-27)
 
 **Platforms:**
-- iOS TestFlight (Public Beta)
-- Android Open Testing track
+- ✅ iOS TestFlight (Public Beta)
+- ✅ Android Open Testing track
 
-**Requirements:**
-- Configure Facebook Business Manager with App Store/Google Play IDs
-- Update Facebook App Settings with published app platform credentials
-- Set up conversion tracking for public beta installs
-- Test attribution flow with real Facebook ads
+**Completed:**
+- ✅ Facebook Business Manager configured with App Store/Google Play IDs
+- ✅ Facebook App Settings updated with published app platform credentials
+- ✅ Conversion tracking set up for public beta installs
+- ✅ Attribution flow tested with real Facebook ads
 
 ---
 
 ## Facebook Events Manager Configuration
 
-### TODO: SKAdNetwork & Conversion Values Setup
+### ✅ SKAdNetwork & Conversion Values Setup - Completed
 
-**IMPORTANT:** Complete these steps in the correct order to ensure proper attribution tracking for iOS.
+**Status:** All steps completed in the correct order to ensure proper attribution tracking for iOS.
 
 #### Step 1: Add iOS Platform to Facebook App (MUST DO FIRST)
 
@@ -433,5 +431,5 @@ xcrun simctl openurl booted "https://discovery.ozma.io/go-app/the-boss?fbclid=te
 
 ---
 
-**Last Updated:** 2025-11-21
+**Last Updated:** 2025-11-27
 
