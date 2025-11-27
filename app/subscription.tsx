@@ -16,7 +16,7 @@ import { CancelSubscriptionResponse, SubscriptionPlanConfig } from '@/types';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect } from 'expo-router';
 import { httpsCallable } from 'firebase/functions';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -34,15 +34,22 @@ export default function SubscriptionScreen(): React.JSX.Element {
 
   const subscriptionInfo = getSubscriptionDisplayInfo(profile);
 
-  // Track screen views
+  // Keep profile ref up-to-date for useFocusEffect
+  const profileRef = useRef(profile);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  // Track screen views with current subscription info
   useFocusEffect(
     useCallback(() => {
+      const currentSubscriptionInfo = getSubscriptionDisplayInfo(profileRef.current);
       trackAmplitudeEvent('subscription_screen_viewed', {
-        hasSubscription: subscriptionInfo.hasSubscription,
-        tier: subscriptionInfo.tier,
-        billingPeriod: subscriptionInfo.billingPeriod,
+        hasSubscription: currentSubscriptionInfo.hasSubscription,
+        tier: currentSubscriptionInfo.tier,
+        billingPeriod: currentSubscriptionInfo.billingPeriod,
       });
-    }, [subscriptionInfo.hasSubscription, subscriptionInfo.tier, subscriptionInfo.billingPeriod])
+    }, [])
   );
 
   // Auto-sync subscription on screen focus

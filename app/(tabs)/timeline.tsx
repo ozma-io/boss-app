@@ -32,15 +32,17 @@ export default function TimelineScreen() {
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('timeline_screen_viewed');
-      
-      if (!loading && entries.length > 0) {
-        trackAmplitudeEvent('timeline_data_loaded', {
-          entriesCount: entries.length,
-          bossId: boss?.id,
-        });
-      }
-    }, [loading, entries.length, boss?.id])
+    }, [])
   );
+
+  useEffect(() => {
+    if (!loading && entries.length > 0) {
+      trackAmplitudeEvent('timeline_data_loaded', {
+        entriesCount: entries.length,
+        bossId: boss?.id,
+      });
+    }
+  }, [loading, entries.length, boss?.id]);
 
   const timelineGroups = groupTimelineEntries(entries);
 

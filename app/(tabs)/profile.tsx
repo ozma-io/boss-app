@@ -76,15 +76,17 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('profile_screen_viewed');
-      
-      if (profile) {
-        trackAmplitudeEvent('profile_data_loaded', {
-          hasGoal: !!profile.goal,
-          hasPosition: !!profile.position,
-        });
-      }
-    }, [profile])
+    }, [])
   );
+
+  useEffect(() => {
+    if (profile) {
+      trackAmplitudeEvent('profile_data_loaded', {
+        hasGoal: !!profile.goal,
+        hasPosition: !!profile.position,
+      });
+    }
+  }, [profile]);
 
   const handleSignOut = async (): Promise<void> => {
     trackAmplitudeEvent('auth_signout_clicked', {

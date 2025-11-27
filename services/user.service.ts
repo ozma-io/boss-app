@@ -81,9 +81,13 @@ export async function getUserNotificationData(userId: string): Promise<UserNotif
   }
 }
 
-export async function updateNotificationPermissionStatus(
+/**
+ * Update notification permission status in Firestore (internal helper, doesn't send events)
+ */
+async function updateNotificationPermissionStatusInFirestore(
   userId: string,
-  status: NotificationPermissionStatus
+  status: NotificationPermissionStatus,
+  shouldTrackEvent: boolean
 ): Promise<void> {
   try {
     const userDocRef = doc(db, 'users', userId);
@@ -101,22 +105,37 @@ export async function updateNotificationPermissionStatus(
       notificationPromptHistory: [...existingHistory, historyItem],
     });
     
-    // Track event in Amplitude
-    trackAmplitudeEvent('notification_permission_responded', {
-      status: status,
-      platform: Platform.OS,
-    });
+    // Only track event if this is a user action (not automatic sync)
+    if (shouldTrackEvent) {
+      trackAmplitudeEvent('notification_permission_responded', {
+        status: status,
+        platform: Platform.OS,
+      });
+      
+      logger.info('Notification permission status updated and tracked', { feature: 'UserService', status });
+    } else {
+      logger.info('Notification permission status synced to Firestore (no event)', { feature: 'UserService', status });
+    }
     
-    // Set user property in Amplitude
+    // Always set user property in Amplitude
     await setAmplitudeUserProperties({
       notification_permission_status: status,
     });
-    
-    logger.info('Notification permission status updated and tracked', { feature: 'UserService', status });
   } catch (error) {
     logger.error('Error updating notification permission status', { feature: 'UserService', error });
     throw error;
   }
+}
+
+/**
+ * Update notification permission status in Firestore and track event in Amplitude
+ * Use this when user explicitly grants/denies permission
+ */
+export async function updateNotificationPermissionStatus(
+  userId: string,
+  status: NotificationPermissionStatus
+): Promise<void> {
+  await updateNotificationPermissionStatusInFirestore(userId, status, true);
 }
 
 export async function recordNotificationPromptShown(userId: string): Promise<void> {
@@ -145,6 +164,7 @@ export async function recordNotificationPromptShown(userId: string): Promise<voi
  * 
  * IMPORTANT: The system permission status (iOS/Android) is the source of truth.
  * Firestore is only used for analytics, history, and re-prompt logic.
+ * This is an automatic sync, not a user action, so it doesn't send Amplitude events.
  */
 async function syncNotificationStatusWithFirestore(
   userId: string,
@@ -164,7 +184,8 @@ async function syncNotificationStatusWithFirestore(
   });
   
   try {
-    await updateNotificationPermissionStatus(userId, systemStatus);
+    // Use internal function without event tracking (automatic sync, not user action)
+    await updateNotificationPermissionStatusInFirestore(userId, systemStatus, false);
     logger.info('Successfully synced notification status to Firestore', { feature: 'UserService' });
   } catch (error) {
     logger.error('Failed to sync notification status to Firestore', { feature: 'UserService', error });

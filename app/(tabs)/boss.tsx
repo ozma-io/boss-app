@@ -65,15 +65,17 @@ export default function BossScreen() {
   useFocusEffect(
     useCallback(() => {
       trackAmplitudeEvent('boss_screen_viewed');
-      
-      if (boss) {
-        trackAmplitudeEvent('boss_data_loaded', {
-          bossId: boss.id,
-          bossName: boss.name,
-        });
-      }
-    }, [boss])
+    }, [])
   );
+
+  useEffect(() => {
+    if (boss) {
+      trackAmplitudeEvent('boss_data_loaded', {
+        bossId: boss.id,
+        bossName: boss.name,
+      });
+    }
+  }, [boss]);
 
   const handleEditBirthday = (): void => {
     setShowStartedAtPicker(false);

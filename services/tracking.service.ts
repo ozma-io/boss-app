@@ -100,11 +100,12 @@ export async function getUserTrackingData(userId: string): Promise<UserTrackingD
 }
 
 /**
- * Update tracking permission status in Firestore
+ * Update tracking permission status in Firestore (internal helper, doesn't send events)
  */
-export async function updateTrackingPermissionStatus(
+async function updateTrackingPermissionStatusInFirestore(
   userId: string,
-  status: TrackingPermissionStatus
+  status: TrackingPermissionStatus,
+  shouldTrackEvent: boolean
 ): Promise<void> {
   try {
     const userDocRef = doc(db, 'users', userId);
@@ -125,22 +126,37 @@ export async function updateTrackingPermissionStatus(
       trackingPromptCount: existingCount + 1
     });
     
-    // Track event in Amplitude
-    trackAmplitudeEvent('tracking_permission_responded', {
-      status: status,
-      platform: Platform.OS,
-    });
+    // Only track event if this is a user action (not automatic sync)
+    if (shouldTrackEvent) {
+      trackAmplitudeEvent('tracking_permission_responded', {
+        status: status,
+        platform: Platform.OS,
+      });
+      
+      logger.info('Tracking permission status updated and tracked in Amplitude', { feature: 'TrackingService', status });
+    } else {
+      logger.info('Tracking permission status synced to Firestore (no event)', { feature: 'TrackingService', status });
+    }
     
-    // Set user property in Amplitude
+    // Always set user property in Amplitude
     await setAmplitudeUserProperties({
       tracking_permission_status: status,
     });
-    
-    logger.info('Tracking permission status updated and tracked in Amplitude', { feature: 'TrackingService', status });
   } catch (error) {
     logger.error('Error updating tracking permission status', { feature: 'TrackingService', error });
     throw error;
   }
+}
+
+/**
+ * Update tracking permission status in Firestore and track event in Amplitude
+ * Use this when user explicitly grants/denies permission
+ */
+export async function updateTrackingPermissionStatus(
+  userId: string,
+  status: TrackingPermissionStatus
+): Promise<void> {
+  await updateTrackingPermissionStatusInFirestore(userId, status, true);
 }
 
 /**
@@ -175,6 +191,7 @@ export async function recordTrackingPromptShown(userId: string): Promise<void> {
  * 
  * IMPORTANT: The system permission status (iOS/Android) is the source of truth.
  * Firestore is only used for analytics, history, and re-prompt logic.
+ * This is an automatic sync, not a user action, so it doesn't send Amplitude events.
  */
 async function syncTrackingStatusWithFirestore(
   userId: string,
@@ -194,7 +211,8 @@ async function syncTrackingStatusWithFirestore(
   });
   
   try {
-    await updateTrackingPermissionStatus(userId, systemStatus);
+    // Use internal function without event tracking (automatic sync, not user action)
+    await updateTrackingPermissionStatusInFirestore(userId, systemStatus, false);
     logger.info('Successfully synced tracking status to Firestore', { feature: 'TrackingService' });
   } catch (error) {
     logger.error('Failed to sync tracking status to Firestore', { feature: 'TrackingService', error });
