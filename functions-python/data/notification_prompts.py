@@ -27,6 +27,7 @@ Email Requirements:
 - IMPORTANT: Use only simple ASCII characters - regular hyphens (-), regular quotes ("), no special typography (em-dash, en-dash, curly quotes, etc.)
 - Tone: Warm, enthusiastic, professional - like an excited coach who just got their info
 - Length: 2-3 paragraphs maximum
+- CRITICAL: Keep each paragraph SHORT - max 2-3 sentences per paragraph for easy reading. Avoid long, dense text blocks
 - CRITICAL: Must mention AT LEAST 2-3 specific pieces of data they entered
 - CRITICAL: Must explain HOW their specific data will help achieve their goal
 - CRITICAL: Strong CTA to download app (mention it's available on App Store/Google Play) - include this URL in your email text where appropriate: https://discovery.ozma.io/go-app/the-boss - IMPORTANT: Format the link using Markdown link syntax [link text](URL), where the link text is natural and contextual (e.g., "download the BossUp app here", "get started in the app"), NOT the raw URL
@@ -75,6 +76,7 @@ Email Requirements:
 - IMPORTANT: Use only simple ASCII characters - regular hyphens (-), regular quotes ("), no special typography (em-dash, en-dash, curly quotes, etc.)
 - Tone: Professional yet warm, encouraging, with irony and humor where appropriate
 - Length: 2-3 paragraphs maximum - keep it concise
+- CRITICAL: Keep each paragraph SHORT - max 2-3 sentences per paragraph for easy reading. Avoid long, dense text blocks
 - CRITICAL: Reference specific details from their profile (name, goal, boss details, recent entries)
 - AVOID generic advice - make it concrete and personalized
 - Sometimes surprise them with unexpected ideas, unconventional approaches, or playful insights
@@ -117,6 +119,7 @@ Email Requirements:
 - IMPORTANT: Use only simple ASCII characters - regular hyphens (-), regular quotes ("), no special typography (em-dash, en-dash, curly quotes, etc.)
 - Tone: Professional yet warm, like checking in with a colleague, with irony and humor where appropriate
 - Length: 2-3 paragraphs maximum - keep it concise
+- CRITICAL: Keep each paragraph SHORT - max 2-3 sentences per paragraph for easy reading. Avoid long, dense text blocks
 - CRITICAL: Reference specific timeline entries, boss details, and their goal
 - AVOID generic advice - make it concrete and based on their actual situation
 - Sometimes surprise them with unexpected ideas, unconventional approaches, or playful insights
