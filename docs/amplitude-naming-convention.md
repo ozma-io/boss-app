@@ -146,6 +146,12 @@ Keep the number of events minimal. Better to have 10 well-thought-out events tha
 "timeline_entry_clicked"    // + property: entry_type, entry_id
 ```
 
+### Notifications (Backend)
+```typescript
+"notification_proactive_email_sent"  // + property: scenario, subject, notification_count
+"notification_proactive_push_sent"   // + property: scenario, thread_id, notification_count
+```
+
 ### Conversions
 ```typescript
 "subscription_started"      // + property: plan_type, price

@@ -34,6 +34,7 @@ from data.notification_content import (
     generate_first_push_notification,  # type: ignore
     generate_ongoing_push_notification,  # type: ignore
 )
+from utils.amplitude import track_amplitude_event
 from utils.logger import error, info, warn
 
 
@@ -197,7 +198,7 @@ def _generate_single_chat_message(
 def _update_notification_counters_for_chunk(
     db: firestore.Client,  # type: ignore
     user_ids: list[str],
-) -> None:
+) -> dict[str, int]:
     """
     Update notification counters for a chunk of users.
     
@@ -210,9 +211,14 @@ def _update_notification_counters_for_chunk(
     Args:
         db: Firestore client instance
         user_ids: List of user IDs to update (from one chunk)
+        
+    Returns:
+        Dictionary mapping user_id to new notification_count (after increment)
     """
+    notification_counts: dict[str, int] = {}
+    
     if not user_ids:
-        return
+        return notification_counts
     
     from datetime import datetime, timezone
     
@@ -234,15 +240,19 @@ def _update_notification_counters_for_chunk(
             
             user_data = user_doc.to_dict()  # type: ignore
             notification_state = user_data.get('notification_state', {}) if user_data else {}  # type: ignore
-            current_count = notification_state.get('notification_count', 0)  # type: ignore
+            current_count: int = int(notification_state.get('notification_count', 0))  # type: ignore
+            new_count: int = current_count + 1
             
             # Use set() with merge=True to ensure field is created if it doesn't exist
             user_ref.set({  # type: ignore
                 'notification_state': {
                     'last_notification_at': now,
-                    'notification_count': current_count + 1,
+                    'notification_count': new_count,
                 }
             }, merge=True)  # type: ignore
+            
+            # Store new count for return
+            notification_counts[user_id] = new_count
             
         except Exception as err:
             # Log individual user errors but continue with others
@@ -258,6 +268,8 @@ def _update_notification_counters_for_chunk(
         "Notification counters updated for chunk",
         {"count": len(user_ids)}
     )
+    
+    return notification_counts
 
 
 def _write_chat_messages_batch(
@@ -423,7 +435,39 @@ def _write_chat_messages_batch(
             # CRITICAL: Update notification counters immediately after successful write
             # to prevent spam if subsequent operations fail
             user_ids = [task.user_id for task, _ in chunk]
-            _update_notification_counters_for_chunk(db, user_ids) # type: ignore
+            notification_counts = _update_notification_counters_for_chunk(db, user_ids) # type: ignore
+            
+            # Track Amplitude events for successfully sent proactive push notifications
+            # Track for ALL users in chunk since messages were successfully written to Firestore
+            for task, _ in chunk:
+                # Use notification_count from Firestore if available, fallback to None if update failed
+                notification_count = notification_counts.get(task.user_id)
+                
+                if notification_count is None:
+                    error(
+                        "Notification counter update failed - Amplitude event will be sent without notification_count",
+                        {
+                            "user_id": task.user_id,
+                            "event_type": "notification_proactive_push_sent",
+                        }
+                    )
+                
+                thread_id = task.thread_id if task.thread_id else "main"
+                
+                event_properties = {
+                    "scenario": task.scenario,
+                    "thread_id": thread_id,
+                }
+                
+                # Only add notification_count if it was successfully retrieved
+                if notification_count is not None:
+                    event_properties["notification_count"] = notification_count
+                
+                track_amplitude_event(
+                    user_id=task.user_id,
+                    event_type="notification_proactive_push_sent",
+                    event_properties=event_properties,
+                )
             
         except Exception as err:
             error(

@@ -27,6 +27,7 @@ mailgun_api_key = SecretParam('MAILGUN_API_KEY')
 openai_api_key = SecretParam('OPENAI_API_KEY')
 langfuse_public_key = SecretParam('LANGFUSE_PUBLIC_KEY')
 langfuse_secret_key = SecretParam('LANGFUSE_SECRET_KEY')
+amplitude_api_key = SecretParam('AMPLITUDE_API_KEY')
 
 
 def _clean_environment_secrets() -> None:
@@ -44,6 +45,7 @@ def _clean_environment_secrets() -> None:
         'OPENAI_API_KEY',
         'LANGFUSE_PUBLIC_KEY',
         'LANGFUSE_SECRET_KEY',
+        'AMPLITUDE_API_KEY',
     ]
     
     for secret_name in secrets_to_clean:
@@ -116,7 +118,7 @@ def get_firestore_client() -> Any:
 @scheduler_fn.on_schedule(
     schedule="every 2 hours",
     region="us-central1",
-    secrets=[mailgun_api_key, openai_api_key, langfuse_public_key, langfuse_secret_key]
+    secrets=[mailgun_api_key, openai_api_key, langfuse_public_key, langfuse_secret_key, amplitude_api_key]
 )
 def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
     """
@@ -140,7 +142,7 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
 @firestore_fn.on_document_created(
     document="users/{userId}/chatThreads/{threadId}/messages/{messageId}",
     region="us-central1",
-    secrets=[mailgun_api_key, openai_api_key, langfuse_public_key, langfuse_secret_key]
+    secrets=[mailgun_api_key, openai_api_key, langfuse_public_key, langfuse_secret_key, amplitude_api_key]
 )
 def onChatMessageCreatedSendWelcomeEmail(
     event: firestore_fn.Event[firestore_fn.DocumentSnapshot | None]  # type: ignore
