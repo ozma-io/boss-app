@@ -10,6 +10,7 @@
  */
 
 import * as admin from 'firebase-admin';
+import * as crypto from 'crypto';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { cancelStripeSubscription } from './iap-verification';
@@ -28,6 +29,16 @@ interface DeleteAccountRequest {
 interface DeleteAccountResponse {
   success: boolean;
   error?: string;
+}
+
+interface AnonymizeAccountRequest {
+  confirmationText: string; // Must be "DELETE MY ACCOUNT"
+}
+
+interface AnonymizeAccountResponse {
+  success: boolean;
+  error?: string;
+  anonymousEmail?: string;
 }
 
 /**
@@ -238,6 +249,20 @@ async function cancelUserSubscription(userId: string): Promise<{success: boolean
 }
 
 /**
+ * Generate anonymous email with UUID + timestamp for uniqueness
+ * 
+ * Each anonymization generates a completely unique email to prevent
+ * conflicts when users create multiple accounts with same original email.
+ * 
+ * Format: deleted-{timestamp}-{uuid}@anonymized.ozma.io
+ */
+function generateAnonymousEmail(): string {
+  const timestamp = Date.now();
+  const uuid = crypto.randomUUID().substring(0, 8);
+  return `deleted-${timestamp}-${uuid}@anonymized.ozma.io`;
+}
+
+/**
  * Main Cloud Function for account deletion
  * 
  * Security: Only authenticated users can delete their own account
@@ -408,6 +433,194 @@ export const deleteUserAccount = onCall<DeleteAccountRequest, Promise<DeleteAcco
       const message = `Account deletion failed: ${errors.join('; ')}`;
       
       logger.error('Account deletion completely failed', { userId, errors });
+
+      return {
+        success: false,
+        error: message
+      };
+    }
+  }
+);
+
+/**
+ * Main Cloud Function for account anonymization
+ * 
+ * Security: Only authenticated users can anonymize their own account
+ * Requires confirmation text "DELETE MY ACCOUNT" to prevent accidental anonymization
+ * 
+ * Preserves behavioral/statistical data while removing PII:
+ * - Replaces email with UUID+timestamp anonymous email
+ * - Removes name, displayName, photoURL
+ * - Removes PII from attribution (email, fbc, fbp) but keeps marketing data and appUserId
+ * - Conditionally removes subscription data (only if cancellation succeeds)
+ * 
+ * Uses partial error handling - continues anonymization even if some steps fail
+ */
+export const anonymizeUserAccount = onCall<AnonymizeAccountRequest, Promise<AnonymizeAccountResponse>>(
+  {
+    region: 'us-central1',
+    timeoutSeconds: 120, // 2 minutes should be enough for anonymization
+    memory: '512MiB',
+    secrets: [stripeSecretKey, intercomAccessToken], // Required for Stripe & Intercom
+  },
+  async (request) => {
+    // Verify authentication
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'User must be authenticated');
+    }
+
+    const userId = request.auth.uid;
+    const { confirmationText } = request.data;
+
+    logger.info('Account anonymization requested', { userId });
+
+    // Verify confirmation text
+    if (confirmationText !== 'DELETE MY ACCOUNT') {
+      logger.warn('Account anonymization rejected: invalid confirmation text', { 
+        userId, 
+        providedText: confirmationText 
+      });
+      throw new HttpsError(
+        'failed-precondition',
+        'Confirmation text must be "DELETE MY ACCOUNT"'
+      );
+    }
+
+    // Track success of each step
+    const errors: string[] = [];
+    let subscriptionCancelled = false;
+    let intercomDeleted = false;
+    let authUpdated = false;
+    let firestoreUpdated = false;
+    
+    // Generate anonymous email (unique every time)
+    const anonymousEmail = generateAnonymousEmail();
+    logger.info('Generated anonymous email for anonymization', { userId, anonymousEmail });
+
+    // Step 1: Cancel active subscription (if any)
+    try {
+      logger.info('Attempting to cancel user subscription', { userId });
+      
+      const subscriptionResult = await cancelUserSubscription(userId);
+      
+      if (subscriptionResult.success) {
+        subscriptionCancelled = true;
+        logger.info('User subscription cancelled successfully', { userId });
+      } else {
+        errors.push(`Subscription cancellation failed: ${subscriptionResult.error}`);
+        logger.warn('Subscription cancellation failed, will keep data for debugging', { 
+          userId, 
+          error: subscriptionResult.error 
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`Subscription cancellation error: ${errorMessage}`);
+      logger.error('Subscription cancellation failed', { userId, error });
+    }
+
+    // Step 2: Delete from Intercom (same as deletion)
+    try {
+      logger.info('Attempting to delete user from Intercom', { userId });
+      
+      const intercomResult = await deleteFromIntercom(userId);
+      
+      if (intercomResult.success) {
+        intercomDeleted = true;
+        logger.info('User deleted from Intercom successfully', { userId });
+      } else {
+        errors.push(`Intercom deletion failed: ${intercomResult.error}`);
+        logger.warn('Intercom deletion failed', { userId, error: intercomResult.error });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`Intercom deletion error: ${errorMessage}`);
+      logger.error('Intercom deletion failed', { userId, error });
+    }
+
+    // Step 3: Update Firebase Auth with anonymous email
+    try {
+      logger.info('Updating Firebase Auth with anonymous email', { userId, anonymousEmail });
+      
+      await admin.auth().updateUser(userId, {
+        email: anonymousEmail,
+        displayName: undefined, // Remove display name
+        photoURL: undefined,    // Remove photo
+      });
+      
+      authUpdated = true;
+      logger.info('Firebase Auth updated successfully', { userId, anonymousEmail });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`Auth update error: ${errorMessage}`);
+      logger.error('Firebase Auth update failed', { userId, error });
+    }
+
+    // Step 4: Update Firestore with anonymized data
+    try {
+      logger.info('Updating Firestore with anonymized data', { userId });
+      
+      const updateData: Record<string, unknown> = {
+        email: anonymousEmail,
+        name: 'Anonymous User',
+        displayName: admin.firestore.FieldValue.delete(),
+        photoURL: admin.firestore.FieldValue.delete(),
+        // Remove PII from attribution while keeping marketing data
+        'attribution.email': admin.firestore.FieldValue.delete(),
+        'attribution.fbc': admin.firestore.FieldValue.delete(), // Facebook Cookie
+        'attribution.fbp': admin.firestore.FieldValue.delete(), // Facebook Pixel Browser ID
+        // Keep marketing data: fbclid, utm_*, installedAt, appUserId (Firebase UID is random)
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+      // Conditional subscription deletion - only if cancellation succeeded
+      if (subscriptionCancelled) {
+        updateData['subscription'] = admin.firestore.FieldValue.delete();
+        logger.info('Subscription data will be deleted (cancellation succeeded)', { userId });
+      } else {
+        logger.info('Subscription data will be preserved for debugging (cancellation failed)', { userId });
+      }
+
+      await admin.firestore().collection('users').doc(userId).update(updateData);
+      
+      firestoreUpdated = true;
+      logger.info('Firestore data updated successfully', { userId });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`Firestore update error: ${errorMessage}`);
+      logger.error('Firestore update failed', { userId, error });
+    }
+
+    // Determine overall success
+    // Consider it successful if Auth OR Firestore update succeeded
+    const success = authUpdated || firestoreUpdated;
+
+    if (success) {
+      const message = errors.length > 0 
+        ? `Account partially anonymized. Some errors occurred: ${errors.join('; ')}`
+        : 'Account successfully anonymized';
+      
+      logger.info('Account anonymization completed', { 
+        userId, 
+        success: true,
+        anonymousEmail,
+        subscriptionCancelled,
+        intercomDeleted,
+        authUpdated,
+        firestoreUpdated,
+        errorCount: errors.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+
+      return {
+        success: true,
+        anonymousEmail,
+        error: errors.length > 0 ? message : undefined
+      };
+    } else {
+      const message = `Account anonymization failed: ${errors.join('; ')}`;
+      
+      logger.error('Account anonymization completely failed', { userId, errors });
 
       return {
         success: false,

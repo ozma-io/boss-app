@@ -236,3 +236,14 @@ export interface DeleteAccountResponse {
   success: boolean;
   error?: string;
 }
+
+// Account anonymization types
+export interface AnonymizeAccountRequest {
+  confirmationText: string; // Must be "DELETE MY ACCOUNT"
+}
+
+export interface AnonymizeAccountResponse {
+  success: boolean;
+  error?: string;
+  anonymousEmail?: string;
+}

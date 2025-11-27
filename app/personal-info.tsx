@@ -1,7 +1,7 @@
 import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { deleteAccount } from '@/services/account-deletion.service';
+import { anonymizeAccount } from '@/services/account-deletion.service';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { signOut } from '@/services/auth.service';
 import { logger } from '@/services/logger.service';
@@ -31,6 +31,7 @@ export default function PersonalInfoScreen(): React.JSX.Element {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
 
   // Sync local state with profile data when it loads
   useEffect(() => {
@@ -127,7 +128,7 @@ export default function PersonalInfoScreen(): React.JSX.Element {
         userId: user?.id,
       });
 
-      const result = await deleteAccount(deleteConfirmationText);
+      const result = await anonymizeAccount(deleteConfirmationText);
 
       if (result.success) {
         trackAmplitudeEvent('account_deletion_completed');
@@ -143,19 +144,18 @@ export default function PersonalInfoScreen(): React.JSX.Element {
         // Show success toast
         showToast('Account successfully deleted. You will be signed out now.');
 
-        // Redirect to welcome screen immediately
-        // AuthContext will automatically handle the deleted auth account
-        router.replace('/(auth)/welcome');
+        // Force sign out immediately after anonymization
+        // Note: Unlike deletion, anonymization keeps the Firebase Auth account but changes email
+        // So we must manually sign out to prevent user staying logged in to anonymous account
+        try {
+          await signOut();
+          logger.info('User signed out after anonymization', { feature: 'PersonalInfoScreen' });
+        } catch (error) {
+          logger.error('Failed to sign out after anonymization', { feature: 'PersonalInfoScreen', error });
+        }
 
-        // Try to clean up session (will likely fail as account is deleted, but that's okay)
-        setTimeout(async () => {
-          try {
-            await signOut();
-          } catch { 
-            // Ignore signout errors as account is already deleted
-            logger.info('Sign out after deletion (expected to fail)', { feature: 'PersonalInfoScreen' });
-          }
-        }, 100);
+        // Redirect to welcome screen
+        router.replace('/(auth)/welcome');
       } else {
         trackAmplitudeEvent('account_deletion_failed', {
           error: result.error,
