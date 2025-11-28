@@ -909,6 +909,8 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
     });
 
     try {
+      await timeout.check('Verifying IAP receipt');
+      
       let verificationResult: VerifyIAPResponse;
 
       // Verify based on platform
@@ -927,6 +929,8 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
       // Cancel Stripe subscription if migrating
       const migrated = await cancelStripeSubscriptionIfExists(userId);
 
+      await timeout.check('Updating subscription in Firestore');
+      
       // Update Firestore
       // For iOS, environment is returned from verifyAppleReceipt
       // For Android, we don't have environment info
