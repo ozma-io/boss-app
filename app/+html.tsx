@@ -1,4 +1,3 @@
-import { AMPLITUDE_API_KEY } from '@/constants/amplitude.config';
 import { ScrollViewStyleReset } from 'expo-router/html';
 
 // This file is web-only and used to configure the root HTML for every
@@ -24,7 +23,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
         {/* Add any additional <head> elements that you want globally available on web... */}
         
         {/* Amplitude Analytics with Session Replay */}
-        <script src={`https://cdn.amplitude.com/script/${AMPLITUDE_API_KEY}.js`}></script>
+        {/* Using manual SDK (not auto-init script) to defer initialization until after authentication */}
+        <script src="https://cdn.amplitude.com/libs/analytics-browser-2.11.4-min.js.gz"></script>
         <script src="https://cdn.amplitude.com/libs/plugin-session-replay-browser-1-latest.umd.js"></script>
       </head>
       <body>{children}</body>
