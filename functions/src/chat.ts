@@ -251,6 +251,8 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
   {
     region: 'us-central1',
     invoker: 'private', // Requires authentication
+    timeoutSeconds: 120, // 2 minutes for OpenAI API with large context (profile + bosses + entries + emails)
+    memory: '512MiB', // Increased for large context processing
     secrets: [openaiApiKey, langfusePublicKey, langfuseSecretKey], // Declare the secrets
   },
   async (request) => {
@@ -573,6 +575,8 @@ export const onChatMessageCreated = onDocumentCreated(
   {
     document: 'users/{userId}/chatThreads/{threadId}/messages/{messageId}',
     region: 'us-central1',
+    timeoutSeconds: 60, // 1 minute for unread count update + FCM push notification
+    memory: '256MiB', // Default is sufficient
   },
   async (event) => {
     const messageData = event.data?.data() as FirestoreChatMessage | undefined;

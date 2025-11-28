@@ -419,6 +419,8 @@ async function handleDidChangeRenewalStatus(
 export const appleServerNotification = onRequest(
   {
     region: 'us-central1',
+    timeoutSeconds: 120, // 2 minutes for webhook processing + Firestore updates
+    memory: '512MiB', // Increased for Apple library crypto operations
     // No secrets needed - Apple notifications are verified using public root certificates
   },
   async (req, res) => {

@@ -41,6 +41,8 @@ export const onEmailCreated = onDocumentCreated(
   {
     document: 'users/{userId}/emails/{emailId}',
     region: 'us-central1',
+    timeoutSeconds: 60, // 1 minute for Mailgun API with 3 retry attempts
+    memory: '256MiB', // Default is sufficient
     secrets: [mailgunApiKey],
   },
   async (event) => {
@@ -70,6 +72,8 @@ export const onEmailUpdated = onDocumentUpdated(
   {
     document: 'users/{userId}/emails/{emailId}',
     region: 'us-central1',
+    timeoutSeconds: 60, // 1 minute for Mailgun API with 3 retry attempts
+    memory: '256MiB', // Default is sufficient
     secrets: [mailgunApiKey],
   },
   async (event) => {

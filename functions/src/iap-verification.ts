@@ -877,6 +877,8 @@ async function updateUserSubscription(
 export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPResponse>>(
   {
     region: 'us-central1',
+    timeoutSeconds: 120, // 2 minutes for Apple/Google API calls with retry logic (3 attempts)
+    memory: '512MiB', // Increased for Apple library crypto operations
     secrets: [applePrivateKey, stripeSecretKey, googleServiceAccountKey],
   },
   async (request) => {
@@ -960,6 +962,8 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
 export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>>(
   {
     region: 'us-central1',
+    timeoutSeconds: 60, // 1 minute for Stripe API call (usually < 5s)
+    memory: '256MiB', // Default is sufficient
     secrets: [stripeSecretKey],
   },
   async (request) => {
