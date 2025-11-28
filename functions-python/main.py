@@ -118,6 +118,8 @@ def get_firestore_client() -> Any:
 @scheduler_fn.on_schedule(
     schedule="every 2 hours",
     region="us-central1",
+    timeout_sec=2400,  # 40 minutes - enough time to process all users in one run
+    memory=512,  # 512 MB - increased from default 256 MB for parallel processing
     secrets=[mailgun_api_key, openai_api_key, langfuse_public_key, langfuse_secret_key, amplitude_api_key]
 )
 def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
@@ -126,6 +128,11 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
     
     Thin wrapper that handles Cloud Function lifecycle and calls business logic.
     Triggered automatically every 2 hours by Cloud Scheduler.
+    
+    Configuration:
+    - Timeout: 40 minutes (2400s) to process all eligible users in single run
+    - Memory: 512 MB for parallel AI generation and Firestore batch operations
+    - Expected duration: 15-25 minutes for typical user base (see orchestrator logs)
     """
     try:
         # Initialize environment (clean secrets, configure Langfuse)
@@ -142,6 +149,8 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
 @firestore_fn.on_document_created(
     document="users/{userId}/chatThreads/{threadId}/messages/{messageId}",
     region="us-central1",
+    timeout_sec=300,  # 5 minutes - enough for AI generation and email sending
+    memory=256,  # 256 MB - default is sufficient for single email
     secrets=[mailgun_api_key, openai_api_key, langfuse_public_key, langfuse_secret_key, amplitude_api_key]
 )
 def onChatMessageCreatedSendWelcomeEmail(
@@ -163,6 +172,10 @@ def onChatMessageCreatedSendWelcomeEmail(
     3. Users who don't have lastActivityAt (web funnel users who haven't opened app yet)
     
     This ensures we only send onboarding email to web funnel users, not app users.
+    
+    Configuration:
+    - Timeout: 5 minutes (300s) for AI generation + email creation
+    - Memory: 256 MB (default) - sufficient for single user processing
     """
     try:
         # Initialize environment (clean secrets, configure Langfuse)
