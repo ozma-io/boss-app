@@ -12,8 +12,9 @@ import { onCall } from 'firebase-functions/v2/https';
 import { observeOpenAI } from 'langfuse';
 import OpenAI from 'openai';
 import type { ChatCompletion } from 'openai/resources/chat';
-import { CHAT_MESSAGE_HISTORY_HOURS, CHAT_REMINDER_PROMPT, CHAT_SYSTEM_PROMPT, OPENAI_MODEL } from './constants';
+import { CHAT_MESSAGE_HISTORY_HOURS, CHAT_REMINDER_PROMPT, CHAT_SYSTEM_PROMPT, FUNCTION_TIMEOUTS, OPENAI_MODEL } from './constants';
 import { logger } from './logger';
+import { createTimeoutMonitor } from './timeout-monitor';
 import type {
   ChatCompletionMessageParam,
   ContentItem,
@@ -251,12 +252,15 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
   {
     region: 'us-central1',
     invoker: 'private', // Requires authentication
-    timeoutSeconds: 120, // 2 minutes for OpenAI API with large context (profile + bosses + entries + emails)
+    timeoutSeconds: FUNCTION_TIMEOUTS.generateChatResponse,
     memory: '512MiB', // Increased for large context processing
     secrets: [openaiApiKey, langfusePublicKey, langfuseSecretKey], // Declare the secrets
   },
   async (request) => {
     const { userId, threadId, messageId, sessionId, currentDateTimeUTC, currentDateTimeLocal } = request.data;
+    
+    // Create timeout monitor
+    const timeout = createTimeoutMonitor(FUNCTION_TIMEOUTS.generateChatResponse);
     
     // Initialize OpenAI client with LangFuse observability wrapper
     const openai = observeOpenAI(
@@ -367,6 +371,8 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       
       logger.debug('Fetching user context', { userId, threadId });
       
+      await timeout.check('Fetching user context');
+      
       // Fetch user context
       const userContext = await fetchUserContext(userId);
       
@@ -455,6 +461,8 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         systemMessagesCount: 4,
         userMessagesCount: recentMessages.length,
       });
+      
+      await timeout.check('Calling OpenAI API');
       
       // Call OpenAI API
       const response = await openai.chat.completions.create({

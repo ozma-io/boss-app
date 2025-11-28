@@ -12,10 +12,12 @@ import firebase_admin  # type: ignore
 from firebase_admin import firestore  # type: ignore
 from firebase_functions import scheduler_fn, firestore_fn
 from firebase_functions.params import SecretParam
+from constants import FUNCTION_TIMEOUTS  # type: ignore
 from orchestrators.notification_orchestrator import (
     process_notification_orchestration,
     send_onboarding_welcome_email,
 )
+from timeout_monitor import create_timeout_monitor  # type: ignore
 from utils.logger import error, info, warn
 from utils.sentry import init_sentry
 
@@ -118,7 +120,7 @@ def get_firestore_client() -> Any:
 @scheduler_fn.on_schedule(
     schedule="every 2 hours",
     region="us-central1",
-    timeout_sec=2400,  # 40 minutes - enough time to process all users in one run
+    timeout_sec=FUNCTION_TIMEOUTS['notificationOrchestrator'],  # type: ignore
     memory=512,  # 512 MB - increased from default 256 MB for parallel processing
     secrets=[mailgun_api_key, openai_api_key, langfuse_public_key, langfuse_secret_key, amplitude_api_key]
 )
@@ -138,6 +140,10 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
         # Initialize environment (clean secrets, configure Langfuse)
         _initialize_cloud_function()
         
+        # Create timeout monitor
+        timeout = create_timeout_monitor(FUNCTION_TIMEOUTS['notificationOrchestrator'])  # type: ignore
+        timeout.check('Starting notification orchestration')
+        
         db = get_firestore_client()
         process_notification_orchestration(db)
         
@@ -149,7 +155,7 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
 @firestore_fn.on_document_created(
     document="users/{userId}/chatThreads/{threadId}/messages/{messageId}",
     region="us-central1",
-    timeout_sec=300,  # 5 minutes - enough for AI generation and email sending
+    timeout_sec=FUNCTION_TIMEOUTS['onChatMessageCreatedSendWelcomeEmail'],  # type: ignore
     memory=256,  # 256 MB - default is sufficient for single email
     secrets=[mailgun_api_key, openai_api_key, langfuse_public_key, langfuse_secret_key, amplitude_api_key]
 )

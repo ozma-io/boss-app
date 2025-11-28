@@ -17,9 +17,11 @@ import {
   APPLE_APP_STORE_ISSUER_ID,
   APPLE_APP_STORE_KEY_ID,
   APPLE_BUNDLE_ID,
+  FUNCTION_TIMEOUTS,
   GOOGLE_PLAY_PACKAGE_NAME,
 } from './constants';
 import { logger } from './logger';
+import { createTimeoutMonitor } from './timeout-monitor';
 
 // Define secrets using Cloud Functions v2 API
 const applePrivateKey = defineSecret('APPLE_APP_STORE_PRIVATE_KEY');
@@ -877,11 +879,14 @@ async function updateUserSubscription(
 export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPResponse>>(
   {
     region: 'us-central1',
-    timeoutSeconds: 120, // 2 minutes for Apple/Google API calls with retry logic (3 attempts)
+    timeoutSeconds: FUNCTION_TIMEOUTS.verifyIAPPurchase,
     memory: '512MiB', // Increased for Apple library crypto operations
     secrets: [applePrivateKey, stripeSecretKey, googleServiceAccountKey],
   },
   async (request) => {
+    // Create timeout monitor
+    const timeout = createTimeoutMonitor(FUNCTION_TIMEOUTS.verifyIAPPurchase);
+    
     // Verify authentication
     if (!request.auth) {
       throw new HttpsError('unauthenticated', 'User must be authenticated');

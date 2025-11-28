@@ -153,3 +153,22 @@ export const GOOGLE_PLAY_PACKAGE_NAME = 'com.ozmaio.bossup';
  */
 export const EMAIL_MONITORING_RECIPIENT = 'kmarkin@ozma.io';
 
+// ============================================================================
+// Cloud Functions Timeout Configuration
+// ============================================================================
+
+/**
+ * Function timeout configurations (in seconds)
+ * Must match timeoutSeconds values in function decorators
+ * Used for timeout monitoring to avoid duplication
+ */
+export const FUNCTION_TIMEOUTS = {
+  generateChatResponse: 120,
+  verifyIAPPurchase: 120,
+  appleServerNotification: 120,
+  onChatMessageCreated: 60,
+  cancelSubscription: 60,
+  onEmailCreated: 60,
+  onEmailUpdated: 60,
+} as const;
+
