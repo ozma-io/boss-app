@@ -251,9 +251,10 @@ def test_determine_scenario_email_only_user():
         'lastActivityAt': None,
         'createdAt': '2025-11-20T10:00:00Z',
     }
-    # EMAIL_ONLY_USER can work with any channel now
+    # EMAIL_ONLY_USER only for EMAIL channel
     assert determine_scenario(mock_db, 'test_user_id', user_never_logged_in, 'EMAIL') == 'EMAIL_ONLY_USER'
-    assert determine_scenario(mock_db, 'test_user_id', user_never_logged_in, 'PUSH') == 'EMAIL_ONLY_USER'
+    # PUSH channel for never logged in users should be NEW_USER_PUSH
+    assert determine_scenario(mock_db, 'test_user_id', user_never_logged_in, 'PUSH') == 'NEW_USER_PUSH'
 
 
 def test_determine_scenario_new_user():

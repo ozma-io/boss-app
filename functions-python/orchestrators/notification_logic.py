@@ -298,8 +298,8 @@ def determine_scenario(
     last_activity = user_data.get('lastActivityAt')
     unread_count = get_unread_count(db, user_id)
     
-    # A. EMAIL_ONLY_USER - never logged into app
-    if not last_activity:
+    # A. EMAIL_ONLY_USER - never logged into app (EMAIL channel only)
+    if not last_activity and channel == 'EMAIL':
         return 'EMAIL_ONLY_USER'
     
     # F. INACTIVE_USER - priority check (overrides other scenarios)
@@ -308,8 +308,8 @@ def determine_scenario(
     if unread_count > 0 and is_inactive(user_data, days=6):
         return 'INACTIVE_USER'
     
-    # B. NEW_USER_PUSH - logged in recently + new user + push channel
-    if is_new_user(user_data, days=14) and channel == 'PUSH':
+    # B. NEW_USER_PUSH - logged in recently OR never logged in + push channel
+    if (is_new_user(user_data, days=14) or not last_activity) and channel == 'PUSH':
         return 'NEW_USER_PUSH'
     
     # C. NEW_USER_EMAIL - logged in recently + new user + email channel
