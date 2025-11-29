@@ -38,7 +38,7 @@ Each user belongs to exactly ONE category:
    - New user (<14 days since registration) OR never logged in with push setup
    - Has push channel enabled (notifications granted + FCM token)
    - Content: early career coaching guidance, help establish good habits
-   - Interval schedule: 1h, 3h, 12h, 24h, 3d (faster cadence for engaged users)
+   - Interval schedule: 1h, 3h, 6h, 24h, 3d (faster cadence for engaged users)
 
 3. NEW_USER_EMAIL
    - New user (<14 days since registration)
@@ -51,7 +51,7 @@ Each user belongs to exactly ONE category:
    - Regular app usage (>14 days since registration)
    - Has push channel enabled
    - Content: ongoing career coaching (leadership, communication, career development)
-   - Interval schedule: 1h, 3h, 12h, 24h, 3d (faster cadence for engaged users)
+   - Interval schedule: 1h, 3h, 6h, 24h, 3d (faster cadence for engaged users)
 
 5. ACTIVE_USER_EMAIL
    - Regular app usage (>14 days since registration)
@@ -65,7 +65,7 @@ Each user belongs to exactly ONE category:
    - EMAIL ONLY per business requirements (no push version)
    - Content: career growth advice + gentle reminder about unread messages
    - CTA: "You have unread messages in app"
-   - Interval schedule: 1h, 12h, 48h, 7d, 14d (slower cadence for inactive users)
+   - Interval schedule: 1h, 24h, 48h, 7d, 14d (slower cadence for inactive users)
    - Priority category: overrides NEW/ACTIVE if conditions met
 
 NO CHANNEL:

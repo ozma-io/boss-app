@@ -137,8 +137,8 @@ def test_should_send_notification_progressive_intervals():
     }
     assert should_send_notification(user_5th_ok, 'EMAIL_ONLY_USER') is True
     
-    # Test NEW_USER_PUSH category (faster intervals: 1h, 3h, 12h, 24h, 3d)
-    # 2nd notification - needs 3 hours (not 6)
+    # Test NEW_USER_PUSH category (faster intervals: 1h, 3h, 6h, 24h, 3d)
+    # 2nd notification - needs 3 hours
     user_2nd_push = {
         'createdAt': (now - timedelta(days=1)).isoformat(),
         'notification_state': {
@@ -148,13 +148,13 @@ def test_should_send_notification_progressive_intervals():
     }
     assert should_send_notification(user_2nd_push, 'NEW_USER_PUSH') is True
     
-    # Test INACTIVE_USER_EMAIL category (slower intervals: 1h, 12h, 48h, 7d, 14d)
-    # 2nd notification - needs 12 hours (not 6)
+    # Test INACTIVE_USER_EMAIL category (slower intervals: 1h, 24h, 48h, 7d, 14d)
+    # 2nd notification - needs 24 hours
     user_2nd_inactive = {
         'createdAt': (now - timedelta(days=1)).isoformat(),
         'notification_state': {
             'notification_count': 1,
-            'last_notification_at': (now - timedelta(hours=13)).isoformat(),
+            'last_notification_at': (now - timedelta(hours=25)).isoformat(),
         }
     }
     assert should_send_notification(user_2nd_inactive, 'INACTIVE_USER_EMAIL') is True

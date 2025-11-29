@@ -38,7 +38,7 @@ CATEGORY_INTERVALS: dict[UserCategory, list[timedelta]] = {
     'NEW_USER_PUSH': [
         timedelta(hours=1),   # Faster cadence for engaged new users
         timedelta(hours=3),
-        timedelta(hours=12),
+        timedelta(hours=6),
         timedelta(hours=24),
         timedelta(days=3),
     ],
@@ -52,7 +52,7 @@ CATEGORY_INTERVALS: dict[UserCategory, list[timedelta]] = {
     'ACTIVE_USER_PUSH': [
         timedelta(hours=1),
         timedelta(hours=3),
-        timedelta(hours=12),
+        timedelta(hours=6),
         timedelta(hours=24),
         timedelta(days=3),
     ],
@@ -65,7 +65,7 @@ CATEGORY_INTERVALS: dict[UserCategory, list[timedelta]] = {
     ],
     'INACTIVE_USER_EMAIL': [
         timedelta(hours=1),
-        timedelta(hours=12),  # Slower cadence for inactive users
+        timedelta(hours=24),  # Slower cadence for inactive users
         timedelta(hours=48),
         timedelta(days=7),
         timedelta(days=14),
