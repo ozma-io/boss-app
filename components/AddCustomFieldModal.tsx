@@ -1,12 +1,14 @@
 import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
+import { logger } from '@/services/logger.service';
 import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  TextStyle,
   View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -29,7 +31,7 @@ type FieldType = 'text' | 'multiline' | 'select' | 'date' | 'multiselect';
 // TODO: Implement 'multiline' type - support for multiline text input with proper rendering
 // TODO: Implement 'select' type - dropdown with custom options, needs options management UI
 // TODO: Implement 'date' type - date picker with proper date formatting and storage
-const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: string; enabled: boolean }> = [
+const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: keyof typeof Ionicons.glyphMap; enabled: boolean }> = [
   { value: 'text', label: 'Text', icon: 'text-outline', enabled: true },
   { value: 'multiline', label: 'Multiline Text', icon: 'document-text-outline', enabled: false },
   { value: 'select', label: 'Select', icon: 'list-outline', enabled: false },
@@ -40,7 +42,7 @@ const FIELD_TYPES: Array<{ value: FieldType; label: string; icon: string; enable
  * Modal for adding a new custom field
  * Creates empty field immediately on open, auto-saves all changes
  */
-export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdate, fieldKeyToEdit, initialLabel, initialValue: initialValueProp, initialType }: AddCustomFieldModalProps) {
+export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdate, fieldKeyToEdit, initialLabel, initialValue: initialValueProp, initialType }: AddCustomFieldModalProps): React.JSX.Element {
   const [label, setLabel] = useState<string>('');
   const [selectedType, setSelectedType] = useState<FieldType>('text');
   const [value, setValue] = useState<string>('');
@@ -79,6 +81,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
             const newFieldKey = await onCreateEmpty();
             setCurrentFieldKey(newFieldKey);
           } catch (error) {
+            logger.error('Failed to create empty custom field', { feature: 'AddCustomFieldModal', error });
             showAlert(
               'Something went wrong',
               'We couldn\'t create this field right now. Our team has been notified and is working on it. Please try again later.'
@@ -116,6 +119,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
       await onUpdate(currentFieldKey, updates);
     } catch (error) {
       // Silent fail - user can retry by changing field again
+      logger.error('Failed to auto-save custom field', { feature: 'AddCustomFieldModal', fieldKey: currentFieldKey, updates, error });
     }
   }, [currentFieldKey, onUpdate]);
 
@@ -163,7 +167,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
     autoSave({ type: selectedType });
   }, [selectedType, currentFieldKey, autoSave]);
 
-  const handleTypePress = (type: { value: FieldType; label: string; icon: string; enabled: boolean }): void => {
+  const handleTypePress = (type: typeof FIELD_TYPES[number]): void => {
     if (type.enabled) {
       setSelectedType(type.value);
     } else {
@@ -213,7 +217,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
                 Field Label
               </Text>
               <TextInput
-                style={[styles.input, { outlineStyle: 'none' } as any]}
+                style={[styles.input, { outlineStyle: 'none' } as unknown as TextStyle]}
                 value={label}
                 onChangeText={setLabel}
                 placeholder="e.g., Pet Name, Favorite Color"
@@ -239,7 +243,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
                     testID={`type-option-${type.value}`}
                   >
                     <Ionicons
-                      name={type.icon as any}
+                      name={type.icon}
                       size={20}
                       color={selectedType === type.value ? '#B8E986' : '#666'}
                     />
@@ -264,7 +268,7 @@ export function AddCustomFieldModal({ isVisible, onClose, onCreateEmpty, onUpdat
                 style={[
                   styles.input,
                   selectedType === 'multiline' && styles.multilineInput,
-                  { outlineStyle: 'none' } as any,
+                  { outlineStyle: 'none' } as unknown as TextStyle,
                 ]}
                 value={value}
                 onChangeText={setValue}
