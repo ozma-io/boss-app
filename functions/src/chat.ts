@@ -16,12 +16,31 @@ import { CHAT_MESSAGE_HISTORY_HOURS, CHAT_REMINDER_PROMPT, CHAT_SYSTEM_PROMPT, F
 import { logger } from './logger';
 import { createTimeoutMonitor } from './timeout-monitor';
 import type {
+  BossSchema,
+  EmailSchema,
+  EntrySchema,
+  UserSchema,
+} from '../../firestore/schemas';
+import type {
   ChatCompletionMessageParam,
   ContentItem,
   FirestoreChatMessage,
   GenerateChatResponseRequest,
   GenerateChatResponseResponse,
 } from './types/chat.types';
+
+/**
+ * Field metadata type extracted from schema
+ */
+type FieldMetadata = {
+  label: string;
+  type: 'text' | 'select' | 'date' | 'multiline' | 'multiselect';
+  category?: string;
+  source?: 'onboarding_funnel' | 'user_added';
+  createdAt: string;
+  displayOrder?: number;
+  options?: string[];
+};
 
 /**
  * Define the OpenAI API key secret
@@ -43,7 +62,7 @@ const langfuseSecretKey = defineSecret('LANGFUSE_SECRET_KEY');
  * @returns true if user is actively in the screen
  */
 function isUserActiveInScreen(
-  userData: any,
+  userData: UserSchema | undefined,
   screenName: string
 ): boolean {
   if (userData?.currentScreen !== screenName) return false;
@@ -129,11 +148,11 @@ async function fetchUserContext(userId: string): Promise<string> {
     .orderBy('createdAt', 'asc')
     .get();
   
-  const bossesData: any[] = [];
+  const bossesData: Array<BossSchema & { id: string }> = [];
   
   // Collect all bosses (without entries nested inside)
   for (const bossDoc of bossesSnapshot.docs) {
-    const bossData = { id: bossDoc.id, ...bossDoc.data() };
+    const bossData = { id: bossDoc.id, ...bossDoc.data() as BossSchema };
     bossesData.push(bossData);
   }
   
@@ -145,9 +164,9 @@ async function fetchUserContext(userId: string): Promise<string> {
     .limit(50)
     .get();
   
-  const entries: any[] = [];
+  const entries: Array<EntrySchema & { id: string }> = [];
   entriesSnapshot.forEach((entryDoc) => {
-    entries.push({ id: entryDoc.id, ...entryDoc.data() });
+    entries.push({ id: entryDoc.id, ...entryDoc.data() as EntrySchema });
   });
   
   // Fetch last 15 sent emails
@@ -159,9 +178,9 @@ async function fetchUserContext(userId: string): Promise<string> {
     .limit(15)
     .get();
   
-  const emails: any[] = [];
+  const emails: Array<EmailSchema & { id: string }> = [];
   emailsSnapshot.forEach((emailDoc) => {
-    emails.push({ id: emailDoc.id, ...emailDoc.data() });
+    emails.push({ id: emailDoc.id, ...emailDoc.data() as EmailSchema });
   });
   
   // Build context string
@@ -178,10 +197,12 @@ async function fetchUserContext(userId: string): Promise<string> {
     // Add custom fields if they exist
     if (userData._fieldsMeta) {
       contextParts.push('\n### Custom Profile Fields');
-      for (const [fieldKey, fieldMeta] of Object.entries(userData._fieldsMeta)) {
-        const fieldValue = userData[fieldKey];
+      for (const [fieldKey, fieldMetaValue] of Object.entries(userData._fieldsMeta)) {
+        const fieldMeta = fieldMetaValue as FieldMetadata;
+        // userData is a Record so we can safely access any key
+        const fieldValue = userData[fieldKey as keyof UserSchema];
         if (fieldValue !== undefined && fieldValue !== null) {
-          contextParts.push(`${(fieldMeta as any).label}: ${fieldValue}`);
+          contextParts.push(`${fieldMeta.label}: ${fieldValue}`);
         }
       }
     }
@@ -202,10 +223,12 @@ async function fetchUserContext(userId: string): Promise<string> {
       // Add custom fields if they exist
       if (boss._fieldsMeta) {
         contextParts.push('\n#### Custom Boss Fields');
-        for (const [fieldKey, fieldMeta] of Object.entries(boss._fieldsMeta)) {
-          const fieldValue = boss[fieldKey];
+        for (const [fieldKey, fieldMetaValue] of Object.entries(boss._fieldsMeta)) {
+          const fieldMeta = fieldMetaValue as FieldMetadata;
+          // boss is a Record so we can safely access any key
+          const fieldValue = boss[fieldKey as keyof BossSchema];
           if (fieldValue !== undefined && fieldValue !== null) {
-            contextParts.push(`${(fieldMeta as any).label}: ${fieldValue}`);
+            contextParts.push(`${fieldMeta.label}: ${fieldValue}`);
           }
         }
       }
@@ -621,7 +644,7 @@ export const onChatMessageCreated = onDocumentCreated(
     try {
       // Check if user is actively in chat screen
       const userDoc = await db.collection('users').doc(userId).get();
-      const userData = userDoc.data();
+      const userData = userDoc.data() as UserSchema | undefined;
       
       if (isUserActiveInScreen(userData, 'chat')) {
         logger.info('User is actively in chat, skipping notification and unread count', {
@@ -692,10 +715,10 @@ export const onChatMessageCreated = onDocumentCreated(
           
           logger.info('Push notification sent', {
             userId,
-            threadId,
-            messageId,
-          });
-        } catch (notificationError: any) {
+          threadId,
+          messageId,
+        });
+        } catch (notificationError: unknown) {
           logger.error('Failed to send push notification', {
             userId,
             threadId,
@@ -710,19 +733,37 @@ export const onChatMessageCreated = onDocumentCreated(
             'messaging/registration-token-not-registered',
           ];
           
+          // Type guard for error object with code and message
+          const isErrorWithCodeAndMessage = (
+            error: unknown
+          ): error is { code: string; message: string } => {
+            return (
+              typeof error === 'object' &&
+              error !== null &&
+              'code' in error &&
+              'message' in error &&
+              typeof (error as { code: unknown }).code === 'string' &&
+              typeof (error as { message: unknown }).message === 'string'
+            );
+          };
+          
           // Also handle cases where FCM API returns 404 for token not found
           // Error message from FCM: "Requested entity was not found"
-          const isTokenNotFoundError = notificationError.message && 
+          const isTokenNotFoundError = 
+            isErrorWithCodeAndMessage(notificationError) &&
             (notificationError.message.includes('Requested entity was not found') ||
              notificationError.message.includes('registration token not found'));
           
-          const shouldRemoveToken = invalidTokenErrors.includes(notificationError.code) || isTokenNotFoundError;
+          const shouldRemoveToken = 
+            (isErrorWithCodeAndMessage(notificationError) && 
+             invalidTokenErrors.includes(notificationError.code)) || 
+            isTokenNotFoundError;
           
           if (shouldRemoveToken) {
             logger.info('Removing invalid FCM token', { 
               userId, 
-              errorCode: notificationError.code,
-              errorMessage: notificationError.message,
+              errorCode: isErrorWithCodeAndMessage(notificationError) ? notificationError.code : undefined,
+              errorMessage: isErrorWithCodeAndMessage(notificationError) ? notificationError.message : undefined,
             });
             try {
               await db.collection('users').doc(userId).update({
