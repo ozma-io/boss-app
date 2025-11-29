@@ -5,7 +5,15 @@
  * Handles Stripe-to-IAP migration automatically
  */
 
-import { AppStoreServerAPIClient, Environment, ReceiptUtility, SignedDataVerifier } from '@apple/app-store-server-library';
+import { 
+  AppStoreServerAPIClient, 
+  Environment, 
+  JWSRenewalInfoDecodedPayload,
+  JWSTransactionDecodedPayload,
+  ReceiptUtility, 
+  SignedDataVerifier,
+  SubscriptionGroupIdentifierItem,
+} from '@apple/app-store-server-library';
 import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
@@ -186,7 +194,7 @@ async function verifyAppleReceipt(
     // - Old App Receipt: starts with "MIIT" or similar (base64 ASN.1/DER)
     const isJWSFormat = receipt.startsWith('eyJ');
     
-    let decodedTransaction: any;
+    let decodedTransaction: JWSTransactionDecodedPayload;
     let environment: Environment;
     let originalTransactionId: string | undefined;
     let verifier: SignedDataVerifier;
@@ -327,6 +335,9 @@ async function verifyAppleReceipt(
 
     // Extract real transaction details from decoded data
     const transactionId = decodedTransaction.transactionId;
+    if (!transactionId) {
+      throw new Error('Transaction ID not found in decoded transaction');
+    }
     const expiresDate = decodedTransaction.expiresDate ? new Date(decodedTransaction.expiresDate) : null;
     const purchaseDate = decodedTransaction.purchaseDate ? new Date(decodedTransaction.purchaseDate) : new Date();
     const offerType = decodedTransaction.offerType;
@@ -336,7 +347,7 @@ async function verifyAppleReceipt(
     
     // Get comprehensive subscription status from Apple
     // This provides more accurate status including renewal info, grace period, billing retry
-    let renewalInfo: any = null;
+    let renewalInfo: JWSRenewalInfoDecodedPayload | null = null;
     
     if (originalTransactionId) {
       try {
@@ -349,7 +360,7 @@ async function verifyAppleReceipt(
         if (statusResponse && statusResponse.data && statusResponse.data.length > 0) {
           // Find the status for our product
           const productStatus = statusResponse.data.find(
-            (item: any) => item.lastTransactions?.[0]?.originalTransactionId === originalTransactionId
+            (item: SubscriptionGroupIdentifierItem) => item.lastTransactions?.[0]?.originalTransactionId === originalTransactionId
           );
           
           if (productStatus) {
@@ -376,9 +387,9 @@ async function verifyAppleReceipt(
     }
     
     // Grace period: Apple gives users time to fix payment issues while maintaining access
-    // gracePeriodExpiresDate may not be in all library versions, so we use type assertion
-    const gracePeriodExpiresDate = (decodedTransaction as any).gracePeriodExpiresDate 
-      ? new Date((decodedTransaction as any).gracePeriodExpiresDate) 
+    // gracePeriodExpiresDate is an optional field in JWSTransactionDecodedPayload
+    const gracePeriodExpiresDate = (decodedTransaction as JWSTransactionDecodedPayload & { gracePeriodExpiresDate?: number }).gracePeriodExpiresDate 
+      ? new Date((decodedTransaction as JWSTransactionDecodedPayload & { gracePeriodExpiresDate?: number }).gracePeriodExpiresDate!) 
       : null;
     
     // Check if this is a trial period - must be introductory offer and not an upgrade
@@ -453,8 +464,8 @@ async function verifyAppleReceipt(
         priceCurrency: pricing?.priceCurrency,
         billingCycleMonths: pricing?.billingCycleMonths,
         trialEnd,
-        revocationDate: revocationDate?.toISOString(),
-        revocationReason,
+        ...(revocationDate && { revocationDate: revocationDate.toISOString() }),
+        ...(revocationReason !== undefined && { revocationReason }),
       },
       environment: environment === Environment.SANDBOX ? 'Sandbox' : 'Production',
     };
@@ -679,8 +690,9 @@ export async function cancelStripeSubscription(
         prorate: true,
       });
 
-      const currentPeriodEnd = (stripeSubscription as any).current_period_end 
-        ? new Date((stripeSubscription as any).current_period_end * 1000).toISOString()
+      // Access current_period_end from Stripe subscription (exists in API but may need type assertion)
+      const currentPeriodEnd = (stripeSubscription as Stripe.Subscription & { current_period_end?: number }).current_period_end 
+        ? new Date((stripeSubscription as Stripe.Subscription & { current_period_end: number }).current_period_end * 1000).toISOString()
         : undefined;
 
       logger.info(`Cancelled Stripe subscription - reason: ${reason}`, {
@@ -779,7 +791,7 @@ async function updateUserSubscription(
     throw new Error('No subscription data to update');
   }
 
-  const updateData: any = {
+  const updateData: Record<string, unknown> = {
     'subscription.status': subscriptionData.status,
     'subscription.tier': subscriptionData.tier,
     'subscription.billingPeriod': subscriptionData.billingPeriod,
