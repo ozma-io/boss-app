@@ -25,10 +25,11 @@
  */
 
 // Sentry import with try-catch protection
-let Sentry: any = null;
+type SentryModule = typeof import('@sentry/react-native');
+let Sentry: SentryModule | null = null;
 try {
   Sentry = require('@sentry/react-native');
-} catch (error) {
+} catch {
   // Sentry not available, will fall back to console logging only
   console.error('Sentry SDK not available, using console logging only');
 }
@@ -56,7 +57,16 @@ export interface LogContext {
   userId?: string;
   userEmail?: string;
   duration?: number;
-  [key: string]: any;
+  error?: Error | unknown;
+  errorMessage?: string;
+  errorName?: string;
+  errorStack?: string;
+  errorObject?: string;
+  errorCode?: string;
+  errorProductId?: string;
+  errorResponseCode?: number;
+  errorDebugMessage?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -148,7 +158,7 @@ class LoggerService {
    * Clear user context (on logout)
    */
   clearUserContext(): void {
-    const { userId, userEmail, ...rest } = this.globalContext;
+    const { userId: _userId, userEmail: _userEmail, ...rest } = this.globalContext;
     this.globalContext = rest;
     
     // Clear user context in Sentry with graceful fallback
@@ -347,17 +357,24 @@ class LoggerService {
   /**
    * JSON replacer function to handle Error objects and circular references
    */
-  private jsonReplacer(): (key: string, value: any) => any {
+  private jsonReplacer(): (key: string, value: unknown) => unknown {
     const seen = new WeakSet();
-    return (key: string, value: any) => {
+    return (key: string, value: unknown) => {
       // Handle Error objects
       if (value instanceof Error) {
-        return {
+        const errorObj: Record<string, unknown> = {
           name: value.name,
           message: value.message,
           stack: value.stack,
-          ...(value as any), // Include any custom properties
         };
+        // Include any custom properties from the Error object
+        const valueAsRecord = value as unknown as Record<string, unknown>;
+        Object.keys(value).forEach(errorKey => {
+          if (!['name', 'message', 'stack'].includes(errorKey)) {
+            errorObj[errorKey] = valueAsRecord[errorKey];
+          }
+        });
+        return errorObj;
       }
       
       // Handle circular references
@@ -384,9 +401,10 @@ class LoggerService {
       enriched.errorStack = error.stack;
       
       // Include any custom Error properties
+      const errorAsRecord = error as unknown as Record<string, unknown>;
       Object.keys(error).forEach(key => {
         if (!['message', 'name', 'stack'].includes(key)) {
-          enriched[`error_${key}`] = (error as any)[key];
+          enriched[`error_${key}`] = errorAsRecord[key];
         }
       });
     } else if (error && typeof error === 'object') {
@@ -395,12 +413,12 @@ class LoggerService {
         enriched.errorObject = JSON.stringify(error, null, 2);
         
         // Try to extract common error properties
-        const errorObj = error as any;
-        if (errorObj.code) enriched.errorCode = errorObj.code;
-        if (errorObj.message) enriched.errorMessage = errorObj.message;
-        if (errorObj.productId) enriched.errorProductId = errorObj.productId;
-        if (errorObj.responseCode) enriched.errorResponseCode = errorObj.responseCode;
-        if (errorObj.debugMessage) enriched.errorDebugMessage = errorObj.debugMessage;
+        const errorObj = error as Record<string, unknown>;
+        if (errorObj.code) enriched.errorCode = String(errorObj.code);
+        if (errorObj.message) enriched.errorMessage = String(errorObj.message);
+        if (errorObj.productId) enriched.errorProductId = String(errorObj.productId);
+        if (errorObj.responseCode) enriched.errorResponseCode = Number(errorObj.responseCode);
+        if (errorObj.debugMessage) enriched.errorDebugMessage = String(errorObj.debugMessage);
       } catch {
         enriched.error = String(error);
       }
