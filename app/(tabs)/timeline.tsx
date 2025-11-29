@@ -38,6 +38,12 @@ export default function TimelineScreen(): React.JSX.Element {
   const timelineGroups = groupTimelineEntries(entries);
 
   const handleTimelineEntryPress = (entry: TimelineEntry): void => {
+    trackAmplitudeEvent('timeline_entry_viewed', {
+      entryId: entry.id,
+      entryType: entry.type,
+      subtype: entry.subtype,
+      bossId: boss?.id,
+    });
     setEntryToEdit(entry);
     setIsAddModalVisible(true);
   };

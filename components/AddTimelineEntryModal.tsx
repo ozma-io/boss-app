@@ -50,6 +50,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
   const [currentEntryId, setCurrentEntryId] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
   // Create empty entry or populate fields when editing
   useEffect(() => {
@@ -65,6 +66,9 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       if (entryToEdit.type === 'note') {
         setNoteSubtype(entryToEdit.subtype);
       }
+      
+      // Mark as initialized after setting all fields
+      setIsInitialized(true);
     } else {
       // Create mode: create empty entry immediately
       const createEmpty = async (): Promise<void> => {
@@ -72,6 +76,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
           try {
             const newEntryId = await onCreateEmpty();
             setCurrentEntryId(newEntryId);
+            setIsInitialized(true);
           } catch (error) {
             logger.error('Failed to create empty timeline entry', { feature: 'AddTimelineEntryModal', error });
             showAlert(
@@ -88,15 +93,17 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       setContent('');
       setNoteSubtype('note');
       setSelectedDate(new Date());
+      setIsInitialized(false);
       
       createEmpty();
     }
   }, [entryToEdit, isVisible, onCreateEmpty, onClose]);
   
-  // Reset currentEntryId when modal closes
+  // Reset state when modal closes
   useEffect(() => {
     if (!isVisible) {
       setCurrentEntryId(null);
+      setIsInitialized(false);
     }
   }, [isVisible]);
 
@@ -122,7 +129,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
   
   // Debounced auto-save for title
   useEffect(() => {
-    if (!currentEntryId) return;
+    if (!currentEntryId || !isInitialized) return;
     
     if (titleDebounceTimer.current) {
       clearTimeout(titleDebounceTimer.current);
@@ -137,11 +144,11 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
         clearTimeout(titleDebounceTimer.current);
       }
     };
-  }, [title, currentEntryId, autoSave]);
+  }, [title, currentEntryId, isInitialized, autoSave]);
   
   // Debounced auto-save for content
   useEffect(() => {
-    if (!currentEntryId) return;
+    if (!currentEntryId || !isInitialized) return;
     
     if (contentDebounceTimer.current) {
       clearTimeout(contentDebounceTimer.current);
@@ -156,13 +163,13 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
         clearTimeout(contentDebounceTimer.current);
       }
     };
-  }, [content, currentEntryId, autoSave]);
+  }, [content, currentEntryId, isInitialized, autoSave]);
   
   // Immediate auto-save for noteSubtype
   useEffect(() => {
-    if (!currentEntryId) return;
+    if (!currentEntryId || !isInitialized) return;
     autoSave({ subtype: noteSubtype });
-  }, [noteSubtype, currentEntryId, autoSave]);
+  }, [noteSubtype, currentEntryId, isInitialized, autoSave]);
 
   const handleDateChange = (event: DateTimePickerEvent, date?: Date): void => {
     if (date) {
@@ -178,9 +185,9 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
   
   // Immediate auto-save for timestamp (date/time)
   useEffect(() => {
-    if (!currentEntryId) return;
+    if (!currentEntryId || !isInitialized) return;
     autoSave({ timestamp: selectedDate.toISOString() });
-  }, [selectedDate, currentEntryId, autoSave]);
+  }, [selectedDate, currentEntryId, isInitialized, autoSave]);
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString('en-US', {
