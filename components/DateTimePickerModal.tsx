@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerAndroid, DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 
@@ -7,7 +7,7 @@ interface DateTimePickerModalProps {
   isVisible: boolean;
   value: Date;
   mode: 'date' | 'time';
-  onChange: (event: any, date?: Date) => void;
+  onChange: (event: DateTimePickerEvent, date?: Date) => void;
   onClose: () => void;
   testID?: string;
 }
@@ -26,7 +26,7 @@ export function DateTimePickerModal({
       DateTimePickerAndroid.open({
         value,
         mode,
-        onChange: (event: any, date?: Date) => {
+        onChange: (event: DateTimePickerEvent, date?: Date) => {
           onClose();
           onChange(event, date);
         },

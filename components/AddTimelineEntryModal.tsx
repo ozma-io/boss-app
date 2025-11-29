@@ -1,8 +1,10 @@
 import { KEYBOARD_AWARE_SCROLL_OFFSET } from '@/constants/keyboard';
+import { logger } from '@/services/logger.service';
 import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Pressable,
     StyleSheet,
@@ -38,13 +40,12 @@ const NOTE_SUBTYPES: Array<{ value: NoteSubtype; label: string }> = [
  * Creates empty entry immediately on open, auto-saves all changes
  * Entry type can be changed anytime with field state preservation
  */
-export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpdate, entryToEdit }: AddTimelineEntryModalProps) {
+export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpdate, entryToEdit }: AddTimelineEntryModalProps): React.JSX.Element {
   const isEditMode = !!entryToEdit;
   
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const [noteSubtype, setNoteSubtype] = useState<NoteSubtype>('note');
-  const [icon, setIcon] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
   const [showTimePicker, setShowTimePicker] = useState<boolean>(false);
@@ -59,7 +60,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       setCurrentEntryId(entryToEdit.id);
       setTitle(entryToEdit.title);
       setContent(entryToEdit.content || '');
-      setIcon(entryToEdit.icon || '');
       setSelectedDate(new Date(entryToEdit.timestamp));
       
       if (entryToEdit.type === 'note') {
@@ -73,6 +73,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
             const newEntryId = await onCreateEmpty();
             setCurrentEntryId(newEntryId);
           } catch (error) {
+            logger.error('Failed to create empty timeline entry', { feature: 'AddTimelineEntryModal', error });
             showAlert(
               'Something went wrong',
               'We couldn\'t create this entry right now. Our team has been notified and is working on it. Please try again later.'
@@ -86,7 +87,6 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       setTitle('');
       setContent('');
       setNoteSubtype('note');
-      setIcon('');
       setSelectedDate(new Date());
       
       createEmpty();
@@ -116,6 +116,7 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
       await onUpdate(currentEntryId, updates);
     } catch (error) {
       // Silent fail - user can retry by changing field again
+      logger.error('Failed to auto-save timeline entry', { feature: 'AddTimelineEntryModal', entryId: currentEntryId, updates, error });
     }
   }, [currentEntryId, onUpdate]);
   
@@ -160,16 +161,16 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
   // Immediate auto-save for noteSubtype
   useEffect(() => {
     if (!currentEntryId) return;
-    autoSave({ subtype: noteSubtype } as any);
+    autoSave({ subtype: noteSubtype });
   }, [noteSubtype, currentEntryId, autoSave]);
 
-  const handleDateChange = (event: any, date?: Date): void => {
+  const handleDateChange = (event: DateTimePickerEvent, date?: Date): void => {
     if (date) {
       setSelectedDate(date);
     }
   };
 
-  const handleTimeChange = (event: any, date?: Date): void => {
+  const handleTimeChange = (event: DateTimePickerEvent, date?: Date): void => {
     if (date) {
       setSelectedDate(date);
     }
@@ -296,7 +297,13 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
                     Title
                   </Text>
                   <TextInput
-                    style={[styles.input, { outlineStyle: 'none' } as any]}
+                    style={[
+                      styles.input, 
+                      // Web-specific style: React Native Web supports outlineStyle: 'none' to remove focus outline,
+                      // but it's not in React Native's type definitions (which only supports 'solid', 'dotted', 'dashed')
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      { outlineStyle: 'none' } as any
+                    ]}
                     value={title}
                     onChangeText={setTitle}
                     placeholder="e.g., Weekly 1-on-1 Meeting"
@@ -310,7 +317,14 @@ export function AddTimelineEntryModal({ isVisible, onClose, onCreateEmpty, onUpd
                     Content
                   </Text>
                   <TextInput
-                    style={[styles.input, styles.multilineInput, { outlineStyle: 'none' } as any]}
+                    style={[
+                      styles.input, 
+                      styles.multilineInput, 
+                      // Web-specific style: React Native Web supports outlineStyle: 'none' to remove focus outline,
+                      // but it's not in React Native's type definitions (which only supports 'solid', 'dotted', 'dashed')
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      { outlineStyle: 'none' } as any
+                    ]}
                     value={content}
                     onChangeText={setContent}
                     placeholder="Enter details..."
