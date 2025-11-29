@@ -23,8 +23,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 from orchestrators.notification_logic import (  # type: ignore
-    determine_channel,  # type: ignore
-    determine_scenario,  # type: ignore
+    determine_user_category,  # type: ignore
     is_inactive,  # type: ignore
     is_new_user,  # type: ignore
     should_send_notification,  # type: ignore
@@ -63,7 +62,7 @@ def test_should_send_notification_first_notification() -> None:
             'notification_count': 0,
         }
     }
-    assert should_send_notification(user_2h_ago) is True
+    assert should_send_notification(user_2h_ago, 'EMAIL_ONLY_USER') is True
     
     # Registered 30 minutes ago - too soon
     user_30m_ago = {
@@ -72,13 +71,14 @@ def test_should_send_notification_first_notification() -> None:
             'notification_count': 0,
         }
     }
-    assert should_send_notification(user_30m_ago) is False
+    assert should_send_notification(user_30m_ago, 'EMAIL_ONLY_USER') is False
 
 
 def test_should_send_notification_progressive_intervals():
-    """Test progressive intervals (6h, 24h, 48h, 7 days)."""
+    """Test progressive intervals with category-specific schedules."""
     now = datetime.now(timezone.utc)
     
+    # Test EMAIL_ONLY_USER category (standard intervals: 1h, 6h, 24h, 48h, 7d)
     # 2nd notification - needs 6 hours
     user_2nd = {
         'createdAt': (now - timedelta(days=1)).isoformat(),
@@ -87,7 +87,7 @@ def test_should_send_notification_progressive_intervals():
             'last_notification_at': (now - timedelta(hours=7)).isoformat(),
         }
     }
-    assert should_send_notification(user_2nd) is True
+    assert should_send_notification(user_2nd, 'EMAIL_ONLY_USER') is True
     
     # 3rd notification - needs 24 hours
     user_3rd = {
@@ -97,7 +97,7 @@ def test_should_send_notification_progressive_intervals():
             'last_notification_at': (now - timedelta(hours=25)).isoformat(),
         }
     }
-    assert should_send_notification(user_3rd) is True
+    assert should_send_notification(user_3rd, 'EMAIL_ONLY_USER') is True
     
     # 4th notification - needs 48 hours
     user_4th_too_soon = {
@@ -107,7 +107,7 @@ def test_should_send_notification_progressive_intervals():
             'last_notification_at': (now - timedelta(hours=24)).isoformat(),
         }
     }
-    assert should_send_notification(user_4th_too_soon) is False
+    assert should_send_notification(user_4th_too_soon, 'EMAIL_ONLY_USER') is False
     
     user_4th_ok = {
         'createdAt': (now - timedelta(days=10)).isoformat(),
@@ -116,7 +116,7 @@ def test_should_send_notification_progressive_intervals():
             'last_notification_at': (now - timedelta(hours=49)).isoformat(),
         }
     }
-    assert should_send_notification(user_4th_ok) is True
+    assert should_send_notification(user_4th_ok, 'EMAIL_ONLY_USER') is True
     
     # 5+ notifications - needs 7 days (168 hours)
     user_5th_too_soon = {
@@ -126,7 +126,7 @@ def test_should_send_notification_progressive_intervals():
             'last_notification_at': (now - timedelta(days=3)).isoformat(),
         }
     }
-    assert should_send_notification(user_5th_too_soon) is False
+    assert should_send_notification(user_5th_too_soon, 'EMAIL_ONLY_USER') is False
     
     user_5th_ok = {
         'createdAt': (now - timedelta(days=30)).isoformat(),
@@ -135,7 +135,29 @@ def test_should_send_notification_progressive_intervals():
             'last_notification_at': (now - timedelta(days=8)).isoformat(),
         }
     }
-    assert should_send_notification(user_5th_ok) is True
+    assert should_send_notification(user_5th_ok, 'EMAIL_ONLY_USER') is True
+    
+    # Test NEW_USER_PUSH category (faster intervals: 1h, 3h, 12h, 24h, 3d)
+    # 2nd notification - needs 3 hours (not 6)
+    user_2nd_push = {
+        'createdAt': (now - timedelta(days=1)).isoformat(),
+        'notification_state': {
+            'notification_count': 1,
+            'last_notification_at': (now - timedelta(hours=4)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_2nd_push, 'NEW_USER_PUSH') is True
+    
+    # Test INACTIVE_USER_EMAIL category (slower intervals: 1h, 12h, 48h, 7d, 14d)
+    # 2nd notification - needs 12 hours (not 6)
+    user_2nd_inactive = {
+        'createdAt': (now - timedelta(days=1)).isoformat(),
+        'notification_state': {
+            'notification_count': 1,
+            'last_notification_at': (now - timedelta(hours=13)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_2nd_inactive, 'INACTIVE_USER_EMAIL') is True
 
 
 def test_was_active_recently():
@@ -186,124 +208,141 @@ def test_is_inactive():
     assert is_inactive(user_never_logged_in, days=7) is False
 
 
-def test_determine_channel_push():
-    """Test PUSH channel selection."""
-    now = datetime.now(timezone.utc)
-    
-    # User with push permission and token - PUSH (regardless of activity/unread)
-    user_push_eligible = {
-        'notificationPermissionStatus': 'granted',
-        'fcmToken': 'valid_token',
-        'lastActivityAt': (now - timedelta(days=3)).isoformat(),
-    }
-    assert determine_channel(user_push_eligible, unread_count=5) == 'PUSH'
-    assert determine_channel(user_push_eligible, unread_count=0) == 'PUSH'
-    
-    # Even inactive users get PUSH if they have permission and token
-    user_inactive_with_push = {
-        'notificationPermissionStatus': 'granted',
-        'fcmToken': 'valid_token',
-        'lastActivityAt': (now - timedelta(days=10)).isoformat(),
-    }
-    assert determine_channel(user_inactive_with_push, unread_count=3) == 'PUSH'
-
-
-def test_determine_channel_email():
-    """Test EMAIL channel selection as fallback."""
-    now = datetime.now(timezone.utc)
-    
-    # No push permission, but not unsubscribed - EMAIL fallback
-    user_email_no_push_permission = {
-        'notificationPermissionStatus': 'denied',
-        'fcmToken': None,
-        'lastActivityAt': (now - timedelta(days=3)).isoformat(),
-        'email_unsubscribed': False,
-    }
-    assert determine_channel(user_email_no_push_permission, unread_count=0) == 'EMAIL'
-    assert determine_channel(user_email_no_push_permission, unread_count=5) == 'EMAIL'
-    
-    # Has push permission but no FCM token - EMAIL fallback
-    user_email_no_token = {
-        'notificationPermissionStatus': 'granted',
-        'fcmToken': None,
-        'lastActivityAt': (now - timedelta(days=3)).isoformat(),
-        'email_unsubscribed': False,
-    }
-    assert determine_channel(user_email_no_token, unread_count=3) == 'EMAIL'
-
-
-def test_determine_channel_none():
-    """Test no channel available."""
-    # No PUSH (denied/no token) and no EMAIL (unsubscribed) - no channel
-    user_no_channel = {
-        'notificationPermissionStatus': 'denied',
-        'fcmToken': None,
-        'email_unsubscribed': True,
-    }
-    assert determine_channel(user_no_channel, unread_count=0) is None
-    assert determine_channel(user_no_channel, unread_count=5) is None
-
-
-def test_determine_scenario_email_only_user():
-    """Test EMAIL_ONLY_USER scenario."""
+def test_determine_user_category_email_only():
+    """Test EMAIL_ONLY_USER category."""
     mock_db = create_mock_db(unread_count=0)
+    
+    # Never logged in with email available
     user_never_logged_in = {
         'lastActivityAt': None,
         'createdAt': '2025-11-20T10:00:00Z',
+        'email_unsubscribed': False,
     }
-    # EMAIL_ONLY_USER only for EMAIL channel
-    assert determine_scenario(mock_db, 'test_user_id', user_never_logged_in, 'EMAIL') == 'EMAIL_ONLY_USER'
-    # PUSH channel for never logged in users should be NEW_USER_PUSH
-    assert determine_scenario(mock_db, 'test_user_id', user_never_logged_in, 'PUSH') == 'NEW_USER_PUSH'
+    assert determine_user_category(mock_db, 'test_user_id', user_never_logged_in) == 'EMAIL_ONLY_USER'
 
 
-def test_determine_scenario_new_user():
-    """Test NEW_USER scenarios."""
+def test_determine_user_category_new_user_push():
+    """Test NEW_USER_PUSH category."""
     mock_db = create_mock_db(unread_count=0)
     now = datetime.now(timezone.utc)
     
-    user_new = {
+    # New user with push enabled
+    user_new_push = {
         'lastActivityAt': (now - timedelta(days=5)).isoformat(),
         'createdAt': (now - timedelta(days=7)).isoformat(),
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': 'valid_token',
     }
+    assert determine_user_category(mock_db, 'test_user_id', user_new_push) == 'NEW_USER_PUSH'
     
-    assert determine_scenario(mock_db, 'test_user_id', user_new, 'PUSH') == 'NEW_USER_PUSH'
-    assert determine_scenario(mock_db, 'test_user_id', user_new, 'EMAIL') == 'NEW_USER_EMAIL'
+    # Never logged in but has push setup (edge case)
+    user_never_logged_push = {
+        'lastActivityAt': None,
+        'createdAt': (now - timedelta(days=2)).isoformat(),
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': 'valid_token',
+        'email_unsubscribed': True,  # No email available
+    }
+    assert determine_user_category(mock_db, 'test_user_id', user_never_logged_push) == 'NEW_USER_PUSH'
 
 
-def test_determine_scenario_active_user():
-    """Test ACTIVE_USER scenarios."""
+def test_determine_user_category_new_user_email():
+    """Test NEW_USER_EMAIL category."""
     mock_db = create_mock_db(unread_count=0)
     now = datetime.now(timezone.utc)
     
-    user_active = {
-        'lastActivityAt': (now - timedelta(days=2)).isoformat(),
-        'createdAt': (now - timedelta(days=30)).isoformat(),
+    # New user without push, with email
+    user_new_email = {
+        'lastActivityAt': (now - timedelta(days=5)).isoformat(),
+        'createdAt': (now - timedelta(days=7)).isoformat(),
+        'notificationPermissionStatus': 'denied',
+        'email_unsubscribed': False,
     }
-    
-    assert determine_scenario(mock_db, 'test_user_id', user_active, 'PUSH') == 'ACTIVE_USER_PUSH'
-    assert determine_scenario(mock_db, 'test_user_id', user_active, 'EMAIL') == 'ACTIVE_USER_EMAIL'
+    assert determine_user_category(mock_db, 'test_user_id', user_new_email) == 'NEW_USER_EMAIL'
 
 
-def test_determine_scenario_inactive_user():
-    """Test INACTIVE_USER scenario."""
+def test_determine_user_category_active_push():
+    """Test ACTIVE_USER_PUSH category."""
+    mock_db = create_mock_db(unread_count=0)
     now = datetime.now(timezone.utc)
     
-    user_inactive = {
+    # Active user with push enabled
+    user_active_push = {
+        'lastActivityAt': (now - timedelta(days=2)).isoformat(),
+        'createdAt': (now - timedelta(days=30)).isoformat(),
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': 'valid_token',
+    }
+    assert determine_user_category(mock_db, 'test_user_id', user_active_push) == 'ACTIVE_USER_PUSH'
+
+
+def test_determine_user_category_active_email():
+    """Test ACTIVE_USER_EMAIL category."""
+    mock_db = create_mock_db(unread_count=0)
+    now = datetime.now(timezone.utc)
+    
+    # Active user without push, with email
+    user_active_email = {
+        'lastActivityAt': (now - timedelta(days=2)).isoformat(),
+        'createdAt': (now - timedelta(days=30)).isoformat(),
+        'notificationPermissionStatus': 'denied',
+        'email_unsubscribed': False,
+    }
+    assert determine_user_category(mock_db, 'test_user_id', user_active_email) == 'ACTIVE_USER_EMAIL'
+
+
+def test_determine_user_category_inactive_email():
+    """Test INACTIVE_USER_EMAIL category."""
+    now = datetime.now(timezone.utc)
+    
+    # Inactive user with unread messages and email available
+    user_inactive_email = {
         'lastActivityAt': (now - timedelta(days=10)).isoformat(),
         'createdAt': (now - timedelta(days=60)).isoformat(),
+        'email_unsubscribed': False,
     }
     
-    # Test with no unread messages - should be ACTIVE_USER_* (not INACTIVE_USER)
-    mock_db_no_unread = create_mock_db(unread_count=0)
-    assert determine_scenario(mock_db_no_unread, 'test_user_id', user_inactive, 'EMAIL') == 'ACTIVE_USER_EMAIL'
-    assert determine_scenario(mock_db_no_unread, 'test_user_id', user_inactive, 'PUSH') == 'ACTIVE_USER_PUSH'
-    
-    # Test with unread messages - should be INACTIVE_USER (priority scenario)
-    # Can work with both PUSH and EMAIL channels now
+    # With unread messages - should be INACTIVE_USER_EMAIL
     mock_db_with_unread = create_mock_db(unread_count=5)
-    assert determine_scenario(mock_db_with_unread, 'test_user_id', user_inactive, 'EMAIL') == 'INACTIVE_USER'
-    assert determine_scenario(mock_db_with_unread, 'test_user_id', user_inactive, 'PUSH') == 'INACTIVE_USER'
+    assert determine_user_category(mock_db_with_unread, 'test_user_id', user_inactive_email) == 'INACTIVE_USER_EMAIL'
+    
+    # Without unread messages - should be ACTIVE_USER_EMAIL (not inactive)
+    mock_db_no_unread = create_mock_db(unread_count=0)
+    assert determine_user_category(mock_db_no_unread, 'test_user_id', user_inactive_email) == 'ACTIVE_USER_EMAIL'
+    
+    # Inactive with unread but has push - should still be INACTIVE_USER_EMAIL (EMAIL only per business rules)
+    user_inactive_push = {
+        'lastActivityAt': (now - timedelta(days=10)).isoformat(),
+        'createdAt': (now - timedelta(days=60)).isoformat(),
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': 'valid_token',
+        'email_unsubscribed': False,
+    }
+    assert determine_user_category(mock_db_with_unread, 'test_user_id', user_inactive_push) == 'INACTIVE_USER_EMAIL'
+    
+    # Inactive with unread but no email channel - should return None
+    user_inactive_no_email = {
+        'lastActivityAt': (now - timedelta(days=10)).isoformat(),
+        'createdAt': (now - timedelta(days=60)).isoformat(),
+        'notificationPermissionStatus': 'granted',
+        'fcmToken': 'valid_token',
+        'email_unsubscribed': True,
+    }
+    assert determine_user_category(mock_db_with_unread, 'test_user_id', user_inactive_no_email) is None
+
+
+def test_determine_user_category_no_channel():
+    """Test no channel available returns None."""
+    mock_db = create_mock_db(unread_count=0)
+    
+    # No push and email unsubscribed
+    user_no_channel = {
+        'lastActivityAt': None,
+        'createdAt': '2025-11-20T10:00:00Z',
+        'notificationPermissionStatus': 'denied',
+        'email_unsubscribed': True,
+    }
+    assert determine_user_category(mock_db, 'test_user_id', user_no_channel) is None
 
 
 if __name__ == '__main__':
@@ -311,10 +350,10 @@ if __name__ == '__main__':
     
     # Timing tests
     test_should_send_notification_first_notification()
-    print("✓ First notification timing")
+    print("✓ First notification timing (category-specific)")
     
     test_should_send_notification_progressive_intervals()
-    print("✓ Progressive intervals")
+    print("✓ Progressive intervals (category-specific)")
     
     # Helper function tests
     test_was_active_recently()
@@ -326,28 +365,27 @@ if __name__ == '__main__':
     test_is_inactive()
     print("✓ Inactive user detection")
     
-    # Channel selection tests
-    test_determine_channel_push()
-    print("✓ PUSH channel selection")
+    # Category determination tests
+    test_determine_user_category_email_only()
+    print("✓ EMAIL_ONLY_USER category")
     
-    test_determine_channel_email()
-    print("✓ EMAIL channel selection")
+    test_determine_user_category_new_user_push()
+    print("✓ NEW_USER_PUSH category")
     
-    test_determine_channel_none()
+    test_determine_user_category_new_user_email()
+    print("✓ NEW_USER_EMAIL category")
+    
+    test_determine_user_category_active_push()
+    print("✓ ACTIVE_USER_PUSH category")
+    
+    test_determine_user_category_active_email()
+    print("✓ ACTIVE_USER_EMAIL category")
+    
+    test_determine_user_category_inactive_email()
+    print("✓ INACTIVE_USER_EMAIL category")
+    
+    test_determine_user_category_no_channel()
     print("✓ No channel detection")
-    
-    # Scenario tests
-    test_determine_scenario_email_only_user()
-    print("✓ EMAIL_ONLY_USER scenario")
-    
-    test_determine_scenario_new_user()
-    print("✓ NEW_USER scenarios")
-    
-    test_determine_scenario_active_user()
-    print("✓ ACTIVE_USER scenarios")
-    
-    test_determine_scenario_inactive_user()
-    print("✓ INACTIVE_USER scenario (placeholder)")
     
     print("\n✅ All tests passed!")
 

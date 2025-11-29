@@ -3,8 +3,8 @@ Notification Orchestrator Business Logic
 
 Core business logic for notification orchestration:
 1. Query users from Firestore
-2. Decide who needs notifications based on various scenarios
-3. Create messages and email operations
+2. Categorize users based on state, activity, and available channels
+3. Generate and send notifications
 
 All functions are pure and take db client as parameter for testability.
 
@@ -18,76 +18,81 @@ NOTIFICATION ORCHESTRATION FLOW:
 All messages are from AI assistant persona providing personalized career coaching.
 See functions/src/constants.ts (CHAT_SYSTEM_PROMPT) for AI behavior details.
 
-STEP 1: CHOOSE CHANNEL
+USER CATEGORIZATION:
 
-Decision logic:
-- PUSH: if notifications_enabled=true AND fcm_token exists
-- EMAIL: if no PUSH available AND email_unsubscribed=false
-- NO CHANNEL: if no channel available → log error to Sentry, skip user
+Single unified function determines each user's category based on:
+1. Available channels (PUSH and/or EMAIL)
+2. User activity state (never logged in, new, active, inactive)
+3. Unread message status
 
-Implementation note: Sync Mailgun unsubscribe list at function start, update Firestore email_unsubscribed flags.
+Each user belongs to exactly ONE category:
 
-STEP 2: CHOOSE SCENARIO
-
-Each scenario defines content context, channel, and CTA:
-
-A. EMAIL_ONLY_USER
-   - Trigger: never logged into app (lastActivityAt is null)
-   - Channel: EMAIL
-   - Content: career coaching based on onboarding data - show value through actionable advice
-   - CTA: "App is more convenient, you can ask questions to your AI, download and try it"
+1. EMAIL_ONLY_USER
+   - Never logged into app (lastActivityAt is null)
+   - Has email channel available
+   - Content: career coaching based on onboarding data
+   - CTA: "Download the app for better experience"
    - Note: First email sent immediately via HTTP endpoint when user submits web form
 
-B. NEW_USER_PUSH
-   - Trigger: logged into app within first N days (TBD)
-   - Channel: PUSH
+2. NEW_USER_PUSH
+   - New user (<14 days since registration) OR never logged in with push setup
+   - Has push channel enabled (notifications granted + FCM token)
    - Content: early career coaching guidance, help establish good habits
-   - CTA: none (user is already engaged)
+   - Interval schedule: 1h, 3h, 12h, 24h, 3d (faster cadence for engaged users)
 
-C. NEW_USER_EMAIL
-   - Trigger: logged into app within first N days
-   - Channel: EMAIL
-   - Content: early career coaching guidance, help establish good habits
-   - CTA: "Enable notifications for better experience, promise not to spam"
+3. NEW_USER_EMAIL
+   - New user (<14 days since registration)
+   - No push channel, has email channel
+   - Content: early career coaching guidance
+   - CTA: "Enable notifications for better experience"
+   - Interval schedule: 1h, 6h, 24h, 48h, 7d (standard cadence)
 
-D. ACTIVE_USER_PUSH
-   - Trigger: regular app usage
-   - Channel: PUSH
-   - Content: ongoing career coaching - help user grow professionally (leadership, communication skills, career development)
-   - CTA: none (user is already engaged)
+4. ACTIVE_USER_PUSH
+   - Regular app usage (>14 days since registration)
+   - Has push channel enabled
+   - Content: ongoing career coaching (leadership, communication, career development)
+   - Interval schedule: 1h, 3h, 12h, 24h, 3d (faster cadence for engaged users)
 
-E. ACTIVE_USER_EMAIL
-   - Trigger: regular app usage
-   - Channel: EMAIL
-   - Content: ongoing career coaching - help user grow professionally
-   - CTA: "Enable notifications for better experience, promise not to spam"
+5. ACTIVE_USER_EMAIL
+   - Regular app usage (>14 days since registration)
+   - No push channel, has email channel
+   - Content: ongoing career coaching
+   - CTA: "Enable notifications for better experience"
+   - Interval schedule: 1h, 6h, 24h, 48h, 7d (standard cadence)
 
-F. INACTIVE_USER
-   - Trigger: has unread messages AND lastActivityAt > 6 days ago
-   - Channel: EMAIL (only available when there are unread messages to follow up on)
-   - Content: career growth advice + gentle reminder about continuing conversation in app
+6. INACTIVE_USER_EMAIL
+   - Has unread messages AND inactive >6 days
+   - EMAIL ONLY per business requirements (no push version)
+   - Content: career growth advice + gentle reminder about unread messages
    - CTA: "You have unread messages in app"
+   - Interval schedule: 1h, 12h, 48h, 7d, 14d (slower cadence for inactive users)
+   - Priority category: overrides NEW/ACTIVE if conditions met
 
-STEP 3: GENERATE CONTENT
+NO CHANNEL:
+- User has neither push nor email available
+- Logged to Sentry as warning
+- User skipped
 
-- AI generates ONLY: title + body (markdown)
-- Code wraps with appropriate CTA/disclaimer based on scenario + channel
+CONTENT GENERATION:
 
-STEP 4: SEND
+- AI generates: title + body (markdown for email, plain text for push)
+- Code wraps with appropriate CTA/disclaimer based on category
+- Different prompts for EMAIL_ONLY, NEW_*, ACTIVE_*, and INACTIVE categories
 
-- Push notification via FCM
-- Email via Mailgun
-- Update notification_state.last_notification_at
+DELIVERY:
 
-TIMING (Progressive Intervals):
+- Push notifications via FCM (triggers Firestore Cloud Function automatically)
+- Email via Mailgun (queued operations in Firestore)
+- Update notification_state.last_notification_at after successful delivery
+
+TIMING (Category-Specific Progressive Intervals):
+
 - Function runs every 2 hours
-- Intervals depend on notification_count:
-  * 1st notification: 1 hour after registration
-  * 2nd notification: 6 hours after 1st
-  * 3rd notification: 24 hours after 2nd
-  * 4th notification: 48 hours after 3rd
-  * 5+ notifications: 7 days between each
+- Each category has its own interval schedule (see category descriptions above)
+- Intervals apply from registration (1st notification) or last notification (subsequent)
 - No timezone logic needed (UTC timestamps)
+
+Implementation note: Sync Mailgun unsubscribe list at function start, update Firestore email_unsubscribed flags.
 """
 
 import uuid
@@ -103,9 +108,7 @@ from data.email_operations import create_email_for_sending  # type: ignore
 from data.notification_content import generate_onboarding_welcome_email  # type: ignore
 from data.notification_data import sync_mailgun_unsubscribes
 from orchestrators.notification_logic import (
-    determine_channel,
-    determine_scenario,
-    get_unread_count,
+    determine_user_category,
     should_send_notification,
 )
 from utils.logger import error, info, warn
@@ -212,33 +215,24 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
     skipped_no_channel = 0
     
     for user_id, user_data in all_users:
-        # Check if enough time has passed for next notification
-        if not should_send_notification(user_data):
-            skipped_timing += 1
-            continue
-        
-        # Get unread count for channel determination and scenario selection
-        unread_count = get_unread_count(db, user_id)
-        
-        # Determine notification channel (PUSH or EMAIL)
-        # Note: PUSH if user has notification permission and FCM token
-        # EMAIL as fallback if PUSH unavailable and user not unsubscribed
-        channel = determine_channel(user_data, unread_count)
-        if channel is None:
+        # Determine user category (combines channel + scenario logic)
+        category = determine_user_category(db, user_id, user_data)
+        if category is None:
             skipped_no_channel += 1
             continue
         
-        # Determine scenario based on user state and channel
-        # Note: Scenario selection now focuses on user activity and unread count, not channel constraints
-        scenario = determine_scenario(db, user_id, user_data, channel)
+        # Check if enough time has passed for next notification
+        if not should_send_notification(user_data, category):
+            skipped_timing += 1
+            continue
         
-        # Create appropriate task for batch processing
-        if channel == 'EMAIL':
+        # Create appropriate task based on category
+        if category in ['EMAIL_ONLY_USER', 'NEW_USER_EMAIL', 'ACTIVE_USER_EMAIL', 'INACTIVE_USER_EMAIL']:
             user_email = user_data.get('email', '').strip()
             if not user_email:
-                error("User has EMAIL channel but no valid email address", {
+                error("User has EMAIL category but no valid email address", {
                     "user_id": user_id,
-                    "channel": channel,
+                    "category": category,
                 })
                 skipped_no_channel += 1
                 continue
@@ -246,14 +240,14 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
             email_tasks.append(UserEmailTask(
                 user_id=user_id,
                 user_email=user_email,
-                scenario=scenario,
+                scenario=category,
             ))
-        elif channel == 'PUSH':
+        elif category in ['NEW_USER_PUSH', 'ACTIVE_USER_PUSH']:
             fcm_token = user_data.get('fcmToken', '').strip()
             if not fcm_token:
-                error("User has PUSH channel but no valid FCM token", {
+                error("User has PUSH category but no valid FCM token", {
                     "user_id": user_id,
-                    "channel": channel,
+                    "category": category,
                 })
                 skipped_no_channel += 1
                 continue
@@ -261,7 +255,7 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
             push_tasks.append(UserChatTask(
                 user_id=user_id,
                 fcm_token=fcm_token,
-                scenario=scenario,
+                scenario=category,
                 thread_id=None,  # Auto-detect thread
             ))
     

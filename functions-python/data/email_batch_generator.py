@@ -116,7 +116,7 @@ def _generate_single_email(
                     user_id=task.user_id,
                     session_id=session_id,
                 )
-            elif task.scenario in ["NEW_USER_EMAIL", "ACTIVE_USER_EMAIL", "INACTIVE_USER"]:
+            elif task.scenario in ["NEW_USER_EMAIL", "ACTIVE_USER_EMAIL", "INACTIVE_USER_EMAIL"]:
                 email_content = generate_ongoing_email_notification(
                     db=db,  # type: ignore
                     user_id=task.user_id,
@@ -124,7 +124,7 @@ def _generate_single_email(
                     session_id=session_id,
                 )
             else:
-                raise ValueError(f"Unknown scenario: {task.scenario}")
+                raise ValueError(f"Unknown category for EMAIL: {task.scenario}")
         except Exception as err:
             error_msg = f"Failed to generate AI content: {str(err)}"
             error(error_msg, {

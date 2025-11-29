@@ -5,7 +5,20 @@ Data models for parallel generation operations (emails and chat messages).
 Used to structure inputs, outputs, and results of batch processing.
 """
 
+from typing import Literal
+
 from pydantic import BaseModel
+
+
+# User category type - single source of truth for notification categories
+UserCategory = Literal[
+    'EMAIL_ONLY_USER',
+    'NEW_USER_PUSH',
+    'NEW_USER_EMAIL',
+    'ACTIVE_USER_PUSH',
+    'ACTIVE_USER_EMAIL',
+    'INACTIVE_USER_EMAIL'
+]
 
 
 # ============================================================================
@@ -21,7 +34,7 @@ class UserEmailTask(BaseModel):
     """
     user_id: str
     user_email: str
-    scenario: str  # e.g., "EMAIL_ONLY_USER", "NEW_USER_EMAIL", "ACTIVE_USER_EMAIL"
+    scenario: UserCategory
 
 
 class GeneratedEmail(BaseModel):
@@ -44,7 +57,7 @@ class FailedGeneration(BaseModel):
     """
     user_id: str
     user_email: str
-    scenario: str
+    scenario: UserCategory
     error_message: str
 
 
@@ -74,7 +87,7 @@ class UserChatTask(BaseModel):
     """
     user_id: str
     fcm_token: str  # Required for validation, though not used directly
-    scenario: str  # e.g., "NEW_USER_PUSH", "ACTIVE_USER_PUSH"
+    scenario: UserCategory
     thread_id: str | None = None  # Optional: if None, will auto-detect
 
 
@@ -99,7 +112,7 @@ class FailedChatGeneration(BaseModel):
     """
     user_id: str
     fcm_token: str
-    scenario: str
+    scenario: UserCategory
     error_message: str
 
 

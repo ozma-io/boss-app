@@ -15,30 +15,74 @@ import sentry_sdk  # type: ignore
 from utils.logger import error, warn
 
 # Type aliases for clarity
-NotificationChannel = Literal['PUSH', 'EMAIL'] | None
-NotificationScenario = Literal[
+UserCategory = Literal[
     'EMAIL_ONLY_USER',
-    'NEW_USER_PUSH', 
+    'NEW_USER_PUSH',
     'NEW_USER_EMAIL',
     'ACTIVE_USER_PUSH',
     'ACTIVE_USER_EMAIL',
-    'INACTIVE_USER'
+    'INACTIVE_USER_EMAIL'
 ]
 
+# Category-specific notification intervals
+# Each category has its own progressive interval schedule
+# Format: list of timedelta objects representing intervals between notifications
+CATEGORY_INTERVALS: dict[UserCategory, list[timedelta]] = {
+    'EMAIL_ONLY_USER': [
+        timedelta(hours=1),   # 1st notification: 1h after registration
+        timedelta(hours=6),   # 2nd: 6h after 1st
+        timedelta(hours=24),  # 3rd: 24h after 2nd
+        timedelta(hours=48),  # 4th: 48h after 3rd
+        timedelta(days=7),    # 5+: weekly
+    ],
+    'NEW_USER_PUSH': [
+        timedelta(hours=1),   # Faster cadence for engaged new users
+        timedelta(hours=3),
+        timedelta(hours=12),
+        timedelta(hours=24),
+        timedelta(days=3),
+    ],
+    'NEW_USER_EMAIL': [
+        timedelta(hours=1),
+        timedelta(hours=6),
+        timedelta(hours=24),
+        timedelta(hours=48),
+        timedelta(days=7),
+    ],
+    'ACTIVE_USER_PUSH': [
+        timedelta(hours=1),
+        timedelta(hours=3),
+        timedelta(hours=12),
+        timedelta(hours=24),
+        timedelta(days=3),
+    ],
+    'ACTIVE_USER_EMAIL': [
+        timedelta(hours=1),
+        timedelta(hours=6),
+        timedelta(hours=24),
+        timedelta(hours=48),
+        timedelta(days=7),
+    ],
+    'INACTIVE_USER_EMAIL': [
+        timedelta(hours=1),
+        timedelta(hours=12),  # Slower cadence for inactive users
+        timedelta(hours=48),
+        timedelta(days=7),
+        timedelta(days=14),
+    ],
+}
 
-def should_send_notification(user_data: dict[str, Any]) -> bool:
+
+def should_send_notification(user_data: dict[str, Any], category: UserCategory) -> bool:
     """
     Check if enough time has passed to send next notification.
     
-    Implements progressive interval logic from orchestrator docstring:
-    - 1st notification: 1 hour after registration
-    - 2nd notification: 6 hours after 1st
-    - 3rd notification: 24 hours after 2nd
-    - 4th notification: 48 hours after 3rd
-    - 5+ notifications: 7 days between each
+    Uses category-specific progressive interval logic from CATEGORY_INTERVALS.
+    Each category has its own schedule optimized for user engagement patterns.
     
     Args:
         user_data: User document data from Firestore
+        category: User category (determines interval schedule)
         
     Returns:
         True if notification should be sent, False otherwise
@@ -50,6 +94,9 @@ def should_send_notification(user_data: dict[str, Any]) -> bool:
     notification_count = notification_state.get('notification_count', 0)
     last_notification_at = notification_state.get('last_notification_at')
     
+    # Get category-specific intervals
+    intervals = CATEGORY_INTERVALS[category]
+    
     # First notification - check time since registration
     if notification_count == 0:
         created_at_str = user_data.get('createdAt')
@@ -60,8 +107,8 @@ def should_send_notification(user_data: dict[str, Any]) -> bool:
         created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
         time_since_registration = now - created_at
         
-        # First notification: 1 hour after registration
-        return time_since_registration >= timedelta(hours=1)
+        # Use first interval from category schedule
+        return time_since_registration >= intervals[0]
     
     # Subsequent notifications - check time since last notification
     if not last_notification_at:
@@ -74,16 +121,10 @@ def should_send_notification(user_data: dict[str, Any]) -> bool:
     last_sent = datetime.fromisoformat(last_notification_at.replace('Z', '+00:00'))
     time_since_last = now - last_sent
     
-    # Progressive intervals
-    if notification_count == 1:
-        required_interval = timedelta(hours=6)
-    elif notification_count == 2:
-        required_interval = timedelta(hours=24)
-    elif notification_count == 3:
-        required_interval = timedelta(hours=48)
-    else:
-        # 5+ notifications: weekly interval
-        required_interval = timedelta(days=7)
+    # Get required interval for this notification number
+    # Use last interval in schedule for counts beyond schedule length
+    interval_index: int = min(notification_count, len(intervals) - 1)
+    required_interval: timedelta = intervals[interval_index]
     
     return time_since_last >= required_interval
 
@@ -204,122 +245,110 @@ def get_unread_count(db: Any, user_id: str) -> int:
         return 0
 
 
-def determine_channel(user_data: dict[str, Any], unread_count: int) -> NotificationChannel:
-    """
-    Determine which channel to use for notification (PUSH or EMAIL).
-    
-    Decision logic from orchestrator docstring STEP 1:
-    - PUSH: if notifications_enabled=true AND fcm_token exists
-    - EMAIL: if no PUSH available AND email_unsubscribed=false
-    - None: if no channel available (log to Sentry)
-    
-    This is simplified logic where EMAIL serves as fallback when PUSH is unavailable.
-    Business logic (activity, unread messages) is handled in scenario selection.
-    
-    Args:
-        user_data: User document data from Firestore
-        unread_count: Number of unread chat messages (not used in channel selection)
-        
-    Returns:
-        'PUSH', 'EMAIL', or None if no channel available
-    """
-    # Check PUSH eligibility first (preferred channel)
-    has_notifications = user_data.get('notificationPermissionStatus') == 'granted'
-    has_fcm_token = bool(user_data.get('fcmToken'))
-    
-    if has_notifications and has_fcm_token:
-        return 'PUSH'
-    
-    # Check EMAIL eligibility (fallback channel)
-    is_unsubscribed = user_data.get('email_unsubscribed', False)
-    
-    if not is_unsubscribed:
-        return 'EMAIL'
-    
-    # No channel available - log to Sentry
-    user_email = user_data.get('email', 'unknown')
-    error(
-        "No notification channel available for user",
-        {
-            "email": user_email,
-            "has_notifications": has_notifications,
-            "has_fcm_token": has_fcm_token,
-            "is_unsubscribed": is_unsubscribed,
-        }
-    )
-    
-    # Capture in Sentry
-    with sentry_sdk.push_scope() as scope:  # type: ignore
-        scope.set_extra("email", user_email)  # type: ignore
-        scope.set_extra("has_notifications", has_notifications)  # type: ignore
-        scope.set_extra("has_fcm_token", has_fcm_token)  # type: ignore
-        scope.set_extra("is_unsubscribed", is_unsubscribed)  # type: ignore
-        sentry_sdk.capture_message(  # type: ignore
-            "User has no available notification channel",
-            level="warning"
-        )
-    
-    return None
-
-
-def determine_scenario(
+def determine_user_category(
     db: Any,
     user_id: str,
-    user_data: dict[str, Any],
-    channel: NotificationChannel
-) -> NotificationScenario:
+    user_data: dict[str, Any]
+) -> UserCategory | None:
     """
-    Determine which notification scenario applies to this user.
+    Determine user category based on state, activity, and available channels.
     
-    Implements logic from orchestrator docstring STEP 2 for scenarios A-F:
+    Single unified function that replaces the old two-step approach
+    (determine_channel + determine_scenario). Each user belongs to exactly
+    one category, which determines both the notification channel and content type.
     
-    A. EMAIL_ONLY_USER - never logged into app (lastActivityAt is null)
-    B. NEW_USER_PUSH - logged into app within first N days + PUSH channel
-    C. NEW_USER_EMAIL - logged into app within first N days + EMAIL channel
-    D. ACTIVE_USER_PUSH - regular app usage + PUSH channel
-    E. ACTIVE_USER_EMAIL - regular app usage + EMAIL channel
-    F. INACTIVE_USER - has unread messages AND lastActivityAt > 6 days ago
-    
-    With simplified channel logic, EMAIL serves as fallback when PUSH unavailable.
-    Scenario selection now focuses on user state and content, not channel constraints.
+    Category priority logic:
+    1. Check channel availability (PUSH and/or EMAIL)
+    2. Check INACTIVE status (overrides other categories if conditions met)
+    3. Check if never logged in
+    4. Check if NEW user (< 14 days since registration)
+    5. Default to ACTIVE user
     
     Args:
         db: Firestore client instance
         user_id: User document ID
         user_data: User document data from Firestore
-        channel: Selected notification channel ('PUSH' or 'EMAIL')
         
     Returns:
-        Notification scenario identifier
+        UserCategory or None if no channel available
+        
+    Examples:
+        >>> # User with push enabled, new account
+        >>> determine_user_category(db, 'user1', {'notificationPermissionStatus': 'granted', 'fcmToken': 'abc', 'createdAt': '2024-11-28T...'})
+        'NEW_USER_PUSH'
+        
+        >>> # User with email only, inactive with unread messages
+        >>> determine_user_category(db, 'user2', {'email_unsubscribed': False, 'lastActivityAt': '2024-11-01T...'})
+        'INACTIVE_USER_EMAIL'  # if has unread messages
     """
-    if channel is None:
-        raise ValueError("Cannot determine scenario without channel")
+    # Priority 1: Check channel availability
+    has_push = (
+        user_data.get('notificationPermissionStatus') == 'granted'
+        and bool(user_data.get('fcmToken'))
+    )
+    has_email = not user_data.get('email_unsubscribed', False)
     
-    last_activity = user_data.get('lastActivityAt')
+    # No channels available
+    if not has_push and not has_email:
+        user_email = user_data.get('email', 'unknown')
+        error(
+            "No notification channel available for user",
+            {
+                "email": user_email,
+                "has_push": has_push,
+                "has_email": has_email,
+            }
+        )
+        
+        with sentry_sdk.push_scope() as scope:  # type: ignore
+            scope.set_extra("email", user_email)  # type: ignore
+            scope.set_extra("has_push", has_push)  # type: ignore
+            scope.set_extra("has_email", has_email)  # type: ignore
+            sentry_sdk.capture_message(  # type: ignore
+                "User has no available notification channel",
+                level="warning"
+            )
+        
+        return None
+    
+    # Priority 2: Check INACTIVE (overrides everything if conditions met)
+    # INACTIVE_USER can ONLY be EMAIL per business requirements
     unread_count = get_unread_count(db, user_id)
-    
-    # A. EMAIL_ONLY_USER - never logged into app (EMAIL channel only)
-    if not last_activity and channel == 'EMAIL':
-        return 'EMAIL_ONLY_USER'
-    
-    # F. INACTIVE_USER - priority check (overrides other scenarios)
-    # Has unread messages AND inactive for more than 6 days
-    # Can have either PUSH or EMAIL channel depending on user's notification settings
     if unread_count > 0 and is_inactive(user_data, days=6):
-        return 'INACTIVE_USER'
+        if has_email:
+            return 'INACTIVE_USER_EMAIL'
+        else:
+            # Has unread messages but no email channel
+            # Skip this user (can't send INACTIVE notification via PUSH)
+            return None
     
-    # B. NEW_USER_PUSH - logged in recently OR never logged in + push channel
-    if (is_new_user(user_data, days=14) or not last_activity) and channel == 'PUSH':
-        return 'NEW_USER_PUSH'
+    # Get activity status for remaining categories
+    last_activity = user_data.get('lastActivityAt')
     
-    # C. NEW_USER_EMAIL - logged in recently + new user + email channel
-    if is_new_user(user_data, days=14) and channel == 'EMAIL':
-        return 'NEW_USER_EMAIL'
+    # Priority 3: Check if never logged in
+    if not last_activity:
+        # Never logged in - prefer email, fallback to push
+        if has_email:
+            return 'EMAIL_ONLY_USER'
+        elif has_push:
+            # Never logged in but has push setup (rare edge case)
+            return 'NEW_USER_PUSH'
     
-    # D. ACTIVE_USER_PUSH - regular usage + push channel
-    if channel == 'PUSH':
+    # Priority 4: Check if NEW user (< 14 days since registration)
+    if is_new_user(user_data, days=14):
+        # Prefer push for new users, fallback to email
+        if has_push:
+            return 'NEW_USER_PUSH'
+        elif has_email:
+            return 'NEW_USER_EMAIL'
+    
+    # Priority 5: Default to ACTIVE user
+    # Prefer push for active users, fallback to email
+    if has_push:
         return 'ACTIVE_USER_PUSH'
+    elif has_email:
+        return 'ACTIVE_USER_EMAIL'
     
-    # E. ACTIVE_USER_EMAIL - regular usage + email channel
-    return 'ACTIVE_USER_EMAIL'
+    # This should never be reached given the channel check at the start
+    return None
 

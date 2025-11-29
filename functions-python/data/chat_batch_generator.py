@@ -117,7 +117,7 @@ def _generate_single_chat_message(
                     user_id=task.user_id,
                     session_id=session_id,
                 )
-            elif task.scenario in ["ACTIVE_USER_PUSH"]:
+            elif task.scenario == "ACTIVE_USER_PUSH":
                 chat_content = generate_ongoing_push_notification(
                     db=db,  # type: ignore
                     user_id=task.user_id,
@@ -125,7 +125,7 @@ def _generate_single_chat_message(
                     session_id=session_id,
                 )
             else:
-                raise ValueError(f"Unknown scenario: {task.scenario}")
+                raise ValueError(f"Unknown category for PUSH: {task.scenario}")
         except Exception as err:
             error_msg = f"Failed to generate AI content: {str(err)}"
             error(error_msg, {

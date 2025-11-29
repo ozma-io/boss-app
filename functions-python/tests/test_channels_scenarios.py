@@ -1,12 +1,11 @@
 # type: ignore
 # pyright: reportGeneralTypeIssues=false
 """
-Test script to display channel and scenario for each user.
+Test script to display user categories for notification system.
 
 This script fetches users needing notifications and displays:
 - User ID and email
-- Notification channel (PUSH/EMAIL/NONE)
-- Notification scenario (EMAIL_ONLY_USER, NEW_USER_PUSH, etc.)
+- User category (EMAIL_ONLY_USER, NEW_USER_PUSH, ACTIVE_USER_EMAIL, etc.)
 - Hours since last communication
 
 Requirements:
@@ -62,20 +61,11 @@ def check_credentials() -> bool:
     return True
 
 
-def format_table_row(user_id: str, email: str, channel: str, scenario: str, hours: float) -> str:
-    """Format a table row with fixed column widths."""
-    # Truncate long values
-    user_id_short = user_id[:20] if len(user_id) > 20 else user_id
-    email_short = email[:30] if len(email) > 30 else email
-    
-    return f"│ {user_id_short:<20} │ {email_short:<30} │ {channel:<8} │ {scenario:<20} │ {hours:>6.1f}h │"
-
-
 def main() -> None:
-    """Run test to display channels and scenarios for all users."""
-    logger.info("=" * 110)
-    logger.info("Testing Notification Channels and Scenarios")
-    logger.info("=" * 110)
+    """Run test to display user categories for all users."""
+    logger.info("=" * 100)
+    logger.info("Testing User Categories for Notification System")
+    logger.info("=" * 100)
     
     # Check credentials
     if not check_credentials():
@@ -89,9 +79,7 @@ def main() -> None:
         from main import get_firestore_client
         from data.notification_data import get_users_needing_notifications
         from orchestrators.notification_logic import (
-            determine_channel,
-            determine_scenario,
-            get_unread_count,
+            determine_user_category,
         )
         
         # Get Firestore client
@@ -106,16 +94,15 @@ def main() -> None:
         logger.info("")
         
         # Display results in table format
-        print("=" * 110)
-        print("NOTIFICATION CHANNELS AND SCENARIOS")
-        print("=" * 110)
-        print("┌──────────────────────┬────────────────────────────────┬──────────┬──────────────────────┬─────────┐")
-        print("│ User ID              │ Email                          │ Channel  │ Scenario             │ Hours   │")
-        print("├──────────────────────┼────────────────────────────────┼──────────┼──────────────────────┼─────────┤")
+        print("=" * 100)
+        print("USER CATEGORIES")
+        print("=" * 100)
+        print("┌──────────────────────┬────────────────────────────────┬─────────────────────────┬─────────┐")
+        print("│ User ID              │ Email                          │ Category                │ Hours   │")
+        print("├──────────────────────┼────────────────────────────────┼─────────────────────────┼─────────┤")
         
         # Statistics
-        channel_stats: dict[str, int] = {'PUSH': 0, 'EMAIL': 0, 'NONE': 0}
-        scenario_stats: dict[str, int] = {}
+        category_stats: dict[str, int] = {}
         
         for user in users:
             # Build user_data dict for notification_logic functions
@@ -127,45 +114,34 @@ def main() -> None:
                 'email_unsubscribed': user.email_unsubscribed,
             }
             
-            # Get unread count for channel determination
-            unread_count = get_unread_count(db, user.user_id)
-            
-            # Determine channel and scenario
-            channel = determine_channel(user_data, unread_count)
-            scenario = determine_scenario(db, user.user_id, user_data, channel)
+            # Determine user category (combines channel + scenario logic)
+            category = determine_user_category(db, user.user_id, user_data)
             
             # Update statistics
-            channel_stats[channel] = channel_stats.get(channel, 0) + 1
-            scenario_stats[scenario] = scenario_stats.get(scenario, 0) + 1
+            category_key = category if category else 'NO_CHANNEL'
+            category_stats[category_key] = category_stats.get(category_key, 0) + 1
             
             # Display row
-            print(format_table_row(
-                user.user_id,
-                user.email,
-                channel,
-                scenario,
-                user.hours_since_last_communication
-            ))
+            category_display = category if category else 'NO_CHANNEL'
+            email_display = user.email[:30] if user.email else ''
+            user_id_display = user.user_id[:20]
+            
+            print(f"│ {user_id_display:<20} │ {email_display:<30} │ {category_display:<23} │ {user.hours_since_last_communication:>7.1f} │")
         
-        print("└──────────────────────┴────────────────────────────────┴──────────┴──────────────────────┴─────────┘")
+        print("└──────────────────────┴────────────────────────────────┴─────────────────────────┴─────────┘")
         print("")
         
         # Display statistics
-        print("=" * 110)
+        print("=" * 100)
         print("STATISTICS")
-        print("=" * 110)
+        print("=" * 100)
         print(f"Total users: {len(users)}")
         print("")
-        print("Channels:")
-        for channel, count in sorted(channel_stats.items()):
+        print("Categories:")
+        for category, count in sorted(category_stats.items()):
             percentage = (count / len(users) * 100) if len(users) > 0 else 0
-            print(f"  {channel:<8} : {count:>3} users ({percentage:>5.1f}%)")
-        print("")
-        print("Scenarios:")
-        for scenario, count in sorted(scenario_stats.items()):
-            percentage = (count / len(users) * 100) if len(users) > 0 else 0
-            print(f"  {scenario:<20} : {count:>3} users ({percentage:>5.1f}%)")
-        print("=" * 110)
+            print(f"  {category:<25} : {count:>3} users ({percentage:>5.1f}%)")
+        print("=" * 100)
         
     except Exception as e:
         logger.error("=" * 110)
