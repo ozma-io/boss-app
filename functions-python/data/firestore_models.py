@@ -81,6 +81,21 @@ class ChatThread(BaseModel):
 
 
 # ============================================================================
+# Notification State Models
+# ============================================================================
+
+class NotificationState(BaseModel):
+    """
+    Notification state tracking for a user.
+    
+    Stored in user document under notification_state field.
+    Tracks notification history and timing.
+    """
+    notification_count: int = 0
+    last_notification_at: str | None = None
+
+
+# ============================================================================
 # User Context Models (minimal fields for AI context)
 # ============================================================================
 

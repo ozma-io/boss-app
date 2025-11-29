@@ -12,6 +12,7 @@ from typing import Any, Literal
 
 import sentry_sdk  # type: ignore
 
+from data.firestore_models import ChatThread, NotificationState
 from utils.logger import error, warn
 
 # Type aliases for clarity
@@ -89,10 +90,16 @@ def should_send_notification(user_data: dict[str, Any], category: UserCategory) 
     """
     now = datetime.now(timezone.utc)
     
-    # Get notification state
-    notification_state = user_data.get('notification_state', {})
-    notification_count = notification_state.get('notification_count', 0)
-    last_notification_at = notification_state.get('last_notification_at')
+    # Get notification state with type validation
+    notification_state_dict = user_data.get('notification_state', {})
+    try:
+        notification_state = NotificationState(**notification_state_dict)
+    except Exception:
+        # Fallback to defaults if data is invalid
+        notification_state = NotificationState()
+    
+    notification_count = notification_state.notification_count
+    last_notification_at = notification_state.last_notification_at
     
     # Get category-specific intervals
     intervals = CATEGORY_INTERVALS[category]
@@ -231,11 +238,19 @@ def get_unread_count(db: Any, user_id: str) -> int:
         if not thread_doc.exists:  # type: ignore
             return 0
         
-        thread_data = thread_doc.to_dict()  # type: ignore
-        if not thread_data:
+        thread_data_dict = thread_doc.to_dict()  # type: ignore
+        if not thread_data_dict:
             return 0
         
-        return thread_data.get('unreadCount', 0)
+        try:
+            thread_data = ChatThread(**thread_data_dict)
+            return thread_data.unreadCount
+        except Exception as validation_err:
+            warn("Failed to parse thread data", {
+                "user_id": user_id,
+                "error": str(validation_err)
+            })
+            return thread_data_dict.get('unreadCount', 0)
         
     except Exception as err:
         warn("Failed to fetch unread count", {

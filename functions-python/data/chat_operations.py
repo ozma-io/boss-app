@@ -11,6 +11,7 @@ from typing import cast
 import sentry_sdk  # type: ignore
 from firebase_admin import firestore  # type: ignore
 
+from data.firestore_models import ChatMessage, ChatThread, ContentItem
 from utils.logger import error, info, warn
 
 
@@ -172,36 +173,34 @@ def _add_message_to_thread(
     thread_doc = thread_ref.get()  # type: ignore
     
     if not thread_doc.exists:  # type: ignore
-        # Create new thread
-        thread_ref.set({  # type: ignore
-            'createdAt': timestamp,
-            'updatedAt': timestamp,
-            'messageCount': 0,
-            'assistantIsTyping': False,
-            'unreadCount': 0,
-            'lastReadAt': None,
-            'lastMessageAt': None,
-            'lastMessageRole': None,
-        })
+        # Create new thread with validated structure
+        new_thread = ChatThread(
+            createdAt=timestamp,
+            updatedAt=timestamp,
+            messageCount=0,
+            assistantIsTyping=False,
+            unreadCount=0,
+            lastReadAt=None,
+            lastMessageAt=None,
+            lastMessageRole=None,
+        )
+        thread_ref.set(new_thread.model_dump(exclude_none=False))  # type: ignore
         info("Created new chat thread", {"user_id": user_id, "thread_id": thread_id})
     
     # Add message to thread
     messages_ref = thread_ref.collection('messages')  # type: ignore
     
-    # Message document (OpenAI-compatible format)
-    message_data = {
-        'role': 'assistant',
-        'content': [
-            {
-                'type': 'text',
-                'text': message_text,
-            }
+    # Create message with validated structure (OpenAI-compatible format)
+    new_message = ChatMessage(
+        role='assistant',
+        content=[
+            ContentItem(type='text', text=message_text)
         ],
-        'timestamp': timestamp,
-    }
+        timestamp=timestamp,
+    )
     
     # Add message (auto-generated ID)
-    update_time, message_ref = messages_ref.add(message_data)  # type: ignore
+    update_time, message_ref = messages_ref.add(new_message.model_dump(exclude={'id', 'thread_id'}))  # type: ignore
     message_id = cast(str, message_ref.id)
     
     # Update thread metadata

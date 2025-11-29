@@ -30,6 +30,7 @@ from data.batch_models import (
     GeneratedChatMessage,
     UserChatTask,
 )
+from data.firestore_models import ChatMessage, ContentItem
 from data.notification_content import (
     generate_first_push_notification,  # type: ignore
     generate_ongoing_push_notification,  # type: ignore
@@ -148,18 +149,16 @@ def _generate_single_chat_message(
                 error_message=error_msg,
             )
         
-        # Prepare message data structure (OpenAI-compatible format)
+        # Prepare message with validated structure (OpenAI-compatible format)
         # Note: thread_id will be determined during write phase
-        message_data = {
-            "role": "assistant",
-            "content": [
-                {
-                    "type": "text",
-                    "text": chat_content.message,
-                }
+        message = ChatMessage(
+            role="assistant",
+            content=[
+                ContentItem(type="text", text=chat_content.message)
             ],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
+            timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+        message_data = message.model_dump(exclude={'id', 'thread_id'})
         
         info(
             "Chat message generated successfully",
