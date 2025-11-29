@@ -12,7 +12,7 @@ import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { groupTimelineEntries } from '@/utils/timelineHelpers';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
