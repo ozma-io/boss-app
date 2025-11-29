@@ -14,7 +14,7 @@ These models are intentionally minimal - only fields that we actually use
 in Python functions. Full schemas are in TypeScript.
 """
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -119,7 +119,8 @@ class UserBasic(BaseModel):
     fcmToken: str | None = None
     
     # Custom fields metadata (aliased to avoid protected member issues)
-    fields_meta: dict[str, dict[str, str]] | None = Field(default=None, alias="_fieldsMeta")
+    # Matches TypeScript schema: label, type, category, source, createdAt, displayOrder, options
+    fields_meta: dict[str, dict[str, Any]] | None = Field(default=None, alias="_fieldsMeta")
 
 
 class BossBasic(BaseModel):
@@ -141,7 +142,8 @@ class BossBasic(BaseModel):
     updatedAt: str
     
     # Custom fields metadata (aliased to avoid protected member issues)
-    fields_meta: dict[str, dict[str, str]] | None = Field(default=None, alias="_fieldsMeta")
+    # Matches TypeScript schema: label, type, category, source, createdAt, displayOrder, options
+    fields_meta: dict[str, dict[str, Any]] | None = Field(default=None, alias="_fieldsMeta")
     
     # Added by fetch operations (not in Firestore)
     id: str | None = None
