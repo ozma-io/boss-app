@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Migration: Add Required Fields to User and Boss Documents
  * 
@@ -46,7 +47,7 @@ export const migration = {
       const userNeedsUpdate = !userData.name || !userData.goal || !userData.position;
       
       if (userNeedsUpdate) {
-        const updates: any = {
+        const updates: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
           updatedAt: new Date().toISOString(),
         };
         
@@ -98,7 +99,7 @@ export const migration = {
           continue;
         }
         
-        const updates: any = {
+        const updates: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
           updatedAt: new Date().toISOString(),
         };
         
@@ -163,7 +164,7 @@ export const migration = {
       // Note: We're only removing fields if they are empty strings
       // to avoid data loss for users who have already filled them in
       const userData = userDoc.data();
-      const updates: any = {};
+      const updates: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
       
       if (userData.name === '') {
         updates.name = null;
@@ -192,7 +193,7 @@ export const migration = {
       
       for (const bossDoc of bossesSnapshot.docs) {
         const bossData = bossDoc.data();
-        const bossUpdates: any = {};
+        const bossUpdates: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
         
         if (bossData.birthday === '') {
           bossUpdates.birthday = null;

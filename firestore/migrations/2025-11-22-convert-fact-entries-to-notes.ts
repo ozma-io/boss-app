@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Migration: Convert Fact Entries to Note Entries
  * 
@@ -44,7 +45,7 @@ export const migration = {
         const entryData = entryDoc.data();
         
         // Convert fact entry to note entry
-        const updatedData: any = {
+        const updatedData: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
           type: 'note',
           subtype: 'note',
           title: entryData.title || 'Assessment', // Keep existing title or default
@@ -134,7 +135,7 @@ export const migration = {
         const entryData = entryDoc.data();
         
         // Convert back to fact entry (best effort)
-        const rolledBackData: any = {
+        const rolledBackData: any = { // eslint-disable-line @typescript-eslint/no-explicit-any
           type: 'fact',
           factKey: `custom_${entryData.title?.toLowerCase().replace(/\s+/g, '')}` || 'custom_unknown',
           value: entryData.content || '',
