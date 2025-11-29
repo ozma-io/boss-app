@@ -3,7 +3,7 @@ import { NotificationPermissionStatus } from '@/types';
 import { Platform, PermissionsAndroid } from 'react-native';
 
 // Only import on native platforms to avoid web initialization warnings
-let Notifications: any = null;
+let Notifications: typeof import('expo-notifications') | null = null;
 if (Platform.OS !== 'web') {
   Notifications = require('expo-notifications');
 }
@@ -100,20 +100,18 @@ export async function getNotificationPermissionStatus(): Promise<NotificationPer
 }
 
 // Import Firebase Messaging modular API (native only)
-let getMessagingFn: any = null;
-let requestPermissionFn: any = null;
-let getTokenFn: any = null;
-let onTokenRefreshFn: any = null;
-let AuthorizationStatus: any = null;
+type MessagingModular = typeof import('@react-native-firebase/messaging/lib/modular');
+
+let getMessagingFn: MessagingModular['getMessaging'] | null = null;
+let getTokenFn: MessagingModular['getToken'] | null = null;
+let onTokenRefreshFn: MessagingModular['onTokenRefresh'] | null = null;
 
 if (Platform.OS !== 'web') {
   // iOS/Android: use React Native Firebase modular API
-  const messagingModule = require('@react-native-firebase/messaging/lib/modular');
+  const messagingModule = require('@react-native-firebase/messaging/lib/modular') as MessagingModular;
   getMessagingFn = messagingModule.getMessaging;
-  requestPermissionFn = messagingModule.requestPermission;
   getTokenFn = messagingModule.getToken;
   onTokenRefreshFn = messagingModule.onTokenRefresh;
-  AuthorizationStatus = messagingModule.AuthorizationStatus;
 }
 
 /**
@@ -121,7 +119,7 @@ if (Platform.OS !== 'web') {
  * Should be called ONLY after notification permission is already granted
  */
 export async function registerFCMToken(userId: string): Promise<void> {
-  if (Platform.OS === 'web' || !getMessagingFn) {
+  if (Platform.OS === 'web' || !getMessagingFn || !getTokenFn) {
     logger.debug('FCM token registration not available on web', { feature: 'NotificationService' });
     return;
   }
@@ -173,7 +171,7 @@ export async function registerFCMToken(userId: string): Promise<void> {
  * Call this once when app starts to handle token updates
  */
 export function setupFCMTokenRefreshListener(userId: string): (() => void) | null {
-  if (Platform.OS === 'web' || !getMessagingFn) {
+  if (Platform.OS === 'web' || !getMessagingFn || !onTokenRefreshFn) {
     return null;
   }
 
