@@ -314,7 +314,7 @@ def determine_user_category(
     # Priority 2: Check INACTIVE (overrides everything if conditions met)
     # INACTIVE_USER can ONLY be EMAIL per business requirements
     unread_count = get_unread_count(db, user_id)
-    if unread_count > 0 and is_inactive(user_data, days=6):
+    if unread_count > 0 and is_inactive(user_data, days=10):
         if has_email:
             return 'INACTIVE_USER_EMAIL'
         else:

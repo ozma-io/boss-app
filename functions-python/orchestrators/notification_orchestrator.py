@@ -61,7 +61,7 @@ Each user belongs to exactly ONE category:
    - Interval schedule: 1h, 6h, 24h, 48h, 7d (standard cadence)
 
 6. INACTIVE_USER_EMAIL
-   - Has unread messages AND inactive >6 days
+   - Has unread messages AND inactive >10 days
    - EMAIL ONLY per business requirements (no push version)
    - Content: career growth advice + gentle reminder about unread messages
    - CTA: "You have unread messages in app"
