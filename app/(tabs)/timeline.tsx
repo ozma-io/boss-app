@@ -12,7 +12,7 @@ import { TimelineEntry } from '@/types';
 import { showAlert } from '@/utils/alert';
 import { groupTimelineEntries } from '@/utils/timelineHelpers';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,15 +34,6 @@ export default function TimelineScreen(): React.JSX.Element {
       trackAmplitudeEvent('timeline_screen_viewed');
     }, [])
   );
-
-  useEffect(() => {
-    if (!loading && entries.length > 0) {
-      trackAmplitudeEvent('timeline_data_loaded', {
-        entriesCount: entries.length,
-        bossId: boss?.id,
-      });
-    }
-  }, [loading, entries.length, boss?.id]);
 
   const timelineGroups = groupTimelineEntries(entries);
 

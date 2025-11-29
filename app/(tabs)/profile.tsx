@@ -79,15 +79,6 @@ export default function ProfileScreen(): React.JSX.Element {
     }, [])
   );
 
-  useEffect(() => {
-    if (profile) {
-      trackAmplitudeEvent('profile_data_loaded', {
-        hasGoal: !!profile.goal,
-        hasPosition: !!profile.position,
-      });
-    }
-  }, [profile]);
-
   const _handleSignOut = async (): Promise<void> => {
     trackAmplitudeEvent('auth_signout_clicked', {
       email: user?.email || '[no_email]',

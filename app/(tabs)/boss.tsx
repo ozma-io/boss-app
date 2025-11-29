@@ -68,15 +68,6 @@ export default function BossScreen(): React.JSX.Element {
     }, [])
   );
 
-  useEffect(() => {
-    if (boss) {
-      trackAmplitudeEvent('boss_data_loaded', {
-        bossId: boss.id,
-        bossName: boss.name,
-      });
-    }
-  }, [boss]);
-
   const handleEditBirthday = (): void => {
     setShowStartedAtPicker(false);
     if (boss?.birthday) {
