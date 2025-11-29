@@ -22,7 +22,7 @@ export default function TimelineScreen() {
   const topInset = insets.top;
 
   const { user } = useAuth();
-  const { boss, loading: bossLoading } = useBoss();
+  const { boss } = useBoss();
   const { entries, loading: entriesLoading, error } = useTimelineEntries();
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [entryToEdit, setEntryToEdit] = useState<TimelineEntry | undefined>(undefined);
