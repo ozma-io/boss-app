@@ -406,6 +406,127 @@ When updating Facebook App ID, Client Token, or Pixel ID:
 
 ---
 
+## 📊 Facebook Events Manager Setup
+
+Configure Events Manager for proper iOS/Android attribution tracking.
+
+### Prerequisites
+
+- Facebook App created with App ID and Client Token
+- iOS/Android platforms added to Facebook App Settings
+
+### Step 1: Add Mobile Platforms
+
+Go to [Facebook App Settings - Basic](https://developers.facebook.com/apps/853405190716887/settings/basic/)
+
+#### iOS Platform
+
+1. Click **"Add Platform"** → Select **"iOS"**
+2. Configure:
+   - **Bundle ID**: `com.ozmaio.bossup`
+   - **iPhone Store ID**: Your App Store ID (after publication)
+   - **iPad Store ID**: (optional)
+   - **Shared Secret**: Get from App Store Connect → App Information → App-Specific Shared Secret
+   - **SKAdNetwork**: ✅ Enable (critical for iOS 14.5+ attribution)
+3. Enable **"Log in-app events automatically"**
+4. Click **"Save Changes"**
+
+#### Android Platform
+
+1. Click **"Add Platform"** → Select **"Android"** or use **"Quick Start"**
+2. Configure:
+   - **Package Name**: `com.ozmaio.bossup`
+   - **Class Name**: `com.ozmaio.bossup.MainActivity` (optional)
+   - **Key Hashes**: SHA-1 fingerprints for Google Sign-In (hidden after save - this is normal)
+3. Enable **"Log In-App Purchases Automatically"**
+4. Enable **"Log In-App Subscriptions Automatically"**
+5. Click **"Save Changes"**
+
+**Note:** Key Hashes are hidden after saving for security - this is expected behavior.
+
+---
+
+### Step 2: Configure SKAdNetwork Events
+
+Go to [Events Manager - Settings](https://business.facebook.com/events_manager2/list/dataset/1170898585142562/settings?business_id=2178506568838763)
+
+1. Navigate to **"Settings"** tab → **"Apple's SKAdNetwork"** section
+2. Click **"Configure events"**
+3. Select **"Use Facebook SDK to manage SKAdNetwork"**
+4. Click **"Next"**
+
+#### Add Conversion Values
+
+Configure event priorities for iOS 14.5+ attribution:
+
+| Priority | Event Name | Value Optimization | Purpose |
+|----------|-----------|-------------------|---------|
+| **High** | `Subscribe` | Default | Subscription purchases (most important) |
+| **Low** | `Activate app` | Default | App opens (baseline activity) |
+
+**Future events to add** (when they appear after first users):
+- **`fb_mobile_purchase`** (priority 63) - Direct revenue events
+- **`Complete Registration`** (priority 50) - User registrations
+
+**How to add more events:**
+1. Click **"Edit events"** in Events Manager Settings
+2. Select event from dropdown (events appear after app starts sending them)
+3. Set priority (High/Medium/Low)
+4. Save
+
+**Note:** SKAdNetwork reports only the highest-priority event in the 24h conversion window.
+
+---
+
+### Step 3: Optional - Configure Advanced Measurement
+
+#### Aggregated Event Measurement (AEM)
+
+In Events Manager Settings → **"Meta's attribution for iOS 14+"**:
+1. Click **"Continue"**
+2. Verify deep link (should show "Completed")
+3. Provides near-real-time reporting for iOS 14+ campaigns
+
+#### Marketing Messages Events
+
+Skip this - only needed for e-commerce apps with retargeting campaigns.
+
+---
+
+### Step 4: Verify Configuration
+
+**Check these pages:**
+
+1. **Facebook App Dashboard**: https://developers.facebook.com/apps/853405190716887/settings/basic/
+   - ✅ iOS platform with Bundle ID and SKAdNetwork enabled
+   - ✅ Android platform with Package Name
+
+2. **Events Manager**: https://business.facebook.com/events_manager
+   - ✅ SKAdNetwork events configured (Subscribe + Activate app)
+   - ✅ No critical errors in Diagnostics tab
+
+3. **Test Events** (after launching ads):
+   - Install app from Facebook ad
+   - Check **Test Events** tab for real-time data
+   - Verify `AppInstall`, `Subscribe`, `Activate app` events appear
+
+---
+
+### Configuration Status
+
+**Completed (2025-11-29):**
+- ✅ iOS platform configured (Bundle ID + App Store ID + Shared Secret + SKAdNetwork)
+- ✅ Android platform configured (Package Name + Class Name + Key Hashes)
+- ✅ SKAdNetwork events: Subscribe (High) + Activate app (Low)
+- ✅ Deep link verification completed for AEM
+- ✅ Auto event logging enabled for both platforms
+
+**Future updates:**
+- Add `fb_mobile_purchase` event (after first subscriptions)
+- Add `Complete Registration` event (after first user registrations)
+
+---
+
 ## 🚀 Deployment Checklist
 
 Before deploying to production:
@@ -414,11 +535,12 @@ Before deploying to production:
 2. ✅ Set Access Token secret: `firebase functions:secrets:set FACEBOOK_ACCESS_TOKEN`
 3. ✅ Configure Universal Links on `discovery.ozma.io` (iOS)
 4. ✅ Configure App Links on `discovery.ozma.io` (Android)
-5. ✅ Rebuild apps: `npx expo prebuild`
-6. ✅ Deploy Cloud Functions: `firebase deploy --only functions`
-7. ✅ Test with simulated deep links
-8. ✅ Monitor events in Facebook Events Manager
-9. ✅ Set up conversion optimization in Meta Ads Manager
+5. ✅ Configure Events Manager (iOS/Android platforms + SKAdNetwork events)
+6. ✅ Rebuild apps: `npx expo prebuild`
+7. ✅ Deploy Cloud Functions: `firebase deploy --only functions`
+8. ✅ Test with simulated deep links
+9. ✅ Monitor events in Facebook Events Manager
+10. ✅ Set up conversion optimization in Meta Ads Manager
 
 ---
 

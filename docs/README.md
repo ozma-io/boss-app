@@ -129,14 +129,6 @@ Solutions for common CocoaPods errors:
 
 ---
 
-## 👤 User Flows
-
-End-to-end user experience flows:
-
-- **[Facebook Attribution User Flow](./user-flows/facebook-attribution-user-flow.md)** - Complete flow for users installing from Facebook ads (iOS/Android differences, tracking permissions, attribution data lifecycle)
-
----
-
 ## 📋 Templates
 
 Documentation templates and checklists:
