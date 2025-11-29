@@ -17,14 +17,17 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, FlatList, Platform, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type * as ExpoNotifications from 'expo-notifications';
+import type { TextInputContentSizeChangeEvent } from 'react-native';
+import type React from 'react';
 
 // Only import on native platforms
-let Notifications: any = null;
+let Notifications: typeof ExpoNotifications | null = null;
 if (Platform.OS !== 'web') {
   Notifications = require('expo-notifications');
 }
 
-export default function ChatScreen() {
+export default function ChatScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { sessionId } = useSession();
@@ -233,7 +236,7 @@ export default function ChatScreen() {
     }
   };
 
-  const handleContentSizeChange = (event: any): void => {
+  const handleContentSizeChange = (event: TextInputContentSizeChangeEvent): void => {
     const contentHeight = event.nativeEvent.contentSize.height;
     const minHeight = 40;
     const maxHeight = 220;
@@ -307,7 +310,7 @@ export default function ChatScreen() {
     }
   };
 
-  const renderMessage = (message: ChatMessage, index: number) => {
+  const renderMessage = (message: ChatMessage, index: number): React.JSX.Element => {
     const isUser = message.role === 'user';
     const text = extractTextFromContent(message.content);
     
