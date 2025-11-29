@@ -3,7 +3,6 @@ import { AddTimelineEntryModal } from '@/components/AddTimelineEntryModal';
 import { FloatingChatButton } from '@/components/FloatingChatButton';
 import { SwipeableTimelineItem } from '@/components/SwipeableTimelineItem';
 import { useAuth } from '@/contexts/AuthContext';
-import { useBoss } from '@/hooks/useBoss';
 import { useTimelineEntries } from '@/hooks/useTimelineEntries';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { logger } from '@/services/logger.service';
@@ -22,7 +21,6 @@ export default function TimelineScreen(): React.JSX.Element {
   const topInset = insets.top;
 
   const { user } = useAuth();
-  const { boss } = useBoss();
   const { entries, loading: entriesLoading, error } = useTimelineEntries();
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [entryToEdit, setEntryToEdit] = useState<TimelineEntry | undefined>(undefined);
@@ -42,7 +40,6 @@ export default function TimelineScreen(): React.JSX.Element {
       entryId: entry.id,
       entryType: entry.type,
       subtype: entry.subtype,
-      bossId: boss?.id,
     });
     setEntryToEdit(entry);
     setIsAddModalVisible(true);
@@ -71,12 +68,10 @@ export default function TimelineScreen(): React.JSX.Element {
       trackAmplitudeEvent('timeline_entry_created', {
         entryType: 'note',
         subtype: 'note',
-        bossId: boss?.id,
       });
 
       logger.info('Timeline empty entry created', {
         feature: 'TimelineScreen',
-        bossId: boss?.id,
         entryId,
       });
 
@@ -84,12 +79,11 @@ export default function TimelineScreen(): React.JSX.Element {
     } catch (err) {
       logger.error('Failed to create empty timeline entry', {
         feature: 'TimelineScreen',
-        bossId: boss?.id,
         error: err instanceof Error ? err : new Error(String(err)),
       });
       throw err;
     }
-  }, [user, boss?.id]);
+  }, [user]);
 
   const handleUpdateEntry = async (entryId: string, updates: Partial<TimelineEntry>): Promise<void> => {
     if (!user) {
@@ -102,18 +96,15 @@ export default function TimelineScreen(): React.JSX.Element {
 
       trackAmplitudeEvent('timeline_entry_updated', {
         entryId,
-        bossId: boss?.id,
       });
 
       logger.info('Timeline entry updated', {
         feature: 'TimelineScreen',
-        bossId: boss?.id,
         entryId,
       });
     } catch (err) {
       logger.error('Failed to update timeline entry', {
         feature: 'TimelineScreen',
-        bossId: boss?.id,
         entryId,
         error: err instanceof Error ? err : new Error(String(err)),
       });
@@ -138,18 +129,15 @@ export default function TimelineScreen(): React.JSX.Element {
 
               trackAmplitudeEvent('timeline_entry_deleted', {
                 entryId,
-                bossId: boss?.id,
               });
 
               logger.info('Timeline entry deleted', {
                 feature: 'TimelineScreen',
-                bossId: boss?.id,
                 entryId,
               });
             } catch (err) {
               logger.error('Failed to delete timeline entry', {
                 feature: 'TimelineScreen',
-                bossId: boss?.id,
                 entryId,
                 error: err instanceof Error ? err : new Error(String(err)),
               });
