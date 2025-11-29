@@ -68,10 +68,11 @@ Each user belongs to exactly ONE category:
    - Interval schedule: 1h, 24h, 48h, 7d, 14d (slower cadence for inactive users)
    - Priority category: overrides NEW/ACTIVE if conditions met
 
-NO CHANNEL:
-- User has neither push nor email available
-- Logged to Sentry as warning
-- User skipped
+7. NO_CHANNEL_AVAILABLE
+   - User has neither push nor email available (unsubscribed + no push permissions)
+   - Valid scenario - user has right to opt out of all communications
+   - User is categorized but no action taken
+   - Counted separately in orchestration statistics
 
 CONTENT GENERATION:
 
@@ -216,8 +217,11 @@ def process_notification_orchestration(db: Any) -> dict[str, Any]:
     
     for user_id, user_data in all_users:
         # Determine user category (combines channel + scenario logic)
-        category = determine_user_category(db, user_id, user_data)
-        if category is None:
+        from orchestrators.notification_logic import UserCategory
+        category: UserCategory = determine_user_category(db, user_id, user_data)
+        
+        # Skip users with no available channels (valid scenario - user opted out)
+        if category == 'NO_CHANNEL_AVAILABLE':
             skipped_no_channel += 1
             continue
         

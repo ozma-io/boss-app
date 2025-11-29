@@ -320,7 +320,8 @@ def test_determine_user_category_inactive_email():
     }
     assert determine_user_category(mock_db_with_unread, 'test_user_id', user_inactive_push) == 'INACTIVE_USER_EMAIL'
     
-    # Inactive with unread but no email channel - should return None
+    # Inactive with unread but no email channel - should fall through to ACTIVE_USER_PUSH
+    # (INACTIVE category requires email per business rules, but user has push available)
     user_inactive_no_email = {
         'lastActivityAt': (now - timedelta(days=10)).isoformat(),
         'createdAt': (now - timedelta(days=60)).isoformat(),
@@ -328,11 +329,11 @@ def test_determine_user_category_inactive_email():
         'fcmToken': 'valid_token',
         'email_unsubscribed': True,
     }
-    assert determine_user_category(mock_db_with_unread, 'test_user_id', user_inactive_no_email) is None
+    assert determine_user_category(mock_db_with_unread, 'test_user_id', user_inactive_no_email) == 'ACTIVE_USER_PUSH'
 
 
 def test_determine_user_category_no_channel():
-    """Test no channel available returns None."""
+    """Test no channel available returns NO_CHANNEL_AVAILABLE."""
     mock_db = create_mock_db(unread_count=0)
     
     # No push and email unsubscribed
@@ -342,7 +343,7 @@ def test_determine_user_category_no_channel():
         'notificationPermissionStatus': 'denied',
         'email_unsubscribed': True,
     }
-    assert determine_user_category(mock_db, 'test_user_id', user_no_channel) is None
+    assert determine_user_category(mock_db, 'test_user_id', user_no_channel) == 'NO_CHANNEL_AVAILABLE'
 
 
 if __name__ == '__main__':

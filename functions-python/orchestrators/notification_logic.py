@@ -10,10 +10,8 @@ Used by notification orchestrator to decide who gets what type of notification.
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
 
-import sentry_sdk  # type: ignore
-
 from data.firestore_models import ChatThread, NotificationState
-from utils.logger import error, warn
+from utils.logger import warn
 
 # Type aliases for clarity
 UserCategory = Literal[
@@ -22,7 +20,8 @@ UserCategory = Literal[
     'NEW_USER_EMAIL',
     'ACTIVE_USER_PUSH',
     'ACTIVE_USER_EMAIL',
-    'INACTIVE_USER_EMAIL'
+    'INACTIVE_USER_EMAIL',
+    'NO_CHANNEL_AVAILABLE'
 ]
 
 # Category-specific notification intervals
@@ -264,7 +263,7 @@ def determine_user_category(
     db: Any,
     user_id: str,
     user_data: dict[str, Any]
-) -> UserCategory | None:
+) -> UserCategory:
     """
     Determine user category based on state, activity, and available channels.
     
@@ -285,7 +284,7 @@ def determine_user_category(
         user_data: User document data from Firestore
         
     Returns:
-        UserCategory or None if no channel available
+        UserCategory (always returns a category, including NO_CHANNEL_AVAILABLE for users with no channels)
         
     Examples:
         >>> # User with push enabled, new account
@@ -295,6 +294,10 @@ def determine_user_category(
         >>> # User with email only, inactive with unread messages
         >>> determine_user_category(db, 'user2', {'email_unsubscribed': False, 'lastActivityAt': '2024-11-01T...'})
         'INACTIVE_USER_EMAIL'  # if has unread messages
+        
+        >>> # User with no available channels (unsubscribed + no push)
+        >>> determine_user_category(db, 'user3', {'email_unsubscribed': True, 'notificationPermissionStatus': 'denied'})
+        'NO_CHANNEL_AVAILABLE'
     """
     # Priority 1: Check channel availability
     has_push = (
@@ -303,28 +306,9 @@ def determine_user_category(
     )
     has_email = not user_data.get('email_unsubscribed', False)
     
-    # No channels available
+    # No channels available - this is a valid scenario (user unsubscribed + no push)
     if not has_push and not has_email:
-        user_email = user_data.get('email', 'unknown')
-        error(
-            "No notification channel available for user",
-            {
-                "email": user_email,
-                "has_push": has_push,
-                "has_email": has_email,
-            }
-        )
-        
-        with sentry_sdk.push_scope() as scope:  # type: ignore
-            scope.set_extra("email", user_email)  # type: ignore
-            scope.set_extra("has_push", has_push)  # type: ignore
-            scope.set_extra("has_email", has_email)  # type: ignore
-            sentry_sdk.capture_message(  # type: ignore
-                "User has no available notification channel",
-                level="warning"
-            )
-        
-        return None
+        return 'NO_CHANNEL_AVAILABLE'
     
     # Priority 2: Check INACTIVE (overrides everything if conditions met)
     # INACTIVE_USER can ONLY be EMAIL per business requirements
@@ -332,10 +316,9 @@ def determine_user_category(
     if unread_count > 0 and is_inactive(user_data, days=10):
         if has_email:
             return 'INACTIVE_USER_EMAIL'
-        else:
-            # Has unread messages but no email channel
-            # Skip this user (can't send INACTIVE notification via PUSH)
-            return None
+        # else: Has unread messages but no email channel
+        # Can't send INACTIVE notification via PUSH per business requirements
+        # Fall through to other categories (will become ACTIVE_USER_PUSH or NEW_USER_PUSH)
     
     # Get activity status for remaining categories
     last_activity = user_data.get('lastActivityAt')
@@ -365,5 +348,5 @@ def determine_user_category(
         return 'ACTIVE_USER_EMAIL'
     
     # This should never be reached given the channel check at the start
-    return None
+    return 'NO_CHANNEL_AVAILABLE'
 

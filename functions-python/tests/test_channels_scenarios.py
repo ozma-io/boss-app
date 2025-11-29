@@ -118,11 +118,10 @@ def main() -> None:
             category = determine_user_category(db, user.user_id, user_data)
             
             # Update statistics
-            category_key = category if category else 'NO_CHANNEL'
-            category_stats[category_key] = category_stats.get(category_key, 0) + 1
+            category_stats[category] = category_stats.get(category, 0) + 1
             
             # Display row
-            category_display = category if category else 'NO_CHANNEL'
+            category_display = category
             email_display = user.email[:30] if user.email else ''
             user_id_display = user.user_id[:20]
             
