@@ -17,7 +17,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function TimelineScreen() {
+export default function TimelineScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const topInset = insets.top;
 
