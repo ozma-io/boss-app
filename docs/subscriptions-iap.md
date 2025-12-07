@@ -4,6 +4,37 @@ Complete guide for Apple and Google in-app purchase integration.
 
 ---
 
+## ⚠️ Library Version Notice
+
+**Current Version:** `react-native-iap@14.4.12` (locked)
+
+**Technical Issue:** Versions 14.4.35+ have a breaking API incompatibility between `react-native-iap` and `openiap` library:
+
+- **Broken code (14.4.35+):** 
+  ```swift
+  let props = try OpenIapSerialization.receiptValidationProps(from: ["sku": params.sku])
+  // Error: 'OpenIapSerialization' has no member 'receiptValidationProps'
+  ```
+- **Root cause:** openiap 1.2.36+ removed the `receiptValidationProps` method, but react-native-iap code wasn't updated
+- **Working version (14.4.12):** Uses openiap 1.2.10 where the method still exists
+
+**Version History:**
+| react-native-iap | openiap | Status |
+|------------------|---------|--------|
+| 14.4.12 | 1.2.10 | ✅ Works |
+| 14.4.35-14.4.44 | 1.2.36 | ❌ Broken |
+| 14.4.46 | 1.2.39 | ❌ Broken |
+
+**When to update:**
+- Monitor [react-native-iap releases](https://github.com/hyochan/react-native-iap/releases)
+- Check if `receiptValidationProps` issue is fixed in newer versions
+- Test EAS build before releasing to production
+- Consider reporting issue to maintainers if not already filed
+
+**Note:** We don't actually use `validateReceipt` in our app (server-side verification only), but the code must compile for iOS build to succeed.
+
+---
+
 ## 📋 Overview
 
 BossUp uses native in-app purchases for subscriptions on mobile platforms:
