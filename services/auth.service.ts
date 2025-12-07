@@ -27,6 +27,102 @@ import { logger } from './logger.service';
 
 WebBrowser.maybeCompleteAuthSession();
 
+/**
+ * Extract detailed error information from Firebase errors for logging
+ * 
+ * Firebase Auth errors have the following structure:
+ * - code: string (e.g., 'auth/network-request-failed')
+ * - message: string
+ * - customData: {
+ *     appName: string (required)
+ *     email?: string
+ *     phoneNumber?: string
+ *     tenantId?: string
+ *     operationType?: string (for MultiFactorError)
+ *     serverResponse?: object (internal, contains detailed server error)
+ *   }
+ * 
+ * @see https://github.com/firebase/firebase-js-sdk/blob/main/common/api-review/auth.api.md
+ */
+function getFirebaseErrorDetails(error: unknown): Record<string, unknown> {
+  const details: Record<string, unknown> = {
+    error_message: error instanceof Error ? error.message : String(error),
+    error_type: error instanceof Error ? error.constructor.name : typeof error,
+  };
+
+  // Extract Firebase-specific error details
+  if (error && typeof error === 'object') {
+    const firebaseError = error as Record<string, unknown>;
+    
+    // Firebase error code (documented field)
+    if ('code' in firebaseError) {
+      details.firebase_code = firebaseError.code;
+    }
+    
+    // Extract customData fields (documented structure)
+    if ('customData' in firebaseError && firebaseError.customData) {
+      const customData = firebaseError.customData as Record<string, unknown>;
+      
+      // Documented AuthError fields
+      if ('appName' in customData) {
+        details.app_name = customData.appName;
+      }
+      if ('email' in customData && customData.email) {
+        details.user_email = customData.email;
+      }
+      if ('phoneNumber' in customData && customData.phoneNumber) {
+        details.phone_number = customData.phoneNumber;
+      }
+      if ('tenantId' in customData && customData.tenantId) {
+        details.tenant_id = customData.tenantId;
+      }
+      if ('operationType' in customData && customData.operationType) {
+        details.operation_type = customData.operationType;
+      }
+      
+      // Internal server response (undocumented but useful for debugging)
+      if ('serverResponse' in customData && customData.serverResponse) {
+        const serverResponse = customData.serverResponse as Record<string, unknown>;
+        
+        // Extract key fields from server response
+        if ('error' in serverResponse && serverResponse.error) {
+          const serverError = serverResponse.error as Record<string, unknown>;
+          if ('code' in serverError) {
+            details.server_error_code = serverError.code;
+          }
+          if ('message' in serverError) {
+            details.server_error_message = serverError.message;
+          }
+        }
+        
+        // Include full server response for debugging (limit size)
+        // Use try-catch to handle non-serializable values (circular refs, BigInt, etc.)
+        try {
+          const serverResponseStr = JSON.stringify(serverResponse);
+          if (serverResponseStr.length <= 500) {
+            details.server_response = serverResponse;
+          } else {
+            details.server_response_preview = serverResponseStr.substring(0, 500);
+            details.server_response_truncated = true;
+          }
+        } catch {
+          // Failed to serialize - likely circular reference or non-serializable value
+          details.server_response_error = 'Failed to serialize server response';
+          details.server_response_type = typeof serverResponse;
+          details.server_response_keys = Object.keys(serverResponse).join(', ');
+        }
+      }
+    }
+    
+    // Include stack trace for debugging (first 500 chars)
+    if ('stack' in firebaseError && typeof firebaseError.stack === 'string') {
+      details.stack_preview = String(firebaseError.stack).substring(0, 500);
+    }
+  }
+
+  return details;
+}
+
 function getExpoDevServerUrl(): string | null {
   // Try to detect dev server URL from Expo config
   const manifest2HostUri = Constants.expoConfig?.hostUri;
@@ -91,7 +187,15 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     logger.info('Sign-in link sent successfully', { feature: 'AuthService', email });
   } catch (error) {
-    logger.error('Failed to send sign-in link', { feature: 'AuthService', email, error });
+    const errorDetails = getFirebaseErrorDetails(error);
+    
+    logger.error('Failed to send sign-in link', {
+      feature: 'AuthService',
+      email,
+      platform: Platform.OS,
+      error,
+      ...errorDetails,
+    });
     throw error;
   }
 }
@@ -159,6 +263,17 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
     
     return user;
   } catch (error) {
+    const errorDetails = getFirebaseErrorDetails(error);
+    
+    logger.error('Email sign-in failed', {
+      feature: 'AuthService',
+      method: 'email_link',
+      email,
+      platform: Platform.OS,
+      error,
+      ...errorDetails,
+    });
+    
     trackAmplitudeEvent('auth_signin_failed', {
       method: 'email',
       error_type: error instanceof Error ? error.message : 'unknown',
@@ -168,58 +283,93 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
 }
 
 export async function signInWithTestEmail(email: string): Promise<User> {
-  const functions = getFunctions();
-  const generateToken = httpsCallable<{ email: string }, { token: string }>(
-    functions,
-    'generateTestUserToken'
-  );
+  try {
+    const functions = getFunctions();
+    const generateToken = httpsCallable<{ email: string }, { token: string }>(
+      functions,
+      'generateTestUserToken'
+    );
 
-  const result = await generateToken({ email });
-  const customToken = result.data.token;
+    const result = await generateToken({ email });
+    const customToken = result.data.token;
 
-  const userCredential = await signInWithCustomToken(auth, customToken);
-  const user = mapFirebaseUserToUser(userCredential.user);
-  
-  trackAmplitudeEvent('auth_signin_completed', {
-    method: 'email',
-    is_test: true,
-  });
-  
-  // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
-  const needsTracking = await needsTrackingAfterAuth();
-  const isFirst = await isFirstLaunch();
-  
-  if (needsTracking && isFirst) {
-    logger.info('MAIN FLOW: Test user logged in, triggering post-login tracking', {
-      feature: 'AuthService',
-      email,
-      platform: Platform.OS
+    const userCredential = await signInWithCustomToken(auth, customToken);
+    const user = mapFirebaseUserToUser(userCredential.user);
+    
+    trackAmplitudeEvent('auth_signin_completed', {
+      method: 'email',
+      is_test: true,
     });
     
-    if (Platform.OS === 'ios') {
-      router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
-    } else if (Platform.OS === 'android') {
-      try {
-        // Send registration event for Custom Audiences and Lookalike targeting
-        await sendRegistrationEventDual(email);
-        
-        await clearTrackingAfterAuth();
-        await markAppAsLaunched();
-        logger.info('MAIN FLOW: Test user Android registration event sent, tracking completed', { feature: 'AuthService' });
-      } catch (fbError) {
-        logger.error('MAIN FLOW: Failed to send test user registration event', { feature: 'AuthService', error: fbError });
-        await clearTrackingAfterAuth();
+    // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
+    const needsTracking = await needsTrackingAfterAuth();
+    const isFirst = await isFirstLaunch();
+    
+    if (needsTracking && isFirst) {
+      logger.info('MAIN FLOW: Test user logged in, triggering post-login tracking', {
+        feature: 'AuthService',
+        email,
+        platform: Platform.OS
+      });
+      
+      if (Platform.OS === 'ios') {
+        router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
+      } else if (Platform.OS === 'android') {
+        try {
+          // Send registration event for Custom Audiences and Lookalike targeting
+          await sendRegistrationEventDual(email);
+          
+          await clearTrackingAfterAuth();
+          await markAppAsLaunched();
+          logger.info('MAIN FLOW: Test user Android registration event sent, tracking completed', { feature: 'AuthService' });
+        } catch (fbError) {
+          logger.error('MAIN FLOW: Failed to send test user registration event', { feature: 'AuthService', error: fbError });
+          await clearTrackingAfterAuth();
+        }
       }
     }
+    
+    return user;
+  } catch (error) {
+    const errorDetails = getFirebaseErrorDetails(error);
+    
+    logger.error('Test email sign-in failed', {
+      feature: 'AuthService',
+      method: 'test_email',
+      email,
+      platform: Platform.OS,
+      error,
+      ...errorDetails,
+    });
+    
+    trackAmplitudeEvent('auth_signin_failed', {
+      method: 'email',
+      is_test: true,
+      error_type: error instanceof Error ? error.message : 'unknown',
+    });
+    
+    throw error;
   }
-  
-  return user;
 }
 
 export async function signInWithGoogleCredential(idToken: string): Promise<User> {
-  const credential = GoogleAuthProvider.credential(idToken);
-  const userCredential = await signInWithCredential(auth, credential);
-  return mapFirebaseUserToUser(userCredential.user);
+  try {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const userCredential = await signInWithCredential(auth, credential);
+    return mapFirebaseUserToUser(userCredential.user);
+  } catch (error) {
+    const errorDetails = getFirebaseErrorDetails(error);
+    
+    logger.error('Google credential sign-in failed', {
+      feature: 'AuthService',
+      method: 'google_credential',
+      platform: Platform.OS,
+      error,
+      ...errorDetails,
+    });
+    
+    throw error;
+  }
 }
 
 /**
@@ -297,6 +447,16 @@ export async function signInWithGoogle(): Promise<User> {
       
       return user;
     } catch (error) {
+      const errorDetails = getFirebaseErrorDetails(error);
+      
+      logger.error('Google sign-in failed (web)', {
+        feature: 'AuthService',
+        method: 'google_web',
+        platform: 'web',
+        error,
+        ...errorDetails,
+      });
+      
       trackAmplitudeEvent('auth_signin_failed', {
         method: 'google',
         error_type: error instanceof Error ? error.message : 'unknown',
@@ -384,7 +544,15 @@ export async function signInWithGoogle(): Promise<User> {
       throw error;
     }
     
-    logger.error('Google Sign-In failed', { feature: 'AuthService', error });
+    const errorDetails = getFirebaseErrorDetails(error);
+    
+    logger.error('Google sign-in failed (native)', {
+      feature: 'AuthService',
+      method: 'google_native',
+      platform: Platform.OS,
+      error,
+      ...errorDetails,
+    });
     
     trackAmplitudeEvent('auth_signin_failed', {
       method: 'google',
@@ -454,6 +622,16 @@ export async function signInWithApple(): Promise<User> {
     
     return user;
   } catch (error) {
+    const errorDetails = getFirebaseErrorDetails(error);
+    
+    logger.error('Apple sign-in failed', {
+      feature: 'AuthService',
+      method: 'apple',
+      platform: Platform.OS,
+      error,
+      ...errorDetails,
+    });
+    
     trackAmplitudeEvent('auth_signin_failed', {
       method: 'apple',
       error_type: error instanceof Error ? error.message : 'unknown',

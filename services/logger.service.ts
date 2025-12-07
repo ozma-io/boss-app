@@ -221,19 +221,33 @@ class LoggerService {
   /**
    * Log an error message
    * 
-   * For errors with Error objects, include them in context:
+   * Best practice: Include Error objects in context:
    * logger.error('Failed to fetch', { error, feature: 'API' })
+   * 
+   * If no Error object is provided, a synthetic Error will be created
+   * from the message to ensure the error is tracked in Sentry.
    */
   error(message: string, context?: LogContext): void {
     const errorContext = this.enrichErrorContext(context?.error, context);
     this.log(LogLevel.ERROR, message, errorContext);
 
     // Send to Sentry with graceful fallback
-    if (this.isSentryAvailable && Sentry && context?.error) {
+    // Always send to Sentry when logger.error() is called - if no error object,
+    // create a synthetic Error from the message
+    if (this.isSentryAvailable && Sentry) {
       try {
-        const errorToCapture = context.error instanceof Error 
-          ? context.error 
-          : new Error(String(context.error));
+        let errorToCapture: Error;
+        
+        if (context?.error instanceof Error) {
+          errorToCapture = context.error;
+        } else if (context?.error) {
+          // Non-Error object (e.g., string, IAP error object)
+          errorToCapture = new Error(message);
+          errorToCapture.cause = context.error;
+        } else {
+          // No error object provided - create synthetic Error from message
+          errorToCapture = new Error(message);
+        }
         
         Sentry.captureException(errorToCapture, {
           level: 'error',
@@ -257,19 +271,33 @@ class LoggerService {
   /**
    * Log a fatal error (critical errors requiring immediate attention)
    * 
-   * For errors with Error objects, include them in context:
+   * Best practice: Include Error objects in context:
    * logger.fatal('Critical failure', { error, feature: 'Database' })
+   * 
+   * If no Error object is provided, a synthetic Error will be created
+   * from the message to ensure the error is tracked in Sentry.
    */
   fatal(message: string, context?: LogContext): void {
     const errorContext = this.enrichErrorContext(context?.error, context);
     this.log(LogLevel.FATAL, message, errorContext);
 
     // Send to Sentry with high priority and graceful fallback
-    if (this.isSentryAvailable && Sentry && context?.error) {
+    // Always send to Sentry when logger.fatal() is called - if no error object,
+    // create a synthetic Error from the message
+    if (this.isSentryAvailable && Sentry) {
       try {
-        const errorToCapture = context.error instanceof Error 
-          ? context.error 
-          : new Error(String(context.error));
+        let errorToCapture: Error;
+        
+        if (context?.error instanceof Error) {
+          errorToCapture = context.error;
+        } else if (context?.error) {
+          // Non-Error object (e.g., string, IAP error object)
+          errorToCapture = new Error(message);
+          errorToCapture.cause = context.error;
+        } else {
+          // No error object provided - create synthetic Error from message
+          errorToCapture = new Error(message);
+        }
         
         Sentry.captureException(errorToCapture, {
           level: 'fatal',
