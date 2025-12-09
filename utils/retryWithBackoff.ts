@@ -1,20 +1,5 @@
-import { RetryOptions } from '@/types';
 import { logger } from '@/services/logger.service';
-
-interface RetryResult<T> {
-  success: boolean;
-  data?: T;
-  error?: Error;
-  attempts: number;
-}
-
-function isFirebaseOfflineError(error: Error): boolean {
-  return (
-    error.message.includes('client is offline') ||
-    error.message.includes('Failed to get document') ||
-    error.name === 'FirebaseError'
-  );
-}
+import { isFirebaseOfflineError } from '@/utils/firebaseErrors';
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

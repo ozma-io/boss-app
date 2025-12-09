@@ -1,6 +1,7 @@
 import { db } from '@/constants/firebase.config';
 import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
 import { ChatMessage, ChatThread, ContentItem, NotificationPermissionStatus, NotificationPromptHistoryItem, Unsubscribe, UserNotificationData, UserProfile, UserProfileUpdate } from '@/types';
+import { isFirebaseOfflineError } from '@/utils/firebaseErrors';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import { addDoc, collection, doc, getDoc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
@@ -29,14 +30,6 @@ I can answer your questions anytime, and I'll sometimes reach out to you proacti
 I have access to all your data in the app, so I can provide personalized advice and support. Feel free to ask me anything!
 
 Let's build your career together! 🚀`;
-
-function isFirebaseOfflineError(error: Error): boolean {
-  return (
-    error.message.includes('client is offline') ||
-    error.message.includes('Failed to get document') ||
-    error.name === 'FirebaseError'
-  );
-}
 
 export async function getUserNotificationData(userId: string): Promise<UserNotificationData | null> {
   logger.time('getUserNotificationData');
@@ -334,38 +327,19 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
       timestamp: new Date().toISOString(),
     });
     
-    // Wait for auth token to be ready before accessing Firestore
-    // This prevents permission-denied errors due to race conditions
-    const { auth } = await import('@/constants/firebase.config');
-    const currentUser = auth.currentUser;
-    
-    if (!currentUser || currentUser.uid !== userId) {
-      const errorMessage = !currentUser 
-        ? 'No authenticated user found' 
-        : `Auth user ID mismatch: expected ${userId}, got ${currentUser.uid}`;
-      
-      logger.error('Auth state validation failed in ensureUserProfileExists', {
-        feature: 'UserService',
-        userId,
-        hasCurrentUser: !!currentUser,
-        currentUserId: currentUser?.uid,
-        errorMessage,
-      });
-      
-      throw new Error(errorMessage);
-    }
-    
-    // Force token refresh to ensure it's valid and not expired
-    const tokenStartTime = Date.now();
-    const token = await currentUser.getIdToken(true);
-    const tokenDuration = Date.now() - tokenStartTime;
-    
-    logger.debug('Auth token obtained successfully', {
-      feature: 'UserService',
-      userId,
-      tokenLength: token.length,
-      tokenDuration,
-    });
+    // CRITICAL: Ensure auth token is valid before first Firestore request after login
+    // 
+    // Race condition: onAuthStateChanged fires with user object, but Firebase Auth token
+    // may not be fully ready/valid for Firestore Security Rules yet. This causes
+    // permission-denied errors on the first getDoc() call.
+    // 
+    // Solution: Force token refresh (getIdToken(true)) before accessing Firestore.
+    // This is the first Firestore operation after login, so it's the most critical point.
+    // 
+    // @see Sentry Issue #7023631375 - permission-denied for arnoldkawonga@gmail.com
+    // @see utils/authGuard.ts for implementation details
+    const { ensureAuthReady } = await import('@/utils/authGuard');
+    await ensureAuthReady(userId);
     
     const userDocRef = doc(db, 'users', userId);
     

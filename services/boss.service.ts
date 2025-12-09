@@ -1,5 +1,6 @@
 import { db } from '@/constants/firebase.config';
 import { Boss, BossUpdate, Unsubscribe } from '@/types';
+import { isFirebaseOfflineError } from '@/utils/firebaseErrors';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
   addDoc,
@@ -13,17 +14,6 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { logger } from './logger.service';
-
-/**
- * Check if error is related to offline state
- */
-function isFirebaseOfflineError(error: Error): boolean {
-  return (
-    error.message.includes('client is offline') ||
-    error.message.includes('Failed to get document') ||
-    error.name === 'FirebaseError'
-  );
-}
 
 /**
  * Get all bosses for a user
@@ -83,6 +73,12 @@ export async function getFirstBoss(userId: string): Promise<Boss | null> {
   logger.debug('Getting first boss for user', { feature: 'BossService', userId });
   
   try {
+    // Ensure auth token is valid before first Firestore request
+    // Prevents race condition where user navigates to Boss screen immediately after login
+    // and token is not yet ready. See utils/authGuard.ts for details.
+    const { ensureAuthReady } = await import('@/utils/authGuard');
+    await ensureAuthReady(userId);
+    
     const result = await retryWithBackoff(async () => {
       const bossesRef = collection(db, 'users', userId, 'bosses');
       const q = query(bossesRef, orderBy('createdAt', 'asc'));

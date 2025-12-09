@@ -1,6 +1,7 @@
 import { db } from '@/constants/firebase.config';
 import { setAmplitudeUserProperties, trackAmplitudeEvent } from '@/services/amplitude.service';
 import { logger } from '@/services/logger.service';
+import { isFirebaseOfflineError } from '@/utils/firebaseErrors';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
@@ -36,14 +37,6 @@ export interface UserTrackingData {
   lastTrackingPromptAt: string | null;
   trackingPromptHistory: TrackingPromptHistoryItem[];
   trackingPromptCount: number;
-}
-
-function isFirebaseOfflineError(error: Error): boolean {
-  return (
-    error.message.includes('client is offline') ||
-    error.message.includes('Failed to get document') ||
-    error.name === 'FirebaseError'
-  );
 }
 
 /**

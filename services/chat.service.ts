@@ -1,5 +1,6 @@
 import { db, functions } from '@/constants/firebase.config';
 import { ChatMessage, ChatThread, ContentItem, LoadMessagesResult, Unsubscribe } from '@/types';
+import { isFirebaseOfflineError } from '@/utils/firebaseErrors';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
   addDoc,
@@ -17,17 +18,6 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { logger } from './logger.service';
-
-/**
- * Check if error is related to offline state
- */
-function isFirebaseOfflineError(error: Error): boolean {
-  return (
-    error.message.includes('client is offline') ||
-    error.message.includes('Failed to get document') ||
-    error.name === 'FirebaseError'
-  );
-}
 
 /**
  * Helper function to create text-only content array
@@ -65,6 +55,12 @@ export async function getOrCreateThread(userId: string): Promise<string> {
   const threadId = 'main'; // Single thread per user for MVP
   
   try {
+    // Ensure auth token is valid before first Firestore request
+    // Prevents race condition where user opens chat immediately after login
+    // and token is not yet ready. See utils/authGuard.ts for details.
+    const { ensureAuthReady } = await import('@/utils/authGuard');
+    await ensureAuthReady(userId);
+    
     const result = await retryWithBackoff(async () => {
       const threadRef = doc(db, 'users', userId, 'chatThreads', threadId);
       const threadDoc = await getDoc(threadRef);

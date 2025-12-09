@@ -92,6 +92,9 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       
       if (newUser) {
         // Ensure user profile document exists with correct email
+        // NOTE: ensureUserProfileExists() includes auth token validation to prevent
+        // permission-denied errors due to race conditions between onAuthStateChanged
+        // firing and token being fully ready. See user.service.ts for implementation.
         (async () => {
           try {
             await ensureUserProfileExists(newUser.id, newUser.email);
