@@ -379,7 +379,7 @@ export default function ProfileScreen(): React.JSX.Element {
                     field: 'displayName',
                   });
                 }}
-                placeholder="Me"
+                placeholder="Enter your name"
                 testID="username"
                 style={styles.username}
               />

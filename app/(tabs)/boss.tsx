@@ -356,7 +356,7 @@ export default function BossScreen(): React.JSX.Element {
                     bossId: boss.id,
                   });
                 }}
-                placeholder="My Boss"
+                placeholder="Enter boss name"
                 testID="boss-name"
                 style={styles.bossName}
               />

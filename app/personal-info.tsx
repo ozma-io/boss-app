@@ -339,7 +339,7 @@ export default function PersonalInfoScreen(): React.JSX.Element {
                     testID="input-name"
                   />
                 ) : (
-                  <Text style={[styles.value, !name && styles.placeholderValue]} testID="value-name">{name || 'Me'}</Text>
+                  <Text style={[styles.value, !name && styles.placeholderValue]} testID="value-name">{name || 'Enter your name'}</Text>
                 )}
               </View>
             </Pressable>
