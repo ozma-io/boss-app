@@ -92,50 +92,8 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
       
       if (newUser) {
         // Ensure user profile document exists with correct email
-        // Add detailed logging for diagnostics of permission-denied errors
         (async () => {
           try {
-            // Check if Firebase Auth token is available before calling Firestore
-            const tokenCheckStartTime = Date.now();
-            let tokenInfo: {
-              hasToken: boolean;
-              tokenLength?: number;
-              tokenPreview?: string | null;
-              tokenError?: string;
-              tokenCheckDuration: number;
-            } = {
-              hasToken: false,
-              tokenCheckDuration: 0,
-            };
-            
-            try {
-              const token = await auth.currentUser?.getIdToken(false); // false = don't force refresh, use cache
-              tokenInfo = {
-                hasToken: !!token,
-                tokenLength: token?.length,
-                tokenPreview: token ? `${token.substring(0, 20)}...${token.substring(token.length - 10)}` : null,
-                tokenCheckDuration: Date.now() - tokenCheckStartTime,
-              };
-              
-              logger.debug('Auth token check before ensureUserProfileExists', {
-                feature: 'AuthContext',
-                userId: newUser.id,
-                ...tokenInfo,
-              });
-            } catch (tokenError) {
-              tokenInfo = {
-                hasToken: false,
-                tokenError: tokenError instanceof Error ? tokenError.message : String(tokenError),
-                tokenCheckDuration: Date.now() - tokenCheckStartTime,
-              };
-              
-              logger.warn('Failed to get auth token before ensureUserProfileExists', {
-                feature: 'AuthContext',
-                userId: newUser.id,
-                ...tokenInfo,
-              });
-            }
-            
             await ensureUserProfileExists(newUser.id, newUser.email);
           } catch (err) {
             logger.error('Failed to ensure user profile exists', { 

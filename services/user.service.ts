@@ -334,6 +334,39 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
       timestamp: new Date().toISOString(),
     });
     
+    // Wait for auth token to be ready before accessing Firestore
+    // This prevents permission-denied errors due to race conditions
+    const { auth } = await import('@/constants/firebase.config');
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser || currentUser.uid !== userId) {
+      const errorMessage = !currentUser 
+        ? 'No authenticated user found' 
+        : `Auth user ID mismatch: expected ${userId}, got ${currentUser.uid}`;
+      
+      logger.error('Auth state validation failed in ensureUserProfileExists', {
+        feature: 'UserService',
+        userId,
+        hasCurrentUser: !!currentUser,
+        currentUserId: currentUser?.uid,
+        errorMessage,
+      });
+      
+      throw new Error(errorMessage);
+    }
+    
+    // Force token refresh to ensure it's valid and not expired
+    const tokenStartTime = Date.now();
+    const token = await currentUser.getIdToken(true);
+    const tokenDuration = Date.now() - tokenStartTime;
+    
+    logger.debug('Auth token obtained successfully', {
+      feature: 'UserService',
+      userId,
+      tokenLength: token.length,
+      tokenDuration,
+    });
+    
     const userDocRef = doc(db, 'users', userId);
     
     logger.debug('Attempting to read user document from Firestore', {
@@ -410,29 +443,7 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
       timestamp: new Date().toISOString(),
     };
     
-    // Log with all available context
     logger.error('Error ensuring user profile exists', errorDetails);
-    
-    // Try to get current auth state for additional diagnostics
-    try {
-      const { auth } = await import('@/constants/firebase.config');
-      const currentUser = auth.currentUser;
-      
-      logger.error('Auth state at error time', {
-        feature: 'UserService',
-        hasCurrentUser: !!currentUser,
-        currentUserId: currentUser?.uid,
-        currentUserEmail: currentUser?.email,
-        matchesUserId: currentUser?.uid === userId,
-        matchesEmail: currentUser?.email === userEmail,
-      });
-    } catch (authCheckError) {
-      logger.error('Failed to check auth state', {
-        feature: 'UserService',
-        authCheckError: authCheckError instanceof Error ? authCheckError.message : String(authCheckError),
-      });
-    }
-    
     throw error;
   }
 }
