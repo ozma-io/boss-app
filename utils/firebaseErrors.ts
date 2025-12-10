@@ -64,6 +64,7 @@ export function isExpectedFirebaseError(error: Error & { code?: string }): boole
   return (
     error.code === 'functions/deadline-exceeded' ||    // Cloud Function timeout
     error.code === 'functions/unavailable' ||          // Cloud Function temporarily unavailable
-    error.code === 'functions/resource-exhausted'      // Rate limiting
+    error.code === 'functions/resource-exhausted' ||   // Rate limiting
+    error.code === 'functions/internal'                // Client-side cancellation (app backgrounded on iOS)
   );
 }
