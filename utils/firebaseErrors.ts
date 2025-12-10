@@ -37,3 +37,33 @@ export function isFirebaseOfflineError(error: Error & { code?: string }): boolea
     error.message.includes('client is offline')
   );
 }
+
+/**
+ * Check if error is an expected Firebase error that should be logged as warning instead of error
+ * 
+ * These errors are typically transient issues (timeouts, rate limiting, temporary unavailability)
+ * that don't indicate bugs in our code and shouldn't create noise in Sentry.
+ * 
+ * @param error - Error object from Firebase operation
+ * @returns true if error is expected and should be logged as warning, false otherwise
+ * 
+ * @example
+ * ```typescript
+ * try {
+ *   await httpsCallable(functions, 'generateChatResponse')();
+ * } catch (error) {
+ *   if (isExpectedFirebaseError(error)) {
+ *     logger.warn('Expected error', { error });
+ *   } else {
+ *     logger.error('Unexpected error', { error });
+ *   }
+ * }
+ * ```
+ */
+export function isExpectedFirebaseError(error: Error & { code?: string }): boolean {
+  return (
+    error.code === 'functions/deadline-exceeded' ||    // Cloud Function timeout
+    error.code === 'functions/unavailable' ||          // Cloud Function temporarily unavailable
+    error.code === 'functions/resource-exhausted'      // Rate limiting
+  );
+}

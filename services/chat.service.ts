@@ -1,6 +1,6 @@
 import { db, functions } from '@/constants/firebase.config';
 import { ChatMessage, ChatThread, ContentItem, LoadMessagesResult, Unsubscribe } from '@/types';
-import { isFirebaseOfflineError } from '@/utils/firebaseErrors';
+import { isExpectedFirebaseError, isFirebaseOfflineError } from '@/utils/firebaseErrors';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
   addDoc,
@@ -371,13 +371,25 @@ export async function generateAIResponse(
     logger.timeEnd('generateAIResponse', { feature: 'ChatService', userId, threadId });
   } catch (error) {
     const err = error as Error;
-    logger.error('Error generating AI response', {
-      feature: 'ChatService',
-      userId,
-      threadId,
-      messageId,
-      error: err,
-    });
+    
+    if (isExpectedFirebaseError(err)) {
+      logger.warn('AI response generation failed with expected error', {
+        feature: 'ChatService',
+        userId,
+        threadId,
+        messageId,
+        error: err,
+      });
+    } else {
+      logger.error('Error generating AI response', {
+        feature: 'ChatService',
+        userId,
+        threadId,
+        messageId,
+        error: err,
+      });
+    }
+    
     throw error;
   }
 }
