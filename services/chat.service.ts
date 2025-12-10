@@ -1,5 +1,13 @@
 import { db, functions } from '@/constants/firebase.config';
-import { ChatMessage, ChatThread, ContentItem, LoadMessagesResult, Unsubscribe } from '@/types';
+import { 
+  ChatMessage, 
+  ChatThread, 
+  ContentItem, 
+  GenerateChatResponseRequest,
+  GenerateChatResponseResponse,
+  LoadMessagesResult, 
+  Unsubscribe 
+} from '@/types';
 import { isExpectedFirebaseError, isFirebaseOfflineError } from '@/utils/firebaseErrors';
 import { retryWithBackoff } from '@/utils/retryWithBackoff';
 import {
@@ -327,16 +335,12 @@ export async function generateAIResponse(
     const currentDateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offset}`;
     
     const generateChatResponse = httpsCallable<
-      { 
-        userId: string; 
-        threadId: string; 
-        messageId: string; 
-        sessionId?: string;
+      GenerateChatResponseRequest & {
         currentDateTimeUTC?: string;
         currentDateTimeLocal?: string;
         userTimezone?: string;
       },
-      { success: boolean; messageId?: string; error?: string }
+      GenerateChatResponseResponse
     >(functions, 'generateChatResponse');
     
     const result = await generateChatResponse({ 
@@ -350,14 +354,32 @@ export async function generateAIResponse(
     });
     
     if (!result.data.success) {
+      const errorMessage = result.data.error || 'Failed to generate AI response';
+      const errorCode = result.data.errorCode;
+      
+      // GENERATION_CANCELLED is expected when user sends new message before AI responds
+      // Log as info and return gracefully instead of throwing error
+      if (errorCode === 'GENERATION_CANCELLED') {
+        logger.info('AI response generation cancelled', {
+          feature: 'ChatService',
+          userId,
+          threadId,
+          messageId,
+          reason: errorMessage,
+        });
+        logger.timeEnd('generateAIResponse', { feature: 'ChatService', userId, threadId, cancelled: true });
+        return;
+      }
+      
       logger.warn('AI response generation was not successful', {
         feature: 'ChatService',
         userId,
         threadId,
         messageId,
-        error: result.data.error,
+        error: errorMessage,
+        errorCode,
       });
-      throw new Error(result.data.error || 'Failed to generate AI response');
+      throw new Error(errorMessage);
     }
     
     logger.info('AI response generated successfully', {

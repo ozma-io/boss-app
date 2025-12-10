@@ -48,6 +48,7 @@ export interface GenerateChatResponseResponse {
   success: boolean;
   messageId?: string;
   error?: string;
+  errorCode?: string;
 }
 
 /**

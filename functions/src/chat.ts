@@ -389,6 +389,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         return {
           success: false,
           error: 'Generation cancelled due to new message',
+          errorCode: 'GENERATION_CANCELLED',
         };
       }
       
@@ -515,6 +516,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         return {
           success: false,
           error: 'Generation cancelled due to new message',
+          errorCode: 'GENERATION_CANCELLED',
         };
       }
       

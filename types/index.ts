@@ -225,6 +225,14 @@ export interface GenerateChatResponseRequest {
   sessionId?: string; // Optional app session ID for LangFuse grouping
 }
 
+// Response data from generateChatResponse Cloud Function
+export interface GenerateChatResponseResponse {
+  success: boolean;
+  messageId?: string;
+  error?: string;
+  errorCode?: string;
+}
+
 // === ACCOUNT DELETION TYPES ===
 
 // Account deletion types
