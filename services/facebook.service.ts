@@ -7,8 +7,12 @@ import { Platform } from 'react-native';
 import { AttributionData } from './attribution.service';
 
 // Conditionally import Facebook SDK only on native platforms
-let Settings: any;
-let AppEventsLogger: any;
+// Using imported types when available to ensure type safety
+import type { default as SettingsType } from 'react-native-fbsdk-next/lib/typescript/src/FBSettings';
+import type { default as AppEventsLoggerType } from 'react-native-fbsdk-next/lib/typescript/src/FBAppEventsLogger';
+
+let Settings: typeof SettingsType | undefined;
+let AppEventsLogger: typeof AppEventsLoggerType | undefined;
 
 if (Platform.OS !== 'web') {
   try {
@@ -348,7 +352,7 @@ export async function sendAppInstallEventDual(
     // Client-side: Facebook SDK
     (async () => {
       if (isClientSdkAvailable()) {
-        AppEventsLogger.logEvent(FB_MOBILE_ACTIVATE_APP, clientParams);
+        AppEventsLogger!.logEvent(FB_MOBILE_ACTIVATE_APP, clientParams);
         logger.info('AppInstall client-side sent', { feature: 'Facebook', eventId });
       }
     })(),
@@ -406,7 +410,7 @@ export async function sendRegistrationEventDual(email: string, attributionData?:
     // Client-side: Facebook SDK
     (async () => {
       if (isClientSdkAvailable()) {
-        AppEventsLogger.logEvent('fb_mobile_complete_registration', clientParams);
+        AppEventsLogger!.logEvent('fb_mobile_complete_registration', clientParams);
         logger.info('Registration client-side sent', { feature: 'Facebook', eventId });
       }
     })(),
