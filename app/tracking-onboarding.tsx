@@ -1,11 +1,10 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { clearTrackingAfterAuth, getAttributionData, isFirstLaunch, markAppAsLaunched } from '@/services/attribution.service';
+import { clearTrackingAfterAuth, getAttributionData, getAttributionDataWithFallback, isFirstLaunch, markAppAsLaunched } from '@/services/attribution.service';
 import { initializeFacebookSdk, sendAppInstallEventDual, sendRegistrationEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution, recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
-import { getUserAttributionFromFirestore } from '@/services/user.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -108,18 +107,19 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
             
             // Send registration event with email for Advanced Matching (Custom Audiences)
             if (email) {
-              // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
-              const firestoreAttribution = user?.id 
-                ? await getUserAttributionFromFirestore(user.id)
+              // Get attribution data with AsyncStorage + Firestore fallback
+              const attributionData = user?.id 
+                ? await getAttributionDataWithFallback(user.id)
                 : null;
               
-              await sendRegistrationEventDual(email, firestoreAttribution || undefined);
+              await sendRegistrationEventDual(email, attributionData || undefined);
               
-              logger.info('MAIN FLOW: Registration event sent with Firestore attribution', {
+              logger.info('MAIN FLOW: Registration event sent with attribution', {
                 feature: 'TrackingOnboarding',
-                hasFirestoreData: !!firestoreAttribution,
-                hasFbc: !!firestoreAttribution?.fbc,
-                hasFbp: !!firestoreAttribution?.fbp
+                hasAttributionData: !!attributionData,
+                hasFbc: !!attributionData?.fbc,
+                hasFbp: !!attributionData?.fbp,
+                source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
               });
             } else {
               logger.info('MAIN FLOW: No email available, tracking state cleared without registration event', { feature: 'TrackingOnboarding' });

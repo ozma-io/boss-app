@@ -1,9 +1,8 @@
 import { auth } from '@/constants/firebase.config';
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { clearTrackingAfterAuth, isFirstLaunch, markAppAsLaunched, needsTrackingAfterAuth } from '@/services/attribution.service';
+import { clearTrackingAfterAuth, getAttributionDataWithFallback, isFirstLaunch, markAppAsLaunched, needsTrackingAfterAuth } from '@/services/attribution.service';
 import { sendRegistrationEventDual } from '@/services/facebook.service';
-import { getUserAttributionFromFirestore } from '@/services/user.service';
 import { User } from '@/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -248,19 +247,20 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
       } else if (Platform.OS === 'android') {
         // Android: Send registration event with email for Advanced Matching (no prompt needed)
         try {
-          // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
-          const firestoreAttribution = await getUserAttributionFromFirestore(user.id);
+          // Get attribution data with AsyncStorage + Firestore fallback
+          const attributionData = await getAttributionDataWithFallback(user.id);
           
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(email, firestoreAttribution || undefined);
+          await sendRegistrationEventDual(email, attributionData || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
-          logger.info('MAIN FLOW: Android registration event sent with Firestore attribution', {
+          logger.info('MAIN FLOW: Android registration event sent with attribution', {
             feature: 'AuthService',
-            hasFirestoreData: !!firestoreAttribution,
-            hasFbc: !!firestoreAttribution?.fbc,
-            hasFbp: !!firestoreAttribution?.fbp
+            hasAttributionData: !!attributionData,
+            hasFbc: !!attributionData?.fbc,
+            hasFbp: !!attributionData?.fbp,
+            source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
           });
         } catch (fbError) {
           logger.error('MAIN FLOW: Failed to send registration event', { feature: 'AuthService', error: fbError });
@@ -325,19 +325,20 @@ export async function signInWithTestEmail(email: string): Promise<User> {
         router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
       } else if (Platform.OS === 'android') {
         try {
-          // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
-          const firestoreAttribution = await getUserAttributionFromFirestore(user.id);
+          // Get attribution data with AsyncStorage + Firestore fallback
+          const attributionData = await getAttributionDataWithFallback(user.id);
           
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(email, firestoreAttribution || undefined);
+          await sendRegistrationEventDual(email, attributionData || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
-          logger.info('MAIN FLOW: Test user Android registration event sent with Firestore attribution', {
+          logger.info('MAIN FLOW: Test user Android registration event sent with attribution', {
             feature: 'AuthService',
-            hasFirestoreData: !!firestoreAttribution,
-            hasFbc: !!firestoreAttribution?.fbc,
-            hasFbp: !!firestoreAttribution?.fbp
+            hasAttributionData: !!attributionData,
+            hasFbc: !!attributionData?.fbc,
+            hasFbp: !!attributionData?.fbp,
+            source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
           });
         } catch (fbError) {
           logger.error('MAIN FLOW: Failed to send test user registration event', { feature: 'AuthService', error: fbError });
@@ -520,19 +521,20 @@ export async function signInWithGoogle(): Promise<User> {
         router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
       } else if (Platform.OS === 'android') {
         try {
-          // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
-          const firestoreAttribution = await getUserAttributionFromFirestore(user.id);
+          // Get attribution data with AsyncStorage + Firestore fallback
+          const attributionData = await getAttributionDataWithFallback(user.id);
           
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.email, firestoreAttribution || undefined);
+          await sendRegistrationEventDual(user.email, attributionData || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
-          logger.info('MAIN FLOW: Google user Android registration event sent with Firestore attribution', {
+          logger.info('MAIN FLOW: Google user Android registration event sent with attribution', {
             feature: 'AuthService',
-            hasFirestoreData: !!firestoreAttribution,
-            hasFbc: !!firestoreAttribution?.fbc,
-            hasFbp: !!firestoreAttribution?.fbp
+            hasAttributionData: !!attributionData,
+            hasFbc: !!attributionData?.fbc,
+            hasFbp: !!attributionData?.fbp,
+            source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
           });
         } catch (fbError) {
           logger.error('MAIN FLOW: Failed to send Google user registration event', { feature: 'AuthService', error: fbError });
@@ -632,19 +634,20 @@ export async function signInWithApple(): Promise<User> {
         router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
       } else if (Platform.OS === 'android') {
         try {
-          // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
-          const firestoreAttribution = await getUserAttributionFromFirestore(user.id);
+          // Get attribution data with AsyncStorage + Firestore fallback
+          const attributionData = await getAttributionDataWithFallback(user.id);
           
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.email, firestoreAttribution || undefined);
+          await sendRegistrationEventDual(user.email, attributionData || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
-          logger.info('MAIN FLOW: Apple user Android registration event sent with Firestore attribution', {
+          logger.info('MAIN FLOW: Apple user Android registration event sent with attribution', {
             feature: 'AuthService',
-            hasFirestoreData: !!firestoreAttribution,
-            hasFbc: !!firestoreAttribution?.fbc,
-            hasFbp: !!firestoreAttribution?.fbp
+            hasAttributionData: !!attributionData,
+            hasFbc: !!attributionData?.fbc,
+            hasFbp: !!attributionData?.fbp,
+            source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
           });
         } catch (fbError) {
           logger.error('MAIN FLOW: Failed to send Apple user registration event', { feature: 'AuthService', error: fbError });

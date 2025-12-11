@@ -58,6 +58,44 @@ export async function getAttributionData(): Promise<AttributionData | null> {
 }
 
 /**
+ * Get attribution data with Firestore fallback
+ * 
+ * Strategy:
+ * 1. Try AsyncStorage first (deep link params from mobile app install)
+ *    - Avoids race condition with AuthContext writing to Firestore
+ * 2. If AsyncStorage is empty OR missing fbc/fbp, fallback to Firestore
+ *    - Handles Apple App Store case where deep link params are stripped
+ *    - Retrieves fbc/fbp from web-funnel registration
+ * 3. Preserve AsyncStorage data if Firestore returns null
+ *    - Don't lose fbclid/UTM parameters when Firestore is empty
+ * 
+ * @param userId - User ID for Firestore lookup
+ * @returns Attribution data from AsyncStorage or Firestore, null if neither has data
+ */
+export async function getAttributionDataWithFallback(userId: string): Promise<AttributionData | null> {
+  try {
+    // Try AsyncStorage first (deep link params from mobile app install)
+    let attributionData = await getAttributionData();
+    
+    // Fallback to Firestore (web-funnel attribution when deep link params not available)
+    if (!attributionData || (!attributionData.fbc && !attributionData.fbp)) {
+      const { getUserAttributionFromFirestore } = await import('@/services/user.service');
+      const firestoreAttribution = await getUserAttributionFromFirestore(userId);
+      
+      // Only use Firestore data if it exists, preserving AsyncStorage data otherwise
+      if (firestoreAttribution) {
+        attributionData = firestoreAttribution;
+      }
+    }
+    
+    return attributionData;
+  } catch (error) {
+    logger.error('Error getting attribution data with fallback', { feature: 'AttributionService', userId, error });
+    return null;
+  }
+}
+
+/**
  * Clear attribution data from AsyncStorage
  */
 export async function clearAttributionData(): Promise<void> {
