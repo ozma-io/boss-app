@@ -29,6 +29,7 @@ export async function retryWithBackoff<T>(
       return result;
     } catch (error) {
       lastError = error as Error;
+      const err = lastError as Error & { code?: string };
       const isOffline = isFirebaseOfflineError(lastError);
       const attemptDuration = Date.now() - startTime;
       
@@ -39,6 +40,7 @@ export async function retryWithBackoff<T>(
         duration: attemptDuration,
         isOffline,
         errorMessage: lastError.message,
+        errorCode: err.code,
       });
       
       if (attempt < maxRetries) {
@@ -50,6 +52,7 @@ export async function retryWithBackoff<T>(
   }
   
   if (lastError) {
+    const err = lastError as Error & { code?: string };
     const isOffline = isFirebaseOfflineError(lastError);
     const totalDuration = Date.now() - startTime;
     logger.warn('All retry attempts failed', {
@@ -58,6 +61,7 @@ export async function retryWithBackoff<T>(
       totalDuration,
       isOffline,
       errorMessage: lastError.message,
+      errorCode: err.code,
     });
     throw lastError;
   }

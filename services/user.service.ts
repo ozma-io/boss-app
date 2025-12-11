@@ -330,7 +330,6 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
     logger.debug('Starting ensureUserProfileExists', { 
       feature: 'UserService', 
       userId, 
-      userEmail,
       timestamp: new Date().toISOString(),
     });
     
@@ -348,74 +347,78 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
     const { ensureAuthReady } = await import('@/utils/authGuard');
     await ensureAuthReady(userId);
     
-    const userDocRef = doc(db, 'users', userId);
-    
-    logger.debug('Attempting to read user document from Firestore', {
-      feature: 'UserService',
-      userId,
-      path: `users/${userId}`,
-    });
-    
-    const userDoc = await getDoc(userDocRef);
-    
-    logger.debug('User document read successful', {
-      feature: 'UserService',
-      userId,
-      exists: userDoc.exists(),
-      readDuration: Date.now() - startTime,
-    });
-    
-    if (!userDoc.exists()) {
-      logger.info('Creating user profile document', { feature: 'UserService', userId, userEmail });
+    // Wrap Firestore operations in retry logic to handle token propagation delays
+    // Retry up to 3 times with exponential backoff (500ms base delay)
+    // This handles race conditions where token is valid but not yet propagated to Firestore backend
+    await retryWithBackoff(async () => {
+      const userDocRef = doc(db, 'users', userId);
       
-      const now = new Date().toISOString();
-      
-      // Create User document
-      await setDoc(userDocRef, {
-        email: userEmail,
-        createdAt: now,
-        name: '',
-        goal: '',
-        position: '',
+      logger.debug('Attempting to read user document from Firestore', {
+        feature: 'UserService',
+        userId,
+        path: `users/${userId}`,
       });
       
-      logger.info('User profile document created', { feature: 'UserService', userId });
+      const userDoc = await getDoc(userDocRef);
       
-      // Create default boss for new users (web-funnel users already have a boss)
-      // This ensures every user has at least one boss
-      const bossesRef = collection(db, 'users', userId, 'bosses');
-      const defaultBoss = {
-        name: '',
-        position: '',
-        birthday: '',
-        managementStyle: '',
-        startedAt: '',
-        createdAt: now,
-        updatedAt: now,
-        _fieldsMeta: {},
-      };
-      
-      const bossDocRef = await addDoc(bossesRef, defaultBoss);
-      
-      logger.info('Default boss created for new user', { 
-        feature: 'UserService', 
-        userId, 
-        bossId: bossDocRef.id 
+      logger.debug('User document read successful', {
+        feature: 'UserService',
+        userId,
+        exists: userDoc.exists(),
+        readDuration: Date.now() - startTime,
       });
       
-      // Create chat thread with welcome message
-      // This ensures new users have a welcome message immediately available
-      await createChatWithWelcomeMessage(userId);
-    } else {
-      logger.debug('User profile already exists', { feature: 'UserService', userId });
-    }
+      if (!userDoc.exists()) {
+        logger.info('Creating user profile document', { feature: 'UserService', userId });
+        
+        const now = new Date().toISOString();
+        
+        // Create User document
+        await setDoc(userDocRef, {
+          email: userEmail,
+          createdAt: now,
+          name: '',
+          goal: '',
+          position: '',
+        });
+        
+        logger.info('User profile document created', { feature: 'UserService', userId });
+        
+        // Create default boss for new users (web-funnel users already have a boss)
+        // This ensures every user has at least one boss
+        const bossesRef = collection(db, 'users', userId, 'bosses');
+        const defaultBoss = {
+          name: '',
+          position: '',
+          birthday: '',
+          managementStyle: '',
+          startedAt: '',
+          createdAt: now,
+          updatedAt: now,
+          _fieldsMeta: {},
+        };
+        
+        const bossDocRef = await addDoc(bossesRef, defaultBoss);
+        
+        logger.info('Default boss created for new user', { 
+          feature: 'UserService', 
+          userId, 
+          bossId: bossDocRef.id 
+        });
+        
+        // Create chat thread with welcome message
+        // This ensures new users have a welcome message immediately available
+        await createChatWithWelcomeMessage(userId);
+      } else {
+        logger.debug('User profile already exists', { feature: 'UserService', userId });
+      }
+    }, 3, 500);
   } catch (error) {
     // Enhanced error logging for permission-denied diagnostics
     const err = error as Error & { code?: string };
     const errorDetails = {
       feature: 'UserService',
       userId,
-      userEmail,
       errorName: err.name,
       errorMessage: err.message,
       errorCode: err.code,

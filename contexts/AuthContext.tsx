@@ -96,14 +96,27 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         // permission-denied errors due to race conditions between onAuthStateChanged
         // firing and token being fully ready. See user.service.ts for implementation.
         (async () => {
+          const profileStartTime = Date.now();
+          logger.debug('Starting user profile creation flow', {
+            feature: 'AuthContext',
+            userId: newUser.id,
+          });
+          
           try {
             await ensureUserProfileExists(newUser.id, newUser.email);
+            logger.info('User profile creation flow completed successfully', {
+              feature: 'AuthContext',
+              userId: newUser.id,
+              duration: Date.now() - profileStartTime,
+            });
           } catch (err) {
+            const error = err as Error & { code?: string };
             logger.error('Failed to ensure user profile exists', { 
               feature: 'AuthContext', 
               error: err,
               userId: newUser.id,
-              userEmail: newUser.email,
+              errorCode: error.code,
+              duration: Date.now() - profileStartTime,
             });
           }
         })();

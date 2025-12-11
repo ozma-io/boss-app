@@ -41,6 +41,12 @@ export async function ensureAuthReady(userId: string): Promise<void> {
   const { auth } = await import('@/constants/firebase.config');
   const currentUser = auth.currentUser;
   
+  logger.debug('Auth guard check started', {
+    feature: 'authGuard',
+    expectedUserId: userId,
+    hasCurrentUser: !!currentUser,
+  });
+  
   if (!currentUser) {
     const error = new Error('No authenticated user found');
     logger.error('Auth guard failed: no current user', {
@@ -63,13 +69,14 @@ export async function ensureAuthReady(userId: string): Promise<void> {
   // Force token refresh to ensure it's valid and not expired
   const tokenStartTime = Date.now();
   try {
-    await currentUser.getIdToken(true);
+    const token = await currentUser.getIdToken(true);
     const tokenDuration = Date.now() - tokenStartTime;
     
     logger.debug('Auth token validated successfully', {
       feature: 'authGuard',
       userId,
       tokenDuration,
+      tokenLength: token.length,
     });
   } catch (tokenError) {
     logger.error('Auth guard failed: token error', {
