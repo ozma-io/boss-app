@@ -41,6 +41,29 @@ interface ConversionEventParams {
   attributionData?: AttributionData;
 }
 
+/**
+ * Complete event data payload for Facebook Conversions API
+ * Returned by buildEventData() and sent to Cloud Function for server-side tracking
+ */
+interface ConversionEventData {
+  eventName: string;
+  eventTime: number;
+  eventId: string;
+  actionSource: 'app' | 'website' | 'email' | 'phone_call' | 'chat' | 'physical_store' | 'system_generated' | 'business_messaging' | 'other';
+  advertiserTrackingEnabled: boolean;
+  applicationTrackingEnabled: boolean;
+  extinfo: string[];
+  fbc?: string;
+  fbp?: string;
+  userData?: {
+    email?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+  };
+  customData?: Record<string, string | number | boolean>;
+}
+
 // ============================================================================
 // Facebook Standard Events
 // ============================================================================
@@ -96,7 +119,7 @@ function isClientSdkAvailable(): boolean {
  * @returns Complete event data object ready for Conversions API
  * @internal
  */
-async function buildEventData(params: ConversionEventParams) {
+async function buildEventData(params: ConversionEventParams): Promise<ConversionEventData> {
   // Build 16-element device info array required by Facebook
   const extinfo = await buildExtinfo();
   
@@ -121,6 +144,7 @@ async function buildEventData(params: ConversionEventParams) {
     eventName: params.eventName,
     eventTime: Math.floor(Date.now() / 1000), // Unix timestamp
     eventId: params.eventId,
+    actionSource: 'app' as const,
     advertiserTrackingEnabled,
     applicationTrackingEnabled,
     extinfo,
