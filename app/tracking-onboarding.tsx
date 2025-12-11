@@ -5,6 +5,7 @@ import { clearTrackingAfterAuth, getAttributionData, isFirstLaunch, markAppAsLau
 import { initializeFacebookSdk, sendAppInstallEventDual, sendRegistrationEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution, recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
+import { getUserAttributionFromFirestore } from '@/services/user.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -107,8 +108,19 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
             
             // Send registration event with email for Advanced Matching (Custom Audiences)
             if (email) {
-              await sendRegistrationEventDual(email);
-              logger.info('MAIN FLOW: Registration event sent, tracking completed', { feature: 'TrackingOnboarding' });
+              // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
+              const firestoreAttribution = user?.id 
+                ? await getUserAttributionFromFirestore(user.id)
+                : null;
+              
+              await sendRegistrationEventDual(email, firestoreAttribution || undefined);
+              
+              logger.info('MAIN FLOW: Registration event sent with Firestore attribution', {
+                feature: 'TrackingOnboarding',
+                hasFirestoreData: !!firestoreAttribution,
+                hasFbc: !!firestoreAttribution?.fbc,
+                hasFbp: !!firestoreAttribution?.fbp
+              });
             } else {
               logger.info('MAIN FLOW: No email available, tracking state cleared without registration event', { feature: 'TrackingOnboarding' });
             }

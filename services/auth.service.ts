@@ -3,6 +3,7 @@ import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '@/constants/google.c
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { clearTrackingAfterAuth, isFirstLaunch, markAppAsLaunched, needsTrackingAfterAuth } from '@/services/attribution.service';
 import { sendRegistrationEventDual } from '@/services/facebook.service';
+import { getUserAttributionFromFirestore } from '@/services/user.service';
 import { User } from '@/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -247,12 +248,20 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
       } else if (Platform.OS === 'android') {
         // Android: Send registration event with email for Advanced Matching (no prompt needed)
         try {
+          // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
+          const firestoreAttribution = await getUserAttributionFromFirestore(user.id);
+          
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(email);
+          await sendRegistrationEventDual(email, firestoreAttribution || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
-          logger.info('MAIN FLOW: Android registration event sent, tracking completed', { feature: 'AuthService' });
+          logger.info('MAIN FLOW: Android registration event sent with Firestore attribution', {
+            feature: 'AuthService',
+            hasFirestoreData: !!firestoreAttribution,
+            hasFbc: !!firestoreAttribution?.fbc,
+            hasFbp: !!firestoreAttribution?.fbp
+          });
         } catch (fbError) {
           logger.error('MAIN FLOW: Failed to send registration event', { feature: 'AuthService', error: fbError });
           // Don't block user flow on Facebook error
@@ -316,12 +325,20 @@ export async function signInWithTestEmail(email: string): Promise<User> {
         router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
       } else if (Platform.OS === 'android') {
         try {
+          // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
+          const firestoreAttribution = await getUserAttributionFromFirestore(user.id);
+          
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(email);
+          await sendRegistrationEventDual(email, firestoreAttribution || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
-          logger.info('MAIN FLOW: Test user Android registration event sent, tracking completed', { feature: 'AuthService' });
+          logger.info('MAIN FLOW: Test user Android registration event sent with Firestore attribution', {
+            feature: 'AuthService',
+            hasFirestoreData: !!firestoreAttribution,
+            hasFbc: !!firestoreAttribution?.fbc,
+            hasFbp: !!firestoreAttribution?.fbp
+          });
         } catch (fbError) {
           logger.error('MAIN FLOW: Failed to send test user registration event', { feature: 'AuthService', error: fbError });
           await clearTrackingAfterAuth();
@@ -503,12 +520,20 @@ export async function signInWithGoogle(): Promise<User> {
         router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
       } else if (Platform.OS === 'android') {
         try {
+          // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
+          const firestoreAttribution = await getUserAttributionFromFirestore(user.id);
+          
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.email);
+          await sendRegistrationEventDual(user.email, firestoreAttribution || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
-          logger.info('MAIN FLOW: Google user Android registration event sent, tracking completed', { feature: 'AuthService' });
+          logger.info('MAIN FLOW: Google user Android registration event sent with Firestore attribution', {
+            feature: 'AuthService',
+            hasFirestoreData: !!firestoreAttribution,
+            hasFbc: !!firestoreAttribution?.fbc,
+            hasFbp: !!firestoreAttribution?.fbp
+          });
         } catch (fbError) {
           logger.error('MAIN FLOW: Failed to send Google user registration event', { feature: 'AuthService', error: fbError });
           await clearTrackingAfterAuth();
@@ -607,12 +632,20 @@ export async function signInWithApple(): Promise<User> {
         router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
       } else if (Platform.OS === 'android') {
         try {
+          // Read attribution data from Firestore (may include fbc/fbp/fbclid from web-funnel)
+          const firestoreAttribution = await getUserAttributionFromFirestore(user.id);
+          
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.email);
+          await sendRegistrationEventDual(user.email, firestoreAttribution || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
-          logger.info('MAIN FLOW: Apple user Android registration event sent, tracking completed', { feature: 'AuthService' });
+          logger.info('MAIN FLOW: Apple user Android registration event sent with Firestore attribution', {
+            feature: 'AuthService',
+            hasFirestoreData: !!firestoreAttribution,
+            hasFbc: !!firestoreAttribution?.fbc,
+            hasFbp: !!firestoreAttribution?.fbp
+          });
         } catch (fbError) {
           logger.error('MAIN FLOW: Failed to send Apple user registration event', { feature: 'AuthService', error: fbError });
           await clearTrackingAfterAuth();

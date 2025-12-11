@@ -276,15 +276,29 @@ export async function shouldShowTrackingOnboarding(userId: string): Promise<bool
 }
 
 /**
- * Check if app has Facebook attribution parameters in the URL
+ * Check if app has Facebook attribution parameters
  * This helps decide if we should show the tracking prompt for first launches
+ * 
+ * Priority (from most reliable to least):
+ * 1. fbc - Facebook Click Cookie (PRIMARY, used by Conversions API)
+ * 2. fbclid - Facebook Click ID (LEGACY, for backward compatibility with old data)
+ * 3. utm_source=facebook - UTM parameters (FALLBACK, for any FB campaigns)
+ * 
+ * Note: fbclid check is kept for backward compatibility with:
+ * - Old Firestore records that only have fbclid without fbc
+ * - Deep links that contain fbclid without cookies
+ * - Previous implementation that incorrectly relied only on fbclid
  */
 export function hasFacebookAttribution(attributionData?: {
   fbclid?: string | null;
+  fbc?: string | null;
   utm_source?: string | null;
 }): boolean {
-  return !!(attributionData?.fbclid || 
-    (attributionData?.utm_source && attributionData.utm_source.toLowerCase().includes('facebook')));
+  return !!(
+    attributionData?.fbc ||          // PRIMARY: Facebook Click Cookie (contains fbclid inside)
+    attributionData?.fbclid ||       // LEGACY: Backward compatibility with old/incomplete data
+    (attributionData?.utm_source && attributionData.utm_source.toLowerCase().includes('facebook')) // FALLBACK: UTM-based attribution
+  );
 }
 
 /**

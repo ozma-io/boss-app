@@ -75,6 +75,60 @@ export async function getUserNotificationData(userId: string): Promise<UserNotif
 }
 
 /**
+ * Get user attribution data from Firestore
+ * Used to enrich Facebook events with web-funnel attribution cookies (fbc, fbp, fbclid)
+ * 
+ * @param userId - User ID
+ * @returns Attribution data if found, null otherwise
+ */
+export async function getUserAttributionFromFirestore(userId: string): Promise<AttributionData | null> {
+  try {
+    const userDocRef = doc(db, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    
+    if (!userDoc.exists()) {
+      logger.debug('User document does not exist', { feature: 'UserService', userId });
+      return null;
+    }
+    
+    const attribution = userDoc.data()?.attribution;
+    if (!attribution) {
+      logger.debug('No attribution data found for user', { feature: 'UserService', userId });
+      return null;
+    }
+    
+    // Extract relevant fields
+    const attributionData: AttributionData = {
+      fbclid: attribution.fbclid || null,
+      fbc: attribution.fbc || null,
+      fbp: attribution.fbp || null,
+      utm_source: attribution.utm_source || null,
+      utm_medium: attribution.utm_medium || null,
+      utm_campaign: attribution.utm_campaign || null,
+      utm_content: attribution.utm_content || null,
+      utm_term: attribution.utm_term || null,
+      email: attribution.email || null,
+    };
+    
+    logger.info('Retrieved attribution data from Firestore', { 
+      feature: 'UserService', 
+      userId,
+      hasFbc: !!attributionData.fbc,
+      hasFbp: !!attributionData.fbp
+    });
+    
+    return attributionData;
+  } catch (error) {
+    logger.error('Failed to get user attribution from Firestore', { 
+      feature: 'UserService', 
+      userId, 
+      error 
+    });
+    return null;
+  }
+}
+
+/**
  * Update notification permission status in Firestore (internal helper, doesn't send events)
  */
 async function updateNotificationPermissionStatusInFirestore(

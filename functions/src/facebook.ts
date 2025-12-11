@@ -41,7 +41,12 @@ interface FacebookConversionEventData {
   // Example iOS: ["i2", "com.ozmaio.bossup", "1.0", "1.0 (1)", "17.0.0", "iPhone14,3", "en_US", "PST", "AT&T", "390", "844", "3", "6", "128", "64", "America/New_York"]
   // Example Android: ["a2", "com.ozmaio.bossup", "1.0", "1.0 (1)", "14", "Pixel 7 Pro", "en_US", "PST", "Verizon", "1080", "2340", "3", "8", "128", "64", "America/New_York"]
   extinfo: string[];
-  fbclid?: string;
+  // Facebook attribution cookies (formatted, NOT raw fbclid):
+  // - fbc: Facebook Click Cookie (format: "fb.1.timestamp.fbclid") - for ad attribution
+  // - fbp: Facebook Browser ID (format: "fb.1.timestamp.random") - for user matching
+  // Note: Raw fbclid is NOT accepted by Conversions API - it must be formatted as fbc cookie
+  fbc?: string;
+  fbp?: string;
   userData?: {
     email?: string;
     phone?: string;
@@ -146,6 +151,14 @@ export const sendFacebookConversionEvent = onCall(
         userData.country = hashData(eventData.userData.country);
       }
 
+      // Add Facebook tracking cookies (NOT hashed, passed as-is)
+      if (eventData.fbc) {
+        userData.fbc = eventData.fbc;
+      }
+      if (eventData.fbp) {
+        userData.fbp = eventData.fbp;
+      }
+
       // Event name validation: We expect Facebook standard events
       // Common mobile app events: fb_mobile_activate_app, fb_mobile_purchase, 
       // fb_mobile_complete_registration, fb_mobile_add_to_cart, etc.
@@ -170,11 +183,6 @@ export const sendFacebookConversionEvent = onCall(
         },
       };
 
-      // Add fbclid if present (for attribution)
-      if (eventData.fbclid) {
-        (eventPayload as any).fbp = eventData.fbclid;
-      }
-
       // Prepare the request to Facebook Conversions API
       const url = `https://graph.facebook.com/${apiVersion}/${pixelId}/events`;
       const payload = {
@@ -186,7 +194,8 @@ export const sendFacebookConversionEvent = onCall(
         eventName: eventData.eventName,
         eventId: eventData.eventId,
         hasUserData: Object.keys(userData).length > 0,
-        hasFbclid: !!eventData.fbclid,
+        hasFbc: !!eventData.fbc,
+        hasFbp: !!eventData.fbp,
       });
 
       // Send request to Facebook

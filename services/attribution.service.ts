@@ -9,6 +9,8 @@ const NEEDS_TRACKING_AFTER_AUTH_KEY = '@boss_app_needs_tracking_after_auth';
 
 export interface AttributionData {
   fbclid?: string | null;
+  fbc?: string | null;
+  fbp?: string | null;
   utm_source?: string | null;
   utm_medium?: string | null;
   utm_campaign?: string | null;

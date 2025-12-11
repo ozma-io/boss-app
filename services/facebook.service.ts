@@ -124,7 +124,12 @@ async function buildEventData(params: ConversionEventParams) {
     advertiserTrackingEnabled,
     applicationTrackingEnabled,
     extinfo,
-    fbclid: params.attributionData?.fbclid || undefined,
+    // Facebook Conversions API requires formatted cookies (NOT raw fbclid):
+    // - fbc: "fb.1.timestamp.fbclid" (contains fbclid inside, used for attribution)
+    // - fbp: "fb.1.timestamp.random" (browser identifier)
+    // Raw fbclid is NOT accepted in user_data by Facebook - must be formatted as fbc
+    fbc: params.attributionData?.fbc || undefined,
+    fbp: params.attributionData?.fbp || undefined,
     userData: params.userData,
     customData: params.customData,
   };
@@ -199,6 +204,8 @@ export function parseDeepLinkParams(url: string): AttributionData {
     
     const attributionData: AttributionData = {
       fbclid: params.get('fbclid'),
+      fbc: params.get('fbc'),
+      fbp: params.get('fbp'),
       utm_source: params.get('utm_source'),
       utm_medium: params.get('utm_medium'),
       utm_campaign: params.get('utm_campaign'),
@@ -263,7 +270,8 @@ export async function sendConversionEvent(
       eventName,
       eventId,
       hasUserData: !!userData,
-      hasFbclid: !!attributionData?.fbclid,
+      hasFbc: !!attributionData?.fbc,
+      hasFbp: !!attributionData?.fbp
     });
     
     // Call Cloud Function to send event to Facebook Conversions API
@@ -299,7 +307,8 @@ export async function sendAppInstallEventDual(
   logger.info('Sending AppInstall event (dual-send)', { 
     feature: 'Facebook', 
     eventId,
-    hasFbclid: !!attributionData.fbclid
+    hasFbc: !!attributionData.fbc,
+    hasFbp: !!attributionData.fbp
   });
   
   // Build attribution parameters for client-side event
@@ -348,14 +357,18 @@ export async function sendAppInstallEventDual(
  * This helps Facebook identify your users for better campaign optimization.
  * 
  * @param email - User email for Advanced Matching (will be hashed automatically)
+ * @param attributionData - Optional attribution data from Firestore (fbclid, fbc, fbp from web-funnel)
  */
-export async function sendRegistrationEventDual(email: string): Promise<void> {
+export async function sendRegistrationEventDual(email: string, attributionData?: AttributionData): Promise<void> {
   const eventId = generateEventId();
   
-  logger.info('Sending Registration event for organic user', { 
+  logger.info('Sending Registration event', { 
     feature: 'Facebook', 
     eventId,
-    hasEmail: !!email
+    hasEmail: !!email,
+    hasAttributionData: !!attributionData,
+    hasFbc: !!attributionData?.fbc,
+    hasFbp: !!attributionData?.fbp
   });
   
   // Client params with email for Advanced Matching
@@ -374,8 +387,8 @@ export async function sendRegistrationEventDual(email: string): Promise<void> {
       }
     })(),
     
-    // Server-side: Conversions API with email (automatically hashed)
-    sendConversionEvent(eventId, 'fb_mobile_complete_registration', { email }, { registration_method: 'email' })
+    // Server-side: Conversions API with email + attribution (fbc, fbp, fbclid from Firestore)
+    sendConversionEvent(eventId, 'fb_mobile_complete_registration', { email }, { registration_method: 'email' }, attributionData)
   ]);
   
   // Check results  
