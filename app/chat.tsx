@@ -274,8 +274,11 @@ export default function ChatScreen(): React.JSX.Element {
 
     try {
       // Send user message to Firestore
-      const messageId = await sendMessage(user.id, threadId, textToSend);
-      trackAmplitudeEvent('chat_message_sent', { textLength: textToSend.length });
+      const { messageId, userMessageCount } = await sendMessage(user.id, threadId, textToSend);
+      trackAmplitudeEvent('chat_message_sent', { 
+        textLength: textToSend.length,
+        user_message_number: userMessageCount,
+      });
 
       // Immediately show typing indicator for better UX
       setIsTyping(true);

@@ -277,10 +277,17 @@ async function createChatWithWelcomeMessage(userId: string): Promise<void> {
     
     // Then create thread document with metadata
     // IMPORTANT: unreadCount = 0, onChatMessageCreated trigger will increment it to 1
+    // 
+    // ⚠️ DUPLICATED STRUCTURE WARNING:
+    // This threadData structure is duplicated in web-funnels repository.
+    // If you change this structure, you MUST update BOTH locations:
+    // 1. boss-app/services/user.service.ts (this file) - threadData: ChatThread
+    // 2. web-funnels/app/api/firebase/create-user/route.ts - threadData: ChatThreadData
     const threadData: ChatThread = {
       createdAt: now,
       updatedAt: now,
       messageCount: 1,
+      userMessageCount: 0,
       assistantIsTyping: false,
       unreadCount: 0, // onChatMessageCreated trigger increments this
       lastReadAt: null,

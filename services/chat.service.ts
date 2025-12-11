@@ -91,6 +91,7 @@ export async function getOrCreateThread(userId: string): Promise<string> {
           createdAt: now,
           updatedAt: now,
           messageCount: 0,
+          userMessageCount: 0,
           assistantIsTyping: false,
           unreadCount: 0,
           lastReadAt: null,
@@ -185,18 +186,18 @@ export function subscribeToMessages(
  * @param userId - User ID
  * @param threadId - Thread ID
  * @param text - Message text
- * @returns Message ID of the created message
+ * @returns Object with messageId and updated userMessageCount
  */
 export async function sendMessage(
   userId: string,
   threadId: string,
   text: string
-): Promise<string> {
+): Promise<{ messageId: string; userMessageCount: number }> {
   logger.time('sendMessage');
   logger.debug('Sending message', { feature: 'ChatService', userId, threadId, textLength: text.length });
   
   try {
-    const messageId = await retryWithBackoff(async () => {
+    const result = await retryWithBackoff(async () => {
       const messagesRef = collection(db, 'users', userId, 'chatThreads', threadId, 'messages');
       const threadRef = doc(db, 'users', userId, 'chatThreads', threadId);
       
@@ -210,22 +211,40 @@ export async function sendMessage(
       // Add message to collection
       const messageRef = await addDoc(messagesRef, message);
       
-      // Update thread metadata
+      // Update thread metadata and get updated count
       const threadDoc = await getDoc(threadRef);
-      if (threadDoc.exists()) {
-        const threadData = threadDoc.data() as ChatThread;
-        await updateDoc(threadRef, {
-          updatedAt: message.timestamp,
-          messageCount: threadData.messageCount + 1,
+      
+      if (!threadDoc.exists()) {
+        // Thread should ALWAYS exist before sending a message
+        // This is a critical error - thread is created during:
+        // 1. User registration (createChatWithWelcomeMessage)
+        // 2. Opening chat screen (getOrCreateThread)
+        const error = new Error(`Chat thread not found: ${threadId}`);
+        logger.error('CRITICAL: Attempting to send message to non-existent thread', {
+          feature: 'ChatService',
+          userId,
+          threadId,
+          error,
         });
+        throw error;
       }
       
-      logger.info('Message sent successfully', { feature: 'ChatService', userId, threadId, messageId: messageRef.id });
-      return messageRef.id;
+      const threadData = threadDoc.data() as ChatThread;
+      // Use fallback for threads created before userMessageCount field was added
+      const updatedUserMessageCount = (threadData.userMessageCount ?? 0) + 1;
+      
+      await updateDoc(threadRef, {
+        updatedAt: message.timestamp,
+        messageCount: threadData.messageCount + 1,
+        userMessageCount: updatedUserMessageCount,
+      });
+      
+      logger.info('Message sent successfully', { feature: 'ChatService', userId, threadId, messageId: messageRef.id, userMessageCount: updatedUserMessageCount });
+      return { messageId: messageRef.id, userMessageCount: updatedUserMessageCount };
     }, 3, 500);
     
-    logger.timeEnd('sendMessage', { feature: 'ChatService', userId, threadId, messageId });
-    return messageId;
+    logger.timeEnd('sendMessage', { feature: 'ChatService', userId, threadId, messageId: result.messageId });
+    return result;
   } catch (error) {
     const err = error as Error;
     const isOffline = isFirebaseOfflineError(err);

@@ -31,6 +31,7 @@ export interface ChatThreadSchema {
   createdAt: string; // ISO 8601 timestamp
   updatedAt: string; // ISO 8601 timestamp - updated on each new message
   messageCount: number; // Total number of messages in thread
+  userMessageCount: number; // Number of messages from user only (for analytics)
   assistantIsTyping: boolean; // Whether AI is currently generating a response
   currentGenerationId?: string; // UUID of current response generation (for cancellation)
   
@@ -68,6 +69,7 @@ export interface ChatMessageSchema {
  */
 export const ChatThreadDefaults: Partial<ChatThreadSchema> = {
   messageCount: 0,
+  userMessageCount: 0,
   assistantIsTyping: false,
   unreadCount: 0,
   lastReadAt: null,
