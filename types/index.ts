@@ -9,7 +9,8 @@ import type {
   ContentType,
   NoteEntrySchema,
   NoteSubtype,
-  EmailSchema
+  EmailSchema,
+  SubscriptionPriceTier
 } from '@/firestore/schemas';
 
 // === DERIVED TYPES ===
@@ -93,13 +94,15 @@ export interface Email extends EmailSchema {}
 
 // Extract from UserSchema.subscription
 export type SubscriptionStatus = 'none' | 'active' | 'trial' | 'cancelled' | 'expired' | 'grace_period';
-export type SubscriptionTier = 'basic' | 'pro' | 'ultra' | 'enterprise';
+export type SubscriptionTier = 'basic' | 'pro' | 'ultra' | 'enterprise'; // Product tier (features)
+export type { SubscriptionPriceTier } from '@/firestore/schemas'; // Re-export from schemas (single source of truth)
 export type SubscriptionBillingPeriod = 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'lifetime';
 export type SubscriptionProvider = 'none' | 'stripe' | 'apple' | 'google';
 
 export interface UserSubscription {
   status: SubscriptionStatus;
   tier?: SubscriptionTier;
+  priceTier?: SubscriptionPriceTier;
   billingPeriod?: SubscriptionBillingPeriod;
   provider: SubscriptionProvider;
   

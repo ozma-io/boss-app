@@ -41,6 +41,20 @@ export {
   isBossFieldRequired
 } from './field-presets';
 
+// === SHARED TYPES ===
+
+/**
+ * Subscription Price Tier
+ * 
+ * Price tiers allow different pricing for different markets or A/B test experiments.
+ * This is separate from product tier (basic/pro/ultra/enterprise) which defines features.
+ * 
+ * - tier1: Original pricing (default)
+ * - tier2: Alternative pricing group
+ * - tier3: Alternative pricing group
+ */
+export type SubscriptionPriceTier = 'tier1' | 'tier2' | 'tier3';
+
 // === LEGACY EXPORTS (for backwards compatibility) ===
 export * from './boss.schema';
 export * from './chat.schema';

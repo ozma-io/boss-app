@@ -31,6 +31,8 @@
  * - Source tracking: Field metadata includes source (onboarding_funnel, user_added, etc.)
  */
 
+import type { SubscriptionPriceTier } from './index';
+
 export interface UserSchema {
   // === CORE FIELDS (cannot be deleted) ===
   
@@ -125,10 +127,17 @@ export interface UserSchema {
     // === CORE STATUS ===
     status: 'none' | 'active' | 'trial' | 'cancelled' | 'expired' | 'grace_period';
     
-    // === SUBSCRIPTION TIER ===
+    // === SUBSCRIPTION TIERS ===
+    
+    // Product tier (feature level)
     // Currently only 'basic' is implemented
     // 'pro', 'ultra', 'enterprise' planned for future
     tier?: 'basic' | 'pro' | 'ultra' | 'enterprise';
+    
+    // Price tier (geographical/A-B test pricing)
+    // Used to track which price group user is on
+    // Allows different pricing for different markets or experiments
+    priceTier?: SubscriptionPriceTier;
     
     // === BILLING PERIOD ===
     billingPeriod?: 'monthly' | 'quarterly' | 'semiannual' | 'annual' | 'lifetime';
