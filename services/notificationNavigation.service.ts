@@ -9,6 +9,11 @@ import { logger } from './logger.service';
  * instead of expo-notifications (which has data payload issues on iOS).
  */
 
+interface RemoteMessage {
+  data?: Record<string, unknown>;
+  notification?: Record<string, unknown>;
+}
+
 /**
  * Navigate to chat screen with authentication check
  * 
@@ -19,7 +24,7 @@ import { logger } from './logger.service';
 function navigateToChat(
   authState: string,
   setRedirectPath: (path: string) => void,
-  context: Record<string, any> = {}
+  context: Record<string, unknown> = {}
 ): void {
   logger.info('Navigating to chat from notification', {
     feature: 'NotificationNavigation',
@@ -47,7 +52,7 @@ function navigateToChat(
  * @param source - Source of notification (for logging)
  */
 export function handleNotificationNavigation(
-  data: Record<string, any> | null | undefined,
+  data: Record<string, unknown> | null | undefined,
   authState: string,
   setRedirectPath: (path: string) => void,
   source: 'background' | 'quit' = 'background'
@@ -137,7 +142,7 @@ export function setupFirebaseNotificationHandlers(
     const messaging = require('@react-native-firebase/messaging').default;
 
     // Handle notification opened app from background state
-    const unsubscribeBackground = messaging().onNotificationOpenedApp((remoteMessage: any) => {
+    const unsubscribeBackground = messaging().onNotificationOpenedApp((remoteMessage: RemoteMessage) => {
       logger.info('Notification opened app from background', {
         feature: 'NotificationNavigation',
         data: remoteMessage.data,
@@ -152,7 +157,7 @@ export function setupFirebaseNotificationHandlers(
     // Handle initial notification (app was quit)
     messaging()
       .getInitialNotification()
-      .then((remoteMessage: any) => {
+      .then((remoteMessage: RemoteMessage | null) => {
         if (remoteMessage) {
           logger.info('App opened from notification (quit state)', {
             feature: 'NotificationNavigation',
