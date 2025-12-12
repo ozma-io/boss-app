@@ -1,0 +1,14 @@
+## 1.3.6 — Stability & Polish Update
+
+<en-US>
+This update focuses on improving app reliability and user experience with behind-the-scenes enhancements:
+
+• Enhanced chat stability with better error handling and recovery
+• Improved app performance during sign-in and profile creation
+• More reliable data synchronization after login
+• Clearer input field placeholders for better guidance
+• Enhanced analytics for continuous product improvements
+
+Thank you for using BossUp! We're constantly working to make your experience better.
+</en-US>
+
