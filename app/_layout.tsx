@@ -8,7 +8,7 @@ import { useNotificationHandlers } from '@/hooks/useNotificationHandlers';
 import { initializeAmplitude } from '@/services/amplitude.service';
 import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData, setNeedsTrackingAfterAuth } from '@/services/attribution.service';
 import { initializeGoogleSignIn } from '@/services/auth.service';
-import { initializeFacebookSdk, parseDeepLinkParams, sendAppInstallEventDual } from '@/services/facebook.service';
+import { parseDeepLinkParams, sendAppInstallEventDual } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution } from '@/services/tracking.service';
@@ -113,12 +113,9 @@ export default function RootLayout(): React.JSX.Element | null {
           await checkAndApplyUpdates(true);
         }
 
-        // Initialize Facebook SDK
-        if (Platform.OS === 'android') {
-          // Android: Initialize early (no ATT permission needed)
-          await initializeFacebookSdk();
-        }
-        // iOS: Initialize later in tracking-onboarding.tsx AFTER ATT permission
+        // Facebook SDK: Initializes automatically (isAutoInitEnabled: true in app.config.ts)
+        // No manual initialization needed - SDK will start at native app launch
+        // On iOS: setAdvertiserTrackingEnabled() will be called later after ATT permission
 
         // Initialize Intercom SDK
         await initializeIntercom();

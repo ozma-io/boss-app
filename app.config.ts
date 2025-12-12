@@ -29,7 +29,7 @@ const config: ExpoConfig = {
   name: 'BossUp',
   slug: 'boss-app',
   owner: 'ozma-io',
-  version: '1.3.6',
+  version: '1.3.7',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'bossup',
@@ -142,9 +142,10 @@ const config: ExpoConfig = {
         scheme: `fb${FACEBOOK_APP_ID}`,
         advertiserIDCollectionEnabled: true,
         autoLogAppEventsEnabled: true,
-        // iOS: Manual init after ATT permission (best practice)
-        // Android: Auto init early (no ATT permission needed)
-        isAutoInitEnabled: false,
+        // Auto-init enabled: SDK initializes automatically at app start (both iOS and Android)
+        // This allows autoLogAppEvents to capture first launch immediately
+        // On iOS: IDFA will be enabled later via setAdvertiserTrackingEnabled() after ATT permission
+        isAutoInitEnabled: true,
         iosUserTrackingPermission: 'This app uses data for delivering personalized ads to you.',
       },
     ],

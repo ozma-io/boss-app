@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { clearTrackingAfterAuth, getAttributionData, getAttributionDataWithFallback, isFirstLaunch, markAppAsLaunched } from '@/services/attribution.service';
-import { initializeFacebookSdk, sendAppInstallEventDual, sendRegistrationEventDual } from '@/services/facebook.service';
+import { sendAppInstallEventDual, sendRegistrationEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
 import { hasFacebookAttribution, recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -39,22 +39,16 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
       const status = await requestTrackingPermission();
       logger.info('ATT permission status received', { feature: 'TrackingOnboarding', status });
       
-      // Initialize Facebook SDK on iOS AFTER ATT permission (best practice)
-      if (Platform.OS === 'ios') {
-        await initializeFacebookSdk();
-        
-        // Enable advertiser tracking if permission granted (critical for IDFA usage)
-        if (status === 'authorized') {
-          try {
-            const { Settings } = require('react-native-fbsdk-next');
-            await Settings.setAdvertiserTrackingEnabled(true);
-            logger.info('Advertiser tracking enabled in Facebook SDK', { feature: 'TrackingOnboarding' });
-          } catch (error) {
-            logger.warn('Failed to enable advertiser tracking', { feature: 'TrackingOnboarding', error });
-          }
+      // On iOS: Update Facebook SDK advertiser tracking setting after ATT permission
+      // Note: SDK is already initialized automatically (isAutoInitEnabled: true)
+      if (Platform.OS === 'ios' && status === 'authorized') {
+        try {
+          const { Settings } = require('react-native-fbsdk-next');
+          await Settings.setAdvertiserTrackingEnabled(true);
+          logger.info('Advertiser tracking enabled in Facebook SDK after ATT permission', { feature: 'TrackingOnboarding' });
+        } catch (error) {
+          logger.warn('Failed to enable advertiser tracking', { feature: 'TrackingOnboarding', error });
         }
-        
-        logger.info('Facebook SDK initialized after ATT permission', { feature: 'TrackingOnboarding', status });
       }
       
       // If user is logged in, update their tracking permission status
