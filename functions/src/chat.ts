@@ -138,126 +138,146 @@ function getRecentMessages(
 async function fetchUserContext(userId: string): Promise<string> {
   const db = admin.firestore();
   
-  // Fetch user profile
-  const userDoc = await db.collection('users').doc(userId).get();
-  const userData = userDoc.data();
-  
-  // Fetch all bosses
-  const bossesSnapshot = await db.collection('users').doc(userId)
-    .collection('bosses')
-    .orderBy('createdAt', 'asc')
-    .get();
-  
-  const bossesData: Array<BossSchema & { id: string }> = [];
-  
-  // Collect all bosses (without entries nested inside)
-  for (const bossDoc of bossesSnapshot.docs) {
-    const bossData = { id: bossDoc.id, ...bossDoc.data() as BossSchema };
-    bossesData.push(bossData);
-  }
-  
-  // Fetch all timeline entries from user level
-  const entriesSnapshot = await db
-    .collection('users').doc(userId)
-    .collection('entries')
-    .orderBy('timestamp', 'desc')
-    .limit(50)
-    .get();
-  
-  const entries: Array<EntrySchema & { id: string }> = [];
-  entriesSnapshot.forEach((entryDoc) => {
-    entries.push({ id: entryDoc.id, ...entryDoc.data() as EntrySchema });
-  });
-  
-  // Fetch last 15 sent emails
-  const emailsSnapshot = await db
-    .collection('users').doc(userId)
-    .collection('emails')
-    .where('state', '==', 'SENT')
-    .orderBy('sentAt', 'desc')
-    .limit(15)
-    .get();
-  
-  const emails: Array<EmailSchema & { id: string }> = [];
-  emailsSnapshot.forEach((emailDoc) => {
-    emails.push({ id: emailDoc.id, ...emailDoc.data() as EmailSchema });
-  });
-  
-  // Build context string
-  const contextParts: string[] = [];
-  
-  // User profile info
-  if (userData) {
-    contextParts.push('## User Profile');
-    contextParts.push(`User ID: ${userId}`);
-    contextParts.push(`Name: ${userData.name || 'Not set'}`);
-    contextParts.push(`Position: ${userData.position || 'Not set'}`);
-    contextParts.push(`Goal: ${userData.goal || 'Not set'}`);
+  try {
+    // Fetch user profile
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
     
-    // Add custom fields if they exist
-    if (userData._fieldsMeta) {
-      contextParts.push('\n### Custom Profile Fields');
-      for (const [fieldKey, fieldMetaValue] of Object.entries(userData._fieldsMeta)) {
-        const fieldMeta = fieldMetaValue as FieldMetadata;
-        // userData is a Record so we can safely access any key
-        const fieldValue = userData[fieldKey as keyof UserSchema];
-        if (fieldValue !== undefined && fieldValue !== null) {
-          contextParts.push(`${fieldMeta.label}: ${fieldValue}`);
-        }
-      }
+    if (!userData) {
+      logger.warn('User document not found', { userId });
     }
-  }
-  
-  // Bosses and their data
-  if (bossesData.length > 0) {
-    contextParts.push('\n## Bosses');
     
-    for (const boss of bossesData) {
-      contextParts.push(`\n### Boss: ${boss.name || 'Unnamed'}`);
-      contextParts.push(`Position: ${boss.position || 'Not set'}`);
-      contextParts.push(`Department: ${boss.department || 'Not set'}`);
-      contextParts.push(`Management Style: ${boss.managementStyle || 'Not set'}`);
-      contextParts.push(`Working Hours: ${boss.workingHours || 'Not set'}`);
-      contextParts.push(`Started At: ${boss.startedAt || 'Not set'}`);
+    // Fetch all bosses
+    const bossesSnapshot = await db.collection('users').doc(userId)
+      .collection('bosses')
+      .orderBy('createdAt', 'asc')
+      .get();
+    
+    const bossesData: Array<BossSchema & { id: string }> = [];
+    
+    // Collect all bosses (without entries nested inside)
+    for (const bossDoc of bossesSnapshot.docs) {
+      const bossData = { id: bossDoc.id, ...bossDoc.data() as BossSchema };
+      bossesData.push(bossData);
+    }
+    
+    logger.debug('Fetched bosses data', { userId, bossCount: bossesData.length });
+    
+    // Fetch all timeline entries from user level
+    const entriesSnapshot = await db
+      .collection('users').doc(userId)
+      .collection('entries')
+      .orderBy('timestamp', 'desc')
+      .limit(50)
+      .get();
+    
+    const entries: Array<EntrySchema & { id: string }> = [];
+    entriesSnapshot.forEach((entryDoc) => {
+      entries.push({ id: entryDoc.id, ...entryDoc.data() as EntrySchema });
+    });
+    
+    logger.debug('Fetched timeline entries', { userId, entryCount: entries.length });
+    
+    // Fetch last 15 sent emails
+    const emailsSnapshot = await db
+      .collection('users').doc(userId)
+      .collection('emails')
+      .where('state', '==', 'SENT')
+      .orderBy('sentAt', 'desc')
+      .limit(15)
+      .get();
+    
+    logger.debug('Fetched sent emails', { userId, emailCount: emailsSnapshot.size });
+  
+    const emails: Array<EmailSchema & { id: string }> = [];
+    emailsSnapshot.forEach((emailDoc) => {
+      emails.push({ id: emailDoc.id, ...emailDoc.data() as EmailSchema });
+    });
+    
+    // Build context string
+    const contextParts: string[] = [];
+    
+    // User profile info
+    if (userData) {
+      contextParts.push('## User Profile');
+      contextParts.push(`User ID: ${userId}`);
+      contextParts.push(`Name: ${userData.name || 'Not set'}`);
+      contextParts.push(`Position: ${userData.position || 'Not set'}`);
+      contextParts.push(`Goal: ${userData.goal || 'Not set'}`);
       
       // Add custom fields if they exist
-      if (boss._fieldsMeta) {
-        contextParts.push('\n#### Custom Boss Fields');
-        for (const [fieldKey, fieldMetaValue] of Object.entries(boss._fieldsMeta)) {
+      if (userData._fieldsMeta) {
+        contextParts.push('\n### Custom Profile Fields');
+        for (const [fieldKey, fieldMetaValue] of Object.entries(userData._fieldsMeta)) {
           const fieldMeta = fieldMetaValue as FieldMetadata;
-          // boss is a Record so we can safely access any key
-          const fieldValue = boss[fieldKey as keyof BossSchema];
+          // userData is a Record so we can safely access any key
+          const fieldValue = userData[fieldKey as keyof UserSchema];
           if (fieldValue !== undefined && fieldValue !== null) {
             contextParts.push(`${fieldMeta.label}: ${fieldValue}`);
           }
         }
       }
     }
-  }
-  
-  // Add timeline entries
-  if (entries.length > 0) {
-    contextParts.push('\n## Timeline Entries (Recent)');
-    for (const entry of entries) {
-      const entryType = entry.type === 'note' ? `Note (${entry.subtype})` : 'Entry';
-      contextParts.push(`- [${entry.timestamp}] ${entryType}: ${entry.title}`);
-      if (entry.content) {
-        contextParts.push(`  Content: ${entry.content}`);
+    
+    // Bosses and their data
+    if (bossesData.length > 0) {
+      contextParts.push('\n## Bosses');
+      
+      for (const boss of bossesData) {
+        contextParts.push(`\n### Boss: ${boss.name || 'Unnamed'}`);
+        contextParts.push(`Position: ${boss.position || 'Not set'}`);
+        contextParts.push(`Department: ${boss.department || 'Not set'}`);
+        contextParts.push(`Management Style: ${boss.managementStyle || 'Not set'}`);
+        contextParts.push(`Working Hours: ${boss.workingHours || 'Not set'}`);
+        contextParts.push(`Started At: ${boss.startedAt || 'Not set'}`);
+        
+        // Add custom fields if they exist
+        if (boss._fieldsMeta) {
+          contextParts.push('\n#### Custom Boss Fields');
+          for (const [fieldKey, fieldMetaValue] of Object.entries(boss._fieldsMeta)) {
+            const fieldMeta = fieldMetaValue as FieldMetadata;
+            // boss is a Record so we can safely access any key
+            const fieldValue = boss[fieldKey as keyof BossSchema];
+            if (fieldValue !== undefined && fieldValue !== null) {
+              contextParts.push(`${fieldMeta.label}: ${fieldValue}`);
+            }
+          }
+        }
       }
     }
-  }
-  
-  // Add sent email history
-  if (emails.length > 0) {
-    contextParts.push('\n## Previous Email Notifications Sent to User');
-    for (const email of emails) {
-      contextParts.push(`\n### Email sent at ${email.sentAt}`);
-      contextParts.push(`Subject: ${email.subject}`);
-      contextParts.push(`Body:\n${email.body_markdown}`);
+    
+    // Add timeline entries
+    if (entries.length > 0) {
+      contextParts.push('\n## Timeline Entries (Recent)');
+      for (const entry of entries) {
+        const entryType = entry.type === 'note' ? `Note (${entry.subtype})` : 'Entry';
+        contextParts.push(`- [${entry.timestamp}] ${entryType}: ${entry.title}`);
+        if (entry.content) {
+          contextParts.push(`  Content: ${entry.content}`);
+        }
+      }
     }
-  }
+    
+    // Add sent email history
+    if (emails.length > 0) {
+      contextParts.push('\n## Previous Email Notifications Sent to User');
+      for (const email of emails) {
+        contextParts.push(`\n### Email sent at ${email.sentAt}`);
+        contextParts.push(`Subject: ${email.subject}`);
+        contextParts.push(`Body:\n${email.body_markdown}`);
+      }
+    }
   
-  return contextParts.join('\n');
+    return contextParts.join('\n');
+  } catch (error) {
+    logger.error('Error in fetchUserContext', {
+      userId,
+      error,
+      errorName: (error as Error).name,
+      errorMessage: (error as Error).message,
+    });
+    throw error;
+  }
 }
 
 
@@ -330,6 +350,10 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       userId,
       threadId,
       messageId,
+      sessionId,
+      hasCurrentDateTime: Boolean(currentDateTimeUTC),
+      model: OPENAI_MODEL,
+      timeout: FUNCTION_TIMEOUTS.generateChatResponse,
     });
     
     const db = admin.firestore();
@@ -398,13 +422,22 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       await timeout.check('Fetching user context');
       
       // Fetch user context
-      const userContext = await fetchUserContext(userId);
-      
-      logger.debug('User context fetched', { 
-        userId, 
-        threadId, 
-        contextLength: userContext.length 
-      });
+      let userContext: string;
+      try {
+        userContext = await fetchUserContext(userId);
+        logger.info('User context fetched successfully', { 
+          userId, 
+          threadId, 
+          contextLength: userContext.length 
+        });
+      } catch (contextError) {
+        logger.error('Failed to fetch user context', {
+          userId,
+          threadId,
+          error: contextError,
+        });
+        throw contextError;
+      }
       
       // Prepare messages for OpenAI with 4-layer structure:
       // 1. Main system prompt
@@ -489,18 +522,32 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       await timeout.check('Calling OpenAI API');
       
       // Call OpenAI API
-      const response = await openai.chat.completions.create({
-        model: OPENAI_MODEL,
-        messages: messagesForOpenAI,
-        user: userId, // Unique identifier for end-user abuse tracking
-      });
-      
-      logger.info('Received response from OpenAI', {
-        userId,
-        threadId,
-        finishReason: response.choices[0].finish_reason,
-        tokensUsed: response.usage?.total_tokens,
-      });
+      let response: ChatCompletion;
+      try {
+        response = await openai.chat.completions.create({
+          model: OPENAI_MODEL,
+          messages: messagesForOpenAI,
+          user: userId, // Unique identifier for end-user abuse tracking
+        });
+        
+        logger.info('Received response from OpenAI', {
+          userId,
+          threadId,
+          finishReason: response.choices[0]?.finish_reason,
+          tokensUsed: response.usage?.total_tokens,
+          hasChoices: response.choices?.length > 0,
+        });
+      } catch (openaiError) {
+        logger.error('OpenAI API call failed', {
+          userId,
+          threadId,
+          model: OPENAI_MODEL,
+          error: openaiError,
+          errorName: (openaiError as Error).name,
+          errorMessage: (openaiError as Error).message,
+        });
+        throw openaiError;
+      }
       
       // Check again if generation was cancelled before saving
       const threadSnapshot2 = await threadRef.get();
@@ -521,29 +568,64 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       }
       
       // Convert OpenAI response to Firestore format
-      const assistantMessage = fromOpenAIResponse(response);
+      let assistantMessage: FirestoreChatMessage;
+      try {
+        assistantMessage = fromOpenAIResponse(response);
+        logger.debug('Converted OpenAI response to Firestore format', {
+          userId,
+          threadId,
+          contentLength: assistantMessage.content.length,
+        });
+      } catch (conversionError) {
+        logger.error('Failed to convert OpenAI response to Firestore format', {
+          userId,
+          threadId,
+          error: conversionError,
+          responseChoices: response.choices?.length,
+        });
+        throw conversionError;
+      }
       
       // Save AI response to Firestore
-      const messageRef = await messagesRef.add(assistantMessage);
-      
-      logger.info('Saved assistant message to Firestore', {
-        userId,
-        threadId,
-        messageId: messageRef.id,
-      });
+      let messageRef;
+      try {
+        messageRef = await messagesRef.add(assistantMessage);
+        logger.info('Saved assistant message to Firestore', {
+          userId,
+          threadId,
+          messageId: messageRef.id,
+        });
+      } catch (saveError) {
+        logger.error('Failed to save assistant message to Firestore', {
+          userId,
+          threadId,
+          error: saveError,
+        });
+        throw saveError;
+      }
       
       // Update thread metadata
-      await threadRef.update({
-        assistantIsTyping: false,
-        updatedAt: assistantMessage.timestamp,
-        messageCount: admin.firestore.FieldValue.increment(1),
-      });
-      
-      logger.info('Chat response generation completed successfully', {
-        userId,
-        threadId,
-        messageId: messageRef.id,
-      });
+      try {
+        await threadRef.update({
+          assistantIsTyping: false,
+          updatedAt: assistantMessage.timestamp,
+          messageCount: admin.firestore.FieldValue.increment(1),
+        });
+        
+        logger.info('Chat response generation completed successfully', {
+          userId,
+          threadId,
+          messageId: messageRef.id,
+        });
+      } catch (updateError) {
+        logger.error('Failed to update thread metadata', {
+          userId,
+          threadId,
+          messageId: messageRef.id,
+          error: updateError,
+        });
+        // Don't throw here - message was saved successfully, metadata update is less critical
+      }
       
       // Flush LangFuse events to ensure they are sent
       try {
@@ -569,11 +651,22 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         });
       });
       
-      logger.error('Error generating chat response', {
+      // Capture detailed error information before throwing generic error
+      const errorObj = error as Error;
+      const errorDetails = {
         userId,
         threadId,
-        error,
-      });
+        messageId,
+        error: errorObj,
+        errorName: errorObj.name,
+        errorMessage: errorObj.message,
+        errorStack: errorObj.stack,
+        errorCode: (error as { code?: string }).code,
+        // Add any additional properties from the error object
+        ...(typeof error === 'object' && error !== null ? error : {}),
+      };
+      
+      logger.error('Error generating chat response', errorDetails);
       
       // Flush LangFuse events even on error
       try {
@@ -582,10 +675,28 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         logger.warn('Failed to flush LangFuse events on error', { flushError });
       }
       
-      // Throw user-friendly error
+      // Determine error type and provide more specific error messages
+      let errorCode = 'internal';
+      let errorMessage = 'Failed to generate chat response. Please try again.';
+      
+      if (errorObj.message?.includes('quota') || errorObj.message?.includes('rate limit')) {
+        errorCode = 'resource-exhausted';
+        errorMessage = 'Service is temporarily busy. Please try again in a moment.';
+      } else if (errorObj.message?.includes('timeout') || errorObj.message?.includes('deadline')) {
+        errorCode = 'deadline-exceeded';
+        errorMessage = 'Request took too long. Please try again.';
+      } else if (errorObj.message?.includes('network') || errorObj.message?.includes('connection')) {
+        errorCode = 'unavailable';
+        errorMessage = 'Network error occurred. Please check your connection.';
+      } else if (errorObj.message?.includes('permission') || errorObj.message?.includes('auth')) {
+        errorCode = 'permission-denied';
+        errorMessage = 'Authentication error. Please sign in again.';
+      }
+      
+      // Throw error with better context (message will be seen by client and Sentry)
       throw new functions.https.HttpsError(
-        'internal',
-        'Failed to generate chat response. Please try again.'
+        errorCode as 'internal' | 'resource-exhausted' | 'deadline-exceeded' | 'unavailable' | 'permission-denied',
+        `${errorMessage} [${errorObj.name || 'Error'}: ${errorObj.message || 'Unknown error'}]`
       );
     }
   }

@@ -413,22 +413,28 @@ export async function generateAIResponse(
   } catch (error) {
     const err = error as Error;
     
+    // Extract detailed error information
+    const errorDetails = {
+      feature: 'ChatService',
+      userId,
+      threadId,
+      messageId,
+      error: err,
+      errorName: err.name,
+      errorMessage: err.message,
+      errorStack: err.stack,
+      errorCode: (error as { code?: string }).code,
+      // Capture any additional properties from Firebase error
+      ...(typeof error === 'object' && error !== null ? { 
+        customData: (error as { customData?: unknown }).customData,
+        details: (error as { details?: unknown }).details,
+      } : {}),
+    };
+    
     if (isExpectedFirebaseError(err)) {
-      logger.warn('AI response generation failed with expected error', {
-        feature: 'ChatService',
-        userId,
-        threadId,
-        messageId,
-        error: err,
-      });
+      logger.warn('AI response generation failed with expected error', errorDetails);
     } else {
-      logger.error('Error generating AI response', {
-        feature: 'ChatService',
-        userId,
-        threadId,
-        messageId,
-        error: err,
-      });
+      logger.error('Error generating AI response', errorDetails);
     }
     
     throw error;

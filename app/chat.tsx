@@ -296,7 +296,15 @@ export default function ChatScreen(): React.JSX.Element {
       // Trigger AI response generation
       // The typing indicator will be managed by the Cloud Function
       generateAIResponse(user.id, threadId, messageId, sessionId).catch((error) => {
-        logger.error('Failed to generate AI response', { feature: 'ChatScreen', error });
+        const err = error as Error;
+        logger.error('Failed to generate AI response', { 
+          feature: 'ChatScreen', 
+          error: err,
+          errorMessage: err.message,
+          errorName: err.name,
+          errorStack: err.stack,
+          error_code: (error as { code?: string }).code,
+        });
         // Don't show error to user, just log it
         // The typing indicator will be reset by the Cloud Function
       });
