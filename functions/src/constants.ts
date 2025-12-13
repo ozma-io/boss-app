@@ -163,7 +163,7 @@ export const EMAIL_MONITORING_RECIPIENT = 'kmarkin@ozma.io';
  * Used for timeout monitoring to avoid duplication
  */
 export const FUNCTION_TIMEOUTS = {
-  generateChatResponse: 120,
+  generateChatResponse: 660, // 11 minutes (OpenAI timeout is 10 minutes)
   verifyIAPPurchase: 120,
   appleServerNotification: 120,
   onChatMessageCreated: 60,

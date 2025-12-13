@@ -309,6 +309,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
     const openai = observeOpenAI(
       new OpenAI({
         apiKey: openaiApiKey.value().trim(),
+        timeout: 600000, // 10 minutes in milliseconds
       }),
       {
         generationName: 'chat_completion',
