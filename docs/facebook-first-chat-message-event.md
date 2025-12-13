@@ -222,3 +222,4 @@ npm run ios  # or npm run android
 - [Event Deduplication](https://developers.facebook.com/docs/marketing-api/conversions-api/deduplicate-pixel-and-server-events)
 - [Best Practices](https://developers.facebook.com/docs/marketing-api/conversions-api/best-practices)
 - [External ID Parameter](https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/external-id)
+
