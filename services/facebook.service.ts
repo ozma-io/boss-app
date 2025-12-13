@@ -37,6 +37,7 @@ interface ConversionEventParams {
   eventName: string;
   eventId: string;
   userId: string; // Firebase User ID - CRITICAL for external_id matching
+  actionSource?: 'app' | 'website' | 'email' | 'phone_call' | 'chat' | 'physical_store' | 'system_generated' | 'business_messaging' | 'other';
   userData?: {
     email?: string;
     phone?: string;
@@ -230,7 +231,7 @@ async function buildEventData(params: ConversionEventParams): Promise<Conversion
     eventName: params.eventName,
     eventTime: validateFacebookEventTime(Math.floor(Date.now() / 1000), params.eventName),
     eventId: params.eventId,
-    actionSource: 'app' as const,
+    actionSource: params.actionSource || 'app',
     advertiserTrackingEnabled,
     applicationTrackingEnabled,
     extinfo,
@@ -359,6 +360,7 @@ export function generateEventId(): string {
  * @param userData - User data for the event (will be hashed by Cloud Function)
  * @param customData - Custom event data (e.g., currency, value)
  * @param attributionData - Attribution data from deep link (fbclid, utm params)
+ * @param actionSource - Event source (default: 'app'). Use 'website' for web-proxy events.
  */
 export async function sendConversionEvent(
   userId: string | undefined,
@@ -371,7 +373,8 @@ export async function sendConversionEvent(
     lastName?: string;
   },
   customData?: Record<string, string | number | boolean>,
-  attributionData?: AttributionData
+  attributionData?: AttributionData,
+  actionSource?: 'app' | 'website' | 'email' | 'phone_call' | 'chat' | 'physical_store' | 'system_generated' | 'business_messaging' | 'other'
 ): Promise<void> {
   // Log warning if userId is missing (pre-login events won't have external_id)
   if (!userId) {
@@ -389,6 +392,7 @@ export async function sendConversionEvent(
       userId: userId || '', // Empty string if no userId (pre-login events)
       eventId,
       eventName,
+      actionSource,
       userData,
       customData,
       attributionData,
@@ -455,10 +459,11 @@ export async function sendAppInstallEventDual(
   const results = await Promise.allSettled([
     // Client-side: Facebook SDK
     (async () => {
-      if (isClientSdkAvailable()) {
-        AppEventsLogger!.logEvent(FB_MOBILE_ACTIVATE_APP, clientParams);
-        logger.info('AppInstall client-side sent', { feature: 'Facebook', eventId });
+      if (!isClientSdkAvailable()) {
+        throw new Error('Facebook SDK not available on this platform');
       }
+      AppEventsLogger!.logEvent(FB_MOBILE_ACTIVATE_APP, clientParams);
+      logger.info('AppInstall client-side sent', { feature: 'Facebook', eventId });
     })(),
     
     // Server-side: Conversions API via Cloud Function (with external_id for user matching)
@@ -470,8 +475,9 @@ export async function sendAppInstallEventDual(
   const clientSuccess = clientResult.status === 'fulfilled';
   const serverSuccess = serverResult.status === 'fulfilled';
   
-  if (!clientSuccess && !serverSuccess) {
-    throw new Error('Both client and server AppInstall events failed');
+  // At least server event must succeed (client may be unavailable on web)
+  if (!serverSuccess) {
+    throw new Error('Server-side AppInstall event failed (client-only success is not sufficient)');
   }
   
   logger.info('AppInstall dual-send completed', { 
@@ -515,10 +521,11 @@ export async function sendRegistrationEventDual(userId: string, email: string, a
   const results = await Promise.allSettled([
     // Client-side: Facebook SDK
     (async () => {
-      if (isClientSdkAvailable()) {
-        AppEventsLogger!.logEvent(FB_MOBILE_COMPLETE_REGISTRATION, clientParams);
-        logger.info('Registration client-side sent', { feature: 'Facebook', eventId });
+      if (!isClientSdkAvailable()) {
+        throw new Error('Facebook SDK not available on this platform');
       }
+      AppEventsLogger!.logEvent(FB_MOBILE_COMPLETE_REGISTRATION, clientParams);
+      logger.info('Registration client-side sent', { feature: 'Facebook', eventId });
     })(),
     
     // Server-side: Conversions API with email + external_id + attribution (fbc, fbp, fbclid from Firestore)
@@ -530,8 +537,9 @@ export async function sendRegistrationEventDual(userId: string, email: string, a
   const clientSuccess = clientResult.status === 'fulfilled';
   const serverSuccess = serverResult.status === 'fulfilled';
   
-  if (!clientSuccess && !serverSuccess) {
-    throw new Error('Both client and server Registration events failed');
+  // At least server event must succeed (client may be unavailable on web or blocked by ATT)
+  if (!serverSuccess) {
+    throw new Error('Server-side Registration event failed (client-only success is not sufficient)');
   }
   
   logger.info('Registration dual-send completed', { 
@@ -601,10 +609,11 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
   const results = await Promise.allSettled([
     // Client-side: Facebook SDK
     (async () => {
-      if (isClientSdkAvailable()) {
-        AppEventsLogger!.logEvent(FB_MOBILE_ACHIEVEMENT_UNLOCKED, clientParams);
-        logger.info('FirstChatMessage client-side sent', { feature: 'Facebook', eventId });
+      if (!isClientSdkAvailable()) {
+        throw new Error('Facebook SDK not available on this platform');
       }
+      AppEventsLogger!.logEvent(FB_MOBILE_ACHIEVEMENT_UNLOCKED, clientParams);
+      logger.info('FirstChatMessage client-side sent', { feature: 'Facebook', eventId });
     })(),
     
     // Server-side: Conversions API with external_id + email + attribution (fbc, fbp, fbclid from Firestore)
@@ -616,8 +625,9 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
   const clientSuccess = clientResult.status === 'fulfilled';
   const serverSuccess = serverResult.status === 'fulfilled';
   
-  if (!clientSuccess && !serverSuccess) {
-    throw new Error('Both client and server FirstChatMessage events failed');
+  // At least server event must succeed (client may be unavailable on web or blocked by ATT)
+  if (!serverSuccess) {
+    throw new Error('Server-side FirstChatMessage event failed (client-only success is not sufficient)');
   }
   
   logger.info('FirstChatMessage dual-send completed', { 
@@ -634,11 +644,28 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
  * Sends custom "SecondChatMessage" event when user sends their second message to AI assistant.
  * This is a CUSTOM event (not standard Facebook event) to allow separate campaign optimization.
  * 
- * ⚠️ CRITICAL: Dual-send approach ensures reliable delivery:
- * - Client-side (iOS/Android SDK): May be blocked if ATT denied on iOS
- * - Server-side (Conversions API): ALWAYS sent regardless of ATT status!
+ * ⚠️ TRIPLE-SEND APPROACH:
+ * 1. Client-side (iOS/Android SDK): May be blocked if ATT denied on iOS
+ * 2. Server-side as 'app' (Conversions API): ALWAYS sent regardless of ATT status
+ * 3. Server-side as 'website' (Conversions API): Additional web-proxy event for web campaign optimization
  * 
- * Server-side event works even with ATT denied because:
+ * ⚠️ IMPORTANT: The third event (AppWebProxySecondChatMessage with actionSource: 'website') 
+ * is NOT recommended by Facebook as it misrepresents the actual event source.
+ * Facebook's best practice is to always use the correct actionSource ('app' for mobile app events).
+ * However, we intentionally use this approach to:
+ * - Optimize web campaigns using mobile app conversion events
+ * - Enable web-based campaign bidding strategies for app events
+ * - Test different attribution models (app vs web)
+ * 
+ * This is a deliberate violation of Facebook's guidelines for business optimization purposes.
+ * The event name prefix "AppWebProxy" makes it clear this is a proxy event, not a real web event.
+ * 
+ * The third event (AppWebProxySecondChatMessage) allows:
+ * - Separate tracking for web-based campaign optimization
+ * - Testing different attribution models (app vs web)
+ * - Campaign optimization specifically for web conversions
+ * 
+ * Server-side events work even with ATT denied because:
  * 1. Sent from our server, not from user's device
  * 2. Contains userId (Firebase UID) as external_id for cross-channel matching
  * 3. Contains email (from Firebase Auth) for User Matching
@@ -651,9 +678,11 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
  * - Optimize campaigns specifically for users who send 2+ messages
  * - Build Custom Audiences of highly engaged users
  * - Allow separate campaign goals (first message vs. second message)
+ * - Enable web-based campaign optimization using app events
  * 
- * Event will appear in Events Manager as: "SecondChatMessage" (custom event)
- * You can create separate campaigns with this as optimization goal.
+ * Events will appear in Events Manager as:
+ * - "SecondChatMessage" (custom event, actionSource: app)
+ * - "AppWebProxySecondChatMessage" (custom event, actionSource: website)
  * 
  * @param userId - Firebase User ID (used as external_id for user matching)
  * @param email - User email for Advanced Matching (will be hashed automatically by Cloud Function)
@@ -661,10 +690,12 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
  */
 export async function sendSecondChatMessageEventDual(userId: string, email: string, attributionData?: AttributionData): Promise<void> {
   const eventId = generateEventId();
+  const webProxyEventId = generateEventId(); // Separate event ID for web-proxy event
   
-  logger.info('Sending SecondChatMessage event', { 
+  logger.info('Sending SecondChatMessage event (triple-send)', { 
     feature: 'Facebook', 
     eventId,
+    webProxyEventId,
     userId,
     hasEmail: !!email,
     hasAttributionData: !!attributionData,
@@ -684,34 +715,42 @@ export async function sendSecondChatMessageEventDual(userId: string, email: stri
     message_number: '2'
   };
   
-  // Send to both client and server in parallel
+  // Send to client and both servers in parallel
   const results = await Promise.allSettled([
     // Client-side: Facebook SDK with custom event name
     (async () => {
-      if (isClientSdkAvailable()) {
-        AppEventsLogger!.logEvent(CUSTOM_SECOND_CHAT_MESSAGE, clientParams);
-        logger.info('SecondChatMessage client-side sent', { feature: 'Facebook', eventId });
+      if (!isClientSdkAvailable()) {
+        throw new Error('Facebook SDK not available on this platform');
       }
+      AppEventsLogger!.logEvent(CUSTOM_SECOND_CHAT_MESSAGE, clientParams);
+      logger.info('SecondChatMessage client-side sent', { feature: 'Facebook', eventId });
     })(),
     
-    // Server-side: Conversions API with external_id + email + attribution (fbc, fbp, fbclid from Firestore)
-    sendConversionEvent(userId, eventId, CUSTOM_SECOND_CHAT_MESSAGE, { email }, customData, attributionData)
+    // Server-side #1: Conversions API as 'app' source (standard dual-send)
+    sendConversionEvent(userId, eventId, CUSTOM_SECOND_CHAT_MESSAGE, { email }, customData, attributionData, 'app'),
+    
+    // Server-side #2: Conversions API as 'website' source (web-proxy for campaign optimization)
+    sendConversionEvent(userId, webProxyEventId, 'AppWebProxySecondChatMessage', { email }, customData, attributionData, 'website')
   ]);
   
   // Check results  
-  const [clientResult, serverResult] = results;
+  const [clientResult, serverAppResult, serverWebResult] = results;
   const clientSuccess = clientResult.status === 'fulfilled';
-  const serverSuccess = serverResult.status === 'fulfilled';
+  const serverAppSuccess = serverAppResult.status === 'fulfilled';
+  const serverWebSuccess = serverWebResult.status === 'fulfilled';
   
-  if (!clientSuccess && !serverSuccess) {
-    throw new Error('Both client and server SecondChatMessage events failed');
+  // At least one server event must succeed (client may be unavailable on web or blocked by ATT)
+  if (!serverAppSuccess && !serverWebSuccess) {
+    throw new Error('Both server-side SecondChatMessage events failed (client-only success is not sufficient)');
   }
   
-  logger.info('SecondChatMessage dual-send completed', { 
+  logger.info('SecondChatMessage triple-send completed', { 
     feature: 'Facebook', 
     eventId,
+    webProxyEventId,
     clientSuccess,
-    serverSuccess
+    serverAppSuccess,
+    serverWebSuccess
   });
 }
 
