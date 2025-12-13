@@ -94,7 +94,9 @@ def call_openai_with_structured_output(
     
     # Initialize standard OpenAI client (not wrapped)
     # The @observe decorator handles tracing automatically
-    client = OpenAI(api_key=api_key)
+    # Set timeout to 8.5 minutes (510 seconds) to prevent hanging
+    # This is below the 9-minute limit for event-driven Cloud Functions 2nd gen
+    client = OpenAI(api_key=api_key, timeout=510.0)
     
     # Build messages array
     messages = [

@@ -20,8 +20,10 @@ import { downloadAppleRootCertificates } from './apple-helpers';
 import {
   APPLE_APP_ID,
   APPLE_BUNDLE_ID,
+  FUNCTION_TIMEOUTS,
 } from './constants';
 import { logger } from './logger';
+import { createTimeoutMonitor } from './timeout-monitor';
 
 /**
  * Find userId by originalTransactionId only (for renewalInfo notifications)
@@ -424,9 +426,12 @@ export const appleServerNotification = onRequest(
     // No secrets needed - Apple notifications are verified using public root certificates
   },
   async (req, res) => {
+    const timeout = createTimeoutMonitor(FUNCTION_TIMEOUTS.appleServerNotification);
+    
     try {
       // Only accept POST requests
       if (req.method !== 'POST') {
+        timeout.cancel();
         res.status(405).send('Method not allowed');
         return;
       }
@@ -435,6 +440,7 @@ export const appleServerNotification = onRequest(
 
       if (!signedPayload) {
         logger.warn('Missing signedPayload in notification', {});
+        timeout.cancel();
         res.status(400).send('Missing signedPayload');
         return;
       }
@@ -599,8 +605,10 @@ export const appleServerNotification = onRequest(
       }
 
       // Always return 200 to acknowledge receipt
+      timeout.cancel();
       res.status(200).send('OK');
     } catch (error) {
+      timeout.cancel();
       logger.error('Failed to process Apple notification', { error });
       
       // Return 200 even on error to prevent Apple from retrying

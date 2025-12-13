@@ -309,7 +309,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
     const openai = observeOpenAI(
       new OpenAI({
         apiKey: openaiApiKey.value().trim(),
-        timeout: 600000, // 10 minutes in milliseconds
+        timeout: 510000, // 8.5 minutes in milliseconds (below 9-minute limit for event-driven functions)
       }),
       {
         generationName: 'chat_completion',
@@ -411,6 +411,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
           generationId,
           currentId: threadData?.currentGenerationId,
         });
+        timeout.cancel(); // Cancel timeout monitor
         return {
           success: false,
           error: 'Generation cancelled due to new message',
@@ -561,6 +562,7 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
           generationId,
           currentId: threadData2?.currentGenerationId,
         });
+        timeout.cancel(); // Cancel timeout monitor
         return {
           success: false,
           error: 'Generation cancelled due to new message',
@@ -635,12 +637,18 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
         logger.warn('Failed to flush LangFuse events', { flushError });
       }
       
+      // Cancel timeout monitor - function completed successfully
+      timeout.cancel();
+      
       return {
         success: true,
         messageId: messageRef.id,
       };
       
     } catch (error) {
+      // Cancel timeout monitor - error already occurred
+      timeout.cancel();
+      
       // Reset typing indicator on error
       await threadRef.update({
         assistantIsTyping: false,
@@ -683,9 +691,14 @@ export const generateChatResponse = onCall<GenerateChatResponseRequest, Promise<
       if (errorObj.message?.includes('quota') || errorObj.message?.includes('rate limit')) {
         errorCode = 'resource-exhausted';
         errorMessage = 'Service is temporarily busy. Please try again in a moment.';
-      } else if (errorObj.message?.includes('timeout') || errorObj.message?.includes('deadline')) {
+      } else if (
+        errorObj.message?.includes('timeout') || 
+        errorObj.message?.includes('deadline') ||
+        errorObj.message?.includes('timed out') ||
+        errorObj.name === 'TimeoutError'
+      ) {
         errorCode = 'deadline-exceeded';
-        errorMessage = 'Request took too long. Please try again.';
+        errorMessage = 'Request took too long to complete. Please try sending your message again.';
       } else if (errorObj.message?.includes('network') || errorObj.message?.includes('connection')) {
         errorCode = 'unavailable';
         errorMessage = 'Network error occurred. Please check your connection.';
@@ -724,10 +737,13 @@ export const onChatMessageCreated = onDocumentCreated(
     memory: '256MiB', // Default is sufficient
   },
   async (event) => {
+    const timeout = createTimeoutMonitor(FUNCTION_TIMEOUTS.onChatMessageCreated);
+    
     const messageData = event.data?.data() as FirestoreChatMessage | undefined;
     
     if (!messageData) {
       logger.warn('No message data in trigger', { eventId: event.id });
+      timeout.cancel();
       return;
     }
     
@@ -748,6 +764,7 @@ export const onChatMessageCreated = onDocumentCreated(
         messageId,
         role: messageData.role,
       });
+      timeout.cancel();
       return;
     }
     
@@ -768,6 +785,7 @@ export const onChatMessageCreated = onDocumentCreated(
           currentScreen: userData?.currentScreen,
           lastActivityAt: userData?.lastActivityAt,
         });
+        timeout.cancel();
         return;
       }
       
@@ -895,7 +913,10 @@ export const onChatMessageCreated = onDocumentCreated(
           messageId,
         });
       }
+      
+      timeout.cancel();
     } catch (error) {
+      timeout.cancel();
       logger.error('Failed to update unread count', {
         userId,
         threadId,

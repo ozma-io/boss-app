@@ -901,6 +901,7 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
     
     // Verify authentication
     if (!request.auth) {
+      timeout.cancel();
       throw new HttpsError('unauthenticated', 'User must be authenticated');
     }
 
@@ -909,6 +910,7 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
 
     // Validate input
     if (!receipt || !productId || !platform || !tier || !billingPeriod) {
+      timeout.cancel();
       throw new HttpsError('invalid-argument', 'Missing required fields');
     }
 
@@ -931,10 +933,12 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
       } else if (platform === 'android') {
         verificationResult = await verifyGooglePlayPurchase(receipt, productId, tier, billingPeriod);
       } else {
+        timeout.cancel();
         throw new HttpsError('invalid-argument', 'Invalid platform');
       }
 
       if (!verificationResult.success || !verificationResult.subscription) {
+        timeout.cancel();
         return verificationResult;
       }
 
@@ -955,11 +959,13 @@ export const verifyIAPPurchase = onCall<VerifyIAPRequest, Promise<VerifyIAPRespo
         migrated
       );
 
+      timeout.cancel();
       return {
         ...verificationResult,
         migrated,
       };
     } catch (error) {
+      timeout.cancel();
       logger.error('IAP verification failed', { error, userId, platform });
       
       if (error instanceof HttpsError) {
@@ -988,8 +994,11 @@ export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>
     secrets: [stripeSecretKey],
   },
   async (request) => {
+    const timeout = createTimeoutMonitor(FUNCTION_TIMEOUTS.cancelSubscription);
+    
     // Verify authentication
     if (!request.auth) {
+      timeout.cancel();
       throw new HttpsError('unauthenticated', 'User must be authenticated');
     }
 
@@ -1008,6 +1017,7 @@ export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>
       const userData = userDoc.data();
 
       if (!userData?.subscription) {
+        timeout.cancel();
         return {
           success: false,
           error: 'No active subscription found',
@@ -1019,6 +1029,7 @@ export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>
       // Only allow cancellation of Stripe subscriptions
       // Apple/Google must be cancelled through native Settings
       if (subscription.provider === 'apple' || subscription.provider === 'google') {
+        timeout.cancel();
         throw new HttpsError(
           'failed-precondition',
           'Apple and Google subscriptions must be cancelled through your device Settings'
@@ -1026,6 +1037,7 @@ export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>
       }
 
       if (subscription.provider !== 'stripe') {
+        timeout.cancel();
         return {
           success: false,
           error: 'No subscription provider found',
@@ -1034,6 +1046,7 @@ export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>
 
       // Check if already cancelled or expired
       if (subscription.status === 'cancelled' || subscription.status === 'expired') {
+        timeout.cancel();
         return {
           success: false,
           error: `Subscription is already ${subscription.status}`,
@@ -1043,6 +1056,7 @@ export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>
       const stripeSubscriptionId = subscription.stripeSubscriptionId;
 
       if (!stripeSubscriptionId) {
+        timeout.cancel();
         return {
           success: false,
           error: 'No Stripe subscription ID found',
@@ -1059,8 +1073,10 @@ export const cancelSubscription = onCall<{}, Promise<CancelSubscriptionResponse>
         });
       }
 
+      timeout.cancel();
       return result;
     } catch (error) {
+      timeout.cancel();
       logger.error('Subscription cancellation failed', { error, userId });
       
       if (error instanceof HttpsError) {

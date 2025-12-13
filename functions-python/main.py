@@ -132,7 +132,7 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
     Triggered automatically every 2 hours by Cloud Scheduler.
     
     Configuration:
-    - Timeout: 40 minutes (2400s) to process all eligible users in single run
+    - Timeout: 30 minutes (1800s) - maximum for scheduled Cloud Functions 2nd gen
     - Memory: 512 MB for parallel AI generation and Firestore batch operations
     - Expected duration: 15-25 minutes for typical user base (see orchestrator logs)
     """
@@ -140,14 +140,20 @@ def notificationOrchestrator(event: scheduler_fn.ScheduledEvent) -> None:
         # Initialize environment (clean secrets, configure Langfuse)
         _initialize_cloud_function()
         
-        # Create timeout monitor
+        # Create timeout monitor (starts background timer automatically)
         timeout = create_timeout_monitor(FUNCTION_TIMEOUTS['notificationOrchestrator'])  # type: ignore
         timeout.check('Starting notification orchestration')
         
         db = get_firestore_client()
         process_notification_orchestration(db)
         
+        # Success - cancel timeout monitor
+        timeout.cancel()
+        
     except Exception as e:
+        # Error occurred - cancel timeout monitor
+        if 'timeout' in locals():
+            timeout.cancel()  # type: ignore
         error("Error in notification orchestrator", {"error": str(e)})
         raise
 
@@ -180,30 +186,37 @@ def onChatMessageCreatedSendWelcomeEmail(
     This ensures we only send onboarding email to web funnel users, not app users.
     
     Configuration:
-    - Timeout: 5 minutes (300s) for AI generation + email creation
+    - Timeout: 9 minutes (540s) - maximum for event-driven Cloud Functions 2nd gen (OpenAI timeout is 8.5 minutes)
     - Memory: 256 MB (default) - sufficient for single user processing
     """
     try:
         # Initialize environment (clean secrets, configure Langfuse)
         _initialize_cloud_function()
         
+        # Create timeout monitor (starts background timer automatically)
+        timeout = create_timeout_monitor(FUNCTION_TIMEOUTS['onChatMessageCreatedSendWelcomeEmail'])  # type: ignore
+        
         # Extract user ID from document path
         if not event.params:
+            timeout.cancel()
             return
         
         user_id: str = event.params.get("userId", "")
         thread_id: str = event.params.get("threadId", "")
         
         if not user_id or not thread_id:
+            timeout.cancel()
             return
         
         # Get message data
         message_data = event.data.to_dict() if event.data else None  # type: ignore
         if not message_data:
+            timeout.cancel()
             return
         
         # Only trigger for assistant messages (not user messages)
         if message_data.get('role') != 'assistant':
+            timeout.cancel()
             return
         
         # Get Firestore client
@@ -214,15 +227,18 @@ def onChatMessageCreatedSendWelcomeEmail(
         thread_doc = thread_ref.get()  # type: ignore
         
         if not thread_doc.exists:  # type: ignore
+            timeout.cancel()
             return
         
         thread_data = thread_doc.to_dict()  # type: ignore
         if not thread_data:
+            timeout.cancel()
             return
         
         # Only send email for first message (welcome message from web funnel)
         message_count = thread_data.get('messageCount', 0)
         if message_count != 1:
+            timeout.cancel()
             return
         
         # Check if user has logged into app yet
@@ -231,21 +247,32 @@ def onChatMessageCreatedSendWelcomeEmail(
         user_doc = user_ref.get()  # type: ignore
         
         if not user_doc.exists:  # type: ignore
+            timeout.cancel()
             return
         
         user_data = user_doc.to_dict()  # type: ignore
         if not user_data:
+            timeout.cancel()
             return
         
         # Skip if user has already logged into app (has lastActivityAt)
         if user_data.get('lastActivityAt'):
             info("Skipping onboarding email - user already logged in", {"user_id": user_id})
+            timeout.cancel()
             return
+        
+        timeout.check('Sending onboarding welcome email')
         
         # Send onboarding welcome email
         send_onboarding_welcome_email(db, user_id)
         
+        # Success - cancel timeout monitor
+        timeout.cancel()
+        
     except Exception as e:
+        # Error occurred - cancel timeout monitor
+        if 'timeout' in locals():
+            timeout.cancel()  # type: ignore
         error("Error in onChatMessageCreatedSendWelcomeEmail trigger", {"error": str(e)})
         # Don't raise - we don't want to fail chat creation if email fails
 

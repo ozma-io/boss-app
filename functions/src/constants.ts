@@ -161,9 +161,14 @@ export const EMAIL_MONITORING_RECIPIENT = 'kmarkin@ozma.io';
  * Function timeout configurations (in seconds)
  * Must match timeoutSeconds values in function decorators
  * Used for timeout monitoring to avoid duplication
+ * 
+ * Cloud Functions 2nd gen timeout limits:
+ * - HTTP functions: 60 minutes max
+ * - Scheduled functions (Cloud Scheduler): 30 minutes max (1800s)
+ * - Event-driven functions (Firestore, Pub/Sub, etc.): 9 minutes max (540s)
  */
 export const FUNCTION_TIMEOUTS = {
-  generateChatResponse: 660, // 11 minutes (OpenAI timeout is 10 minutes)
+  generateChatResponse: 570, // 9.5 minutes for HTTP function (OpenAI timeout is 8.5 minutes)
   verifyIAPPurchase: 120,
   appleServerNotification: 120,
   onChatMessageCreated: 60,

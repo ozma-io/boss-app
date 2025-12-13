@@ -9,12 +9,13 @@ import * as admin from 'firebase-admin';
 import { defineSecret } from 'firebase-functions/params';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import Mailgun from 'mailgun.js';
-import { EMAIL_MONITORING_RECIPIENT } from './constants';
+import { EMAIL_MONITORING_RECIPIENT, FUNCTION_TIMEOUTS } from './constants';
 import { renderEmailTemplate } from './email-template';
 import { logger } from './logger';
 import { markdownToHtml } from './markdown-renderer';
 import { retryWithBackoff } from './retry';
 import { Sentry } from './sentry';
+import { createTimeoutMonitor } from './timeout-monitor';
 
 // Define Mailgun API key secret
 const mailgunApiKey = defineSecret('MAILGUN_API_KEY');
@@ -46,12 +47,15 @@ export const onEmailCreated = onDocumentCreated(
     secrets: [mailgunApiKey],
   },
   async (event) => {
+    const timeout = createTimeoutMonitor(FUNCTION_TIMEOUTS.onEmailCreated);
+    
     const userId = event.params.userId;
     const emailId = event.params.emailId;
     const emailData = event.data?.data() as EmailDocument;
 
     if (!emailData) {
       logger.error('No email data found', { feature: 'EmailSender', userId, emailId });
+      timeout.cancel();
       return;
     }
 
@@ -61,6 +65,8 @@ export const onEmailCreated = onDocumentCreated(
     if (emailData.state === 'PLANNED') {
       await sendEmail(userId, emailId, emailData);
     }
+    
+    timeout.cancel();
   }
 );
 
@@ -77,12 +83,15 @@ export const onEmailUpdated = onDocumentUpdated(
     secrets: [mailgunApiKey],
   },
   async (event) => {
+    const timeout = createTimeoutMonitor(FUNCTION_TIMEOUTS.onEmailUpdated);
+    
     const userId = event.params.userId;
     const emailId = event.params.emailId;
     const emailData = event.data?.after.data() as EmailDocument;
 
     if (!emailData) {
       logger.error('No email data found', { feature: 'EmailSender', userId, emailId });
+      timeout.cancel();
       return;
     }
 
@@ -97,6 +106,8 @@ export const onEmailUpdated = onDocumentUpdated(
       });
       await sendEmail(userId, emailId, emailData);
     }
+    
+    timeout.cancel();
   }
 );
 
