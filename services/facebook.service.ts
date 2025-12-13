@@ -2,6 +2,7 @@ import { FACEBOOK_CONFIG } from '@/constants/facebook.config';
 import { functions } from '@/constants/firebase.config';
 import { logger } from '@/services/logger.service';
 import { buildExtinfo, getAdvertiserTrackingEnabled, getApplicationTrackingEnabledSync } from '@/utils/deviceInfo';
+import { validateFacebookEventTime } from '@/utils/facebookTimestamp';
 import { httpsCallable } from 'firebase/functions';
 import { Platform } from 'react-native';
 import { AttributionData } from './attribution.service';
@@ -146,7 +147,7 @@ async function buildEventData(params: ConversionEventParams): Promise<Conversion
   // Construct event data payload
   return {
     eventName: params.eventName,
-    eventTime: Math.floor(Date.now() / 1000), // Unix timestamp
+    eventTime: validateFacebookEventTime(Math.floor(Date.now() / 1000), params.eventName),
     eventId: params.eventId,
     actionSource: 'app' as const,
     advertiserTrackingEnabled,

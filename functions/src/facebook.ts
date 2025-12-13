@@ -10,6 +10,7 @@ import * as functions from 'firebase-functions';
 import { defineSecret } from 'firebase-functions/params';
 import { onCall } from 'firebase-functions/v2/https';
 import { FACEBOOK_API_VERSION, FACEBOOK_PIXEL_ID } from './constants';
+import { validateFacebookEventTime } from './facebookTimestamp';
 import { logger } from './logger';
 
 // Define the secret parameter
@@ -169,9 +170,10 @@ export const sendFacebookConversionEvent = onCall(
       });
 
       // Build event payload
+      // Validate timestamp from client to ensure it meets Facebook requirements
       const eventPayload = {
         event_name: eventData.eventName,
-        event_time: eventData.eventTime,
+        event_time: validateFacebookEventTime(eventData.eventTime, eventData.eventName),
         event_id: eventData.eventId,
         user_data: userData,
         custom_data: eventData.customData || {},
