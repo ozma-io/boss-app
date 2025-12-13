@@ -106,6 +106,14 @@ export interface UserSchema {
     // Facebook tracking cookies for improved attribution quality
     fbc?: string | null;        // Facebook Cookie (format: fb.1.{timestamp}.{fbclid})
     fbp?: string | null;        // Facebook Pixel Browser ID
+    
+    // Geolocation data (from IP address via Vercel headers)
+    // Captured at registration time from web funnel
+    country?: string | null;     // ISO 3166-1 alpha-2 country code (e.g., "US", "RU", "DE")
+    region?: string | null;      // State/province/region name (e.g., "California", "Moscow")
+    city?: string | null;        // City name (e.g., "San Francisco")
+    latitude?: number | null;    // Latitude coordinate
+    longitude?: number | null;   // Longitude coordinate
   };
   
   // === SUBSCRIPTION DATA (system-managed) ===
