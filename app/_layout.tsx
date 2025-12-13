@@ -200,8 +200,10 @@ export default function RootLayout(): React.JSX.Element | null {
                 logger.info('iOS: Facebook attribution detected, tracking onboarding will handle events', { feature: 'App' });
               } else {
                 // Android: send install event immediately (no ATT permission needed, tracking assumed enabled)
+                // NOTE: No userId yet (pre-login), will use email + attribution for matching
                 logger.info('Android: Facebook attribution detected, sending app install event', { feature: 'App' });
                 await sendAppInstallEventDual(
+                  undefined, // No userId yet (pre-login install)
                   attributionData,
                   attributionData.email ? { email: attributionData.email } : undefined
                 );

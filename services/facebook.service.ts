@@ -36,6 +36,7 @@ if (Platform.OS !== 'web') {
 interface ConversionEventParams {
   eventName: string;
   eventId: string;
+  userId: string; // Firebase User ID - CRITICAL for external_id matching
   userData?: {
     email?: string;
     phone?: string;
@@ -65,6 +66,7 @@ interface ConversionEventData {
     phone?: string;
     firstName?: string;
     lastName?: string;
+    externalId?: string; // Firebase User ID for cross-channel user matching
   };
   customData?: Record<string, string | number | boolean>;
 }
@@ -82,6 +84,8 @@ interface ConversionEventData {
  * Currently used:
  * - fb_mobile_activate_app - Official "Activate App" event for app launch
  *   (used for both first launch and subsequent launches - Facebook differentiates automatically)
+ * - fb_mobile_complete_registration - Registration completion (sent in auth flow)
+ * - fb_mobile_achievement_unlocked - User achievements/milestones (e.g., first chat message)
  * 
  * Note: There is NO separate fb_mobile_app_launch event in Facebook's official SDK.
  * The "Activate App" event is the only standard event for tracking app opens.
@@ -91,6 +95,8 @@ interface ConversionEventData {
  * @see https://developers.facebook.com/docs/app-events/reference
  */
 const FB_MOBILE_ACTIVATE_APP = 'fb_mobile_activate_app';
+const FB_MOBILE_COMPLETE_REGISTRATION = 'fb_mobile_complete_registration';
+const FB_MOBILE_ACHIEVEMENT_UNLOCKED = 'fb_mobile_achievement_unlocked';
 
 // ============================================================================
 // Internal Helper Functions
@@ -159,7 +165,13 @@ async function buildEventData(params: ConversionEventParams): Promise<Conversion
     // Raw fbclid is NOT accepted in user_data by Facebook - must be formatted as fbc
     fbc: params.attributionData?.fbc || undefined,
     fbp: params.attributionData?.fbp || undefined,
-    userData: params.userData,
+    userData: {
+      ...params.userData,
+      // Add Firebase User ID as external_id for cross-channel user matching
+      // This is CRITICAL for Facebook to link all events from the same user
+      // Skip if userId is empty (pre-login events like AppInstall before registration)
+      ...(params.userId ? { externalId: params.userId } : {}),
+    },
     customData: params.customData,
   };
 }
@@ -266,6 +278,7 @@ export function generateEventId(): string {
  * Simplified implementation that uses buildEventData() helper to construct the payload.
  * This provides more reliable tracking compared to client-side only.
  * 
+ * @param userId - Firebase User ID (used as external_id for user matching). Optional for pre-login events.
  * @param eventId - Event ID for deduplication between client and server
  * @param eventName - Name of the event (e.g., 'AppInstall', 'AppLaunch')
  * @param userData - User data for the event (will be hashed by Cloud Function)
@@ -273,6 +286,7 @@ export function generateEventId(): string {
  * @param attributionData - Attribution data from deep link (fbclid, utm params)
  */
 export async function sendConversionEvent(
+  userId: string | undefined,
   eventId: string,
   eventName: string,
   userData?: {
@@ -284,9 +298,20 @@ export async function sendConversionEvent(
   customData?: Record<string, string | number | boolean>,
   attributionData?: AttributionData
 ): Promise<void> {
+  // Log warning if userId is missing (pre-login events won't have external_id)
+  if (!userId) {
+    logger.warn('Sending conversion event without userId (external_id will be missing)', {
+      feature: 'Facebook',
+      eventName,
+      eventId,
+      hasEmail: !!userData?.email,
+    });
+  }
   try {
     // Build complete event data payload using helper
+    // userId will be used as external_id if provided (important for user matching)
     const eventData = await buildEventData({
+      userId: userId || '', // Empty string if no userId (pre-login events)
       eventId,
       eventName,
       userData,
@@ -322,10 +347,12 @@ export async function sendConversionEvent(
  * Sends Facebook "Activate App" event with attribution data for proper campaign tracking.
  * Uses dual-send approach (client + server) for maximum reliability.
  * 
+ * @param userId - Firebase User ID (used as external_id for user matching). Optional for pre-login installs.
  * @param attributionData - Attribution data from deep link (fbclid, utm params, email)
  * @param userData - Optional user data (email) for server-side event
  */
 export async function sendAppInstallEventDual(
+  userId: string | undefined,
   attributionData: AttributionData,
   userData?: {
     email?: string;
@@ -336,6 +363,7 @@ export async function sendAppInstallEventDual(
   logger.info('Sending AppInstall event (dual-send)', { 
     feature: 'Facebook', 
     eventId,
+    userId,
     hasFbc: !!attributionData.fbc,
     hasFbp: !!attributionData.fbp
   });
@@ -358,8 +386,8 @@ export async function sendAppInstallEventDual(
       }
     })(),
     
-    // Server-side: Conversions API via Cloud Function
-    sendConversionEvent(eventId, FB_MOBILE_ACTIVATE_APP, userData, undefined, attributionData)
+    // Server-side: Conversions API via Cloud Function (with external_id for user matching)
+    sendConversionEvent(userId, eventId, FB_MOBILE_ACTIVATE_APP, userData, undefined, attributionData)
   ]);
   
   // Check results
@@ -385,15 +413,17 @@ export async function sendAppInstallEventDual(
  * Sends fb_mobile_complete_registration event with email for Custom Audiences and Lookalike targeting.
  * This helps Facebook identify your users for better campaign optimization.
  * 
+ * @param userId - Firebase User ID (used as external_id for user matching)
  * @param email - User email for Advanced Matching (will be hashed automatically)
  * @param attributionData - Optional attribution data from Firestore (fbclid, fbc, fbp from web-funnel)
  */
-export async function sendRegistrationEventDual(email: string, attributionData?: AttributionData): Promise<void> {
+export async function sendRegistrationEventDual(userId: string, email: string, attributionData?: AttributionData): Promise<void> {
   const eventId = generateEventId();
   
   logger.info('Sending Registration event', { 
     feature: 'Facebook', 
     eventId,
+    userId,
     hasEmail: !!email,
     hasAttributionData: !!attributionData,
     hasFbc: !!attributionData?.fbc,
@@ -411,13 +441,13 @@ export async function sendRegistrationEventDual(email: string, attributionData?:
     // Client-side: Facebook SDK
     (async () => {
       if (isClientSdkAvailable()) {
-        AppEventsLogger!.logEvent('fb_mobile_complete_registration', clientParams);
+        AppEventsLogger!.logEvent(FB_MOBILE_COMPLETE_REGISTRATION, clientParams);
         logger.info('Registration client-side sent', { feature: 'Facebook', eventId });
       }
     })(),
     
-    // Server-side: Conversions API with email + attribution (fbc, fbp, fbclid from Firestore)
-    sendConversionEvent(eventId, 'fb_mobile_complete_registration', { email }, { registration_method: 'email' }, attributionData)
+    // Server-side: Conversions API with email + external_id + attribution (fbc, fbp, fbclid from Firestore)
+    sendConversionEvent(userId, eventId, FB_MOBILE_COMPLETE_REGISTRATION, { email }, { registration_method: 'email' }, attributionData)
   ]);
   
   // Check results  
@@ -430,6 +460,92 @@ export async function sendRegistrationEventDual(email: string, attributionData?:
   }
   
   logger.info('Registration dual-send completed', { 
+    feature: 'Facebook', 
+    eventId,
+    clientSuccess,
+    serverSuccess
+  });
+}
+
+/**
+ * Send first chat message event to Facebook for user engagement tracking
+ * 
+ * Sends fb_mobile_achievement_unlocked event when user sends their first message to AI assistant.
+ * 
+ * ⚠️ CRITICAL: Dual-send approach ensures reliable delivery:
+ * - Client-side (iOS/Android SDK): May be blocked if ATT denied on iOS
+ * - Server-side (Conversions API): ALWAYS sent regardless of ATT status!
+ * 
+ * Server-side event works even with ATT denied because:
+ * 1. Sent from our server, not from user's device
+ * 2. Contains userId (Firebase UID) as external_id for cross-channel matching
+ * 3. Contains email (from Firebase Auth) for User Matching
+ * 4. Contains fbc/fbp (from Firestore) for attribution
+ * 5. Contains full device info (extinfo) for Device Matching
+ * 6. Facebook accepts and processes server events with advertiserTrackingEnabled=0
+ * 
+ * This helps Facebook:
+ * - Track meaningful user engagement beyond registration
+ * - Optimize campaigns for users who actually use the core product feature
+ * - Build Custom Audiences of engaged users
+ * - Link all events from the same user (via external_id)
+ * - Improve event matching with user email + external_id + attribution data
+ * 
+ * Event will appear in Events Manager as: "fb_mobile_achievement_unlocked" or "UnlockedAchievement"
+ * 
+ * @param userId - Firebase User ID (used as external_id for user matching)
+ * @param email - User email for Advanced Matching (will be hashed automatically by Cloud Function)
+ * @param attributionData - Optional attribution data from Firestore (fbclid, fbc, fbp from web-funnel)
+ */
+export async function sendFirstChatMessageEventDual(userId: string, email: string, attributionData?: AttributionData): Promise<void> {
+  const eventId = generateEventId();
+  
+  logger.info('Sending FirstChatMessage event', { 
+    feature: 'Facebook', 
+    eventId,
+    userId,
+    hasEmail: !!email,
+    hasAttributionData: !!attributionData,
+    hasFbc: !!attributionData?.fbc,
+    hasFbp: !!attributionData?.fbp
+  });
+  
+  // Client params for Facebook SDK
+  const clientParams: Record<string, string> = { 
+    _eventId: eventId,
+    fb_description: 'first_chat_message'
+  };
+  
+  // Custom data for server-side event
+  const customData: Record<string, string> = {
+    description: 'first_chat_message',
+    achievement_id: 'chat_first_message'
+  };
+  
+  // Send to both client and server in parallel
+  const results = await Promise.allSettled([
+    // Client-side: Facebook SDK
+    (async () => {
+      if (isClientSdkAvailable()) {
+        AppEventsLogger!.logEvent(FB_MOBILE_ACHIEVEMENT_UNLOCKED, clientParams);
+        logger.info('FirstChatMessage client-side sent', { feature: 'Facebook', eventId });
+      }
+    })(),
+    
+    // Server-side: Conversions API with external_id + email + attribution (fbc, fbp, fbclid from Firestore)
+    sendConversionEvent(userId, eventId, FB_MOBILE_ACHIEVEMENT_UNLOCKED, { email }, customData, attributionData)
+  ]);
+  
+  // Check results  
+  const [clientResult, serverResult] = results;
+  const clientSuccess = clientResult.status === 'fulfilled';
+  const serverSuccess = serverResult.status === 'fulfilled';
+  
+  if (!clientSuccess && !serverSuccess) {
+    throw new Error('Both client and server FirstChatMessage events failed');
+  }
+  
+  logger.info('FirstChatMessage dual-send completed', { 
     feature: 'Facebook', 
     eventId,
     clientSuccess,

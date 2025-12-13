@@ -1,53 +1,53 @@
 # Facebook Attribution Matching Process
 
-Техническое описание процесса сохранения и matching attribution данных при установке приложения через Facebook рекламу.
+Technical description of the process for saving and matching attribution data when installing an app through Facebook ads.
 
 ---
 
-## 📍 Этап 1: КЛИК на рекламу
+## 📍 Stage 1: AD CLICK
 
-### Что происходит:
+### What happens:
 
 ```
-Пользователь кликает на рекламу
+User clicks on ad
        ↓
-Redirect через l.facebook.com
+Redirect through l.facebook.com
        ↓
-Facebook генерирует fbclid и сохраняет данные
+Facebook generates fbclid and saves data
 ```
 
-### Что Facebook СОХРАНЯЕТ:
+### What Facebook SAVES:
 
-#### Deterministic Identifiers (точные, если доступны):
+#### Deterministic Identifiers (exact, if available):
 
 ```javascript
 {
-  // Уникальный ID клика
+  // Unique click ID
   fbclid: "IwAR2xYz...",
   
-  // IDFA (если пользователь залогинен в Facebook app)
-  // Facebook получает через cross-app communication с Facebook app
-  // До iOS 14.5: всегда доступен
-  // После iOS 14.5: только если ATT уже было дано ранее
+  // IDFA (if user is logged into Facebook app)
+  // Facebook obtains via cross-app communication with Facebook app
+  // Before iOS 14.5: always available
+  // After iOS 14.5: only if ATT was granted earlier
   idfa: "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
   
-  // IDFV (если клик из Facebook app)
+  // IDFV (if click from Facebook app)
   idfv: "YYYYYYYY-YYYY-YYYY-YYYY-YYYYYYYYYYYY",
   
-  // Facebook User ID (если залогинен)
+  // Facebook User ID (if logged in)
   fb_user_id: "1234567890",
   
-  // Facebook Browser Cookie (если клик в FB app)
+  // Facebook Browser Cookie (if click in FB app)
   fb_browser_id: "cookie_value",
 }
 ```
 
-**⚠️ Важно:** IDFA при клике доступен ТОЛЬКО если:
-- Клик происходит **внутри Facebook/Instagram app** (не Safari)
-- ИЛИ пользователь ранее дал ATT разрешение другому приложению
-- ИЛИ iOS < 14.5
+**⚠️ Important:** IDFA on click is available ONLY if:
+- Click happens **inside Facebook/Instagram app** (not Safari)
+- OR user previously granted ATT permission to another app
+- OR iOS < 14.5
 
-#### Probabilistic Signals (вероятностные, всегда доступны):
+#### Probabilistic Signals (probabilistic, always available):
 
 ```javascript
 {
@@ -56,7 +56,7 @@ Facebook генерирует fbclid и сохраняет данные
   ip_subnet: "192.168.1.0/24",
   isp: "AT&T",
   
-  // Device (из User-Agent)
+  // Device (from User-Agent)
   user_agent: "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0...",
   device_model: "iPhone 14 Pro",
   os_version: "16.0",
@@ -85,26 +85,26 @@ Facebook генерирует fbclid и сохраняет данные
   ad_set_id: "987654321",
   ad_id: "111222333",
   
-  // UTM параметры
+  // UTM parameters
   utm_source: "facebook",
   utm_medium: "cpc",
   utm_campaign: "install_campaign",
 }
 ```
 
-### Где сохраняется:
+### Where it's stored:
 
-Facebook сохраняет данные в нескольких таблицах для быстрого поиска:
+Facebook saves data in multiple tables for fast lookup:
 
 ```javascript
-// Главная таблица
+// Main table
 Table: clicks
 Key: fbclid = "IwAR2xYz..."
 Value: {
   // Deterministic
-  idfa: "XXXX-..." (если есть),
+  idfa: "XXXX-..." (if available),
   idfv: "YYYY-...",
-  fb_user_id: "1234567890" (если есть),
+  fb_user_id: "1234567890" (if available),
   
   // Probabilistic
   ip: "192.168.1.1",
@@ -122,10 +122,10 @@ Value: {
   
   // Metadata
   click_time: "2024-11-19T16:30:45.123Z",
-  expires_at: "2024-11-26T16:30:45.123Z", // +7 дней
+  expires_at: "2024-11-26T16:30:45.123Z", // +7 days
 }
 
-// Индексные таблицы для быстрого поиска
+// Index tables for fast lookup
 Table: clicks_by_idfa
 Key: "XXXX-XXXX-..."
 Value: fbclid = "IwAR2xYz..."
@@ -143,46 +143,46 @@ Key: SHA256(ip + user_agent + screen + timezone + language)
 Value: fbclid = "IwAR2xYz..."
 ```
 
-**TTL: 7 дней** (потом данные автоматически удаляются)
+**TTL: 7 days** (then data is automatically deleted)
 
 ---
 
-## 📍 Этап 2: УСТАНОВКА приложения
+## 📍 Stage 2: APP INSTALLATION
 
-### Что происходит:
+### What happens:
 
 ```
-App Store → Установка → Первый запуск
+App Store → Installation → First launch
        ↓
-Facebook SDK инициализируется
+Facebook SDK initializes
        ↓
-Собирает такую же информацию
+Collects same information
        ↓
-Отправляет на Facebook Attribution API
+Sends to Facebook Attribution API
 ```
 
-### Что Facebook SDK СОБИРАЕТ:
+### What Facebook SDK COLLECTS:
 
 ```typescript
-// React Native код (происходит автоматически при инициализации SDK)
+// React Native code (happens automatically on SDK initialization)
 import { getIDFA } from 'react-native-idfa';
 import DeviceInfo from 'react-native-device-info';
 import { Dimensions, Platform } from 'react-native';
 
 const installData = {
-  // IDFA (КЛЮЧЕВОЙ для deterministic matching!)
-  // Доступен ТОЛЬКО если:
-  // - iOS < 14.5 (всегда)
+  // IDFA (KEY for deterministic matching!)
+  // Available ONLY if:
+  // - iOS < 14.5 (always)
   // - iOS >= 14.5 + ATT permission granted
-  idfa: await getIDFA(), // "XXXX-..." или null
+  idfa: await getIDFA(), // "XXXX-..." or null
   
-  // IDFV (Identifier for Vendor - всегда доступен)
+  // IDFV (Identifier for Vendor - always available)
   idfv: await DeviceInfo.getUniqueId(), // "YYYY-..."
   
-  // IP адрес (определяется на сервере Facebook при HTTP запросе)
+  // IP address (determined on Facebook server during HTTP request)
   ip: request.ip, // "192.168.1.1"
   
-  // Device info (из React Native API)
+  // Device info (from React Native API)
   user_agent: await DeviceInfo.getUserAgent(),
   // "Aida/1.0.0 (iPhone; iOS 16.0; Scale/3.00)"
   
@@ -197,7 +197,7 @@ const installData = {
   language: await DeviceInfo.getDeviceLocale(), // "en-US"
   timezone: await DeviceInfo.getTimezone(),     // "America/New_York"
   
-  // Tracking permissions (получаем из ATT API)
+  // Tracking permissions (obtained from ATT API)
   advertiser_tracking_enabled: attStatus === 'authorized', // true/false
   application_tracking_enabled: true,
   
@@ -205,7 +205,7 @@ const installData = {
   install_time: new Date().toISOString(), // "2024-11-19T17:00:00.000Z"
 };
 
-// Отправляется на Facebook Attribution API
+// Sent to Facebook Attribution API
 await fetch('https://graph.facebook.com/v18.0/PIXEL_ID/activities', {
   method: 'POST',
   body: JSON.stringify({
@@ -213,13 +213,13 @@ await fetch('https://graph.facebook.com/v18.0/PIXEL_ID/activities', {
     advertiser_id: installData.idfa,
     advertiser_tracking_enabled: installData.advertiser_tracking_enabled,
     application_tracking_enabled: true,
-    extinfo: await buildExtinfo(), // 16-element array (см. ниже)
+    extinfo: await buildExtinfo(), // 16-element array (see below)
     install_timestamp: Math.floor(Date.now() / 1000),
   }),
 });
 ```
 
-### Структура extinfo массива (16 элементов):
+### Structure of extinfo array (16 elements):
 
 ```typescript
 // utils/deviceInfo.ts - buildExtinfo()
@@ -245,13 +245,13 @@ const extinfo = [
 
 ---
 
-## 📍 Этап 3: MATCHING
+## 📍 Stage 3: MATCHING
 
-Facebook Attribution API пробует несколько методов в порядке приоритета:
+Facebook Attribution API tries several methods in priority order:
 
-### Метод 1: Deterministic Match (100% точность)
+### Method 1: Deterministic Match (100% accuracy)
 
-#### 1A. Match по IDFA (самый надежный):
+#### 1A. Match by IDFA (most reliable):
 
 ```python
 if install_data.idfa:
@@ -265,12 +265,12 @@ if install_data.idfa:
         }
 ```
 
-**Требования:**
+**Requirements:**
 - ✅ ATT permission granted
-- ✅ IDFA доступен при клике И при установке
-- ✅ Клик не старше 7 дней
+- ✅ IDFA available on click AND on install
+- ✅ Click not older than 7 days
 
-#### 1B. Match по IDFV + IP:
+#### 1B. Match by IDFV + IP:
 
 ```python
 if install_data.idfv:
@@ -286,9 +286,9 @@ if install_data.idfv:
         }
 ```
 
-**Ограничение:** IDFV меняется при переустановке приложений одного разработчика
+**Limitation:** IDFV changes when reinstalling apps from the same developer
 
-#### 1C. Match по Facebook User ID:
+#### 1C. Match by Facebook User ID:
 
 ```python
 if install_data.fb_user_id:
@@ -301,28 +301,28 @@ if install_data.fb_user_id:
         }
 ```
 
-**Требования:**
-- ✅ Пользователь залогинен в Facebook app
-- ✅ Приложение использует Facebook Login
+**Requirements:**
+- ✅ User logged into Facebook app
+- ✅ App uses Facebook Login
 
 ---
 
-### Метод 2: Probabilistic Match (85-95% точность)
+### Method 2: Probabilistic Match (85-95% accuracy)
 
-Если deterministic не сработал, используется fingerprinting:
+If deterministic didn't work, fingerprinting is used:
 
 ```python
-# Создаем fingerprint из install данных
+# Create fingerprint from install data
 install_fingerprint = create_fingerprint(install_data)
 
-# Ищем похожие клики за последние 24 часа
+# Find similar clicks in last 24 hours
 recent_clicks = db.find_recent_clicks(
     ip_subnet=install_data.ip_subnet,
     platform='ios',
     time_window=24_hours
 )
 
-# Считаем similarity score
+# Calculate similarity score
 best_match = None
 best_score = 0
 
@@ -335,7 +335,7 @@ for click in recent_clicks:
         best_score = score
         best_match = click
 
-# Порог 85%
+# Threshold 85%
 if best_score > 0.85:
     return {
         'method': 'probabilistic',
@@ -344,46 +344,46 @@ if best_score > 0.85:
     }
 ```
 
-#### Similarity Score (взвешенная сумма):
+#### Similarity Score (weighted sum):
 
-| Параметр | Вес | Описание |
+| Parameter | Weight | Description |
 |----------|-----|----------|
-| **IP адрес** | 40% | Точное совпадение или та же подсеть |
-| **User-Agent** | 20% | Сравнение строк User-Agent |
+| **IP address** | 40% | Exact match or same subnet |
+| **User-Agent** | 20% | User-Agent string comparison |
 | **Screen resolution** | 15% | Width + Height + Density |
-| **Timezone** | 10% | Точное совпадение timezone |
-| **Language** | 10% | Locale совпадение |
-| **Device model** | 5% | Модель устройства |
+| **Timezone** | 10% | Exact timezone match |
+| **Language** | 10% | Locale match |
+| **Device model** | 5% | Device model |
 
-**Пример:**
+**Example:**
 ```
-IP совпал: +0.40
-User-Agent совпал на 95%: +0.19
-Screen совпал: +0.15
-Timezone совпал: +0.10
-Language совпал: +0.10
-Device совпал: +0.05
+IP matched: +0.40
+User-Agent matched 95%: +0.19
+Screen matched: +0.15
+Timezone matched: +0.10
+Language matched: +0.10
+Device matched: +0.05
 ───────────────────────────
 Total: 0.99 (99% confidence) ✅
 ```
 
 ---
 
-## 📊 Сценарии
+## 📊 Scenarios
 
-### Сценарий 1: ✅ С ATT разрешением (идеальный)
+### Scenario 1: ✅ With ATT permission (ideal)
 
 ```
-1. Клик (t=0):
-   Facebook сохраняет: fbclid + IDFA + fingerprint
+1. Click (t=0):
+   Facebook saves: fbclid + IDFA + fingerprint
 
-2. Установка (t=30 мин):
+2. Install (t=30 min):
    ATT permission granted ✅
-   SDK отправляет: IDFA + fingerprint
+   SDK sends: IDFA + fingerprint
 
 3. Matching:
-   IDFA совпал → Deterministic match (100%)
-   Возвращает: fbclid + campaign_id
+   IDFA matched → Deterministic match (100%)
+   Returns: fbclid + campaign_id
 
 4. App Install event:
    {
@@ -394,44 +394,44 @@ Total: 0.99 (99% confidence) ✅
    }
 ```
 
-**Результат:** Facebook точно знает, какая реклама привела к установке ✅
+**Result:** Facebook knows exactly which ad led to the install ✅
 
-**Что происходит в коде:**
+**What happens in code:**
 ```typescript
-// 1. Запрашиваем ATT разрешение
+// 1. Request ATT permission
 const attStatus = await requestTrackingPermission();
 // attStatus = 'authorized' ✅
 
-// 2. Получаем deferred deep link от Facebook SDK
+// 2. Get deferred deep link from Facebook SDK
 const deferredUrl = await AppEventsLogger.fetchDeferredAppLink();
 // deferredUrl = "https://yourapp.com/?fbclid=IwAR2x..." ✅
 
-// 3. Парсим параметры
+// 3. Parse parameters
 const attribution = parseDeepLinkParams(deferredUrl);
 // { fbclid: "IwAR2x...", utm_source: "facebook", ... }
 
-// 4. Отправляем App Install event
-await sendAppInstallEventDual(attribution, { email: userEmail });
-// Facebook получает: fbclid + advertiserTrackingEnabled: true ✅
+// 4. Send App Install event
+await sendAppInstallEventDual(userId, attribution, { email: userEmail });
+// Facebook receives: external_id + email + fbclid + advertiserTrackingEnabled: true ✅
 ```
 
 ---
 
-### Сценарий 2: ⚠️ БЕЗ ATT разрешения (probabilistic)
+### Scenario 2: ⚠️ WITHOUT ATT permission (probabilistic)
 
 ```
-1. Клик (t=0):
-   Facebook сохраняет: fbclid + fingerprint (БЕЗ IDFA)
+1. Click (t=0):
+   Facebook saves: fbclid + fingerprint (NO IDFA)
 
-2. Установка (t=30 мин):
+2. Install (t=30 min):
    ATT permission denied ❌
-   SDK отправляет: fingerprint (БЕЗ IDFA)
+   SDK sends: fingerprint (NO IDFA)
 
 3. Matching:
-   IDFA недоступен → Probabilistic match
-   Сравнивает: IP + User-Agent + Screen + Timezone
+   IDFA unavailable → Probabilistic match
+   Compares: IP + User-Agent + Screen + Timezone
    Similarity: 92% → MATCH ⚠️
-   Возвращает: fbclid + campaign_id
+   Returns: fbclid + campaign_id
 
 4. App Install event:
    {
@@ -442,51 +442,51 @@ await sendAppInstallEventDual(attribution, { email: userEmail });
    }
 ```
 
-**Результат:** Facebook вероятно знает источник (92% уверенность) ⚠️
+**Result:** Facebook probably knows the source (92% confidence) ⚠️
 
-**Что происходит в коде:**
+**What happens in code:**
 ```typescript
-// 1. Запрашиваем ATT разрешение
+// 1. Request ATT permission
 const attStatus = await requestTrackingPermission();
 // attStatus = 'denied' ❌
 
-// 2. Получаем deferred deep link (все равно работает через fingerprint)
+// 2. Get deferred deep link (still works via fingerprint)
 const deferredUrl = await AppEventsLogger.fetchDeferredAppLink();
 // deferredUrl = "https://yourapp.com/?fbclid=IwAR2x..." ⚠️ (92% confidence)
 
-// 3. Парсим параметры
+// 3. Parse parameters
 const attribution = parseDeepLinkParams(deferredUrl);
 // { fbclid: "IwAR2x...", utm_source: "facebook", ... }
 
-// 4. Отправляем App Install event
-await sendAppInstallEventDual(attribution, { email: userEmail });
-// Facebook получает: fbclid + advertiserTrackingEnabled: false ⚠️
+// 4. Send App Install event
+await sendAppInstallEventDual(userId, attribution, { email: userEmail });
+// Facebook receives: external_id + email + fbclid + advertiserTrackingEnabled: false ⚠️
 ```
 
-**⚠️ Примечание:** Facebook SDK может не вернуть deferred link, если probabilistic matching confidence < 85%
+**⚠️ Note:** Facebook SDK may not return deferred link if probabilistic matching confidence < 85%
 
 ---
 
-### Сценарий 3: ❌ IP изменился (WiFi → LTE)
+### Scenario 3: ❌ IP changed (WiFi → LTE)
 
 ```
-1. Клик (t=0, WiFi):
+1. Click (t=0, WiFi):
    IP: 192.168.1.1
 
-2. Установка (t=30 мин, LTE):
+2. Install (t=30 min, LTE):
    IP: 10.20.30.40
 
 3. Matching:
-   IP не совпал ❌ (-40%)
-   User-Agent совпал ✅ (+20%)
-   Screen совпал ✅ (+15%)
-   Timezone совпал ✅ (+10%)
-   Language совпал ✅ (+10%)
-   Device совпал ✅ (+5%)
+   IP didn't match ❌ (-40%)
+   User-Agent matched ✅ (+20%)
+   Screen matched ✅ (+15%)
+   Timezone matched ✅ (+10%)
+   Language matched ✅ (+10%)
+   Device matched ✅ (+5%)
    ────────────────────────
    Total: 60% < 85% threshold
 
-   Similarity: 60% → НЕ MATCH ❌
+   Similarity: 60% → NO MATCH ❌
 
 4. App Install event:
    {
@@ -495,42 +495,42 @@ await sendAppInstallEventDual(attribution, { email: userEmail });
    }
 ```
 
-**Результат:** Facebook НЕ знает источник (считает organic install) ❌
+**Result:** Facebook DOESN'T know the source (considers organic install) ❌
 
-**Что происходит в коде:**
+**What happens in code:**
 ```typescript
-// 1. Запрашиваем ATT разрешение
+// 1. Request ATT permission
 const attStatus = await requestTrackingPermission();
 // attStatus = 'denied' ❌
 
-// 2. Пытаемся получить deferred deep link
+// 2. Try to get deferred deep link
 const deferredUrl = await AppEventsLogger.fetchDeferredAppLink();
 // deferredUrl = null ❌ (similarity 60% < 85% threshold)
 
-// 3. Нет attribution данных
+// 3. No attribution data
 const attribution = deferredUrl ? parseDeepLinkParams(deferredUrl) : {};
 // attribution = {}
 
-// 4. Отправляем App Install event БЕЗ fbclid
-await sendAppInstallEventDual(attribution, { email: userEmail });
-// Facebook получает: fbclid: null, attribution: 'organic' ❌
+// 4. Send App Install event WITHOUT fbclid
+await sendAppInstallEventDual(userId, attribution, { email: userEmail });
+// Facebook receives: external_id + email, fbclid: null, attribution: 'organic' ❌
 ```
 
 ---
 
-## 🎯 Ключевые выводы
+## 🎯 Key Conclusions
 
-### Что влияет на успешность matching:
+### What affects matching success:
 
-| Фактор | Влияние на точность |
+| Factor | Impact on accuracy |
 |--------|-------------------|
-| **ATT разрешение** | 100% vs 85-95% |
-| **IP адрес стабилен** | +40% к probabilistic |
-| **Facebook app установлен** | Может дать IDFA при клике |
-| **Время между кликом и установкой** | < 24ч лучше (probabilistic) |
-| **VPN/Proxy** | Ухудшает probabilistic |
+| **ATT permission** | 100% vs 85-95% |
+| **IP address stable** | +40% to probabilistic |
+| **Facebook app installed** | Can provide IDFA on click |
+| **Time between click and install** | < 24h better (probabilistic) |
+| **VPN/Proxy** | Degrades probabilistic |
 
-### Что Facebook получает в App Install event:
+### What Facebook receives in App Install event:
 
 ```typescript
 {
@@ -538,22 +538,22 @@ await sendAppInstallEventDual(attribution, { email: userEmail });
   eventTime: 1700412000,
   eventId: 'unique-uuid',
   
-  // ❗ КЛЮЧЕВЫЕ ПОЛЯ
+  // ❗ KEY FIELDS
   advertiserTrackingEnabled: true/false,  // ATT status
   applicationTrackingEnabled: true,
   
-  // Attribution (если нашли match)
-  fbclid: 'IwAR2x...',                    // или null
+  // Attribution (if match found)
+  fbclid: 'IwAR2x...',                    // or null
   
   // Device info
-  extinfo: [/* 16 элементов */],
+  extinfo: [/* 16 elements */],
   
   // User data (hashed)
   userData: {
     email: 'hashed...'
   },
   
-  // Campaign (если нашли match)
+  // Campaign (if match found)
   customData: {
     campaign_id: '123456789',
     utm_source: 'facebook',
@@ -564,40 +564,40 @@ await sendAppInstallEventDual(attribution, { email: userEmail });
 
 ---
 
-## 📝 Рекомендации для разработчиков
+## 📝 Recommendations for developers
 
-### Для максимальной точности attribution:
+### For maximum attribution accuracy:
 
-1. **✅ Всегда запрашивайте ATT разрешение**
-   - Показывайте onboarding экран с объяснением
-   - Запрашивайте при первом запуске
+1. **✅ Always request ATT permission**
+   - Show onboarding screen with explanation
+   - Request on first launch
    
-2. **✅ Используйте Facebook SDK `fetchDeferredAppLink()`**
-   - Вызывайте ПОСЛЕ получения ATT разрешения
-   - Обрабатывайте случай, когда deferred link отсутствует
+2. **✅ Use Facebook SDK `fetchDeferredAppLink()`**
+   - Call AFTER getting ATT permission
+   - Handle case when deferred link is absent
 
-3. **✅ Отправляйте App Install event с правильными параметрами**
-   - Используйте dual-send (client + server)
-   - Включайте `advertiserTrackingEnabled` status
-   - Передавайте `fbclid` если нашли
+3. **✅ Send App Install event with correct parameters**
+   - Use dual-send (client + server)
+   - Include `advertiserTrackingEnabled` status
+   - Pass `fbclid` if found
 
-4. **⚠️ Учитывайте ограничения probabilistic matching**
-   - Точность 85-95% vs 100% с IDFA
-   - Может не работать при смене IP
-   - Требует стабильного интернета
+4. **⚠️ Consider probabilistic matching limitations**
+   - Accuracy 85-95% vs 100% with IDFA
+   - May not work when IP changes
+   - Requires stable internet
 
-### Для надежности при любом сценарии:
+### For reliability in any scenario:
 
-- Используйте **Branch.io** или **AppsFlyer** для deferred deep linking
-- Они комбинируют deterministic + probabilistic методы
-- Имеют лучшие ML модели для matching (95-98% точность)
-- Работают для всех ad networks (не только Facebook)
+- Use **Branch.io** or **AppsFlyer** for deferred deep linking
+- They combine deterministic + probabilistic methods
+- Have better ML models for matching (95-98% accuracy)
+- Work for all ad networks (not just Facebook)
 
 ---
 
-## 💻 Пример интеграции в React Native
+## 💻 React Native Integration Example
 
-### Вариант 1: Facebook SDK (бесплатно, только FB реклама)
+### Option 1: Facebook SDK (free, FB ads only)
 
 ```typescript
 // app/_layout.tsx
@@ -613,34 +613,34 @@ useEffect(() => {
     if (!firstLaunch) return;
     
     try {
-      // 1. Запрашиваем ATT разрешение
+      // 1. Request ATT permission
       logger.info('[App] Requesting ATT permission...');
       const attStatus = await requestTrackingPermission();
       logger.info('[App] ATT status:', { attStatus });
       
-      // 2. Получаем deferred deep link от Facebook
-      // ВАЖНО: вызывать ПОСЛЕ ATT разрешения для лучшей точности
+      // 2. Get deferred deep link from Facebook
+      // IMPORTANT: call AFTER ATT permission for better accuracy
       logger.info('[App] Fetching deferred app link from Facebook...');
       const deferredUrl = await AppEventsLogger.fetchDeferredAppLink();
       
       if (deferredUrl) {
         logger.info('[App] Got deferred deep link! 🎉', { deferredUrl });
         
-        // 3. Парсим attribution параметры
+        // 3. Parse attribution parameters
         const attribution = parseDeepLinkParams(deferredUrl);
         logger.info('[App] Attribution data:', attribution);
         
-        // 4. Отправляем App Install event с fbclid
-        await sendAppInstallEventDual(attribution, {
-          email: userEmail, // если есть
+        // 4. Send App Install event with fbclid
+        await sendAppInstallEventDual(userId, attribution, {
+          email: userEmail, // if available
         });
         
         logger.info('[App] App Install event sent successfully ✅');
       } else {
         logger.info('[App] No deferred deep link (organic install)');
         
-        // Отправляем App Install без attribution
-        await sendAppInstallEventDual({});
+        // Send App Install without attribution
+        await sendAppInstallEventDual(undefined, {});
       }
       
       await markAppAsLaunched();
@@ -653,15 +653,15 @@ useEffect(() => {
 }, []);
 ```
 
-**Требования:**
-- ✅ Установлен `react-native-fbsdk-next`
-- ⚠️ На устройстве ДОЛЖЕН быть установлен Facebook app
-- ⚠️ Пользователь ДОЛЖЕН быть залогинен в Facebook app
-- ⚠️ Работает ТОЛЬКО для Facebook/Instagram рекламы
+**Requirements:**
+- ✅ Installed `react-native-fbsdk-next`
+- ⚠️ Facebook app MUST be installed on device
+- ⚠️ User MUST be logged into Facebook app
+- ⚠️ Works ONLY for Facebook/Instagram ads
 
 ---
 
-### Вариант 2: Branch.io (платно, все источники)
+### Option 2: Branch.io (paid, all sources)
 
 ```typescript
 // app/_layout.tsx
@@ -707,17 +707,17 @@ useEffect(() => {
             };
             
             // 4. Отправляем App Install event
-            await sendAppInstallEventDual(attribution, {
+            await sendAppInstallEventDual(userId, attribution, {
               email: params.email,
             });
             
             logger.info('[Branch] App Install event sent ✅');
             
             // Branch автоматически отправит postback в Facebook
-            // если настроена интеграция в Branch dashboard
+            // if configured in Branch dashboard
           } else {
             logger.info('[Branch] Organic install');
-            await sendAppInstallEventDual({});
+            await sendAppInstallEventDual(undefined, {});
           }
           
           await markAppAsLaunched();
@@ -797,10 +797,10 @@ if (firstLaunch) {
     // iOS: показываем tracking onboarding перед ATT
     if (Platform.OS === 'ios') {
       router.push('/tracking-onboarding');
-      // Там запросим ATT и отправим App Install event
+      // Will request ATT and send App Install event there
     } else {
-      // Android: отправляем сразу
-      await sendAppInstallEventDual(attributionData);
+      // Android: send immediately
+      await sendAppInstallEventDual(userId, attributionData);
     }
   }
   

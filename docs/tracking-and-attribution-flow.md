@@ -65,7 +65,7 @@ The app implements a sophisticated attribution tracking system that:
 5. **Send Facebook Events**
    - **Dual-send (client + server):**
      ```typescript
-     sendAppInstallEventDual(attributionData, userData)
+     sendAppInstallEventDual(userId, attributionData, userData)
      // Sends AppInstall event only (not AppLaunch)
      // - Client-side: via Facebook SDK (fb_mobile_activate_app)
      // - Server-side: via Cloud Function to Conversions API
@@ -112,7 +112,7 @@ The app implements a sophisticated attribution tracking system that:
    
    - **Dual-send (client + server):**
      ```typescript
-     sendAppInstallEventDual(attributionData, userData)
+     sendAppInstallEventDual(userId, attributionData, userData)
      // Sends AppInstall event only (not AppLaunch)
      // - Client-side: via Facebook SDK (fb_mobile_activate_app)
      // - Server-side: via Cloud Function to Conversions API

@@ -78,10 +78,13 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
             
             logger.info('SPECIAL CASE: Facebook attribution detected, sending install event with attribution', {
               feature: 'TrackingOnboarding',
-              hasEmail: !!email
+              hasEmail: !!email,
+              userId: user?.id
             });
             
+            // Send install event with userId (if user is logged in) + email + attribution
             await sendAppInstallEventDual(
+              user?.id, // Firebase UID for external_id (user should be logged in at this point)
               attributionData || {},
               email ? { email } : undefined
             );
@@ -99,17 +102,17 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
               hasEmail: !!email
             });
             
-            // Send registration event with email for Advanced Matching (Custom Audiences)
-            if (email) {
+            // Send registration event with userId + email for Advanced Matching (Custom Audiences)
+            if (email && user?.id) {
               // Get attribution data with AsyncStorage + Firestore fallback
-              const attributionData = user?.id 
-                ? await getAttributionDataWithFallback(user.id)
-                : null;
+              const attributionData = await getAttributionDataWithFallback(user.id);
               
-              await sendRegistrationEventDual(email, attributionData || undefined);
+              // Send registration event with external_id (userId) + email + attribution
+              await sendRegistrationEventDual(user.id, email, attributionData || undefined);
               
               logger.info('MAIN FLOW: Registration event sent with attribution', {
                 feature: 'TrackingOnboarding',
+                userId: user.id,
                 hasAttributionData: !!attributionData,
                 hasFbc: !!attributionData?.fbc,
                 hasFbp: !!attributionData?.fbp,

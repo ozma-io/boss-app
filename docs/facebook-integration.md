@@ -208,6 +208,7 @@ async function handleAttributedInstall() {
     if (attributionData?.fbclid || attributionData?.utm_source === 'facebook') {
       // Send install event with attribution for proper campaign tracking
       await sendAppInstallEventDual(
+        user?.id, // Firebase UID for external_id (may be undefined for pre-login)
         attributionData, // Contains fbclid, utm_source, utm_campaign, etc.
         attributionData.email ? { email: attributionData.email } : undefined
       );

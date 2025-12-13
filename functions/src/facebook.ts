@@ -57,6 +57,10 @@ interface FacebookConversionEventData {
     state?: string;
     zip?: string;
     country?: string;
+    // External ID - user's unique identifier in your system (Firebase UID)
+    // CRITICAL for User Matching and cross-channel attribution
+    // Can be hashed (recommended) or plain text
+    externalId?: string;
   };
   customData?: Record<string, string | number | boolean>;
 }
@@ -150,6 +154,17 @@ export const sendFacebookConversionEvent = onCall(
       }
       if (eventData.userData?.country) {
         userData.country = hashData(eventData.userData.country);
+      }
+
+      // Add external_id (Firebase User ID) - CRITICAL for User Matching
+      // Hashing recommended but not required - we hash it for privacy
+      // This helps Facebook:
+      // 1. Link all events from the same user across sessions/devices
+      // 2. Match events between web-funnel and mobile app
+      // 3. Build better Custom Audiences
+      // 4. Improve Event Match Quality
+      if (eventData.userData?.externalId) {
+        userData.external_id = hashData(eventData.userData.externalId);
       }
 
       // Add Facebook tracking cookies (NOT hashed, passed as-is)

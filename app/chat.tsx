@@ -5,7 +5,9 @@ import { KEYBOARD_AVOIDING_OFFSET } from '@/constants/keyboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSession } from '@/contexts/SessionContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
+import { getAttributionDataWithFallback } from '@/services/attribution.service';
 import { extractTextFromContent, generateAIResponse, getOrCreateThread, loadOlderMessages, markChatAsRead, sendMessage, subscribeToMessages } from '@/services/chat.service';
+import { sendFirstChatMessageEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
 import { updateUserPresence } from '@/services/user.service';
 import { ChatMessage, ChatThread } from '@/types';
@@ -279,6 +281,36 @@ export default function ChatScreen(): React.JSX.Element {
         textLength: textToSend.length,
         user_message_number: userMessageCount,
       });
+      
+      // Send Facebook event for first chat message (engagement milestone)
+      // This helps Facebook optimize campaigns for users who actually engage with the AI
+      // CRITICAL: Includes external_id (Firebase UID) for cross-channel user matching
+      if (userMessageCount === 1) {
+        // Send Facebook event in background (don't block user experience)
+        (async () => {
+          try {
+            // Get attribution data for best event matching (fbc, fbp from web-funnel)
+            const attributionData = await getAttributionDataWithFallback(user.id);
+            
+            // Send event with external_id (Firebase UID) + email + attribution
+            // This allows Facebook to link all events from this user across channels
+            await sendFirstChatMessageEventDual(user.id, user.email, attributionData || undefined);
+            
+            logger.info('First chat message Facebook event sent', { 
+              feature: 'ChatScreen', 
+              userId: user.id,
+              hasAttribution: !!attributionData
+            });
+          } catch (fbError) {
+            // Log error but don't show to user - Facebook tracking is not critical
+            logger.error('Failed to send first chat message Facebook event', { 
+              feature: 'ChatScreen', 
+              userId: user.id,
+              error: fbError 
+            });
+          }
+        })();
+      }
 
       // Immediately show typing indicator for better UX
       setIsTyping(true);
