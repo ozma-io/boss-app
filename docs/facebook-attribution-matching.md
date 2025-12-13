@@ -677,11 +677,11 @@ useEffect(() => {
     if (!firstLaunch) return;
     
     try {
-      // 1. Запрашиваем ATT разрешение
+      // 1. Request ATT permission
       const attStatus = await requestTrackingPermission();
       logger.info('[App] ATT status:', { attStatus });
       
-      // 2. Подписываемся на Branch events
+      // 2. Subscribe to Branch events
       const unsubscribe = branch.subscribe({
         onOpenStart: () => {
           logger.info('[Branch] Session starting...');
@@ -692,11 +692,11 @@ useEffect(() => {
             return;
           }
           
-          // 3. Проверяем, пришел ли пользователь по Branch ссылке
+          // 3. Check if user came via Branch link
           if (params['+clicked_branch_link']) {
             logger.info('[Branch] Got attribution! 🎉', params);
             
-            // Извлекаем attribution данные
+            // Extract attribution data
             const attribution = {
               fbclid: params.fbclid,
               utm_source: params.utm_source,
@@ -706,14 +706,14 @@ useEffect(() => {
               email: params.email,
             };
             
-            // 4. Отправляем App Install event
+            // 4. Send App Install event
             await sendAppInstallEventDual(userId, attribution, {
               email: params.email,
             });
             
             logger.info('[Branch] App Install event sent ✅');
             
-            // Branch автоматически отправит postback в Facebook
+            // Branch will automatically send postback to Facebook
             // if configured in Branch dashboard
           } else {
             logger.info('[Branch] Organic install');
@@ -734,67 +734,67 @@ useEffect(() => {
 }, []);
 ```
 
-**Преимущества:**
-- ✅ НЕ требует Facebook app на устройстве
-- ✅ Работает для ВСЕХ источников (FB, Google, TikTok, email, SMS, etc.)
-- ✅ Probabilistic matching 95-98% (vs 85-95% у Facebook SDK)
-- ✅ Автоматические postbacks во все ad networks
-- ✅ Cross-device tracking (клик на iPad → установка на iPhone)
+**Advantages:**
+- ✅ Does NOT require Facebook app on device
+- ✅ Works for ALL sources (FB, Google, TikTok, email, SMS, etc.)
+- ✅ Probabilistic matching 95-98% (vs 85-95% for Facebook SDK)
+- ✅ Automatic postbacks to all ad networks
+- ✅ Cross-device tracking (click on iPad → install on iPhone)
 
-**Цена:**
-- Free tier: до 10K MAU (Monthly Active Users)
-- Paid: $299-999/месяц
+**Price:**
+- Free tier: up to 10K MAU (Monthly Active Users)
+- Paid: $299-999/month
 
 ---
 
-## 📁 Реализация в BossUp
+## 📁 BossUp Implementation
 
-### Файлы:
+### Files:
 
 1. **`services/facebook.service.ts`**
-   - `sendAppInstallEventDual()` - отправка App Install event (строки 548-566)
-   - `buildEventData()` - формирование payload с ATT status (строки 178-210)
-   - `parseDeepLinkParams()` - парсинг URL параметров (строки 356-378)
+   - `sendAppInstallEventDual()` - sends App Install event (lines 548-566)
+   - `buildEventData()` - builds payload with ATT status (lines 178-210)
+   - `parseDeepLinkParams()` - parses URL parameters (lines 356-378)
 
 2. **`utils/deviceInfo.ts`**
-   - `buildExtinfo()` - создание 16-element array для Facebook
-   - `getAdvertiserTrackingEnabled()` - получение ATT status
+   - `buildExtinfo()` - creates 16-element array for Facebook
+   - `getAdvertiserTrackingEnabled()` - gets ATT status
 
 3. **`services/tracking.service.ts`**
-   - `requestTrackingPermission()` - запрос ATT разрешения
-   - `getTrackingPermissionStatus()` - проверка текущего статуса
+   - `requestTrackingPermission()` - requests ATT permission
+   - `getTrackingPermissionStatus()` - checks current status
 
 4. **`app/_layout.tsx`**
-   - Обработка первого запуска (строки 200-250)
-   - Парсинг deep links
-   - Отправка Facebook events
+   - Handles first launch (lines 200-250)
+   - Parses deep links
+   - Sends Facebook events
 
 5. **`functions/src/facebook.ts`** (Cloud Function)
-   - `sendFacebookConversionEvent` - отправка на Conversions API
-   - Хеширование user data
-   - Retry логика
+   - `sendFacebookConversionEvent` - sends to Conversions API
+   - Hashes user data
+   - Retry logic
 
-### Пример использования в BossUp:
+### Usage example in BossUp:
 
 ```typescript
-// app/_layout.tsx (упрощенная версия)
+// app/_layout.tsx (simplified version)
 
 const firstLaunch = await isFirstLaunch();
 
 if (firstLaunch) {
-  // Получаем initial URL (deep link)
+  // Get initial URL (deep link)
   const url = await Linking.getInitialURL();
   let attributionData = null;
   
   if (url) {
-    // Парсим attribution из URL
+    // Parse attribution from URL
     attributionData = parseDeepLinkParams(url);
     logger.info('[App] Got attribution from deep link', attributionData);
   }
   
-  // Если есть Facebook attribution
+  // If there is Facebook attribution
   if (attributionData?.fbclid || attributionData?.utm_source === 'facebook') {
-    // iOS: показываем tracking onboarding перед ATT
+    // iOS: show tracking onboarding before ATT
     if (Platform.OS === 'ios') {
       router.push('/tracking-onboarding');
       // Will request ATT and send App Install event there
@@ -810,36 +810,36 @@ if (firstLaunch) {
 
 ---
 
-## ⚠️ Важные ограничения
+## ⚠️ Important Limitations
 
 ### Facebook SDK `fetchDeferredAppLink()`:
 
-1. **Требует Facebook app на устройстве**
-   - Если у пользователя нет Facebook app → метод вернет `null`
-   - Если пользователь не залогинен в FB app → точность снижается
+1. **Requires Facebook app on device**
+   - If user doesn't have Facebook app → method will return `null`
+   - If user not logged into FB app → accuracy decreases
 
-2. **Работает только для Facebook/Instagram рекламы**
-   - Не работает для Google Ads, TikTok, email campaigns, etc.
+2. **Works only for Facebook/Instagram ads**
+   - Doesn't work for Google Ads, TikTok, email campaigns, etc.
 
-3. **Probabilistic matching ограничен**
-   - Если IP изменился → может не найти match
-   - Если VPN/Proxy → может не найти match
-   - Если много времени прошло (>24ч) → точность падает
+3. **Probabilistic matching is limited**
+   - If IP changed → may not find match
+   - If VPN/Proxy → may not find match
+   - If too much time passed (>24h) → accuracy drops
 
-4. **iOS 14.5+ проблемы**
-   - ~70% пользователей отказывают в ATT
-   - Без IDFA точность падает с 100% до 85-95%
+4. **iOS 14.5+ issues**
+   - ~70% of users decline ATT
+   - Without IDFA accuracy drops from 100% to 85-95%
 
-### Альтернативы для production:
+### Production alternatives:
 
-| Решение | Точность | Требует FB app | Все источники | Цена |
+| Solution | Accuracy | Requires FB app | All sources | Price |
 |---------|----------|---------------|---------------|------|
-| **Facebook SDK** | 85-95% | Да ⚠️ | Нет ❌ | Бесплатно ✅ |
-| **Branch.io** | 95-98% | Нет ✅ | Да ✅ | $0-299/мес |
-| **AppsFlyer** | 95-98% | Нет ✅ | Да ✅ | $0-449/мес |
-| **Adjust** | 95-98% | Нет ✅ | Да ✅ | Custom pricing |
+| **Facebook SDK** | 85-95% | Yes ⚠️ | No ❌ | Free ✅ |
+| **Branch.io** | 95-98% | No ✅ | Yes ✅ | $0-299/mo |
+| **AppsFlyer** | 95-98% | No ✅ | Yes ✅ | $0-449/mo |
+| **Adjust** | 95-98% | No ✅ | Yes ✅ | Custom pricing |
 
 ---
 
-**Последнее обновление:** 2024-11-19
+**Last updated:** 2024-11-19
 
