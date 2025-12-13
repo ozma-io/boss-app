@@ -7,7 +7,7 @@ import { useSession } from '@/contexts/SessionContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { getAttributionDataWithFallback } from '@/services/attribution.service';
 import { extractTextFromContent, generateAIResponse, getOrCreateThread, loadOlderMessages, markChatAsRead, sendMessage, subscribeToMessages } from '@/services/chat.service';
-import { sendFirstChatMessageEventDual } from '@/services/facebook.service';
+import { sendFirstChatMessageEventDual, sendSecondChatMessageEventDual } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
 import { updateUserPresence } from '@/services/user.service';
 import { ChatMessage, ChatThread } from '@/types';
@@ -304,6 +304,34 @@ export default function ChatScreen(): React.JSX.Element {
           } catch (fbError) {
             // Log error but don't show to user - Facebook tracking is not critical
             logger.error('Failed to send first chat message Facebook event', { 
+              feature: 'ChatScreen', 
+              userId: user.id,
+              error: fbError 
+            });
+          }
+        })();
+      }
+
+      // Send Facebook event for second chat message (continued engagement milestone)
+      // Custom event to allow separate campaign optimization from first message
+      if (userMessageCount === 2) {
+        // Send Facebook event in background (don't block user experience)
+        (async () => {
+          try {
+            // Get attribution data for best event matching (fbc, fbp from web-funnel)
+            const attributionData = await getAttributionDataWithFallback(user.id);
+            
+            // Send custom event with external_id (Firebase UID) + email + attribution
+            await sendSecondChatMessageEventDual(user.id, user.email, attributionData || undefined);
+            
+            logger.info('Second chat message Facebook event sent', { 
+              feature: 'ChatScreen', 
+              userId: user.id,
+              hasAttribution: !!attributionData
+            });
+          } catch (fbError) {
+            // Log error but don't show to user - Facebook tracking is not critical
+            logger.error('Failed to send second chat message Facebook event', { 
               feature: 'ChatScreen', 
               userId: user.id,
               error: fbError 

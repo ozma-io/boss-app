@@ -78,25 +78,100 @@ interface ConversionEventData {
 /**
  * Official Facebook mobile app events
  * 
- * IMPORTANT: Only official Facebook events should be added here.
- * Custom events are NOT allowed to ensure proper attribution and analytics.
+ * NAMING IN SDK vs FACEBOOK:
+ * - React Native SDK uses constants like AppEventsLogger.AppEvents.CompletedRegistration
+ * - These map to actual event names sent to Facebook with 'fb_mobile_' prefix
+ * - Example: AppEventsLogger.AppEvents.CompletedRegistration → fb_mobile_complete_registration
  * 
- * Currently used:
- * - fb_mobile_activate_app - Official "Activate App" event for app launch
- *   (used for both first launch and subsequent launches - Facebook differentiates automatically)
- * - fb_mobile_complete_registration - Registration completion (sent in auth flow)
+ * Available standard events from SDK (AppEventsLogger.AppEvents.*):
+ * - AchievedLevel → fb_mobile_level_achieved
+ * - AddedPaymentInfo → fb_mobile_add_payment_info
+ * - AddedToCart → fb_mobile_add_to_cart
+ * - AddedToWishlist → fb_mobile_add_to_wishlist
+ * - CompletedRegistration → fb_mobile_complete_registration
+ * - CompletedTutorial → fb_mobile_tutorial_completion
+ * - InitiatedCheckout → fb_mobile_initiated_checkout
+ * - Purchased → fb_mobile_purchase
+ * - Rated → fb_mobile_rate
+ * - Searched → fb_mobile_search
+ * - SpentCredits → fb_mobile_spent_credits
+ * - UnlockedAchievement → fb_mobile_achievement_unlocked
+ * - ViewedContent → fb_mobile_content_view
+ * - Contact → fb_mobile_contact
+ * - CustomizeProduct → fb_mobile_customize_product
+ * - Donate → fb_mobile_donate
+ * - FindLocation → fb_mobile_find_location
+ * - Schedule → fb_mobile_schedule
+ * - StartTrial → fb_mobile_start_trial
+ * - SubmitApplication → fb_mobile_submit_application
+ * - Subscribe → fb_mobile_subscribe
+ * - AdClick → fb_mobile_ad_click
+ * - AdImpression → fb_mobile_ad_impression
+ * 
+ * IMPORTANT: Only official Facebook events should be added here.
+ * Custom events are separate (see below).
+ * 
+ * Currently used standard events:
+ * - fb_mobile_activate_app - App launch tracking (both first and subsequent launches)
+ * - fb_mobile_complete_registration - User registration completion
  * - fb_mobile_achievement_unlocked - User achievements/milestones (e.g., first chat message)
  * 
- * Note: There is NO separate fb_mobile_app_launch event in Facebook's official SDK.
- * The "Activate App" event is the only standard event for tracking app opens.
+ * Note: "Activate App" is the only standard event for tracking app opens.
+ * There is NO separate "app launch" event in Facebook's official SDK.
  * The "Install" event is sent via Conversions API (server-side) only.
  * 
- * To add more events, refer to Facebook SDK official documentation:
  * @see https://developers.facebook.com/docs/app-events/reference
  */
-const FB_MOBILE_ACTIVATE_APP = 'fb_mobile_activate_app';
-const FB_MOBILE_COMPLETE_REGISTRATION = 'fb_mobile_complete_registration';
-const FB_MOBILE_ACHIEVEMENT_UNLOCKED = 'fb_mobile_achievement_unlocked';
+const FB_MOBILE_ACTIVATE_APP = 'fb_mobile_activate_app'; // Sent via AppEventsLogger with constants from native SDK
+const FB_MOBILE_COMPLETE_REGISTRATION = 'fb_mobile_complete_registration'; // Sent via AppEventsLogger with constants from native SDK
+const FB_MOBILE_ACHIEVEMENT_UNLOCKED = 'fb_mobile_achievement_unlocked'; // Sent via AppEventsLogger with constants from native SDK
+
+/**
+ * Custom Facebook events for specific user actions
+ * 
+ * CUSTOM vs STANDARD EVENTS:
+ * - Standard events use predefined SDK constants (e.g., AppEventsLogger.AppEvents.CompletedRegistration)
+ * - Custom events use plain string names without SDK constants
+ * - Custom events are sent to Facebook with the exact string name you specify (no 'fb_mobile_' prefix)
+ * - Custom events allow for separate campaign optimization goals
+ * 
+ * Currently used:
+ * - SecondChatMessage - User sends their second message to AI assistant (sent as "SecondChatMessage" to Facebook)
+ */
+const CUSTOM_SECOND_CHAT_MESSAGE = 'SecondChatMessage';
+
+// ============================================================================
+// Facebook Standard Event Parameters
+// ============================================================================
+
+/**
+ * Standard event parameters for Facebook App Events
+ * 
+ * NAMING IN SDK vs FACEBOOK:
+ * - React Native SDK uses constants like AppEventsLogger.AppEventParams.RegistrationMethod
+ * - For client-side events: Use snake_case parameter names (e.g., 'registration_method', 'fb_description')
+ * - For server-side events: Use camelCase in customData (e.g., 'description', 'achievement_id')
+ * 
+ * Common standard parameters (AppEventsLogger.AppEventParams.*):
+ * - RegistrationMethod → 'fb_registration_method' (client) or 'registration_method' (server)
+ * - Description → 'fb_description' (client) or 'description' (server)
+ * - ContentID → 'fb_content_id' (client) or 'content_id' (server)
+ * - ContentType → 'fb_content_type' (client) or 'content_type' (server)
+ * - Currency → 'fb_currency' (client) or 'currency' (server)
+ * - Level → 'fb_level' (client) or 'level' (server)
+ * - MaxRatingValue → 'fb_max_rating_value' (client) or 'max_rating_value' (server)
+ * - NumItems → 'fb_num_items' (client) or 'num_items' (server)
+ * - PaymentInfoAvailable → 'fb_payment_info_available' (client) or 'payment_info_available' (server)
+ * - SearchString → 'fb_search_string' (client) or 'search_string' (server)
+ * - Success → 'fb_success' (client) or 'success' (server)
+ * 
+ * Note: 
+ * - Client-side parameters often use 'fb_' prefix when using raw strings
+ * - Server-side parameters (via Conversions API) use plain names without 'fb_' prefix
+ * - Special parameter '_eventId' is used for deduplication between client and server
+ * 
+ * @see https://developers.facebook.com/docs/app-events/reference
+ */
 
 // ============================================================================
 // Internal Helper Functions
@@ -546,6 +621,93 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
   }
   
   logger.info('FirstChatMessage dual-send completed', { 
+    feature: 'Facebook', 
+    eventId,
+    clientSuccess,
+    serverSuccess
+  });
+}
+
+/**
+ * Send second chat message event to Facebook for continued engagement tracking
+ * 
+ * Sends custom "SecondChatMessage" event when user sends their second message to AI assistant.
+ * This is a CUSTOM event (not standard Facebook event) to allow separate campaign optimization.
+ * 
+ * ⚠️ CRITICAL: Dual-send approach ensures reliable delivery:
+ * - Client-side (iOS/Android SDK): May be blocked if ATT denied on iOS
+ * - Server-side (Conversions API): ALWAYS sent regardless of ATT status!
+ * 
+ * Server-side event works even with ATT denied because:
+ * 1. Sent from our server, not from user's device
+ * 2. Contains userId (Firebase UID) as external_id for cross-channel matching
+ * 3. Contains email (from Firebase Auth) for User Matching
+ * 4. Contains fbc/fbp (from Firestore) for attribution
+ * 5. Contains full device info (extinfo) for Device Matching
+ * 6. Facebook accepts and processes server events with advertiserTrackingEnabled=0
+ * 
+ * This helps Facebook:
+ * - Track continued engagement (beyond first message)
+ * - Optimize campaigns specifically for users who send 2+ messages
+ * - Build Custom Audiences of highly engaged users
+ * - Allow separate campaign goals (first message vs. second message)
+ * 
+ * Event will appear in Events Manager as: "SecondChatMessage" (custom event)
+ * You can create separate campaigns with this as optimization goal.
+ * 
+ * @param userId - Firebase User ID (used as external_id for user matching)
+ * @param email - User email for Advanced Matching (will be hashed automatically by Cloud Function)
+ * @param attributionData - Optional attribution data from Firestore (fbclid, fbc, fbp from web-funnel)
+ */
+export async function sendSecondChatMessageEventDual(userId: string, email: string, attributionData?: AttributionData): Promise<void> {
+  const eventId = generateEventId();
+  
+  logger.info('Sending SecondChatMessage event', { 
+    feature: 'Facebook', 
+    eventId,
+    userId,
+    hasEmail: !!email,
+    hasAttributionData: !!attributionData,
+    hasFbc: !!attributionData?.fbc,
+    hasFbp: !!attributionData?.fbp
+  });
+  
+  // Client params for Facebook SDK
+  const clientParams: Record<string, string> = { 
+    _eventId: eventId,
+    fb_description: 'second_chat_message'
+  };
+  
+  // Custom data for server-side event
+  const customData: Record<string, string> = {
+    description: 'second_chat_message',
+    message_number: '2'
+  };
+  
+  // Send to both client and server in parallel
+  const results = await Promise.allSettled([
+    // Client-side: Facebook SDK with custom event name
+    (async () => {
+      if (isClientSdkAvailable()) {
+        AppEventsLogger!.logEvent(CUSTOM_SECOND_CHAT_MESSAGE, clientParams);
+        logger.info('SecondChatMessage client-side sent', { feature: 'Facebook', eventId });
+      }
+    })(),
+    
+    // Server-side: Conversions API with external_id + email + attribution (fbc, fbp, fbclid from Firestore)
+    sendConversionEvent(userId, eventId, CUSTOM_SECOND_CHAT_MESSAGE, { email }, customData, attributionData)
+  ]);
+  
+  // Check results  
+  const [clientResult, serverResult] = results;
+  const clientSuccess = clientResult.status === 'fulfilled';
+  const serverSuccess = serverResult.status === 'fulfilled';
+  
+  if (!clientSuccess && !serverSuccess) {
+    throw new Error('Both client and server SecondChatMessage events failed');
+  }
+  
+  logger.info('SecondChatMessage dual-send completed', { 
     feature: 'Facebook', 
     eventId,
     clientSuccess,
