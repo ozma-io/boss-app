@@ -105,7 +105,7 @@ export async function sendFirstChatMessageEventDual(
     AppEventsLogger.logEvent(FB_MOBILE_ACHIEVEMENT_UNLOCKED, clientParams),
     
     // Server-side: Conversions API (with external_id for user matching)
-    sendConversionEvent(userId, eventId, FB_MOBILE_ACHIEVEMENT_UNLOCKED, { email }, customData, attributionData)
+    sendConversionEvent(userId, eventId, FB_MOBILE_ACHIEVEMENT_UNLOCKED, 'app', { email }, customData, attributionData)
   ]);
   
   // Check results (at least one should succeed)

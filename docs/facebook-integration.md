@@ -246,11 +246,15 @@ import { sendConversionEvent } from '@/services/facebook.service';
 import { getAttributionData } from '@/services/attribution.service';
 
 // Purchase event (standard Facebook event)
-async function handlePurchase(amount: number, currency: string) {
+async function handlePurchase(userId: string, amount: number, currency: string) {
   const attributionData = await getAttributionData();
+  const eventId = generateEventId();
   
   await sendConversionEvent(
+    userId,
+    eventId,
     'fb_mobile_purchase', // Standard Facebook event name
+    'app', // actionSource
     {
       email: user.email,
       firstName: user.firstName,
@@ -265,12 +269,16 @@ async function handlePurchase(amount: number, currency: string) {
 }
 
 // Complete Registration event (standard Facebook event)
-async function handleRegistrationComplete() {
+async function handleRegistrationComplete(userId: string, email: string) {
   const attributionData = await getAttributionData();
+  const eventId = generateEventId();
   
   await sendConversionEvent(
+    userId,
+    eventId,
     'fb_mobile_complete_registration', // Standard Facebook event name
-    { email: user.email },
+    'app', // actionSource
+    { email: email },
     { registration_method: 'email' },
     attributionData || undefined
   );

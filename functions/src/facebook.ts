@@ -16,10 +16,33 @@ import { logger } from './logger';
 // Define the secret parameter
 const facebookAccessToken = defineSecret('FACEBOOK_ACCESS_TOKEN');
 
+/**
+ * Facebook Conversions API action source types
+ * 
+ * ⚠️ DUPLICATE TYPE: This type is duplicated in services/facebook.service.ts
+ * Both definitions MUST be kept in sync manually.
+ * Cannot import from client code because Cloud Functions is a separate project.
+ * 
+ * Indicates where the conversion event occurred.
+ * @see https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/server-event#action-source
+ * @see services/facebook.service.ts - Original definition (exported as FacebookActionSource)
+ */
+type FacebookActionSource = 
+  | 'app'                    // Mobile app or desktop app
+  | 'website'                // Website
+  | 'email'                  // Email
+  | 'phone_call'             // Phone call
+  | 'chat'                   // Chat (e.g., Messenger, WhatsApp)
+  | 'physical_store'         // Physical store
+  | 'system_generated'       // System generated (e.g., server-side logic)
+  | 'business_messaging'     // Business messaging
+  | 'other';                 // Other
+
 interface FacebookConversionEventData {
   eventName: string;
   eventTime: number;
   eventId: string;
+  actionSource: FacebookActionSource;
   advertiserTrackingEnabled: boolean;
   applicationTrackingEnabled: boolean;
   // Extended device info (REQUIRED): 16-element array
@@ -114,6 +137,13 @@ export const sendFacebookConversionEvent = onCall(
       );
     }
 
+    if (!eventData.actionSource) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Missing required field: actionSource'
+      );
+    }
+
     if (eventData.advertiserTrackingEnabled === undefined || eventData.applicationTrackingEnabled === undefined) {
       throw new functions.https.HttpsError(
         'invalid-argument',
@@ -192,7 +222,7 @@ export const sendFacebookConversionEvent = onCall(
         event_id: eventData.eventId,
         user_data: userData,
         custom_data: eventData.customData || {},
-        action_source: 'app',
+        action_source: eventData.actionSource,
         app_data: {
           advertiser_tracking_enabled: eventData.advertiserTrackingEnabled ? 1 : 0,
           application_tracking_enabled: eventData.applicationTrackingEnabled ? 1 : 0,
@@ -210,6 +240,7 @@ export const sendFacebookConversionEvent = onCall(
       logger.info('Facebook sending conversion event', {
         eventName: eventData.eventName,
         eventId: eventData.eventId,
+        actionSource: eventData.actionSource,
         hasUserData: Object.keys(userData).length > 0,
         hasFbc: !!eventData.fbc,
         hasFbp: !!eventData.fbp,

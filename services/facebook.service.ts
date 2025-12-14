@@ -26,8 +26,29 @@ if (Platform.OS !== 'web') {
 }
 
 // ============================================================================
-// TypeScript Interfaces
+// TypeScript Types & Interfaces
 // ============================================================================
+
+/**
+ * Facebook Conversions API action source types
+ * 
+ * ⚠️ DUPLICATE TYPE: This type is duplicated in functions/src/facebook.ts
+ * Both definitions MUST be kept in sync manually.
+ * 
+ * Indicates where the conversion event occurred.
+ * @see https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/server-event#action-source
+ * @see functions/src/facebook.ts - Duplicate definition (Cloud Function cannot import from client)
+ */
+export type FacebookActionSource = 
+  | 'app'                    // Mobile app or desktop app
+  | 'website'                // Website
+  | 'email'                  // Email
+  | 'phone_call'             // Phone call
+  | 'chat'                   // Chat (e.g., Messenger, WhatsApp)
+  | 'physical_store'         // Physical store
+  | 'system_generated'       // System generated (e.g., server-side logic)
+  | 'business_messaging'     // Business messaging
+  | 'other';                 // Other
 
 /**
  * Parameters for building conversion event data
@@ -37,7 +58,7 @@ interface ConversionEventParams {
   eventName: string;
   eventId: string;
   userId: string; // Firebase User ID - CRITICAL for external_id matching
-  actionSource?: 'app' | 'website' | 'email' | 'phone_call' | 'chat' | 'physical_store' | 'system_generated' | 'business_messaging' | 'other';
+  actionSource: FacebookActionSource;
   userData?: {
     email?: string;
     phone?: string;
@@ -56,7 +77,7 @@ interface ConversionEventData {
   eventName: string;
   eventTime: number;
   eventId: string;
-  actionSource: 'app' | 'website' | 'email' | 'phone_call' | 'chat' | 'physical_store' | 'system_generated' | 'business_messaging' | 'other';
+  actionSource: FacebookActionSource;
   advertiserTrackingEnabled: boolean;
   applicationTrackingEnabled: boolean;
   extinfo: string[];
@@ -231,7 +252,7 @@ async function buildEventData(params: ConversionEventParams): Promise<Conversion
     eventName: params.eventName,
     eventTime: validateFacebookEventTime(Math.floor(Date.now() / 1000), params.eventName),
     eventId: params.eventId,
-    actionSource: params.actionSource || 'app',
+    actionSource: params.actionSource,
     advertiserTrackingEnabled,
     applicationTrackingEnabled,
     extinfo,
@@ -357,15 +378,16 @@ export function generateEventId(): string {
  * @param userId - Firebase User ID (used as external_id for user matching). Optional for pre-login events.
  * @param eventId - Event ID for deduplication between client and server
  * @param eventName - Name of the event (e.g., 'AppInstall', 'AppLaunch')
+ * @param actionSource - Event source (REQUIRED). Use 'app' for mobile app events, 'website' for web-proxy events.
  * @param userData - User data for the event (will be hashed by Cloud Function)
  * @param customData - Custom event data (e.g., currency, value)
  * @param attributionData - Attribution data from deep link (fbclid, utm params)
- * @param actionSource - Event source (default: 'app'). Use 'website' for web-proxy events.
  */
 export async function sendConversionEvent(
   userId: string | undefined,
   eventId: string,
   eventName: string,
+  actionSource: FacebookActionSource,
   userData?: {
     email?: string;
     phone?: string;
@@ -373,8 +395,7 @@ export async function sendConversionEvent(
     lastName?: string;
   },
   customData?: Record<string, string | number | boolean>,
-  attributionData?: AttributionData,
-  actionSource?: 'app' | 'website' | 'email' | 'phone_call' | 'chat' | 'physical_store' | 'system_generated' | 'business_messaging' | 'other'
+  attributionData?: AttributionData
 ): Promise<void> {
   // Log warning if userId is missing (pre-login events won't have external_id)
   if (!userId) {
@@ -402,6 +423,7 @@ export async function sendConversionEvent(
       feature: 'Facebook',
       eventName,
       eventId,
+      actionSource,
       hasUserData: !!userData,
       hasFbc: !!attributionData?.fbc,
       hasFbp: !!attributionData?.fbp
@@ -467,7 +489,7 @@ export async function sendAppInstallEventDual(
     })(),
     
     // Server-side: Conversions API via Cloud Function (with external_id for user matching)
-    sendConversionEvent(userId, eventId, FB_MOBILE_ACTIVATE_APP, userData, undefined, attributionData)
+    sendConversionEvent(userId, eventId, FB_MOBILE_ACTIVATE_APP, 'app', userData, undefined, attributionData)
   ]);
   
   // Check results
@@ -558,10 +580,10 @@ export async function sendRegistrationEventDual(userId: string, email: string, r
     })(),
     
     // Server-side #1: Conversions API as 'app' source (standard dual-send)
-    sendConversionEvent(userId, eventId, FB_MOBILE_COMPLETE_REGISTRATION, { email }, customData, attributionData, 'app'),
+    sendConversionEvent(userId, eventId, FB_MOBILE_COMPLETE_REGISTRATION, 'app', { email }, customData, attributionData),
     
     // Server-side #2: Conversions API as 'website' source (web-proxy for campaign optimization)
-    sendConversionEvent(userId, webProxyEventId, 'AppWebProxyLogin', { email }, customData, attributionData, 'website')
+    sendConversionEvent(userId, webProxyEventId, 'AppWebProxyLogin', 'website', { email }, customData, attributionData)
   ]);
   
   // Check results  
@@ -669,10 +691,10 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
     })(),
     
     // Server-side #1: Conversions API as 'app' source (standard dual-send)
-    sendConversionEvent(userId, eventId, FB_MOBILE_ACHIEVEMENT_UNLOCKED, { email }, customData, attributionData, 'app'),
+    sendConversionEvent(userId, eventId, FB_MOBILE_ACHIEVEMENT_UNLOCKED, 'app', { email }, customData, attributionData),
     
     // Server-side #2: Conversions API as 'website' source (web-proxy for campaign optimization)
-    sendConversionEvent(userId, webProxyEventId, 'AppWebProxyFirstChatMessage', { email }, customData, attributionData, 'website')
+    sendConversionEvent(userId, webProxyEventId, 'AppWebProxyFirstChatMessage', 'website', { email }, customData, attributionData)
   ]);
   
   // Check results  
@@ -785,10 +807,10 @@ export async function sendSecondChatMessageEventDual(userId: string, email: stri
     })(),
     
     // Server-side #1: Conversions API as 'app' source (standard dual-send)
-    sendConversionEvent(userId, eventId, CUSTOM_SECOND_CHAT_MESSAGE, { email }, customData, attributionData, 'app'),
+    sendConversionEvent(userId, eventId, CUSTOM_SECOND_CHAT_MESSAGE, 'app', { email }, customData, attributionData),
     
     // Server-side #2: Conversions API as 'website' source (web-proxy for campaign optimization)
-    sendConversionEvent(userId, webProxyEventId, 'AppWebProxySecondChatMessage', { email }, customData, attributionData, 'website')
+    sendConversionEvent(userId, webProxyEventId, 'AppWebProxySecondChatMessage', 'website', { email }, customData, attributionData)
   ]);
   
   // Check results  
