@@ -206,7 +206,7 @@ const installData = {
 };
 
 // Sent to Facebook Attribution API
-await fetch('https://graph.facebook.com/v18.0/PIXEL_ID/activities', {
+await fetch('https://graph.facebook.com/v24.0/PIXEL_ID/activities', {
   method: 'POST',
   body: JSON.stringify({
     event: 'MOBILE_APP_INSTALL',

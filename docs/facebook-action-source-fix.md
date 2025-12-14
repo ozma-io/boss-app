@@ -1,24 +1,24 @@
 # Facebook actionSource Fix
 
-## Проблема
+## Problem
 
-Третье событие (web-proxy) при отправке событий в Meta НЕ отправлялось с правильным `action_source`.
+The third event (web-proxy) was NOT being sent with the correct `action_source` when sending events to Meta.
 
-**Причина:**
-- В Cloud Function `functions/src/facebook.ts` был жестко прописан `action_source: 'app'`
-- Параметр `actionSource` не передавался из клиента в Cloud Function
-- Все события (включая web-proxy) отправлялись с `action_source: 'app'`
+**Root Cause:**
+- Cloud Function `functions/src/facebook.ts` had hardcoded `action_source: 'app'`
+- The `actionSource` parameter was not being passed from client to Cloud Function
+- All events (including web-proxy) were being sent with `action_source: 'app'`
 
-**Результат:**
-Facebook не видел третье событие как веб-конверсию, что нарушало цель отправки web-proxy событий для оптимизации веб-кампаний.
+**Result:**
+Facebook didn't recognize the third event as a web conversion, which violated the purpose of sending web-proxy events for web campaign optimization.
 
-## Решение
+## Solution
 
-### 1. Создали общий тип `FacebookActionSource`
+### 1. Created shared type `FacebookActionSource`
 
-Чтобы избежать дублирования, создали тип `FacebookActionSource`:
+To avoid duplication, created the `FacebookActionSource` type:
 
-**Клиент** (`services/facebook.service.ts`):
+**Client** (`services/facebook.service.ts`):
 ```typescript
 export type FacebookActionSource = 
   | 'app'                    // Mobile app or desktop app
@@ -33,30 +33,30 @@ export type FacebookActionSource =
 ```
 
 **Cloud Function** (`functions/src/facebook.ts`):
-- Тот же тип с комментарием, что он должен совпадать с клиентским
-- (Cloud Functions - отдельный проект, не можем импортировать из клиента)
+- Same type with comment that it must match the client-side definition
+- (Cloud Functions is a separate project, cannot import from client)
 
 ### 2. Cloud Function (`functions/src/facebook.ts`)
 
-- ✅ Создали тип `FacebookActionSource` с комментарием синхронизации
-- ✅ Используем `FacebookActionSource` в интерфейсе `FacebookConversionEventData`
-- ✅ Добавили валидацию `actionSource` в начале функции
-- ✅ Используем `action_source: eventData.actionSource` вместо `'app'`
-- ✅ Добавили `actionSource` в логи
+- ✅ Created `FacebookActionSource` type with synchronization comment
+- ✅ Use `FacebookActionSource` in `FacebookConversionEventData` interface
+- ✅ Added `actionSource` validation at function start
+- ✅ Use `action_source: eventData.actionSource` instead of `'app'`
+- ✅ Added `actionSource` to logs
 
-### 3. Клиент (`services/facebook.service.ts`)
+### 3. Client (`services/facebook.service.ts`)
 
-- ✅ Создали и экспортировали тип `FacebookActionSource`
-- ✅ Используем `FacebookActionSource` в `ConversionEventParams`
-- ✅ Используем `FacebookActionSource` в `ConversionEventData`
-- ✅ Используем `FacebookActionSource` в `sendConversionEvent()` (4-я позиция)
-- ✅ Убрали все дефолтные значения `|| 'app'`
-- ✅ Обновили все вызовы с явной передачей `actionSource`
-- ✅ Добавили `actionSource` в логи
+- ✅ Created and exported `FacebookActionSource` type
+- ✅ Use `FacebookActionSource` in `ConversionEventParams`
+- ✅ Use `FacebookActionSource` in `ConversionEventData`
+- ✅ Use `FacebookActionSource` in `sendConversionEvent()` (4th position)
+- ✅ Removed all default values `|| 'app'`
+- ✅ Updated all calls with explicit `actionSource` parameter
+- ✅ Added `actionSource` to logs
 
-### Изменения в сигнатуре функции
+### Function Signature Changes
 
-**Было:**
+**Before:**
 ```typescript
 sendConversionEvent(
   userId: string | undefined,
@@ -65,82 +65,123 @@ sendConversionEvent(
   userData?: {...},
   customData?: Record<string, string | number | boolean>,
   attributionData?: AttributionData,
-  actionSource?: 'app' | 'website' | ... // опциональный, последний параметр
+  actionSource?: 'app' | 'website' | ... // optional, last parameter
 ): Promise<void>
 ```
 
-**Стало:**
+**After:**
 ```typescript
 sendConversionEvent(
   userId: string | undefined,
   eventId: string,
   eventName: string,
-  actionSource: FacebookActionSource, // ОБЯЗАТЕЛЬНЫЙ, 4-й параметр
+  actionSource: FacebookActionSource, // REQUIRED, 4th parameter
   userData?: {...},
   customData?: Record<string, string | number | boolean>,
   attributionData?: AttributionData
 ): Promise<void>
 ```
 
-**Преимущества:**
-- ✅ Невозможно забыть указать `actionSource`
-- ✅ TypeScript выдаст ошибку при неправильном порядке параметров
-- ✅ Единый тип `FacebookActionSource` вместо дублирования union type
-- ✅ Нет неявных дефолтных значений
+**Benefits:**
+- ✅ Cannot forget to specify `actionSource`
+- ✅ TypeScript will error on incorrect parameter order
+- ✅ Single `FacebookActionSource` type instead of duplicating union type
+- ✅ No implicit default values
 
-## Примеры использования
+## Usage Examples
 
-### AppInstall (только 'app')
+### AppInstall ('app' only)
 ```typescript
 sendConversionEvent(userId, eventId, FB_MOBILE_ACTIVATE_APP, 'app', userData, undefined, attributionData)
 ```
 
 ### Registration (triple-send)
 ```typescript
-// Событие #1: app
+// Event #1: app
 sendConversionEvent(userId, eventId, FB_MOBILE_COMPLETE_REGISTRATION, 'app', { email }, customData, attributionData)
 
-// Событие #2: website
+// Event #2: website
 sendConversionEvent(userId, webProxyEventId, 'AppWebProxyLogin', 'website', { email }, customData, attributionData)
 ```
 
 ### First Chat Message (triple-send)
 ```typescript
-// Событие #1: app
+// Event #1: app
 sendConversionEvent(userId, eventId, FB_MOBILE_ACHIEVEMENT_UNLOCKED, 'app', { email }, customData, attributionData)
 
-// Событие #2: website
+// Event #2: website
 sendConversionEvent(userId, webProxyEventId, 'AppWebProxyFirstChatMessage', 'website', { email }, customData, attributionData)
 ```
 
-## Деплой
+## 🔄 Additional Optimizations for Web-Proxy Events
 
-После изменений необходимо задеплоить Cloud Function:
+To make web-proxy events as close as possible to real website events:
+
+### 1. **Removed `app_data` for web events**
+- ✅ `app_data` (with `extinfo`, `advertiser_tracking_enabled`, `application_tracking_enabled`) is sent **ONLY** for `action_source: 'app'`
+- ✅ For `action_source: 'website'` these fields are **NOT sent** - just like real website events
+
+### 2. **Removed hashing of `external_id`**
+- ✅ Firebase UID is sent **in raw form** (not hashed)
+- Reason: It's already a random ID, contains no PII
+
+### 3. **Removed unused fields**
+- ❌ Removed from interface: `phone`, `firstName`, `lastName`, `city`, `state`, `zip`, `country`
+- ✅ Kept: `email` (hashed), `external_id` (not hashed)
+
+### 4. **Updated API version**
+- ✅ Boss-App: `v24.0` (latest version)
+- ✅ Web-Funnels: updated from `v18.0` to `v24.0`
+
+## Deployment
+
+After changes, deploy the Cloud Function:
 
 ```bash
 cd functions
 npm run deploy
 ```
 
-Или только эту функцию:
+Or deploy only this function:
 
 ```bash
 firebase deploy --only functions:sendFacebookConversionEvent
 ```
 
-## Проверка
+## Verification
 
-После деплоя в логах Cloud Function должно появиться:
-
-```
-Facebook sending conversion event {
-  eventName: "AppWebProxyFirstChatMessage",
-  eventId: "...",
-  actionSource: "website",  // ✅ было "app"
-  hasUserData: true,
-  hasFbc: true,
-  hasFbp: true
+### Event with `action_source: 'app'`
+```json
+{
+  "event_name": "fb_mobile_achievement_unlocked",
+  "action_source": "app",
+  "user_data": {
+    "em": "hashed_email",
+    "external_id": "firebase_uid_raw",
+    "fbc": "fb.1.xxx.yyy",
+    "fbp": "fb.1.zzz"
+  },
+  "app_data": {  // ✅ Present
+    "advertiser_tracking_enabled": 1,
+    "application_tracking_enabled": 1,
+    "extinfo": ["i2", "com.ozmaio.bossup", ...]
+  }
 }
 ```
 
-В Facebook Events Manager третье событие должно появиться с правильным `action_source: website`.
+### Event with `action_source: 'website'`
+```json
+{
+  "event_name": "AppWebProxyFirstChatMessage",
+  "action_source": "website",
+  "user_data": {
+    "em": "hashed_email",
+    "external_id": "firebase_uid_raw",
+    "fbc": "fb.1.xxx.yyy",
+    "fbp": "fb.1.zzz"
+  }
+  // ❌ app_data is absent - maximally similar to web event
+}
+```
+
+In Facebook Events Manager, the third event should appear with correct `action_source: website` and WITHOUT mobile metadata.

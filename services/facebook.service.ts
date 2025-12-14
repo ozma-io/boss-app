@@ -61,9 +61,6 @@ interface ConversionEventParams {
   actionSource: FacebookActionSource;
   userData?: {
     email?: string;
-    phone?: string;
-    firstName?: string;
-    lastName?: string;
   };
   customData?: Record<string, string | number | boolean>;
   attributionData?: AttributionData;
@@ -78,17 +75,14 @@ interface ConversionEventData {
   eventTime: number;
   eventId: string;
   actionSource: FacebookActionSource;
-  advertiserTrackingEnabled: boolean;
-  applicationTrackingEnabled: boolean;
-  extinfo: string[];
+  advertiserTrackingEnabled?: boolean; // Required only for actionSource === 'app'
+  applicationTrackingEnabled?: boolean; // Required only for actionSource === 'app'
+  extinfo?: string[]; // Required only for actionSource === 'app'
   fbc?: string;
   fbp?: string;
   userData?: {
     email?: string;
-    phone?: string;
-    firstName?: string;
-    lastName?: string;
-    externalId?: string; // Firebase User ID for cross-channel user matching
+    externalId?: string; // Firebase User ID for cross-channel user matching (not hashed)
   };
   customData?: Record<string, string | number | boolean>;
 }
@@ -228,24 +222,32 @@ function isClientSdkAvailable(): boolean {
  * @internal
  */
 async function buildEventData(params: ConversionEventParams): Promise<ConversionEventData> {
-  // Build 16-element device info array required by Facebook
-  const extinfo = await buildExtinfo();
+  // For 'app' events: collect device info and tracking permissions
+  // For 'website' events: omit app-specific data to mimic real website events
+  const isAppEvent = params.actionSource === 'app';
   
-  // Get tracking permissions based on platform
-  let advertiserTrackingEnabled = false;
+  let advertiserTrackingEnabled: boolean | undefined;
+  let applicationTrackingEnabled: boolean | undefined;
+  let extinfo: string[] | undefined;
   
-  if (Platform.OS === 'ios') {
-    // On iOS, respect ATT (App Tracking Transparency) permission
-    const { getTrackingPermissionStatus } = await import('@/services/tracking.service');
-    const status = await getTrackingPermissionStatus();
-    advertiserTrackingEnabled = status === 'authorized';
-  } else {
-    // On Android, use device info utility
-    advertiserTrackingEnabled = await getAdvertiserTrackingEnabled();
+  if (isAppEvent) {
+    // Build 16-element device info array required by Facebook for mobile apps
+    extinfo = await buildExtinfo();
+    
+    // Get tracking permissions based on platform
+    if (Platform.OS === 'ios') {
+      // On iOS, respect ATT (App Tracking Transparency) permission
+      const { getTrackingPermissionStatus } = await import('@/services/tracking.service');
+      const status = await getTrackingPermissionStatus();
+      advertiserTrackingEnabled = status === 'authorized';
+    } else {
+      // On Android, use device info utility
+      advertiserTrackingEnabled = await getAdvertiserTrackingEnabled();
+    }
+    
+    // Application tracking is whether we have user's consent to track in the app
+    applicationTrackingEnabled = getApplicationTrackingEnabledSync();
   }
-  
-  // Application tracking is whether we have user's consent to track in the app
-  const applicationTrackingEnabled = getApplicationTrackingEnabledSync();
   
   // Construct event data payload
   return {
@@ -253,9 +255,12 @@ async function buildEventData(params: ConversionEventParams): Promise<Conversion
     eventTime: validateFacebookEventTime(Math.floor(Date.now() / 1000), params.eventName),
     eventId: params.eventId,
     actionSource: params.actionSource,
-    advertiserTrackingEnabled,
-    applicationTrackingEnabled,
-    extinfo,
+    // Include app-specific fields only for 'app' events
+    ...(isAppEvent ? {
+      advertiserTrackingEnabled,
+      applicationTrackingEnabled,
+      extinfo,
+    } : {}),
     // Facebook Conversions API requires formatted cookies (NOT raw fbclid):
     // - fbc: "fb.1.timestamp.fbclid" (contains fbclid inside, used for attribution)
     // - fbp: "fb.1.timestamp.random" (browser identifier)
@@ -390,9 +395,6 @@ export async function sendConversionEvent(
   actionSource: FacebookActionSource,
   userData?: {
     email?: string;
-    phone?: string;
-    firstName?: string;
-    lastName?: string;
   },
   customData?: Record<string, string | number | boolean>,
   attributionData?: AttributionData

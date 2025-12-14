@@ -43,9 +43,9 @@ interface FacebookConversionEventData {
   eventTime: number;
   eventId: string;
   actionSource: FacebookActionSource;
-  advertiserTrackingEnabled: boolean;
-  applicationTrackingEnabled: boolean;
-  // Extended device info (REQUIRED): 16-element array
+  advertiserTrackingEnabled?: boolean; // Required only for action_source === 'app'
+  applicationTrackingEnabled?: boolean; // Required only for action_source === 'app'
+  // Extended device info (REQUIRED for action_source === 'app'): 16-element array
   // [0] extinfo version (REQUIRED: "i2" for iOS, "a2" for Android)
   // [1] app package name
   // [2] short version
@@ -64,7 +64,7 @@ interface FacebookConversionEventData {
   // [15] device timezone
   // Example iOS: ["i2", "com.ozmaio.bossup", "1.0", "1.0 (1)", "17.0.0", "iPhone14,3", "en_US", "PST", "AT&T", "390", "844", "3", "6", "128", "64", "America/New_York"]
   // Example Android: ["a2", "com.ozmaio.bossup", "1.0", "1.0 (1)", "14", "Pixel 7 Pro", "en_US", "PST", "Verizon", "1080", "2340", "3", "8", "128", "64", "America/New_York"]
-  extinfo: string[];
+  extinfo?: string[]; // Required only for action_source === 'app'
   // Facebook attribution cookies (formatted, NOT raw fbclid):
   // - fbc: Facebook Click Cookie (format: "fb.1.timestamp.fbclid") - for ad attribution
   // - fbp: Facebook Browser ID (format: "fb.1.timestamp.random") - for user matching
@@ -73,16 +73,9 @@ interface FacebookConversionEventData {
   fbp?: string;
   userData?: {
     email?: string;
-    phone?: string;
-    firstName?: string;
-    lastName?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-    country?: string;
     // External ID - user's unique identifier in your system (Firebase UID)
     // CRITICAL for User Matching and cross-channel attribution
-    // Can be hashed (recommended) or plain text
+    // Sent in raw form (not hashed) - Firebase UID is already random and non-sensitive
     externalId?: string;
   };
   customData?: Record<string, string | number | boolean>;
@@ -144,60 +137,44 @@ export const sendFacebookConversionEvent = onCall(
       );
     }
 
-    if (eventData.advertiserTrackingEnabled === undefined || eventData.applicationTrackingEnabled === undefined) {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'Missing required fields: advertiserTrackingEnabled and applicationTrackingEnabled'
-      );
-    }
+    // Validate app-specific fields only for 'app' action_source
+    if (eventData.actionSource === 'app') {
+      if (eventData.advertiserTrackingEnabled === undefined || eventData.applicationTrackingEnabled === undefined) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Missing required fields for app events: advertiserTrackingEnabled and applicationTrackingEnabled'
+        );
+      }
 
-    if (!eventData.extinfo || eventData.extinfo.length !== 16) {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'Missing required field: extinfo must be an array of 16 strings. See Facebook Conversions API documentation for details. Required: extinfo[0] (version: i2/a2) and extinfo[4] (OS version) cannot be empty!'
-      );
+      if (!eventData.extinfo || eventData.extinfo.length !== 16) {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Missing required field for app events: extinfo must be an array of 16 strings. See Facebook Conversions API documentation for details. Required: extinfo[0] (version: i2/a2) and extinfo[4] (OS version) cannot be empty!'
+        );
+      }
     }
 
     try {
       // Prepare user data with hashing
       const userData: Record<string, string> = {};
+      
+      // Email - hashed for privacy (PII)
       if (eventData.userData?.email) {
         userData.em = hashData(eventData.userData.email);
       }
-      if (eventData.userData?.phone) {
-        userData.ph = hashData(eventData.userData.phone);
-      }
-      if (eventData.userData?.firstName) {
-        userData.fn = hashData(eventData.userData.firstName);
-      }
-      if (eventData.userData?.lastName) {
-        userData.ln = hashData(eventData.userData.lastName);
-      }
-      if (eventData.userData?.city) {
-        userData.ct = hashData(eventData.userData.city);
-      }
-      if (eventData.userData?.state) {
-        userData.st = hashData(eventData.userData.state);
-      }
-      if (eventData.userData?.zip) {
-        userData.zp = hashData(eventData.userData.zip);
-      }
-      if (eventData.userData?.country) {
-        userData.country = hashData(eventData.userData.country);
-      }
 
-      // Add external_id (Firebase User ID) - CRITICAL for User Matching
-      // Hashing recommended but not required - we hash it for privacy
+      // External ID (Firebase User ID) - CRITICAL for User Matching
+      // Send in raw form (not hashed) - it's already a random Firebase UID, not sensitive
       // This helps Facebook:
       // 1. Link all events from the same user across sessions/devices
       // 2. Match events between web-funnel and mobile app
       // 3. Build better Custom Audiences
       // 4. Improve Event Match Quality
       if (eventData.userData?.externalId) {
-        userData.external_id = hashData(eventData.userData.externalId);
+        userData.external_id = eventData.userData.externalId;
       }
 
-      // Add Facebook tracking cookies (NOT hashed, passed as-is)
+      // Facebook tracking cookies - NOT hashed, passed as-is for attribution
       if (eventData.fbc) {
         userData.fbc = eventData.fbc;
       }
@@ -216,19 +193,24 @@ export const sendFacebookConversionEvent = onCall(
 
       // Build event payload
       // Validate timestamp from client to ensure it meets Facebook requirements
-      const eventPayload = {
+      const eventPayload: Record<string, any> = {
         event_name: eventData.eventName,
         event_time: validateFacebookEventTime(eventData.eventTime, eventData.eventName),
         event_id: eventData.eventId,
         user_data: userData,
         custom_data: eventData.customData || {},
         action_source: eventData.actionSource,
-        app_data: {
+      };
+
+      // Add app_data ONLY for mobile app events (action_source === 'app')
+      // For web-proxy events (action_source === 'website'), we omit app_data to better mimic real website events
+      if (eventData.actionSource === 'app') {
+        eventPayload.app_data = {
           advertiser_tracking_enabled: eventData.advertiserTrackingEnabled ? 1 : 0,
           application_tracking_enabled: eventData.applicationTrackingEnabled ? 1 : 0,
           extinfo: eventData.extinfo,
-        },
-      };
+        };
+      }
 
       // Prepare the request to Facebook Conversions API
       const url = `https://graph.facebook.com/${apiVersion}/${pixelId}/events`;
