@@ -494,30 +494,59 @@ export async function sendAppInstallEventDual(
  * Sends fb_mobile_complete_registration event with email for Custom Audiences and Lookalike targeting.
  * This helps Facebook identify your users for better campaign optimization.
  * 
+ * ⚠️ TRIPLE-SEND APPROACH:
+ * 1. Client-side (iOS/Android SDK): May be blocked if ATT denied on iOS
+ * 2. Server-side as 'app' (Conversions API): ALWAYS sent regardless of ATT status
+ * 3. Server-side as 'website' (Conversions API): Additional web-proxy event for web campaign optimization
+ * 
+ * ⚠️ IMPORTANT: The third event (AppWebProxyLogin with actionSource: 'website') 
+ * is NOT recommended by Facebook as it misrepresents the actual event source.
+ * Facebook's best practice is to always use the correct actionSource ('app' for mobile app events).
+ * However, we intentionally use this approach to:
+ * - Optimize web campaigns using mobile app conversion events
+ * - Enable web-based campaign bidding strategies for app events
+ * - Test different attribution models (app vs web)
+ * 
+ * This is a deliberate violation of Facebook's guidelines for business optimization purposes.
+ * The event name prefix "AppWebProxy" makes it clear this is a proxy event, not a real web event.
+ * 
+ * Events will appear in Events Manager as:
+ * - "fb_mobile_complete_registration" (standard event, actionSource: app)
+ * - "AppWebProxyLogin" (custom event, actionSource: website)
+ * 
  * @param userId - Firebase User ID (used as external_id for user matching)
  * @param email - User email for Advanced Matching (will be hashed automatically)
+ * @param registrationMethod - Registration method: 'email', 'Google', or 'Apple'
  * @param attributionData - Optional attribution data from Firestore (fbclid, fbc, fbp from web-funnel)
  */
-export async function sendRegistrationEventDual(userId: string, email: string, attributionData?: AttributionData): Promise<void> {
+export async function sendRegistrationEventDual(userId: string, email: string, registrationMethod: 'email' | 'Google' | 'Apple', attributionData?: AttributionData): Promise<void> {
   const eventId = generateEventId();
+  const webProxyEventId = generateEventId(); // Separate event ID for web-proxy event
   
-  logger.info('Sending Registration event', { 
+  logger.info('Sending Registration event (triple-send)', { 
     feature: 'Facebook', 
     eventId,
+    webProxyEventId,
     userId,
+    registrationMethod,
     hasEmail: !!email,
     hasAttributionData: !!attributionData,
     hasFbc: !!attributionData?.fbc,
     hasFbp: !!attributionData?.fbp
   });
   
-  // Client params with email for Advanced Matching
+  // Client params for Facebook SDK
   const clientParams: Record<string, string> = { 
     _eventId: eventId,
-    registration_method: 'email'
+    registration_method: registrationMethod
   };
   
-  // Send to both client and server in parallel
+  // Custom data for server-side events
+  const customData: Record<string, string> = {
+    registration_method: registrationMethod
+  };
+  
+  // Send to client and both servers in parallel
   const results = await Promise.allSettled([
     // Client-side: Facebook SDK
     (async () => {
@@ -528,25 +557,31 @@ export async function sendRegistrationEventDual(userId: string, email: string, a
       logger.info('Registration client-side sent', { feature: 'Facebook', eventId });
     })(),
     
-    // Server-side: Conversions API with email + external_id + attribution (fbc, fbp, fbclid from Firestore)
-    sendConversionEvent(userId, eventId, FB_MOBILE_COMPLETE_REGISTRATION, { email }, { registration_method: 'email' }, attributionData)
+    // Server-side #1: Conversions API as 'app' source (standard dual-send)
+    sendConversionEvent(userId, eventId, FB_MOBILE_COMPLETE_REGISTRATION, { email }, customData, attributionData, 'app'),
+    
+    // Server-side #2: Conversions API as 'website' source (web-proxy for campaign optimization)
+    sendConversionEvent(userId, webProxyEventId, 'AppWebProxyLogin', { email }, customData, attributionData, 'website')
   ]);
   
   // Check results  
-  const [clientResult, serverResult] = results;
+  const [clientResult, serverAppResult, serverWebResult] = results;
   const clientSuccess = clientResult.status === 'fulfilled';
-  const serverSuccess = serverResult.status === 'fulfilled';
+  const serverAppSuccess = serverAppResult.status === 'fulfilled';
+  const serverWebSuccess = serverWebResult.status === 'fulfilled';
   
-  // At least server event must succeed (client may be unavailable on web or blocked by ATT)
-  if (!serverSuccess) {
-    throw new Error('Server-side Registration event failed (client-only success is not sufficient)');
+  // At least one server event must succeed (client may be unavailable on web or blocked by ATT)
+  if (!serverAppSuccess && !serverWebSuccess) {
+    throw new Error('Both server-side Registration events failed (client-only success is not sufficient)');
   }
   
-  logger.info('Registration dual-send completed', { 
+  logger.info('Registration triple-send completed', { 
     feature: 'Facebook', 
     eventId,
+    webProxyEventId,
     clientSuccess,
-    serverSuccess
+    serverAppSuccess,
+    serverWebSuccess
   });
 }
 
@@ -555,11 +590,23 @@ export async function sendRegistrationEventDual(userId: string, email: string, a
  * 
  * Sends fb_mobile_achievement_unlocked event when user sends their first message to AI assistant.
  * 
- * ⚠️ CRITICAL: Dual-send approach ensures reliable delivery:
- * - Client-side (iOS/Android SDK): May be blocked if ATT denied on iOS
- * - Server-side (Conversions API): ALWAYS sent regardless of ATT status!
+ * ⚠️ TRIPLE-SEND APPROACH:
+ * 1. Client-side (iOS/Android SDK): May be blocked if ATT denied on iOS
+ * 2. Server-side as 'app' (Conversions API): ALWAYS sent regardless of ATT status
+ * 3. Server-side as 'website' (Conversions API): Additional web-proxy event for web campaign optimization
  * 
- * Server-side event works even with ATT denied because:
+ * ⚠️ IMPORTANT: The third event (AppWebProxyFirstChatMessage with actionSource: 'website') 
+ * is NOT recommended by Facebook as it misrepresents the actual event source.
+ * Facebook's best practice is to always use the correct actionSource ('app' for mobile app events).
+ * However, we intentionally use this approach to:
+ * - Optimize web campaigns using mobile app conversion events
+ * - Enable web-based campaign bidding strategies for app events
+ * - Test different attribution models (app vs web)
+ * 
+ * This is a deliberate violation of Facebook's guidelines for business optimization purposes.
+ * The event name prefix "AppWebProxy" makes it clear this is a proxy event, not a real web event.
+ * 
+ * Server-side events work even with ATT denied because:
  * 1. Sent from our server, not from user's device
  * 2. Contains userId (Firebase UID) as external_id for cross-channel matching
  * 3. Contains email (from Firebase Auth) for User Matching
@@ -573,8 +620,11 @@ export async function sendRegistrationEventDual(userId: string, email: string, a
  * - Build Custom Audiences of engaged users
  * - Link all events from the same user (via external_id)
  * - Improve event matching with user email + external_id + attribution data
+ * - Enable web-based campaign optimization using app events
  * 
- * Event will appear in Events Manager as: "fb_mobile_achievement_unlocked" or "UnlockedAchievement"
+ * Events will appear in Events Manager as:
+ * - "fb_mobile_achievement_unlocked" or "UnlockedAchievement" (standard event, actionSource: app)
+ * - "AppWebProxyFirstChatMessage" (custom event, actionSource: website)
  * 
  * @param userId - Firebase User ID (used as external_id for user matching)
  * @param email - User email for Advanced Matching (will be hashed automatically by Cloud Function)
@@ -582,10 +632,12 @@ export async function sendRegistrationEventDual(userId: string, email: string, a
  */
 export async function sendFirstChatMessageEventDual(userId: string, email: string, attributionData?: AttributionData): Promise<void> {
   const eventId = generateEventId();
+  const webProxyEventId = generateEventId(); // Separate event ID for web-proxy event
   
-  logger.info('Sending FirstChatMessage event', { 
+  logger.info('Sending FirstChatMessage event (triple-send)', { 
     feature: 'Facebook', 
     eventId,
+    webProxyEventId,
     userId,
     hasEmail: !!email,
     hasAttributionData: !!attributionData,
@@ -599,13 +651,13 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
     fb_description: 'first_chat_message'
   };
   
-  // Custom data for server-side event
+  // Custom data for server-side events
   const customData: Record<string, string> = {
     description: 'first_chat_message',
     achievement_id: 'chat_first_message'
   };
   
-  // Send to both client and server in parallel
+  // Send to client and both servers in parallel
   const results = await Promise.allSettled([
     // Client-side: Facebook SDK
     (async () => {
@@ -616,25 +668,31 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
       logger.info('FirstChatMessage client-side sent', { feature: 'Facebook', eventId });
     })(),
     
-    // Server-side: Conversions API with external_id + email + attribution (fbc, fbp, fbclid from Firestore)
-    sendConversionEvent(userId, eventId, FB_MOBILE_ACHIEVEMENT_UNLOCKED, { email }, customData, attributionData)
+    // Server-side #1: Conversions API as 'app' source (standard dual-send)
+    sendConversionEvent(userId, eventId, FB_MOBILE_ACHIEVEMENT_UNLOCKED, { email }, customData, attributionData, 'app'),
+    
+    // Server-side #2: Conversions API as 'website' source (web-proxy for campaign optimization)
+    sendConversionEvent(userId, webProxyEventId, 'AppWebProxyFirstChatMessage', { email }, customData, attributionData, 'website')
   ]);
   
   // Check results  
-  const [clientResult, serverResult] = results;
+  const [clientResult, serverAppResult, serverWebResult] = results;
   const clientSuccess = clientResult.status === 'fulfilled';
-  const serverSuccess = serverResult.status === 'fulfilled';
+  const serverAppSuccess = serverAppResult.status === 'fulfilled';
+  const serverWebSuccess = serverWebResult.status === 'fulfilled';
   
-  // At least server event must succeed (client may be unavailable on web or blocked by ATT)
-  if (!serverSuccess) {
-    throw new Error('Server-side FirstChatMessage event failed (client-only success is not sufficient)');
+  // At least one server event must succeed (client may be unavailable on web or blocked by ATT)
+  if (!serverAppSuccess && !serverWebSuccess) {
+    throw new Error('Both server-side FirstChatMessage events failed (client-only success is not sufficient)');
   }
   
-  logger.info('FirstChatMessage dual-send completed', { 
+  logger.info('FirstChatMessage triple-send completed', { 
     feature: 'Facebook', 
     eventId,
+    webProxyEventId,
     clientSuccess,
-    serverSuccess
+    serverAppSuccess,
+    serverWebSuccess
   });
 }
 

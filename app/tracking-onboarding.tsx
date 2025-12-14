@@ -16,9 +16,10 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
   const { setShouldShowOnboarding } = useTrackingOnboarding();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Get email from route params (MAIN FLOW) or will use attribution data (SPECIAL CASE)
+  // Get email and method from route params (MAIN FLOW) or will use attribution data (SPECIAL CASE)
   const params = useLocalSearchParams();
   const emailParam = typeof params.email === 'string' ? params.email : undefined;
+  const methodParam = typeof params.method === 'string' ? params.method as 'email' | 'Google' | 'Apple' : undefined;
 
   useFocusEffect(
     useCallback(() => {
@@ -66,8 +67,9 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
           const attributionData = await getAttributionData();
           const hasAttribution = hasFacebookAttribution(attributionData || {});
           
-          // Determine email: from params (MAIN FLOW) or attribution (SPECIAL CASE)
+          // Determine email and method: from params (MAIN FLOW) or attribution (SPECIAL CASE)
           const email = emailParam || attributionData?.email;
+          const method = methodParam; // Only available in MAIN FLOW from route params
           
           if (hasAttribution) {
             // ============================================================
@@ -103,12 +105,12 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
             });
             
             // Send registration event with userId + email for Advanced Matching (Custom Audiences)
-            if (email && user?.id) {
+            if (email && user?.id && method) {
               // Get attribution data with AsyncStorage + Firestore fallback
               const attributionData = await getAttributionDataWithFallback(user.id);
               
-              // Send registration event with external_id (userId) + email + attribution
-              await sendRegistrationEventDual(user.id, email, attributionData || undefined);
+              // Send registration event with external_id (userId) + email + method + attribution
+              await sendRegistrationEventDual(user.id, email, method, attributionData || undefined);
               
               logger.info('MAIN FLOW: Registration event sent with attribution', {
                 feature: 'TrackingOnboarding',

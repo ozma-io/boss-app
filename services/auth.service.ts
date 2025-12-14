@@ -243,7 +243,7 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
         // iOS: Navigate to tracking onboarding screen
         // User will see ATT prompt, then we send events with email
         // Note: We don't mark app as launched yet - tracking screen will do it
-        router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
+        router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}&method=email`);
       } else if (Platform.OS === 'android') {
         // Android: Send registration event with email for Advanced Matching (no prompt needed)
         try {
@@ -251,7 +251,7 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
           const attributionData = await getAttributionDataWithFallback(user.id);
           
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(email, attributionData || undefined);
+          await sendRegistrationEventDual(user.id, email, 'email', attributionData || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
@@ -322,14 +322,14 @@ export async function signInWithTestEmail(email: string): Promise<User> {
       });
       
       if (Platform.OS === 'ios') {
-        router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}`);
+        router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}&method=email`);
       } else if (Platform.OS === 'android') {
         try {
           // Get attribution data with AsyncStorage + Firestore fallback
           const attributionData = await getAttributionDataWithFallback(user.id);
           
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(email, attributionData || undefined);
+          await sendRegistrationEventDual(user.id, email, 'email', attributionData || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
@@ -518,14 +518,14 @@ export async function signInWithGoogle(): Promise<User> {
       });
       
       if (Platform.OS === 'ios') {
-        router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
+        router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}&method=Google`);
       } else if (Platform.OS === 'android') {
         try {
           // Get attribution data with AsyncStorage + Firestore fallback
           const attributionData = await getAttributionDataWithFallback(user.id);
           
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.email, attributionData || undefined);
+          await sendRegistrationEventDual(user.id, user.email, 'Google', attributionData || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
@@ -631,14 +631,14 @@ export async function signInWithApple(): Promise<User> {
       });
       
       if (Platform.OS === 'ios') {
-        router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}`);
+        router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}&method=Apple`);
       } else if (Platform.OS === 'android') {
         try {
           // Get attribution data with AsyncStorage + Firestore fallback
           const attributionData = await getAttributionDataWithFallback(user.id);
           
           // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.email, attributionData || undefined);
+          await sendRegistrationEventDual(user.id, user.email, 'Apple', attributionData || undefined);
           
           await clearTrackingAfterAuth();
           await markAppAsLaunched();
