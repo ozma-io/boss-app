@@ -1,6 +1,7 @@
 import { FACEBOOK_CONFIG } from '@/constants/facebook.config';
 import { functions } from '@/constants/firebase.config';
 import { logger } from '@/services/logger.service';
+import { trackAmplitudeEvent } from '@/services/amplitude.service';
 import { LoginMethod } from '@/types';
 import { buildExtinfo, getAdvertiserTrackingEnabled, getApplicationTrackingEnabledSync } from '@/utils/deviceInfo';
 import { validateFacebookEventTime } from '@/utils/facebookTimestamp';
@@ -280,6 +281,50 @@ async function buildEventData(params: ConversionEventParams): Promise<Conversion
 }
 
 
+/**
+ * Track Facebook event sending to Amplitude
+ * 
+ * Consolidates multiple Facebook events (client + server app + server website) 
+ * into a single Amplitude event with all details as parameters.
+ * 
+ * This allows tracking Facebook event delivery without creating noise in Amplitude,
+ * since we may send 2-3 Facebook events for the same user action (client + multiple servers).
+ * 
+ * @param eventName - Name of the Facebook event (e.g., 'fb_mobile_complete_registration')
+ * @param eventContext - Context about how the event was sent
+ * @param customData - Custom data attached to the Facebook event
+ * @internal
+ */
+function trackFacebookEventToAmplitude(
+  eventName: string,
+  eventContext: {
+    send_method: 'client' | 'server_app' | 'server_website' | 'dual' | 'triple';
+    client_sent?: boolean;
+    server_app_sent?: boolean;
+    server_website_sent?: boolean;
+    event_id?: string;
+    action_source?: FacebookActionSource;
+    has_attribution?: boolean;
+    has_email?: boolean;
+  },
+  customData?: Record<string, string | number | boolean>
+): void {
+  try {
+    trackAmplitudeEvent('facebook_event_sent', {
+      ...customData,
+      ...eventContext,
+      fb_event_name: eventName,
+    });
+  } catch (error) {
+    // Don't let Amplitude errors break Facebook tracking
+    logger.warn('Failed to track Facebook event to Amplitude', {
+      feature: 'Facebook',
+      eventName,
+      error,
+    });
+  }
+}
+
 // ============================================================================
 // SDK Initialization
 // ============================================================================
@@ -511,6 +556,20 @@ export async function sendAppInstallEventDual(
     clientSuccess,
     serverSuccess
   });
+  
+  // Track to Amplitude
+  trackFacebookEventToAmplitude(
+    FB_MOBILE_ACTIVATE_APP,
+    {
+      send_method: 'dual',
+      client_sent: clientSuccess,
+      server_app_sent: serverSuccess,
+      event_id: eventId,
+      action_source: 'app',
+      has_attribution: !!attributionData.fbc || !!attributionData.fbp,
+      has_email: !!userData?.email,
+    }
+  );
 }
 
 /**
@@ -608,6 +667,25 @@ export async function sendRegistrationEventDual(userId: string, email: string, r
     serverAppSuccess,
     serverWebSuccess
   });
+  
+  // Track to Amplitude
+  trackFacebookEventToAmplitude(
+    FB_MOBILE_COMPLETE_REGISTRATION,
+    {
+      send_method: 'triple',
+      client_sent: clientSuccess,
+      server_app_sent: serverAppSuccess,
+      server_website_sent: serverWebSuccess,
+      event_id: eventId,
+      action_source: 'app',
+      has_attribution: !!attributionData?.fbc || !!attributionData?.fbp,
+      has_email: !!email,
+    },
+    {
+      registration_method: registrationMethod,
+      web_proxy_event_id: webProxyEventId,
+    }
+  );
 }
 
 /**
@@ -719,6 +797,26 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
     serverAppSuccess,
     serverWebSuccess
   });
+  
+  // Track to Amplitude
+  trackFacebookEventToAmplitude(
+    FB_MOBILE_ACHIEVEMENT_UNLOCKED,
+    {
+      send_method: 'triple',
+      client_sent: clientSuccess,
+      server_app_sent: serverAppSuccess,
+      server_website_sent: serverWebSuccess,
+      event_id: eventId,
+      action_source: 'app',
+      has_attribution: !!attributionData?.fbc || !!attributionData?.fbp,
+      has_email: !!email,
+    },
+    {
+      description: 'first_chat_message',
+      achievement_id: 'chat_first_message',
+      web_proxy_event_id: webProxyEventId,
+    }
+  );
 }
 
 /**
@@ -991,5 +1089,25 @@ export async function sendSecondChatMessageEventDual(userId: string, email: stri
     serverAppSuccess,
     serverWebSuccess
   });
+  
+  // Track to Amplitude
+  trackFacebookEventToAmplitude(
+    CUSTOM_SECOND_CHAT_MESSAGE,
+    {
+      send_method: 'triple',
+      client_sent: clientSuccess,
+      server_app_sent: serverAppSuccess,
+      server_website_sent: serverWebSuccess,
+      event_id: eventId,
+      action_source: 'app',
+      has_attribution: !!attributionData?.fbc || !!attributionData?.fbp,
+      has_email: !!email,
+    },
+    {
+      description: 'second_chat_message',
+      message_number: 2,
+      web_proxy_event_id: webProxyEventId,
+    }
+  );
 }
 
