@@ -6,7 +6,7 @@ import { SessionProvider } from '@/contexts/SessionContext';
 import { TrackingOnboardingProvider, useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { useNotificationHandlers } from '@/hooks/useNotificationHandlers';
 import { initializeAmplitude } from '@/services/amplitude.service';
-import { getAttributionEmail, isFirstLaunch, markAppAsLaunched, saveAttributionData, setNeedsTrackingAfterAuth } from '@/services/attribution.service';
+import { getAttributionEmail, isAppInstallEventSent, markAppInstallEventSent, saveAttributionData } from '@/services/attribution.service';
 import { initializeGoogleSignIn } from '@/services/auth.service';
 import { parseDeepLinkParams, sendAppInstallEventDual } from '@/services/facebook.service';
 import { initializeIntercom } from '@/services/intercom.service';
@@ -151,88 +151,109 @@ export default function RootLayout(): React.JSX.Element | null {
           logger.info('Android notification channels initialized', { feature: 'App' });
         }
 
-        // Check if this is the first launch
-        const firstLaunch = await isFirstLaunch();
+        // ============================================================
+        // ATTRIBUTION DATA HANDLING & APP INSTALL EVENT
+        // ============================================================
+        //
+        // Save attribution data from deep link to AsyncStorage
+        // This data will be used for Facebook event tracking
+        // 
+        // APP INSTALL EVENT LOGIC:
+        // - Scenario A: If attribution data is available at install time (fbclid, fbc, utm_source)
+        //   → Send App Install event immediately (without userId, user hasn't logged in yet)
+        // - Scenario B: If attribution data is NOT available at install time
+        //   → Send App Install event after first login (with userId + email + Firestore attribution)
+        //   → Implemented in auth.service.ts (Android) and tracking-onboarding.tsx (iOS)
+        //
+        // REGISTRATION EVENT (fb_mobile_complete_registration):
+        // - Always sent at first login with userId + email + method
+        // - Implemented in auth.service.ts → handlePostLoginTracking
+        //
+        // ============================================================
         
-        if (firstLaunch) {
-          logger.info('First launch detected, checking for attribution data', { feature: 'App' });
+        // Get the initial URL (deep link)
+        const initialUrl = await Linking.getInitialURL();
+        
+        if (initialUrl) {
+          logger.info('Initial URL detected, checking for attribution data', { feature: 'App', initialUrl });
           
-          // ============================================================
-          // TRACKING FLOW DECISION POINT
-          // ============================================================
-          //
-          // SPECIAL CASE: Facebook Attribution (paid acquisition)
-          //   → Request tracking IMMEDIATELY (before login)
-          //   → Send events with attribution data (fbclid, utm params)
-          //   → Implemented below for iOS/Android
-          //
-          // MAIN FLOW: Organic Users (App Store, referrals, etc)
-          //   → Set flag to request tracking AFTER LOGIN
-          //   → Send events with email after authentication
-          //   → Implemented in services/auth.service.ts (all login methods)
-          //
-          // ============================================================
+          // Parse attribution parameters
+          const attributionData = parseDeepLinkParams(initialUrl);
           
-          // Get the initial URL (deep link)
-          const initialUrl = await Linking.getInitialURL();
+          // Save attribution data to AsyncStorage for later use
+          await saveAttributionData(attributionData);
           
-          if (initialUrl) {
-            logger.info('Initial URL detected on first launch', { feature: 'App', initialUrl });
+          logger.info('Attribution data saved', { 
+            feature: 'App',
+            hasFbclid: !!attributionData.fbclid,
+            hasFbc: !!attributionData.fbc,
+            hasUtm: !!attributionData.utm_source
+          });
+          
+          // Check if App Install event was already sent
+          const isInstallEventSent = await isAppInstallEventSent();
+          
+          // Check if we have Facebook attribution data
+          // If yes, send App Install event immediately (Scenario A)
+          if (!isInstallEventSent && hasFacebookAttribution(attributionData)) {
+            logger.info('Facebook attribution detected, sending App Install event', {
+              feature: 'App',
+              hasFbclid: !!attributionData.fbclid,
+              hasFbc: !!attributionData.fbc,
+              hasUtm: !!attributionData.utm_source,
+              hasEmail: !!attributionData.email,
+              hasAppUserId: !!attributionData.appUserId
+            });
             
-            // Parse attribution parameters
-            const attributionData = parseDeepLinkParams(initialUrl);
-            
-            // Save attribution data to AsyncStorage
-            await saveAttributionData(attributionData);
-            
-            // Check if we have Facebook attribution
-            const hasFbAttribution = hasFacebookAttribution(attributionData);
-            
-            if (hasFbAttribution) {
-              // ============================================================
-              // SPECIAL CASE: Facebook Attribution Flow
-              // ============================================================
-              // User came from Facebook ad with attribution data (fbclid, utm params)
-              // Show tracking onboarding immediately and send events with attribution
+            try {
+              // Send App Install event with userId from deep link (if available)
+              // Web-funnel users: will have appUserId from deep link (external_id for best EMQ)
+              // Direct mobile users: no appUserId yet (will be sent after login in Scenario B)
+              await sendAppInstallEventDual(
+                attributionData.appUserId || undefined, // userId from web-funnel deep link (if available)
+                attributionData,
+                attributionData.email ? { email: attributionData.email } : undefined
+              );
               
-              if (Platform.OS === 'ios') {
-                // iOS: tracking onboarding will handle permission request and event sending
-                logger.info('iOS: Facebook attribution detected, tracking onboarding will handle events', { feature: 'App' });
-              } else {
-                // Android: send install event immediately (no ATT permission needed, tracking assumed enabled)
-                // NOTE: No userId yet (pre-login), will use email + attribution for matching
-                logger.info('Android: Facebook attribution detected, sending app install event', { feature: 'App' });
-                await sendAppInstallEventDual(
-                  undefined, // No userId yet (pre-login install)
-                  attributionData,
-                  attributionData.email ? { email: attributionData.email } : undefined
-                );
+              logger.info('App Install event sent successfully', { 
+                feature: 'App',
+                hadUserId: !!attributionData.appUserId
+              });
+              
+              // Mark as sent to prevent duplicate sends after login (non-critical)
+              try {
+                await markAppInstallEventSent();
+              } catch (markError) {
+                logger.error('Failed to mark app install event as sent (non-critical)', {
+                  feature: 'App',
+                  error: markError
+                });
+                // Don't throw - this shouldn't block app initialization
               }
-            } else {
-              // ============================================================
-              // MAIN FLOW: Organic User Flow
-              // ============================================================
-              // User installed organically (no Facebook attribution)
-              // Wait for them to log in, then show tracking onboarding
-              // See: services/auth.service.ts for post-login tracking implementation
-              
-              logger.info('No Facebook attribution detected (organic install), will show tracking after login', { feature: 'App' });
-              await setNeedsTrackingAfterAuth(true);
+            } catch (error) {
+              logger.error('Failed to send App Install event', { feature: 'App', error });
+              // Don't block app initialization on tracking error
             }
+          } else if (isInstallEventSent) {
+            logger.info('App Install event already sent, skipping', {
+              feature: 'App',
+              hasFacebookAttribution: hasFacebookAttribution(attributionData)
+            });
           } else {
-            // ============================================================
-            // MAIN FLOW: No deep link (organic install)
-            // ============================================================
-            // User opened app directly without any deep link
-            // Wait for them to log in, then show tracking onboarding
-            // See: services/auth.service.ts for post-login tracking implementation
-            
-            logger.info('No initial URL detected (organic install), will show tracking after login', { feature: 'App' });
-            await setNeedsTrackingAfterAuth(true);
+            logger.info('No Facebook attribution detected, App Install event will be sent after first login', {
+              feature: 'App'
+            });
+            // NOTE: For organic installs (no deep link or no Facebook attribution),
+            // App Install event will be sent after first login:
+            // - Android: in auth.service.ts → handlePostLoginTracking
+            // - iOS: in tracking-onboarding.tsx (after ATT prompt)
           }
-          
-          // Mark app as launched
-          await markAppAsLaunched();
+        } else {
+          // No deep link at all (organic install from App Store)
+          // App Install event will be sent after first login (same as above)
+          logger.info('No deep link detected (organic install), App Install event will be sent after first login', {
+            feature: 'App'
+          });
         }
       } catch (initError) {
         logger.error('Failed to initialize app', { feature: 'App', error: initError instanceof Error ? initError : new Error(String(initError)) });

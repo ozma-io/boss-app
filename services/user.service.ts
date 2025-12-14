@@ -376,8 +376,12 @@ async function createChatWithWelcomeMessage(userId: string): Promise<void> {
  * 
  * @param userId - User ID
  * @param userEmail - Email from Firebase Auth
+ * @returns User document data (with firstAppLoginAt field for tracking logic)
  */
-export async function ensureUserProfileExists(userId: string, userEmail: string): Promise<void> {
+export async function ensureUserProfileExists(
+  userId: string, 
+  userEmail: string
+): Promise<{ firstAppLoginAt?: string | null }> {
   const startTime = Date.now();
   
   try {
@@ -404,7 +408,7 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
     // Wrap Firestore operations in retry logic to handle token propagation delays
     // Retry up to 3 times with exponential backoff (500ms base delay)
     // This handles race conditions where token is valid but not yet propagated to Firestore backend
-    await retryWithBackoff(async () => {
+    const userData = await retryWithBackoff(async () => {
       const userDocRef = doc(db, 'users', userId);
       
       logger.debug('Attempting to read user document from Firestore', {
@@ -463,10 +467,19 @@ export async function ensureUserProfileExists(userId: string, userEmail: string)
         // Create chat thread with welcome message
         // This ensures new users have a welcome message immediately available
         await createChatWithWelcomeMessage(userId);
+        
+        // Return empty userData for new user (no firstAppLoginAt yet)
+        return { firstAppLoginAt: null };
       } else {
         logger.debug('User profile already exists', { feature: 'UserService', userId });
+        
+        // Return existing user data
+        const data = userDoc.data();
+        return { firstAppLoginAt: data.firstAppLoginAt || null };
       }
     }, 3, 500);
+    
+    return userData;
   } catch (error) {
     // Enhanced error logging for permission-denied diagnostics
     const err = error as Error & { code?: string };
@@ -690,6 +703,50 @@ export async function updateUserPresence(
       error: err 
     });
     // Don't throw - app should continue working even if presence update fails
+  }
+}
+
+/**
+ * Mark that user has logged into the mobile app
+ * 
+ * Sets firstAppLoginAt timestamp in Firestore.
+ * This should be called once after sending registration events.
+ * 
+ * Includes 5 retry attempts with exponential backoff to handle transient errors.
+ * 
+ * @param userId - User ID
+ */
+export async function markFirstAppLogin(userId: string): Promise<void> {
+  let attemptNumber = 0;
+  
+  try {
+    await retryWithBackoff(async () => {
+      attemptNumber++;
+      
+      const userDocRef = doc(db, 'users', userId);
+      const now = new Date().toISOString();
+      
+      await updateDoc(userDocRef, {
+        firstAppLoginAt: now,
+        updatedAt: now
+      });
+      
+      logger.info('Marked first app login', { 
+        feature: 'UserService', 
+        userId, 
+        firstAppLoginAt: now,
+        attempt: attemptNumber,
+        totalAttempts: 5
+      });
+    }, 5, 500);
+  } catch (error) {
+    logger.error('Error marking first app login after all retries', { 
+      feature: 'UserService', 
+      userId, 
+      attempts: 5,
+      error 
+    });
+    throw error;
   }
 }
 

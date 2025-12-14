@@ -67,7 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
 
     initAuth();
 
-    const unsubscribe = onAuthStateChanged((newUser: User | null) => {
+    const unsubscribe = onAuthStateChanged(async (newUser: User | null) => {
       if (isProcessingEmailLinkRef.current) {
         return;
       }
@@ -87,31 +87,41 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         });
       }
       
+      // Update UI state IMMEDIATELY - don't block on async operations
       setUser(newUser);
       setAuthState(newUser ? 'authenticated' : 'unauthenticated');
       
       if (newUser) {
-        // Ensure user profile document exists with correct email
-        // NOTE: ensureUserProfileExists() includes auth token validation to prevent
+        // Fire-and-forget: Ensure user profile exists in background
+        // This doesn't block UI rendering when user reopens the app.
+        // 
+        // NOTE: Post-login operations (Amplitude, Facebook events) are handled
+        // by individual login functions (verifyEmailCode, signInWithGoogle, signInWithApple)
+        // via handlePostSignIn(). This callback only handles:
+        // 1. User reopens app with existing session (most common case)
+        // 2. Email synchronization from Firebase Auth to Firestore
+        // 
+        // ensureUserProfileExists() includes auth token validation to prevent
         // permission-denied errors due to race conditions between onAuthStateChanged
         // firing and token being fully ready. See user.service.ts for implementation.
         (async () => {
           const profileStartTime = Date.now();
-          logger.debug('Starting user profile creation flow', {
+          logger.debug('Starting user profile verification (background)', {
             feature: 'AuthContext',
             userId: newUser.id,
           });
           
           try {
             await ensureUserProfileExists(newUser.id, newUser.email);
-            logger.info('User profile creation flow completed successfully', {
+            
+            logger.info('User profile verification completed', {
               feature: 'AuthContext',
               userId: newUser.id,
               duration: Date.now() - profileStartTime,
             });
           } catch (err) {
             const error = err as Error & { code?: string };
-            logger.error('Failed to ensure user profile exists', { 
+            logger.error('Failed to verify user profile', { 
               feature: 'AuthContext', 
               error: err,
               userId: newUser.id,
@@ -158,7 +168,7 @@ export function AuthProvider({ children }: AuthProviderProps): React.JSX.Element
         // Note: Intercom user registration moved to lazy loading (when user opens Support)
         // This prevents background timeout issues on iOS
       } else {
-        // Reset Amplitude user on logout
+        // User logged out
         resetAmplitudeUser()
           .catch(err => logger.error('Amplitude reset failed', { feature: 'AuthContext', error: err }));
         

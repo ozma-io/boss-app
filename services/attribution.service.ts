@@ -4,8 +4,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { logger } from './logger.service';
 
 const ATTRIBUTION_STORAGE_KEY = '@boss_app_attribution_data';
-const FIRST_LAUNCH_KEY = '@boss_app_first_launch';
-const NEEDS_TRACKING_AFTER_AUTH_KEY = '@boss_app_needs_tracking_after_auth';
+const APP_INSTALL_EVENT_SENT_KEY = '@boss_app_install_event_sent';
 
 export interface AttributionData {
   fbclid?: string | null;
@@ -165,32 +164,6 @@ export async function linkAttributionToUser(userId: string, attributionData: Att
 }
 
 /**
- * Check if this is the first launch of the app
- */
-export async function isFirstLaunch(): Promise<boolean> {
-  try {
-    const value = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
-    return value === null;
-  } catch (error) {
-    logger.error('Error checking first launch', { feature: 'AttributionService', error });
-    return false;
-  }
-}
-
-/**
- * Mark that the app has been launched
- */
-export async function markAppAsLaunched(): Promise<void> {
-  try {
-    await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
-    logger.info('App marked as launched', { feature: 'AttributionService' });
-  } catch (error) {
-    logger.error('Error marking app as launched', { feature: 'AttributionService', error });
-    throw error;
-  }
-}
-
-/**
  * Extract attribution email if present (to pre-fill auth screen)
  */
 export async function getAttributionEmail(): Promise<string | null> {
@@ -204,58 +177,63 @@ export async function getAttributionEmail(): Promise<string | null> {
 }
 
 /**
- * Set flag that user needs tracking after authentication (MAIN FLOW)
+ * Check if App Install event has been sent
  * 
- * This is used for organic users who install the app without Facebook attribution.
- * We wait for them to log in, then show tracking onboarding and send events with email.
- * 
- * @param value - true if user needs tracking after auth, false otherwise
+ * Used to prevent duplicate App Install events (fb_mobile_activate_app).
+ * This event should only be sent once per app installation.
  */
-export async function setNeedsTrackingAfterAuth(value: boolean): Promise<void> {
+export async function isAppInstallEventSent(): Promise<boolean> {
   try {
-    if (value) {
-      await AsyncStorage.setItem(NEEDS_TRACKING_AFTER_AUTH_KEY, 'true');
-      logger.info('Set needs tracking after auth flag', { feature: 'AttributionService' });
-    } else {
-      await AsyncStorage.removeItem(NEEDS_TRACKING_AFTER_AUTH_KEY);
-      logger.info('Cleared needs tracking after auth flag', { feature: 'AttributionService' });
-    }
-  } catch (error) {
-    logger.error('Error setting needs tracking after auth', { feature: 'AttributionService', error });
-    throw error;
-  }
-}
-
-/**
- * Check if user needs tracking after authentication (MAIN FLOW)
- * 
- * Returns true if this is an organic user who needs to be prompted for tracking
- * after they log in with their email.
- * 
- * @returns true if tracking should be shown after login
- */
-export async function needsTrackingAfterAuth(): Promise<boolean> {
-  try {
-    const value = await AsyncStorage.getItem(NEEDS_TRACKING_AFTER_AUTH_KEY);
+    const value = await AsyncStorage.getItem(APP_INSTALL_EVENT_SENT_KEY);
     return value === 'true';
   } catch (error) {
-    logger.error('Error checking needs tracking after auth', { feature: 'AttributionService', error });
+    logger.error('Error checking app install event sent flag', { feature: 'AttributionService', error });
     return false;
   }
 }
 
 /**
- * Clear the tracking after auth flag (MAIN FLOW)
+ * Mark that App Install event has been sent
  * 
- * Called after tracking has been completed for organic users.
+ * Sets a flag to prevent duplicate App Install events.
+ * This should be called after successfully sending sendAppInstallEventDual.
+ * 
+ * Includes 5 retry attempts to handle transient AsyncStorage errors.
  */
-export async function clearTrackingAfterAuth(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(NEEDS_TRACKING_AFTER_AUTH_KEY);
-    logger.info('Cleared tracking after auth flag', { feature: 'AttributionService' });
-  } catch (error) {
-    logger.error('Error clearing tracking after auth', { feature: 'AttributionService', error });
-    throw error;
+export async function markAppInstallEventSent(): Promise<void> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      await AsyncStorage.setItem(APP_INSTALL_EVENT_SENT_KEY, 'true');
+      logger.info('Marked app install event as sent', { 
+        feature: 'AttributionService',
+        attempt,
+        totalAttempts: 5
+      });
+      return;
+    } catch (error) {
+      lastError = error as Error;
+      logger.debug('Failed to mark app install event as sent', {
+        feature: 'AttributionService',
+        attempt,
+        totalAttempts: 5,
+        error: lastError
+      });
+      
+      if (attempt < 5) {
+        // Wait with exponential backoff before retry
+        const delayMs = 500 * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
   }
+  
+  logger.error('Error marking app install event as sent after all retries', { 
+    feature: 'AttributionService',
+    attempts: 5,
+    error: lastError 
+  });
+  throw lastError;
 }
 

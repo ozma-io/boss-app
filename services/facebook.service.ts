@@ -1,6 +1,7 @@
 import { FACEBOOK_CONFIG } from '@/constants/facebook.config';
 import { functions } from '@/constants/firebase.config';
 import { logger } from '@/services/logger.service';
+import { LoginMethod } from '@/types';
 import { buildExtinfo, getAdvertiserTrackingEnabled, getApplicationTrackingEnabledSync } from '@/utils/deviceInfo';
 import { validateFacebookEventTime } from '@/utils/facebookTimestamp';
 import { httpsCallable } from 'firebase/functions';
@@ -523,7 +524,7 @@ export async function sendAppInstallEventDual(
  * 2. Server-side as 'app' (Conversions API): ALWAYS sent regardless of ATT status
  * 3. Server-side as 'website' (Conversions API): Additional web-proxy event for web campaign optimization
  * 
- * ⚠️ IMPORTANT: The third event (AppWebProxyLogin with actionSource: 'website') 
+ * ⚠️ IMPORTANT: The third event (AppWebProxyRegistration with actionSource: 'website') 
  * is NOT recommended by Facebook as it misrepresents the actual event source.
  * Facebook's best practice is to always use the correct actionSource ('app' for mobile app events).
  * However, we intentionally use this approach to:
@@ -536,14 +537,14 @@ export async function sendAppInstallEventDual(
  * 
  * Events will appear in Events Manager as:
  * - "fb_mobile_complete_registration" (standard event, actionSource: app)
- * - "AppWebProxyLogin" (custom event, actionSource: website)
+ * - "AppWebProxyRegistration" (custom event, actionSource: website)
  * 
  * @param userId - Firebase User ID (used as external_id for user matching)
  * @param email - User email for Advanced Matching (will be hashed automatically)
- * @param registrationMethod - Registration method: 'email', 'Google', or 'Apple'
+ * @param registrationMethod - Registration method
  * @param attributionData - Optional attribution data from Firestore (fbclid, fbc, fbp from web-funnel)
  */
-export async function sendRegistrationEventDual(userId: string, email: string, registrationMethod: 'email' | 'Google' | 'Apple', attributionData?: AttributionData): Promise<void> {
+export async function sendRegistrationEventDual(userId: string, email: string, registrationMethod: LoginMethod, attributionData?: AttributionData): Promise<void> {
   const eventId = generateEventId();
   const webProxyEventId = generateEventId(); // Separate event ID for web-proxy event
   
@@ -585,7 +586,7 @@ export async function sendRegistrationEventDual(userId: string, email: string, r
     sendConversionEvent(userId, eventId, FB_MOBILE_COMPLETE_REGISTRATION, 'app', { email }, customData, attributionData),
     
     // Server-side #2: Conversions API as 'website' source (web-proxy for campaign optimization)
-    sendConversionEvent(userId, webProxyEventId, 'AppWebProxyLogin', 'website', { email }, customData, attributionData)
+    sendConversionEvent(userId, webProxyEventId, 'AppWebProxyRegistration', 'website', { email }, customData, attributionData)
   ]);
   
   // Check results  

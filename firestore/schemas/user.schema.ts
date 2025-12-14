@@ -52,6 +52,11 @@ export interface UserSchema {
   
   // === TECHNICAL FIELDS (system-managed) ===
   
+  // First app login timestamp (mobile and web)
+  // Used to determine if registration events should be sent to Facebook
+  // Set once on first authentication (all platforms: iOS, Android, web)
+  firstAppLoginAt?: string | null; // ISO 8601 timestamp
+  
   // Push notification token for FCM
   fcmToken?: string | null;
   

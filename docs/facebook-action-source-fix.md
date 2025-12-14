@@ -101,7 +101,7 @@ sendConversionEvent(userId, eventId, FB_MOBILE_ACTIVATE_APP, 'app', userData, un
 sendConversionEvent(userId, eventId, FB_MOBILE_COMPLETE_REGISTRATION, 'app', { email }, customData, attributionData)
 
 // Event #2: website
-sendConversionEvent(userId, webProxyEventId, 'AppWebProxyLogin', 'website', { email }, customData, attributionData)
+sendConversionEvent(userId, webProxyEventId, 'AppWebProxyRegistration', 'website', { email }, customData, attributionData)
 ```
 
 ### First Chat Message (triple-send)

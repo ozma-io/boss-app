@@ -33,6 +33,11 @@ export interface CustomFieldMetadata {
   options?: string[];
 }
 
+// === AUTH TYPES ===
+
+// Login method types (used for Facebook event tracking)
+export type LoginMethod = 'email' | 'Google' | 'Apple';
+
 // === USER TYPES ===
 
 // Minimal user type for auth state (subset of UserSchema)

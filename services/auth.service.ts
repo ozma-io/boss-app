@@ -1,9 +1,10 @@
 import { auth } from '@/constants/firebase.config';
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { clearTrackingAfterAuth, getAttributionDataWithFallback, isFirstLaunch, markAppAsLaunched, needsTrackingAfterAuth } from '@/services/attribution.service';
-import { sendRegistrationEventDual } from '@/services/facebook.service';
-import { User } from '@/types';
+import { getAttributionDataWithFallback, isAppInstallEventSent, markAppInstallEventSent } from '@/services/attribution.service';
+import { sendAppInstallEventDual, sendRegistrationEventDual } from '@/services/facebook.service';
+import { ensureUserProfileExists, markFirstAppLogin } from '@/services/user.service';
+import { LoginMethod, User } from '@/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
@@ -200,6 +201,232 @@ export async function sendEmailVerificationCode(email: string): Promise<void> {
   }
 }
 
+/**
+ * Handle all post-sign-in operations
+ * 
+ * This unified function is called after successful authentication from any login method.
+ * It handles:
+ * 1. Amplitude event logging (auth_signin_completed)
+ * 2. Ensuring user profile exists in Firestore (creating if needed)
+ * 3. First app login tracking (Facebook events via handlePostLoginTracking)
+ * 
+ * This function consolidates all post-login logic into a single place to avoid
+ * code duplication across verifyEmailCode, signInWithGoogle, and signInWithApple.
+ * 
+ * @param user - Firebase User object
+ * @param method - Login method (email, Google, Apple)
+ * @param additionalEventProps - Optional additional properties for Amplitude event
+ * @returns The same User object (for chaining)
+ */
+async function handlePostSignIn(
+  user: User, 
+  method: LoginMethod,
+  additionalEventProps?: Record<string, unknown>
+): Promise<User> {
+  try {
+    // 1. Log successful sign-in to Amplitude
+    trackAmplitudeEvent('auth_signin_completed', {
+      method: method === 'email' ? 'email' : method.toLowerCase(),
+      platform: Platform.OS,
+      ...additionalEventProps,
+    });
+    
+    // 2. Ensure user profile exists in Firestore (create if new user)
+    // Returns userData with firstAppLoginAt field for tracking logic
+    const userData = await ensureUserProfileExists(user.id, user.email);
+    
+    // 3. Handle first app login tracking (Facebook registration events)
+    await handlePostLoginTracking(user.id, user.email, method, userData);
+    
+    return user;
+  } catch (error) {
+    logger.error('Error in post-sign-in operations', {
+      feature: 'AuthService',
+      userId: user.id,
+      method,
+      error,
+    });
+    // Don't throw - we want to let the user continue even if post-login operations fail
+    // The user is already authenticated at this point
+    return user;
+  }
+}
+
+/**
+ * Handle post-login tracking and Facebook events
+ * 
+ * This function is called after user authentication to:
+ * 1. Check if this is the user's first app login (via userData.firstAppLoginAt)
+ * 2. Send Facebook registration events if first login
+ * 3. Mark first app login in Firestore
+ * 
+ * IMPORTANT: This function expects userData to already be loaded from Firestore
+ * (typically by ensureUserProfileExists). This avoids duplicate Firestore reads
+ * and race conditions.
+ * 
+ * @param userId - Firebase User ID
+ * @param email - User email
+ * @param method - Login method
+ * @param userData - User document data from Firestore (must include firstAppLoginAt field)
+ */
+async function handlePostLoginTracking(
+  userId: string,
+  email: string,
+  method: LoginMethod,
+  userData: { firstAppLoginAt?: string | null }
+): Promise<void> {
+  try {
+    // Check if this is first app login
+    const isFirstLogin = !userData.firstAppLoginAt;
+    
+    if (!isFirstLogin) {
+      logger.debug('Not first app login, skipping registration events', {
+        feature: 'AuthService',
+        userId,
+        firstAppLoginAt: userData.firstAppLoginAt
+      });
+      return;
+    }
+    
+    logger.info('First app login detected, sending registration events', {
+      feature: 'AuthService',
+      userId,
+      email,
+      method,
+      platform: Platform.OS
+    });
+    
+    // Platform-specific handling
+    if (Platform.OS === 'ios') {
+      // iOS: Navigate to tracking onboarding screen with isFirstLogin flag
+      // tracking-onboarding.tsx will:
+      // 1. Check Firestore firstAppLoginAt to prevent duplicate events (handles app crashes)
+      // 2. Show ATT prompt
+      // 3. Send Facebook events (App Install + Registration)
+      // 4. Mark firstAppLoginAt in Firestore AFTER successful event sending
+      router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}&method=${method}&isFirstLogin=true`);
+    } else if (Platform.OS === 'android') {
+      // Android: Send App Install (if not sent yet) + Registration events
+      
+      // Get attribution data with AsyncStorage + Firestore fallback
+      // AsyncStorage: deep link parameters from app install
+      // Firestore: web-funnel attribution (fbc, fbp, geolocation)
+      let attributionData;
+      try {
+        attributionData = await getAttributionDataWithFallback(userId);
+      } catch (attrError) {
+        logger.error('Failed to get attribution data, continuing without it', {
+          feature: 'AuthService',
+          userId,
+          error: attrError
+        });
+        attributionData = null;
+      }
+      
+      // Try to send App Install event (non-critical, shouldn't block Registration event)
+      try {
+        // Check if App Install event was already sent (Scenario A at app launch)
+        // If not, send it now (Scenario B - after login with userId + email)
+        const isInstallEventSent = await isAppInstallEventSent();
+        
+        if (!isInstallEventSent) {
+          logger.info('App Install event not sent yet, sending now with userId + email', {
+            feature: 'AuthService',
+            userId,
+            hasAttributionData: !!attributionData,
+          });
+          
+          // Send App Install event with userId + email + attribution
+          await sendAppInstallEventDual(
+            userId,
+            attributionData || {},
+            { email }
+          );
+          
+          // Mark as sent (non-critical operation - don't block Registration event if this fails)
+          try {
+            await markAppInstallEventSent();
+          } catch (markError) {
+            logger.error('Failed to mark app install event as sent (non-critical, continuing)', {
+              feature: 'AuthService',
+              userId,
+              error: markError
+            });
+            // Don't throw - Registration event must still be sent
+          }
+          
+          logger.info('App Install event sent successfully', {
+            feature: 'AuthService',
+            userId,
+            hasAttributionData: !!attributionData,
+          });
+        } else {
+          logger.debug('App Install event already sent, skipping', {
+            feature: 'AuthService',
+            userId,
+          });
+        }
+      } catch (installError) {
+        logger.error('Failed to send App Install event (non-critical, continuing to Registration event)', {
+          feature: 'AuthService',
+          userId,
+          error: installError
+        });
+        // Don't throw - Registration event must still be sent
+      }
+      
+      // ALWAYS send Registration event for Custom Audiences and Lookalike targeting
+      // This is critical and must be attempted even if App Install event failed
+      try {
+        await sendRegistrationEventDual(userId, email, method, attributionData || undefined);
+        
+        logger.info('Registration event sent successfully', {
+          feature: 'AuthService',
+          userId,
+          hasAttributionData: !!attributionData,
+          hasFbc: !!attributionData?.fbc,
+          hasFbp: !!attributionData?.fbp,
+          source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
+        });
+      } catch (registrationError) {
+        logger.error('Failed to send Registration event', {
+          feature: 'AuthService',
+          userId,
+          error: registrationError
+        });
+        // Don't throw - tracking errors shouldn't block user flow
+      }
+      
+      // Mark first app login in Firestore (ALWAYS execute, even if Facebook events fail)
+      try {
+        await markFirstAppLogin(userId);
+      } catch (markError) {
+        logger.error('Failed to mark first app login', { feature: 'AuthService', userId, error: markError });
+        // Don't throw - this shouldn't block user flow
+      }
+    } else {
+      // Web and other platforms: Mark first login without Facebook events
+      // Web doesn't require ATT prompts and Facebook events are primarily for mobile attribution
+      // However, we still mark firstAppLoginAt for consistency across all platforms
+      logger.info('Web or other platform detected, marking first login without Facebook events', {
+        feature: 'AuthService',
+        userId,
+        platform: Platform.OS
+      });
+      
+      try {
+        await markFirstAppLogin(userId);
+      } catch (markError) {
+        logger.error('Failed to mark first app login', { feature: 'AuthService', userId, error: markError });
+        // Don't throw - this shouldn't block user flow
+      }
+    }
+  } catch (error) {
+    logger.error('Error in post-login tracking', { feature: 'AuthService', userId, error });
+    // Don't throw - tracking errors shouldn't block user flow
+  }
+}
+
 export async function verifyEmailCode(email: string, emailLink: string): Promise<User> {
   try {
     trackAmplitudeEvent('auth_magic_link_clicked', {
@@ -209,68 +436,8 @@ export async function verifyEmailCode(email: string, emailLink: string): Promise
     const userCredential = await signInWithEmailLink(auth, email, emailLink);
     const user = mapFirebaseUserToUser(userCredential.user);
     
-    trackAmplitudeEvent('auth_signin_completed', {
-      method: 'email',
-    });
-    
-    // ============================================================
-    // MAIN FLOW: Post-Login Tracking for Organic Users
-    // ============================================================
-    //
-    // This is the PRIMARY tracking flow for most users:
-    // 1. User installs app organically (App Store, friend referral, etc)
-    // 2. User explores app, decides to sign up
-    // 3. User logs in with email → WE ARE HERE
-    // 4. Request tracking permission (iOS ATT prompt)
-    // 5. Send Facebook events with email for attribution
-    //
-    // SPECIAL CASE: Users with Facebook attribution already sent
-    // events at first launch (see app/_layout.tsx lines 154-171)
-    //
-    // ============================================================
-    
-    const needsTracking = await needsTrackingAfterAuth();
-    const isFirst = await isFirstLaunch();
-    
-    if (needsTracking && isFirst) {
-      logger.info('MAIN FLOW: Organic user logged in, triggering post-login tracking', {
-        feature: 'AuthService',
-        email,
-        platform: Platform.OS
-      });
-      
-      if (Platform.OS === 'ios') {
-        // iOS: Navigate to tracking onboarding screen
-        // User will see ATT prompt, then we send events with email
-        // Note: We don't mark app as launched yet - tracking screen will do it
-        router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}&method=email`);
-      } else if (Platform.OS === 'android') {
-        // Android: Send registration event with email for Advanced Matching (no prompt needed)
-        try {
-          // Get attribution data with AsyncStorage + Firestore fallback
-          const attributionData = await getAttributionDataWithFallback(user.id);
-          
-          // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.id, email, 'email', attributionData || undefined);
-          
-          await clearTrackingAfterAuth();
-          await markAppAsLaunched();
-          logger.info('MAIN FLOW: Android registration event sent with attribution', {
-            feature: 'AuthService',
-            hasAttributionData: !!attributionData,
-            hasFbc: !!attributionData?.fbc,
-            hasFbp: !!attributionData?.fbp,
-            source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
-          });
-        } catch (fbError) {
-          logger.error('MAIN FLOW: Failed to send registration event', { feature: 'AuthService', error: fbError });
-          // Don't block user flow on Facebook error
-          await clearTrackingAfterAuth();
-        }
-      }
-    }
-    
-    return user;
+    // Handle all post-sign-in operations (Amplitude, Firestore, Facebook events)
+    return await handlePostSignIn(user, 'email');
   } catch (error) {
     const errorDetails = getFirebaseErrorDetails(error);
     
@@ -305,49 +472,10 @@ export async function signInWithTestEmail(email: string): Promise<User> {
     const userCredential = await signInWithCustomToken(auth, customToken);
     const user = mapFirebaseUserToUser(userCredential.user);
     
-    trackAmplitudeEvent('auth_signin_completed', {
-      method: 'email',
-      is_test: true,
-    });
-    
-    // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
-    const needsTracking = await needsTrackingAfterAuth();
-    const isFirst = await isFirstLaunch();
-    
-    if (needsTracking && isFirst) {
-      logger.info('MAIN FLOW: Test user logged in, triggering post-login tracking', {
-        feature: 'AuthService',
-        email,
-        platform: Platform.OS
-      });
-      
-      if (Platform.OS === 'ios') {
-        router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}&method=email`);
-      } else if (Platform.OS === 'android') {
-        try {
-          // Get attribution data with AsyncStorage + Firestore fallback
-          const attributionData = await getAttributionDataWithFallback(user.id);
-          
-          // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.id, email, 'email', attributionData || undefined);
-          
-          await clearTrackingAfterAuth();
-          await markAppAsLaunched();
-          logger.info('MAIN FLOW: Test user Android registration event sent with attribution', {
-            feature: 'AuthService',
-            hasAttributionData: !!attributionData,
-            hasFbc: !!attributionData?.fbc,
-            hasFbp: !!attributionData?.fbp,
-            source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
-          });
-        } catch (fbError) {
-          logger.error('MAIN FLOW: Failed to send test user registration event', { feature: 'AuthService', error: fbError });
-          await clearTrackingAfterAuth();
-        }
-      }
-    }
-    
-    return user;
+    // Handle all post-sign-in operations (Amplitude, Firestore, Facebook events)
+    // Note: Test users are tracked separately in Amplitude via is_test flag,
+    // but still go through standard Facebook Custom Audiences tracking
+    return await handlePostSignIn(user, 'email', { is_test: true });
   } catch (error) {
     const errorDetails = getFirebaseErrorDetails(error);
     
@@ -441,29 +569,8 @@ export async function signInWithGoogle(): Promise<User> {
 
       const user = await signInWithGoogleCredential(idToken);
       
-      trackAmplitudeEvent('auth_signin_completed', {
-        method: 'google',
-        platform: 'web',
-      });
-      
-      // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
-      const needsTracking = await needsTrackingAfterAuth();
-      const isFirst = await isFirstLaunch();
-      
-      if (needsTracking && isFirst) {
-        logger.info('MAIN FLOW: Google user logged in (web), triggering post-login tracking', {
-          feature: 'AuthService',
-          email: user.email,
-          platform: 'web'
-        });
-        
-        // Web platform: tracking not typically needed (no ATT on web)
-        // But we clear the flag to avoid confusion
-        await clearTrackingAfterAuth();
-        logger.info('MAIN FLOW: Web platform - cleared tracking flag', { feature: 'AuthService' });
-      }
-      
-      return user;
+      // Handle all post-sign-in operations (Amplitude, Firestore, Facebook events)
+      return await handlePostSignIn(user, 'Google');
     } catch (error) {
       const errorDetails = getFirebaseErrorDetails(error);
       
@@ -500,50 +607,8 @@ export async function signInWithGoogle(): Promise<User> {
 
     const user = await signInWithGoogleCredential(idToken);
     
-    trackAmplitudeEvent('auth_signin_completed', {
-      method: 'google',
-      platform: Platform.OS,
-      native: true,
-    });
-    
-    // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
-    const needsTracking = await needsTrackingAfterAuth();
-    const isFirst = await isFirstLaunch();
-    
-    if (needsTracking && isFirst) {
-      logger.info('MAIN FLOW: Google user logged in (native), triggering post-login tracking', {
-        feature: 'AuthService',
-        email: user.email,
-        platform: Platform.OS
-      });
-      
-      if (Platform.OS === 'ios') {
-        router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}&method=Google`);
-      } else if (Platform.OS === 'android') {
-        try {
-          // Get attribution data with AsyncStorage + Firestore fallback
-          const attributionData = await getAttributionDataWithFallback(user.id);
-          
-          // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.id, user.email, 'Google', attributionData || undefined);
-          
-          await clearTrackingAfterAuth();
-          await markAppAsLaunched();
-          logger.info('MAIN FLOW: Google user Android registration event sent with attribution', {
-            feature: 'AuthService',
-            hasAttributionData: !!attributionData,
-            hasFbc: !!attributionData?.fbc,
-            hasFbp: !!attributionData?.fbp,
-            source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
-          });
-        } catch (fbError) {
-          logger.error('MAIN FLOW: Failed to send Google user registration event', { feature: 'AuthService', error: fbError });
-          await clearTrackingAfterAuth();
-        }
-      }
-    }
-    
-    return user;
+    // Handle all post-sign-in operations (Amplitude, Firestore, Facebook events)
+    return await handlePostSignIn(user, 'Google');
   } catch (error) {
     // Handle specific Google Sign-In errors
     if (error && typeof error === 'object' && 'code' in error) {
@@ -615,48 +680,8 @@ export async function signInWithApple(): Promise<User> {
     const userCredential = await signInWithCredential(auth, credential);
     const user = mapFirebaseUserToUser(userCredential.user);
     
-    trackAmplitudeEvent('auth_signin_completed', {
-      method: 'apple',
-    });
-    
-    // MAIN FLOW: Post-login tracking (same as verifyEmailCode)
-    const needsTracking = await needsTrackingAfterAuth();
-    const isFirst = await isFirstLaunch();
-    
-    if (needsTracking && isFirst) {
-      logger.info('MAIN FLOW: Apple user logged in, triggering post-login tracking', {
-        feature: 'AuthService',
-        email: user.email,
-        platform: Platform.OS
-      });
-      
-      if (Platform.OS === 'ios') {
-        router.push(`/tracking-onboarding?email=${encodeURIComponent(user.email)}&method=Apple`);
-      } else if (Platform.OS === 'android') {
-        try {
-          // Get attribution data with AsyncStorage + Firestore fallback
-          const attributionData = await getAttributionDataWithFallback(user.id);
-          
-          // Send registration event for Custom Audiences and Lookalike targeting
-          await sendRegistrationEventDual(user.id, user.email, 'Apple', attributionData || undefined);
-          
-          await clearTrackingAfterAuth();
-          await markAppAsLaunched();
-          logger.info('MAIN FLOW: Apple user Android registration event sent with attribution', {
-            feature: 'AuthService',
-            hasAttributionData: !!attributionData,
-            hasFbc: !!attributionData?.fbc,
-            hasFbp: !!attributionData?.fbp,
-            source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
-          });
-        } catch (fbError) {
-          logger.error('MAIN FLOW: Failed to send Apple user registration event', { feature: 'AuthService', error: fbError });
-          await clearTrackingAfterAuth();
-        }
-      }
-    }
-    
-    return user;
+    // Handle all post-sign-in operations (Amplitude, Firestore, Facebook events)
+    return await handlePostSignIn(user, 'Apple');
   } catch (error) {
     const errorDetails = getFirebaseErrorDetails(error);
     
