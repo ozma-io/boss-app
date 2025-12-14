@@ -1,10 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useTrackingOnboarding } from '@/contexts/TrackingOnboardingContext';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { getAttributionDataWithFallback, isAppInstallEventSent, markAppInstallEventSent } from '@/services/attribution.service';
-import { sendAppInstallEventDual, sendRegistrationEventDual } from '@/services/facebook.service';
+import { sendFirstLoginEvents } from '@/services/facebook.service';
 import { logger } from '@/services/logger.service';
-import { getUserProfile, markFirstAppLogin } from '@/services/user.service';
+import { getUserProfile } from '@/services/user.service';
 import { LoginMethod } from '@/types';
 import { recordTrackingPromptShown, requestTrackingPermission, updateTrackingPermissionStatus } from '@/services/tracking.service';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -96,92 +95,18 @@ export default function TrackingOnboardingScreen(): React.JSX.Element {
               userId: user.id
             });
           
-          if (email && method) {
-            // Get attribution data with AsyncStorage + Firestore fallback
-            const attributionData = await getAttributionDataWithFallback(user.id);
-            
-            // Check if App Install event was already sent (Scenario A at app launch)
-            // If not, send it now (Scenario B - after login with userId + email)
-            const isInstallEventSent = await isAppInstallEventSent();
-            
-            if (!isInstallEventSent) {
-              logger.info('App Install event not sent yet, sending now with userId + email', {
-                feature: 'TrackingOnboarding',
-                userId: user.id,
-                hasAttributionData: !!attributionData,
-              });
-              
-              // Send App Install event with userId + email + attribution
-              await sendAppInstallEventDual(
-                user.id,
-                attributionData || {},
-                { email }
-              );
-              
-              // Mark as sent (non-critical operation - don't block Registration event if this fails)
-              try {
-                await markAppInstallEventSent();
-              } catch (markError) {
-                logger.error('Failed to mark app install event as sent (non-critical, continuing)', {
-                  feature: 'TrackingOnboarding',
-                  userId: user.id,
-                  error: markError
-                });
-                // Don't throw - Registration event must still be sent
-              }
-              
-              logger.info('App Install event sent successfully', {
-                feature: 'TrackingOnboarding',
-                userId: user.id,
-                hasAttributionData: !!attributionData,
-              });
+            if (email && method) {
+              // Send all first login events (App Install + Registration + mark firstAppLoginAt)
+              // Uses unified sendFirstLoginEvents() function (same as Android)
+              await sendFirstLoginEvents(user.id, email, method);
             } else {
-              logger.debug('App Install event already sent, skipping', {
+              logger.info('No email or method available, skipping Facebook events', { 
                 feature: 'TrackingOnboarding',
-                userId: user.id,
+                hasEmail: !!email,
+                hasMethod: !!method
               });
             }
-            
-            // ALWAYS send Registration event for Custom Audiences and Lookalike targeting
-            // Attribution data is optional - Facebook will use email + userId for Custom Audiences
-            // even without fbc/fbp/fbclid
-            await sendRegistrationEventDual(user.id, email, method, attributionData || undefined);
-            
-            logger.info('Registration event sent successfully', {
-              feature: 'TrackingOnboarding',
-              userId: user.id,
-              hasAttributionData: !!attributionData,
-              hasFbc: !!attributionData?.fbc,
-              hasFbp: !!attributionData?.fbp,
-              source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
-            });
-            
-            // Mark first app login in Firestore (AFTER successful event sending)
-            // This ensures firstAppLoginAt is only set after events are sent successfully
-            // preventing duplicate events if app crashes before completion
-            // Includes 5 retry attempts with exponential backoff (same as Android flow)
-            try {
-              await markFirstAppLogin(user.id);
-              logger.info('Marked first app login after successful event sending', {
-                feature: 'TrackingOnboarding',
-                userId: user.id
-              });
-            } catch (markError) {
-              logger.error('Failed to mark first app login after retries', { 
-                feature: 'TrackingOnboarding', 
-                userId: user.id, 
-                error: markError 
-              });
-              // Don't throw - this shouldn't block user flow
-            }
-          } else {
-            logger.info('No email or method available, skipping Facebook events', { 
-              feature: 'TrackingOnboarding',
-              hasEmail: !!email,
-              hasMethod: !!method
-            });
           }
-        }
         } catch (fbError) {
           logger.error('Failed to send Facebook events', { feature: 'TrackingOnboarding', error: fbError instanceof Error ? fbError : new Error(String(fbError)) });
           // Don't block user flow on FB error

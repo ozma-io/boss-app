@@ -722,6 +722,162 @@ export async function sendFirstChatMessageEventDual(userId: string, email: strin
 }
 
 /**
+ * Send App Install + Registration events for first app login
+ * 
+ * Unified logic for both iOS and Android first login tracking.
+ * This function handles:
+ * 1. Checking if App Install event was already sent
+ * 2. Sending App Install event (if needed) with userId + email + attribution
+ * 3. Sending Registration event (always)
+ * 4. Marking first app login in Firestore
+ * 
+ * This function consolidates duplicate logic that was previously in:
+ * - auth.service.ts (Android flow)
+ * - tracking-onboarding.tsx (iOS flow)
+ * 
+ * The only difference between platforms is the ATT prompt (iOS only),
+ * which is handled by the caller before calling this function.
+ * 
+ * @param userId - Firebase User ID
+ * @param email - User email for Advanced Matching
+ * @param method - Login method (email, Google, Apple)
+ * @returns Promise<void>
+ */
+export async function sendFirstLoginEvents(
+  userId: string,
+  email: string,
+  method: LoginMethod
+): Promise<void> {
+  try {
+    logger.info('Starting first login events flow', {
+      feature: 'Facebook',
+      userId,
+      method,
+      platform: Platform.OS
+    });
+    
+    // Get attribution data with AsyncStorage + Firestore fallback
+    let attributionData: AttributionData | null = null;
+    try {
+      const { getAttributionDataWithFallback } = await import('@/services/attribution.service');
+      attributionData = await getAttributionDataWithFallback(userId);
+    } catch (attrError) {
+      logger.error('Failed to get attribution data, continuing without it', {
+        feature: 'Facebook',
+        userId,
+        error: attrError
+      });
+    }
+    
+    // ============================================================
+    // STEP 1: Send App Install event (if not sent yet)
+    // ============================================================
+    
+    try {
+      const { isAppInstallEventSent, markAppInstallEventSent } = await import('@/services/attribution.service');
+      const isInstallEventSent = await isAppInstallEventSent();
+      
+      if (!isInstallEventSent) {
+        logger.info('App Install event not sent yet, sending now with userId + email', {
+          feature: 'Facebook',
+          userId,
+          hasAttributionData: !!attributionData,
+        });
+        
+        // Send App Install event with userId + email + attribution
+        await sendAppInstallEventDual(
+          userId,
+          attributionData || {},
+          { email }
+        );
+        
+        logger.info('App Install event sent successfully', {
+          feature: 'Facebook',
+          userId,
+          hasAttributionData: !!attributionData,
+        });
+        
+        // Mark as sent (non-critical operation)
+        try {
+          await markAppInstallEventSent();
+        } catch (markError) {
+          logger.error('Failed to mark app install event as sent (non-critical, continuing)', {
+            feature: 'Facebook',
+            userId,
+            error: markError
+          });
+          // Don't throw - Registration event must still be sent
+        }
+      } else {
+        logger.debug('App Install event already sent, skipping', {
+          feature: 'Facebook',
+          userId,
+        });
+      }
+    } catch (installError) {
+      logger.error('Failed to send App Install event (non-critical, continuing to Registration event)', {
+        feature: 'Facebook',
+        userId,
+        error: installError
+      });
+      // Don't throw - Registration event must still be sent
+    }
+    
+    // ============================================================
+    // STEP 2: Send Registration event (ALWAYS)
+    // ============================================================
+    
+    try {
+      await sendRegistrationEventDual(userId, email, method, attributionData || undefined);
+      
+      logger.info('Registration event sent successfully', {
+        feature: 'Facebook',
+        userId,
+        hasAttributionData: !!attributionData,
+        hasFbc: !!attributionData?.fbc,
+        hasFbp: !!attributionData?.fbp,
+        source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
+      });
+    } catch (registrationError) {
+      logger.error('Failed to send Registration event', {
+        feature: 'Facebook',
+        userId,
+        error: registrationError
+      });
+      // Don't throw - this shouldn't block marking first login
+    }
+    
+    // ============================================================
+    // STEP 3: Mark first app login in Firestore (ALWAYS)
+    // ============================================================
+    
+    try {
+      const { markFirstAppLogin } = await import('@/services/user.service');
+      await markFirstAppLogin(userId);
+      
+      logger.info('First login events flow completed successfully', {
+        feature: 'Facebook',
+        userId
+      });
+    } catch (markError) {
+      logger.error('Failed to mark first app login', { 
+        feature: 'Facebook', 
+        userId, 
+        error: markError 
+      });
+      // Don't throw - this shouldn't block user flow
+    }
+  } catch (error) {
+    logger.error('Error in first login events flow', { 
+      feature: 'Facebook', 
+      userId, 
+      error 
+    });
+    // Don't throw - tracking errors shouldn't block user flow
+  }
+}
+
+/**
  * Send second chat message event to Facebook for continued engagement tracking
  * 
  * Sends custom "SecondChatMessage" event when user sends their second message to AI assistant.

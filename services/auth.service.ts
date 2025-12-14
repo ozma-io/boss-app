@@ -1,9 +1,8 @@
 import { auth } from '@/constants/firebase.config';
 import { GOOGLE_IOS_CLIENT_ID, GOOGLE_WEB_CLIENT_ID } from '@/constants/google.config';
 import { trackAmplitudeEvent } from '@/services/amplitude.service';
-import { getAttributionDataWithFallback, isAppInstallEventSent, markAppInstallEventSent } from '@/services/attribution.service';
-import { sendAppInstallEventDual, sendRegistrationEventDual } from '@/services/facebook.service';
-import { ensureUserProfileExists, markFirstAppLogin } from '@/services/user.service';
+import { sendFirstLoginEvents } from '@/services/facebook.service';
+import { ensureUserProfileExists } from '@/services/user.service';
 import { LoginMethod, User } from '@/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -302,108 +301,12 @@ async function handlePostLoginTracking(
       // tracking-onboarding.tsx will:
       // 1. Check Firestore firstAppLoginAt to prevent duplicate events (handles app crashes)
       // 2. Show ATT prompt
-      // 3. Send Facebook events (App Install + Registration)
-      // 4. Mark firstAppLoginAt in Firestore AFTER successful event sending
+      // 3. Call sendFirstLoginEvents() to send Facebook events
       router.push(`/tracking-onboarding?email=${encodeURIComponent(email)}&method=${method}&isFirstLogin=true`);
     } else if (Platform.OS === 'android') {
-      // Android: Send App Install (if not sent yet) + Registration events
-      
-      // Get attribution data with AsyncStorage + Firestore fallback
-      // AsyncStorage: deep link parameters from app install
-      // Firestore: web-funnel attribution (fbc, fbp, geolocation)
-      let attributionData;
-      try {
-        attributionData = await getAttributionDataWithFallback(userId);
-      } catch (attrError) {
-        logger.error('Failed to get attribution data, continuing without it', {
-          feature: 'AuthService',
-          userId,
-          error: attrError
-        });
-        attributionData = null;
-      }
-      
-      // Try to send App Install event (non-critical, shouldn't block Registration event)
-      try {
-        // Check if App Install event was already sent (Scenario A at app launch)
-        // If not, send it now (Scenario B - after login with userId + email)
-        const isInstallEventSent = await isAppInstallEventSent();
-        
-        if (!isInstallEventSent) {
-          logger.info('App Install event not sent yet, sending now with userId + email', {
-            feature: 'AuthService',
-            userId,
-            hasAttributionData: !!attributionData,
-          });
-          
-          // Send App Install event with userId + email + attribution
-          await sendAppInstallEventDual(
-            userId,
-            attributionData || {},
-            { email }
-          );
-          
-          // Mark as sent (non-critical operation - don't block Registration event if this fails)
-          try {
-            await markAppInstallEventSent();
-          } catch (markError) {
-            logger.error('Failed to mark app install event as sent (non-critical, continuing)', {
-              feature: 'AuthService',
-              userId,
-              error: markError
-            });
-            // Don't throw - Registration event must still be sent
-          }
-          
-          logger.info('App Install event sent successfully', {
-            feature: 'AuthService',
-            userId,
-            hasAttributionData: !!attributionData,
-          });
-        } else {
-          logger.debug('App Install event already sent, skipping', {
-            feature: 'AuthService',
-            userId,
-          });
-        }
-      } catch (installError) {
-        logger.error('Failed to send App Install event (non-critical, continuing to Registration event)', {
-          feature: 'AuthService',
-          userId,
-          error: installError
-        });
-        // Don't throw - Registration event must still be sent
-      }
-      
-      // ALWAYS send Registration event for Custom Audiences and Lookalike targeting
-      // This is critical and must be attempted even if App Install event failed
-      try {
-        await sendRegistrationEventDual(userId, email, method, attributionData || undefined);
-        
-        logger.info('Registration event sent successfully', {
-          feature: 'AuthService',
-          userId,
-          hasAttributionData: !!attributionData,
-          hasFbc: !!attributionData?.fbc,
-          hasFbp: !!attributionData?.fbp,
-          source: attributionData ? (attributionData.fbc || attributionData.fbp ? 'asyncstorage_or_firestore' : 'asyncstorage') : 'none'
-        });
-      } catch (registrationError) {
-        logger.error('Failed to send Registration event', {
-          feature: 'AuthService',
-          userId,
-          error: registrationError
-        });
-        // Don't throw - tracking errors shouldn't block user flow
-      }
-      
-      // Mark first app login in Firestore (ALWAYS execute, even if Facebook events fail)
-      try {
-        await markFirstAppLogin(userId);
-      } catch (markError) {
-        logger.error('Failed to mark first app login', { feature: 'AuthService', userId, error: markError });
-        // Don't throw - this shouldn't block user flow
-      }
+      // Android: Send Facebook events directly (no ATT prompt needed)
+      // Uses unified sendFirstLoginEvents() function
+      await sendFirstLoginEvents(userId, email, method);
     } else {
       // Web and other platforms: Mark first login without Facebook events
       // Web doesn't require ATT prompts and Facebook events are primarily for mobile attribution
@@ -415,6 +318,7 @@ async function handlePostLoginTracking(
       });
       
       try {
+        const { markFirstAppLogin } = await import('@/services/user.service');
         await markFirstAppLogin(userId);
       } catch (markError) {
         logger.error('Failed to mark first app login', { feature: 'AuthService', userId, error: markError });
