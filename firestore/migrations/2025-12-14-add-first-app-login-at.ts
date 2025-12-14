@@ -64,8 +64,51 @@ export const migration = {
       const hasUsedMobileApp = hasFcmToken || hasSeenTrackingPrompt || hasSeenNotificationPrompt || hasActivityTimestamp;
       
       if (hasUsedMobileApp) {
-        // User has used mobile app - set firstAppLoginAt to their createdAt
-        const firstAppLoginAt = userData.createdAt || new Date().toISOString();
+        // Find earliest timestamp from app usage indicators
+        const timestamps: Date[] = [];
+        
+        // Helper to convert any timestamp format to Date
+        const toDate = (ts: any): Date | null => { // eslint-disable-line @typescript-eslint/no-explicit-any
+          if (!ts) return null;
+          if (typeof ts === 'string') return new Date(ts);
+          if (ts.toDate) return ts.toDate(); // Firestore Timestamp
+          return null;
+        };
+        
+        // Check prompt histories (most accurate indicators of first app usage)
+        if (userData.trackingPromptHistory && userData.trackingPromptHistory.length > 0) {
+          const firstPrompt = userData.trackingPromptHistory[0];
+          const date = toDate(firstPrompt.timestamp);
+          if (date) timestamps.push(date);
+        }
+        
+        if (userData.notificationPromptHistory && userData.notificationPromptHistory.length > 0) {
+          const firstPrompt = userData.notificationPromptHistory[0];
+          const date = toDate(firstPrompt.timestamp);
+          if (date) timestamps.push(date);
+        }
+        
+        // Check direct prompt timestamps
+        if (userData.lastTrackingPromptAt) {
+          const date = toDate(userData.lastTrackingPromptAt);
+          if (date) timestamps.push(date);
+        }
+        
+        if (userData.lastNotificationPromptAt) {
+          const date = toDate(userData.lastNotificationPromptAt);
+          if (date) timestamps.push(date);
+        }
+        
+        // Fallback to createdAt if no prompt timestamps available
+        if (timestamps.length === 0 && userData.createdAt) {
+          const date = toDate(userData.createdAt);
+          if (date) timestamps.push(date);
+        }
+        
+        // Use earliest timestamp, or current time as last resort
+        const firstAppLoginAt = timestamps.length > 0
+          ? new Date(Math.min(...timestamps.map(d => d.getTime()))).toISOString()
+          : new Date().toISOString();
         
         console.log(`✏️  Setting firstAppLoginAt for user ${userDoc.id} (${
           hasFcmToken ? 'has fcmToken' : 
@@ -112,6 +155,7 @@ export const migration = {
     console.log('⚠️  Rolling back migration...');
     
     const usersSnapshot = await db.collection('users').get();
+    console.log(`Found ${usersSnapshot.size} users to process`);
     
     let batch = db.batch();
     let batchCount = 0;
@@ -133,6 +177,7 @@ export const migration = {
         rollbackCount++;
         
         if (batchCount >= batchSize) {
+          console.log(`💾 Committing batch of ${batchCount} rollback updates...`);
           await batch.commit();
           batch = db.batch();
           batchCount = 0;
@@ -141,6 +186,7 @@ export const migration = {
     }
     
     if (batchCount > 0) {
+      console.log(`💾 Committing final batch of ${batchCount} rollback updates...`);
       await batch.commit();
     }
     
