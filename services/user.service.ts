@@ -406,7 +406,8 @@ export async function ensureUserProfileExists(
     await ensureAuthReady(userId);
     
     // Wrap Firestore operations in retry logic to handle token propagation delays
-    // Retry up to 3 times with exponential backoff (500ms base delay)
+    // Retry up to 5 times with exponential backoff (500ms base delay)
+    // Permission-denied errors get longer delays (1000ms, 2000ms, 4000ms, 8000ms)
     // This handles race conditions where token is valid but not yet propagated to Firestore backend
     const userData = await retryWithBackoff(async () => {
       const userDocRef = doc(db, 'users', userId);
@@ -477,7 +478,7 @@ export async function ensureUserProfileExists(
         const data = userDoc.data();
         return { firstAppLoginAt: data.firstAppLoginAt || null };
       }
-    }, 3, 500);
+    }, 5, 500);
     
     return userData;
   } catch (error) {

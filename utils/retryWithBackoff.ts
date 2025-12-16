@@ -5,6 +5,19 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Check if error is a permission-denied error
+ * These typically indicate auth token propagation issues
+ */
+function isPermissionDeniedError(error: Error & { code?: string }): boolean {
+  return (
+    error.code === 'permission-denied' ||
+    error.code === 'PERMISSION_DENIED' ||
+    error.message.includes('permission-denied') ||
+    error.message.includes('Missing or insufficient permissions')
+  );
+}
+
 export async function retryWithBackoff<T>(
   operation: () => Promise<T>,
   maxRetries: number = 3,
@@ -31,6 +44,7 @@ export async function retryWithBackoff<T>(
       lastError = error as Error;
       const err = lastError as Error & { code?: string };
       const isOffline = isFirebaseOfflineError(lastError);
+      const isPermissionDenied = isPermissionDeniedError(err);
       const attemptDuration = Date.now() - startTime;
       
       logger.debug('Retry attempt failed', {
@@ -39,13 +53,24 @@ export async function retryWithBackoff<T>(
         maxRetries,
         duration: attemptDuration,
         isOffline,
+        isPermissionDenied,
         errorMessage: lastError.message,
         errorCode: err.code,
       });
       
       if (attempt < maxRetries) {
-        const delayMs = initialDelayMs * Math.pow(2, attempt - 1);
-        logger.debug('Waiting before next retry attempt', { feature: 'Retry', delayMs });
+        // Use longer delays for permission-denied errors (auth token propagation issue)
+        // Regular errors: 500ms, 1000ms, 2000ms
+        // Permission errors: 1000ms, 2000ms, 4000ms
+        const baseDelay = isPermissionDenied ? initialDelayMs * 2 : initialDelayMs;
+        const delayMs = baseDelay * Math.pow(2, attempt - 1);
+        
+        logger.debug('Waiting before next retry attempt', { 
+          feature: 'Retry', 
+          delayMs,
+          isPermissionDenied,
+          reason: isPermissionDenied ? 'auth token propagation' : 'standard retry'
+        });
         await delay(delayMs);
       }
     }
@@ -54,12 +79,14 @@ export async function retryWithBackoff<T>(
   if (lastError) {
     const err = lastError as Error & { code?: string };
     const isOffline = isFirebaseOfflineError(lastError);
+    const isPermissionDenied = isPermissionDeniedError(err);
     const totalDuration = Date.now() - startTime;
     logger.warn('All retry attempts failed', {
       feature: 'Retry',
       maxRetries,
       totalDuration,
       isOffline,
+      isPermissionDenied,
       errorMessage: lastError.message,
       errorCode: err.code,
     });

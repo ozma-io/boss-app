@@ -78,6 +78,18 @@ export async function ensureAuthReady(userId: string): Promise<void> {
       tokenDuration,
       tokenLength: token.length,
     });
+    
+    // Add small delay to allow token to propagate to Firestore backend
+    // This prevents permission-denied errors on some devices (especially Android)
+    // where token validation succeeds but Firestore backend hasn't received it yet
+    const TOKEN_PROPAGATION_DELAY_MS = 200;
+    await new Promise(resolve => setTimeout(resolve, TOKEN_PROPAGATION_DELAY_MS));
+    
+    logger.debug('Token propagation delay completed', {
+      feature: 'authGuard',
+      userId,
+      delayMs: TOKEN_PROPAGATION_DELAY_MS,
+    });
   } catch (tokenError) {
     logger.error('Auth guard failed: token error', {
       feature: 'authGuard',
