@@ -97,16 +97,17 @@ export default function WelcomeScreen(): React.JSX.Element {
       await signInWithApple();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'unknown';
+      const errorCode = error && typeof error === 'object' && 'code' in error 
+        ? String((error as Record<string, unknown>).code) 
+        : null;
       
-      trackAmplitudeEvent('auth_signin_failed', {
-        method: 'apple',
-        error_type: errorMessage,
-      });
+      // Note: Amplitude tracking is now handled in auth.service.ts with detailed error info
       
       // Check if user explicitly cancelled (they pressed Cancel button)
       const isUserCancelled = 
+        errorCode === 'ERR_REQUEST_CANCELED' ||
         errorMessage.toLowerCase().includes('cancel') ||
-        errorMessage.includes('1001'); // Explicit cancellation code
+        errorMessage.includes('1001');
       
       if (isUserCancelled) {
         // Silent fail - user knows they cancelled
@@ -116,8 +117,9 @@ export default function WelcomeScreen(): React.JSX.Element {
       // For system errors (not signed in to iCloud, etc.)
       // Show friendly message AFTER Apple's system dialog closed
       const isSystemAuthError = 
+        errorCode === 'ERR_REQUEST_UNKNOWN' ||
         errorMessage.includes('7022') || // AKAuthenticationError
-        errorMessage.includes('1000') || // AuthorizationError (generic)
+        errorMessage.includes('1000') || // ASAuthorizationError.unknown
         errorMessage.includes('unknown reason');
       
       if (isSystemAuthError) {

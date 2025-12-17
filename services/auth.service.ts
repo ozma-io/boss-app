@@ -441,6 +441,141 @@ export function initializeGoogleSignIn(): void {
   }
 }
 
+/**
+ * Extract detailed error information from Apple Authentication errors
+ * 
+ * Apple Sign-In errors have the following structure:
+ * - code: string (Expo error code like 'ERR_REQUEST_UNKNOWN', 'ERR_REQUEST_CANCELED', etc.)
+ * - message: string (error message)
+ * - nativeError: object (iOS native error with domain, code, userInfo)
+ * 
+ * Native iOS ASAuthorizationError codes:
+ * - 1000 (unknown) - General unknown error, often means not signed into iCloud
+ * - 1001 (canceled) - User explicitly cancelled
+ * - 1002 (invalidResponse) - Invalid authorization response
+ * - 1003 (notHandled) - Authorization request not handled
+ * - 1004 (failed) - Authorization attempt failed
+ * - 7022 (AKAuthenticationError) - Authentication service error (iCloud/Apple ID issues)
+ * 
+ * @see https://docs.expo.dev/versions/latest/sdk/apple-authentication/#error-codes
+ * @see https://developer.apple.com/documentation/authenticationservices/asauthorizationerror
+ */
+function getAppleAuthErrorDetails(error: unknown): Record<string, unknown> {
+  const details: Record<string, unknown> = {
+    error_message: error instanceof Error ? error.message : String(error),
+    error_type: error instanceof Error ? error.constructor.name : typeof error,
+  };
+
+  if (error && typeof error === 'object') {
+    const appleError = error as Record<string, unknown>;
+    
+    // Expo error code (ERR_REQUEST_UNKNOWN, ERR_REQUEST_CANCELED, etc.)
+    if ('code' in appleError && typeof appleError.code === 'string') {
+      details.expo_error_code = appleError.code;
+      
+      // Map Expo codes to user-friendly categories
+      switch (appleError.code) {
+        case 'ERR_REQUEST_CANCELED':
+          details.error_category = 'user_cancelled';
+          break;
+        case 'ERR_REQUEST_UNKNOWN':
+          details.error_category = 'system_auth_error';
+          break;
+        case 'ERR_REQUEST_FAILED':
+          details.error_category = 'auth_failed';
+          break;
+        case 'ERR_INVALID_RESPONSE':
+          details.error_category = 'invalid_response';
+          break;
+        default:
+          details.error_category = 'unknown';
+      }
+    }
+    
+    // Extract native iOS error details if available
+    if ('nativeError' in appleError && appleError.nativeError && typeof appleError.nativeError === 'object') {
+      const nativeError = appleError.nativeError as Record<string, unknown>;
+      
+      // Native error code (1000, 1001, 7022, etc.)
+      if ('code' in nativeError && typeof nativeError.code === 'number') {
+        details.native_error_code = nativeError.code;
+        
+        // Add human-readable interpretation
+        switch (nativeError.code) {
+          case 1000:
+            details.native_error_name = 'ASAuthorizationError.unknown';
+            details.likely_cause = 'Not signed into iCloud or Apple ID on device';
+            break;
+          case 1001:
+            details.native_error_name = 'ASAuthorizationError.canceled';
+            details.likely_cause = 'User cancelled authorization';
+            break;
+          case 1002:
+            details.native_error_name = 'ASAuthorizationError.invalidResponse';
+            details.likely_cause = 'Invalid authorization response from Apple';
+            break;
+          case 1003:
+            details.native_error_name = 'ASAuthorizationError.notHandled';
+            details.likely_cause = 'Authorization request not handled';
+            break;
+          case 1004:
+            details.native_error_name = 'ASAuthorizationError.failed';
+            details.likely_cause = 'Authorization attempt failed';
+            break;
+          case 7022:
+            details.native_error_name = 'AKAuthenticationError';
+            details.likely_cause = 'Apple authentication service error (iCloud/Apple ID issues)';
+            break;
+          default:
+            details.native_error_name = `Unknown native code: ${nativeError.code}`;
+        }
+      }
+      
+      // Native error domain
+      if ('domain' in nativeError && typeof nativeError.domain === 'string') {
+        details.native_error_domain = nativeError.domain;
+      }
+      
+      // Native error userInfo (additional context)
+      if ('userInfo' in nativeError && nativeError.userInfo && typeof nativeError.userInfo === 'object') {
+        const userInfo = nativeError.userInfo as Record<string, unknown>;
+        
+        // Extract NSUnderlyingError if present
+        if ('NSUnderlyingError' in userInfo) {
+          details.has_underlying_error = true;
+          
+          // Try to extract underlying error details
+          const underlyingError = userInfo.NSUnderlyingError;
+          if (underlyingError && typeof underlyingError === 'object') {
+            const underlying = underlyingError as Record<string, unknown>;
+            if ('code' in underlying) {
+              details.underlying_error_code = underlying.code;
+            }
+            if ('domain' in underlying) {
+              details.underlying_error_domain = underlying.domain;
+            }
+            if ('localizedDescription' in underlying) {
+              details.underlying_error_description = underlying.localizedDescription;
+            }
+          }
+        }
+        
+        // Extract localized description
+        if ('NSLocalizedDescription' in userInfo && typeof userInfo.NSLocalizedDescription === 'string') {
+          details.native_localized_description = userInfo.NSLocalizedDescription;
+        }
+      }
+    }
+    
+    // Include stack trace for debugging (first 500 chars)
+    if ('stack' in appleError && typeof appleError.stack === 'string') {
+      details.stack_preview = String(appleError.stack).substring(0, 500);
+    }
+  }
+
+  return details;
+}
+
 export async function signInWithGoogle(): Promise<User> {
   // For web platform: use web-based OAuth flow
   if (Platform.OS === 'web') {
@@ -587,7 +722,7 @@ export async function signInWithApple(): Promise<User> {
     // Handle all post-sign-in operations (Amplitude, Firestore, Facebook events)
     return await handlePostSignIn(user, 'Apple');
   } catch (error) {
-    const errorDetails = getFirebaseErrorDetails(error);
+    const errorDetails = getAppleAuthErrorDetails(error);
     
     logger.error('Apple sign-in failed', {
       feature: 'AuthService',
@@ -597,10 +732,21 @@ export async function signInWithApple(): Promise<User> {
       ...errorDetails,
     });
     
-    trackAmplitudeEvent('auth_signin_failed', {
+    // Build Amplitude event properties - only include defined values
+    const amplitudeProps: Record<string, unknown> = {
       method: 'apple',
-      error_type: error instanceof Error ? error.message : 'unknown',
-    });
+      error_type: errorDetails.error_category || (error instanceof Error ? error.message : 'unknown'),
+    };
+    
+    // Only add error codes if they exist to maintain consistent event schema
+    if (errorDetails.expo_error_code !== undefined) {
+      amplitudeProps.error_code = errorDetails.expo_error_code;
+    }
+    if (errorDetails.native_error_code !== undefined) {
+      amplitudeProps.native_error_code = errorDetails.native_error_code;
+    }
+    
+    trackAmplitudeEvent('auth_signin_failed', amplitudeProps);
     throw error;
   }
 }
