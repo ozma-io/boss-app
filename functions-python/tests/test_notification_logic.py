@@ -118,11 +118,11 @@ def test_should_send_notification_progressive_intervals():
     }
     assert should_send_notification(user_4th_ok, 'EMAIL_ONLY_USER') is True
     
-    # 5+ notifications - needs 7 days (168 hours)
+    # 5th notification - needs 7 days (168 hours) - LAST ONE for EMAIL_ONLY_USER
     user_5th_too_soon = {
         'createdAt': (now - timedelta(days=30)).isoformat(),
         'notification_state': {
-            'notification_count': 8,
+            'notification_count': 4,
             'last_notification_at': (now - timedelta(days=3)).isoformat(),
         }
     }
@@ -131,7 +131,7 @@ def test_should_send_notification_progressive_intervals():
     user_5th_ok = {
         'createdAt': (now - timedelta(days=30)).isoformat(),
         'notification_state': {
-            'notification_count': 8,
+            'notification_count': 4,
             'last_notification_at': (now - timedelta(days=8)).isoformat(),
         }
     }
@@ -158,6 +158,51 @@ def test_should_send_notification_progressive_intervals():
         }
     }
     assert should_send_notification(user_2nd_inactive, 'INACTIVE_USER_EMAIL') is True
+
+
+def test_should_send_notification_max_limit():
+    """Test that EMAIL_ONLY_USER stops after 5 notifications."""
+    now = datetime.now(timezone.utc)
+    
+    # User with 4 notifications (count=4) - should still send 5th
+    user_4th = {
+        'createdAt': (now - timedelta(days=30)).isoformat(),
+        'notification_state': {
+            'notification_count': 4,
+            'last_notification_at': (now - timedelta(days=8)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_4th, 'EMAIL_ONLY_USER') is True
+    
+    # User with 5 notifications (count=5) - reached limit, should NOT send
+    user_5th = {
+        'createdAt': (now - timedelta(days=30)).isoformat(),
+        'notification_state': {
+            'notification_count': 5,
+            'last_notification_at': (now - timedelta(days=8)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_5th, 'EMAIL_ONLY_USER') is False
+    
+    # User with 10 notifications (count=10) - way over limit, should NOT send
+    user_10th = {
+        'createdAt': (now - timedelta(days=90)).isoformat(),
+        'notification_state': {
+            'notification_count': 10,
+            'last_notification_at': (now - timedelta(days=8)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_10th, 'EMAIL_ONLY_USER') is False
+    
+    # Test that other categories don't have limits (NEW_USER_PUSH should work with count=10)
+    user_push_10th = {
+        'createdAt': (now - timedelta(days=90)).isoformat(),
+        'notification_state': {
+            'notification_count': 10,
+            'last_notification_at': (now - timedelta(days=4)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_push_10th, 'NEW_USER_PUSH') is True
 
 
 def test_was_active_recently():

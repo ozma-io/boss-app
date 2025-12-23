@@ -33,7 +33,7 @@ CATEGORY_INTERVALS: dict[UserCategory, list[timedelta]] = {
         timedelta(hours=6),   # 2nd: 6h after 1st
         timedelta(hours=24),  # 3rd: 24h after 2nd
         timedelta(hours=48),  # 4th: 48h after 3rd
-        timedelta(days=7),    # 5+: weekly
+        timedelta(days=7),    # 5th: 7d after 4th (FINAL - see MAX_NOTIFICATIONS_PER_CATEGORY)
     ],
     'NEW_USER_PUSH': [
         timedelta(hours=1),   # Faster cadence for engaged new users
@@ -72,6 +72,18 @@ CATEGORY_INTERVALS: dict[UserCategory, list[timedelta]] = {
     ],
 }
 
+# Maximum number of notifications per category
+# After reaching this limit, no more notifications will be sent for that category
+# None means unlimited notifications
+MAX_NOTIFICATIONS_PER_CATEGORY: dict[UserCategory, int | None] = {
+    'EMAIL_ONLY_USER': 5,  # Stop after 5 emails to users who never logged in
+    'NEW_USER_PUSH': None,  # Unlimited for engaged new users
+    'NEW_USER_EMAIL': None,
+    'ACTIVE_USER_PUSH': None,
+    'ACTIVE_USER_EMAIL': None,
+    'INACTIVE_USER_EMAIL': None,
+}
+
 
 def should_send_notification(user_data: dict[str, Any], category: UserCategory) -> bool:
     """
@@ -79,6 +91,9 @@ def should_send_notification(user_data: dict[str, Any], category: UserCategory) 
     
     Uses category-specific progressive interval logic from CATEGORY_INTERVALS.
     Each category has its own schedule optimized for user engagement patterns.
+    
+    Also checks MAX_NOTIFICATIONS_PER_CATEGORY to enforce limits on certain categories
+    (e.g., EMAIL_ONLY_USER limited to 5 emails to reduce costs for inactive users).
     
     Args:
         user_data: User document data from Firestore
@@ -99,6 +114,12 @@ def should_send_notification(user_data: dict[str, Any], category: UserCategory) 
     
     notification_count = notification_state.notification_count
     last_notification_at = notification_state.last_notification_at
+    
+    # Check if category has reached its notification limit
+    max_notifications = MAX_NOTIFICATIONS_PER_CATEGORY.get(category)
+    if max_notifications is not None and notification_count >= max_notifications:
+        # User has reached the limit for this category - no more notifications
+        return False
     
     # Get category-specific intervals
     intervals = CATEGORY_INTERVALS[category]
