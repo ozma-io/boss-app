@@ -49,6 +49,8 @@ npx eas-cli@latest workflow:run create-production-builds.yml
 - `functions-python/` - Firebase Cloud Functions (Python) - layered architecture: `orchestrators/` (business logic), `data/` (Firestore operations), `utils/` (logger, sentry)
   - **Virtual Environment**: Uses `.venv` (configured in `pyrightconfig.json`)
   - Install dependencies: `cd functions-python && source .venv/bin/activate && pip install -r requirements.txt`
+  - **Run tests**: `cd functions-python && source .venv/bin/activate && PYTHONPATH=$(pwd) python tests/test_notification_logic.py`
+  - **Important**: pytest NOT installed - tests run as Python modules with PYTHONPATH set to `functions-python/` directory
 - `firestore/` - Firebase config, database migrations, **schemas (single source of truth)**
   - `schemas/` - TypeScript schemas defining Firestore document structure (UserSchema, BossSchema, ChatMessageSchema, etc.)
   - All type definitions for Firestore data originate here
