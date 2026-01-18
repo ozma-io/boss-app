@@ -2,6 +2,10 @@
   "name": "boss-app",
   "main": "index.js",
   "version": "1.4.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ozma-io/boss-app.git"
+  },
   "scripts": {
     "start": "expo start --dev-client",
     "dev": "expo start --dev-client",

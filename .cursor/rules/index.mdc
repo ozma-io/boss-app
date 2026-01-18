@@ -19,6 +19,10 @@ React Native + Expo + TypeScript + Firebase (Firestore, Auth, FCM, Cloud Functio
 - **TypeScript strict typing** - required for all code
 - **Functional components** with hooks
 
+## Git Workflow
+- Small changes: commit directly to `main`
+- Auto-deploy: GitHub Actions deploy automatically after push to `main`
+
 ## Build Production Releases
 **Build production releases for both iOS and Android:**
 ```bash

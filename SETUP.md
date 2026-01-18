@@ -1,16 +1,8 @@
-# BossUp - Setup Instructions
+# BossUp - Setup Guide
 
-## ✅ Completed Setup
+This guide walks you through setting up BossUp for local development.
 
-The project has been successfully initialized with:
-
-- ✅ **Expo Router** (file-based routing) - modern navigation
-- ✅ **TypeScript** - strict typing throughout
-- ✅ **Firebase SDK** - installed and ready to configure
-- ✅ **Testing libraries** - Jest and React Native Testing Library
-- ✅ **Firebase Cloud Functions** - directory structure created
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 boss-app/
@@ -23,177 +15,174 @@ boss-app/
 ├── types/                   # TypeScript type definitions
 ├── utils/                   # Helper functions
 ├── constants/               # App constants (colors, config)
-├── functions/               # Firebase Cloud Functions
+├── functions/               # Firebase Cloud Functions (TypeScript)
 │   ├── src/                 # Cloud Functions source
 │   ├── package.json         # Functions dependencies
 │   └── tsconfig.json        # Functions TypeScript config
-├── __tests__/               # Unit tests
-│   ├── components/
-│   └── services/
+├── functions-python/        # Firebase Cloud Functions (Python)
+├── firestore/               # Database schemas and migrations
+│   ├── schemas/            # TypeScript schemas (source of truth)
+│   └── migrations/         # Data migration scripts
 └── assets/                  # Images, fonts, static resources
 ```
 
-## 🚀 Next Steps
+## Prerequisites
 
-### 1. Firebase Configuration
+Ensure you have installed:
 
-Create `constants/firebase.config.ts`:
+- **Node.js** 18+ ([nodejs.org](https://nodejs.org))
+- **Git** ([git-scm.com](https://git-scm.com))
 
-```typescript
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+For mobile development:
+- **iOS**: Xcode 15+ (macOS only, from App Store)
+- **Android**: Android Studio with SDK 34+ ([developer.android.com](https://developer.android.com/studio))
 
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+## Step 1: Clone and Install
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-```
-
-### 2. Create TypeScript Types
-
-In `types/` directory, create:
-
-- `user.types.ts` - User model
-- `boss.types.ts` - Boss model
-- `entry.types.ts` - Entry model (notes with subtypes)
-
-### 3. Implement Firebase Services
-
-In `services/` directory, create:
-
-- `auth.service.ts` - Authentication logic
-- `firestore.service.ts` - Database operations
-- `notifications.service.ts` - FCM push notifications
-
-### 4. Build Screens
-
-In `app/` directory:
-
-- Modify `app/(tabs)/index.tsx` - Boss list screen
-- Modify `app/(tabs)/profile.tsx` - User profile (rename from two.tsx)
-- Create `app/boss/[id].tsx` - Boss details (dynamic route)
-- Create `app/boss/add-entry.tsx` - Add entry screen
-
-### 5. Setup Firebase
-
-**Initial Firestore setup:**
 ```bash
-./scripts/setup-firestore.sh
+git clone https://github.com/ozma-io/boss-app.git
+cd boss-app
+npm install
 ```
 
-**Cloud Functions setup:**
+## Step 2: Firebase Configuration
+
+### Create Firebase Project
+
+1. Go to [Firebase Console](https://console.firebase.google.com)
+2. Click "Add project" and follow the wizard
+3. Enable Google Analytics (optional)
+
+### Enable Authentication
+
+1. Go to **Authentication** → **Sign-in method**
+2. Enable the providers you need:
+   - Email/Password (required)
+   - Apple (for iOS app)
+   - Google (for Android app)
+
+### Create Firestore Database
+
+1. Go to **Firestore Database** → **Create database**
+2. Start in **production mode**
+3. Choose a location close to your users
+
+### Download Config Files
+
+1. Go to **Project Settings** → **Your apps**
+2. Add an iOS app and download `GoogleService-Info.plist`
+3. Add an Android app and download `google-services.json`
+4. Add a Web app and copy the config object
+
+Place the files:
+```
+firebase/
+├── google-services.json        # Android config
+└── GoogleService-Info.plist    # iOS config
+```
+
+### Set Environment Variables
+
+Create your environment configuration based on `.env.example`:
+
+```bash
+# Firebase Web Config
+EXPO_PUBLIC_FIREBASE_API_KEY=your-api-key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+EXPO_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
+```
+
+## Step 3: Deploy Firestore Rules and Indexes
+
+```bash
+# Initial Firestore setup
+./scripts/setup-firestore.sh
+
+# Or manually deploy
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+## Step 4: Cloud Functions Setup
+
 ```bash
 cd functions
 npm install
-npm run build
-```
 
-**IAP Setup (for subscription features):**
-```bash
-# Set Firebase secrets (required for IAP verification)
+# Set required secrets
+firebase functions:secrets:set OPENAI_API_KEY  # For AI chat
+
+# Optional secrets for IAP
 firebase functions:secrets:set APPLE_APP_STORE_PRIVATE_KEY
 firebase functions:secrets:set STRIPE_SECRET_KEY
+
+# Build and deploy
+npm run build
+firebase deploy --only functions
 ```
 
-📖 **For detailed Firebase deployment instructions, see [docs/firebase-deployment.md](./docs/firebase-deployment.md)**
+For detailed deployment instructions, see [docs/firebase-deployment.md](./docs/firebase-deployment.md).
 
-This includes:
-- Service account permissions for Cloud Functions
-- Deploying rules and indexes
-- Multi-environment setup
-- Troubleshooting
-
-📖 **For IAP setup and testing, see [docs/subscriptions-iap.md](./docs/subscriptions-iap.md)**
-
-This includes:
-- App Store Connect configuration
-- Sandbox testing
-- Stripe-to-IAP migration
-- Troubleshooting
-
-## 🏃 Running the App
+## Step 5: Run the App
 
 ```bash
-# Install dependencies (if needed)
-npm install
-
 # Start development server
 npm run dev
 
-# Run on specific platform
-npm run ios       # iOS simulator (builds Development Build first time)
-npm run android   # Android emulator (builds Development Build first time)
+# Or run on specific platform
+npm run ios       # iOS simulator
+npm run android   # Android emulator
 npm run web       # Web browser
-
-# Run tests
-npm test
 ```
 
-**First time:** iOS/Android builds take ~5-10 minutes to compile the Development Build.
+**First run note:** iOS/Android builds take ~5-10 minutes to compile the Development Build. After that, JavaScript changes reload instantly.
 
-**After that:** JavaScript changes reload instantly via hot reload.
-
-## 🔧 Development Build
+## Development Build
 
 This project uses **Expo Development Build** for full native module support.
 
 ### Key Benefits
 
-- ✅ **Production-like environment**: Firestore works perfectly
-- ✅ **Native WebSocket support**: Firestore works instantly (<1 sec)
-- ✅ **Full native module support**: No limitations
-- ✅ **Hot reload**: JavaScript changes reload instantly
+- Production-like environment
+- Full native module support (Firestore, notifications, IAP)
+- Hot reload for JavaScript changes
 
 ### Requirements
 
 - **iOS**: Xcode installed (for iOS simulator)
 - **Android**: Android Studio installed (for Android emulator)
 
-### First Build
-
-```bash
-# iOS (first time: ~5-10 minutes)
-npm run ios
-
-# Android (first time: ~5-10 minutes)
-npm run android
-```
-
-This compiles a custom native app with all required modules.
-
-### Daily Development Workflow
-
-1. Start dev server: `npm run dev`
-2. Scan QR code with camera (if using physical device)
-3. Make JavaScript/TypeScript changes → hot reload works!
-4. No rebuild needed for code changes
-
 ### When to Rebuild
 
 Only rebuild when you:
 - Add native modules or Expo plugins
-- Change `app.json` or `app.config.js`
+- Change `app.config.ts`
 - Update Expo SDK version
 
-Otherwise, hot reload works for all JavaScript/TypeScript changes!
+```bash
+# Rebuild iOS
+cd ios && pod install && cd .. && npx expo run:ios
 
-## 📱 Development Workflow
+# Rebuild Android
+npx expo run:android
+```
 
-1. **Local Development**: Use `npm run dev` with Development Build
-2. **Testing**: Write tests in `__tests__/` directory
-3. **Firebase Emulators**: Test Cloud Functions locally before deploying
-4. **Type Safety**: Ensure all files use TypeScript with strict types
+## Daily Development Workflow
 
-## 🔧 Useful Commands
+1. Start dev server: `npm run dev`
+2. Choose platform (w/i/a)
+3. Make JavaScript/TypeScript changes → hot reload works!
+4. No rebuild needed for code changes
+
+## Running Tests
+
+```bash
+npm test
+```
+
+## Useful Commands
 
 ```bash
 # Clear Expo cache
@@ -201,31 +190,38 @@ npx expo start --clear
 
 # Update Expo SDK
 npx expo install --fix
+
+# Check for outdated packages
+npm outdated
 ```
 
-**Firebase commands:** See [docs/firebase-deployment.md](./docs/firebase-deployment.md)
+## Documentation
 
-## 📚 Documentation
-
-### Project Documentation
 - [Firebase Deployment Guide](./docs/firebase-deployment.md) - Deploy Cloud Functions, rules, indexes
 - [Firestore Management](./docs/firestore-management.md) - Schemas, migrations, security rules
 - [Authentication System](./docs/authentication.md) - Email links, Apple/Google sign-in
 - [Subscriptions & IAP](./docs/subscriptions-iap.md) - In-app purchases setup and testing
 - [Magic Link Development](./docs/magic-link-development.md) - Testing auth in development
 
-### External Resources
+## External Resources
+
+- [Expo Documentation](https://docs.expo.dev/)
 - [Expo Router Docs](https://docs.expo.dev/router/introduction/)
 - [Firebase for React Native](https://rnfirebase.io/)
-- [React Native Testing Library](https://callstack.github.io/react-native-testing-library/)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 
-## 🎯 MVP Focus
+## Troubleshooting
 
-Remember: This is an MVP. Focus on:
-- ✅ Core functionality only
-- ✅ Simple, clean code
-- ✅ Type safety everywhere
-- ✅ Minimal but effective testing
-- ❌ Avoid over-engineering
-- ❌ No premature optimization
+### iOS Pod Install Issues
+
+See [docs/troubleshooting-ios-pod-install.md](./docs/troubleshooting-ios-pod-install.md) for solutions to common CocoaPods errors.
+
+### Firestore Connection Issues
+
+Ensure you're using the Development Build, not Expo Go. The Development Build has full native WebSocket support required for Firestore real-time updates.
+
+### Authentication Not Working
+
+1. Check Firebase config files are in `firebase/` directory
+2. Verify environment variables are set correctly
+3. Ensure Authentication providers are enabled in Firebase Console

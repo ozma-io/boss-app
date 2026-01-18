@@ -1,238 +1,198 @@
-# 📦 BossUp
+# BossUp
 
-## 🚀 Quick Start
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Platform](https://img.shields.io/badge/Platform-iOS%20%7C%20Android%20%7C%20Web-blue.svg)](https://expo.dev)
+[![React Native](https://img.shields.io/badge/React%20Native-0.76-61DAFB.svg)](https://reactnative.dev)
+[![Expo](https://img.shields.io/badge/Expo-SDK%2052-000020.svg)](https://expo.dev)
+[![Firebase](https://img.shields.io/badge/Firebase-Backend-FFCA28.svg)](https://firebase.google.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6.svg)](https://www.typescriptlang.org)
 
-```bash
-npm run dev    # Dev server (choose platform)
-npm run web    # Web browser
-npm run ios    # iOS simulator (builds Development Build)
-npm run android # Android emulator (builds Development Build)
-```
+A mobile app for managing workplace relationships with managers/bosses, featuring AI-powered coaching, timeline tracking, and personalized insights. Built with React Native, Expo, and Firebase.
 
-**Note:** First iOS/Android build takes ~5-10 minutes. Subsequent JavaScript changes load instantly via hot reload.
+<p align="center">
+  <img src="docs/screenshots/app-banner.png" alt="BossUp App Screenshots" width="100%">
+</p>
 
-## 📚 Documentation
+## Features
 
-**📖 [Complete Documentation Index](./docs/README.md)**
+- **AI-Powered Coaching** - Chat with an AI assistant (GPT-5) for personalized workplace advice
+- **Boss Timeline** - Track interactions, feedback, achievements, and challenges with your manager
+- **Custom Fields** - Add personalized tracking fields for each boss profile
+- **Push Notifications** - Smart reminders and AI-generated check-ins
+- **Cross-Platform** - iOS, Android, and Web from a single codebase
+- **Subscription Support** - In-app purchases (iOS/Android) and Stripe (Web)
+- **Privacy-First** - All data scoped to user accounts with Firebase Security Rules
 
-Quick links:
-- **[Setup Instructions](./SETUP.md)** - Initial project setup
-- **[Firebase Deployment](./docs/firebase-deployment.md)** - Deploy Cloud Functions, rules, indexes
-- **[Firestore Management](./docs/firestore-management.md)** - Schemas, migrations, security
-- **[Authentication](./docs/authentication.md)** - Magic links, Apple/Google sign-in, Universal Links
-- **Logging** - Use `services/logger.service.ts` in app code, `functions/src/logger.ts` (with Sentry) in Cloud Functions
-- **Pre-auth Permission Flows** - Custom screens + system prompts for notifications and ATT (see `NotificationOnboardingScreen` and `TrackingOnboardingScreen`)
+## Tech Stack
 
-## 🚢 Deploy to Firebase
+| Layer | Technology |
+|-------|------------|
+| **Mobile** | React Native + Expo (Development Build) |
+| **Navigation** | Expo Router (file-based) |
+| **Language** | TypeScript (strict mode) |
+| **Backend** | Firebase (Firestore, Auth, Cloud Functions, FCM) |
+| **AI** | OpenAI API (GPT-5) |
+| **Payments** | Apple IAP, Google Play Billing, Stripe |
 
-**Quick deploy:**
-```bash
-./scripts/setup-firestore.sh  # Initial setup
-firebase deploy               # Deploy everything
-```
+## Prerequisites
 
-📖 **For detailed deployment instructions, see [docs/firebase-deployment.md](./docs/firebase-deployment.md)**
+Before you begin, ensure you have:
 
----
+- **Node.js** 18+ and npm
+- **iOS Development**: Xcode 15+ (macOS only)
+- **Android Development**: Android Studio with SDK 34+
+- **Firebase Account**: [console.firebase.google.com](https://console.firebase.google.com)
 
-## 🧱 Technology Stack
+Optional (for full functionality):
+- **OpenAI API Key** - for AI chat feature
+- **Apple Developer Account** - for iOS IAP and App Store
+- **Google Play Console** - for Android IAP and Play Store
 
-### Client (Mobile App)
-- **React Native** — cross-platform development (iOS + Android)
-- **Expo** — fast setup, simplified build and deployment
-- **Expo Development Build** — native development environment with full module support
-- **TypeScript** — required; improves type safety and developer experience
-- **Expo Router** — file-based routing and navigation (like Next.js)
-- **Expo Notifications** — receiving push notifications on the device
-- **react-native-iap** — Apple and Google in-app purchases (iOS implemented, Android coming soon)
-
-### Backend / BaaS
-- **Firebase** — complete backend platform:
-  - **Firestore** — NoSQL cloud database
-  - **Firebase Authentication** — login with email, social providers, Apple ID
-  - **Firebase Cloud Messaging (FCM)** — push notification service
-  - **Firebase Cloud Functions** — serverless backend logic (scheduling, triggers, etc.)
-  - **Firebase Security Rules** — per-user access control
-- **OpenAI API** — AI chat integration (GPT-5 via Cloud Functions)
-- **Apple App Store Server API** — IAP receipt verification (via Cloud Functions)
-- **Stripe API** — web subscriptions and migration handling (Cloud Functions only, not in app)
-
-### Deployment
-- **Expo EAS Build** — cloud builds for iOS and Android
-- **Expo EAS Submit** — submission to App Store and Google Play
-- **Expo EAS Update** — over-the-air (OTA) updates for JS/TS code and assets (no store resubmission needed)
-- **Firebase Console / Hosting** — backend and data configuration
-
-**Build production releases for both iOS and Android:**
-```bash
-npx eas-cli@latest workflow:run create-production-builds.yml
-```
-
-*Note: Using direct production rollouts (100% immediately). Gradual rollouts postponed until product validation.*
-
-### Android Manifest Conflict
-
-The Android build automatically resolves a manifest conflict between `expo-notifications` and `@react-native-firebase/messaging` (both define notification color). This is handled via:
-- **Local development:** Config plugin (`plugins/withNotificationManifestFix.js`)
-- **EAS Build:** npm hook `eas-build-post-install` in `package.json`
-
-📖 **See [docs/android-manifest-conflict.md](./docs/android-manifest-conflict.md) for technical details**
-
----
-
-## 🗃️ Firestore Data Structure
-
-```
-/users/{userId}
-  ├── bosses/{bossId}
-  │   └── entries/{entryId}
-  └── chatThreads/{threadId}
-      └── messages/{messageId}
-```
-
-**Types:** `User` (auth state with id/email) vs `UserProfile` (Firestore document with full profile data) - see [docs/authentication.md](./docs/authentication.md) and [docs/firestore-management.md](./docs/firestore-management.md)
-
-**User data scoping:** All paths include `{userId}` - Firebase Security Rules enforce `request.auth.uid === userId`
-
-**Entry types:**
-- `note` with subtypes: `note`, `interaction`, `feedback`, `achievement`, `challenge`, `other` - text-based timeline events
-- `fact` - single data points for tracking measurements over time
-
-**Chat:**
-- `chatThreads` - AI conversation sessions (OpenAI-compatible multimodal format)
-- `messages` - chat messages with roles: `user`, `assistant`, `system`
-
-### Data Organization Principle
-
-**Timeline (Entries)** — frequently changing data (daily/weekly assessments):
-- Current mood, stress level today, confidence this week
-- Use timeline entries with type 'note' and appropriate subtype for all data
-- Examples: daily stress assessment, weekly confidence check-in, meeting notes, feedback received
-
-**User/Boss Documents** — stable characteristics (rarely change):
-- Position, department, goal, communication preferences, working hours
-- Store as fields directly in User or Boss documents
-- Examples: job title, team, career goal, boss's management style
-
-📖 **For detailed schemas and examples, see [docs/firestore-management.md](./docs/firestore-management.md)**
-
----
-
-## 🚀 Getting Started
-
-The project is initialized with Expo Router and ready for development.
-
-### Quick Start
+## Quick Start
 
 ```bash
-# Install dependencies (if needed)
+# Clone the repository
+git clone https://github.com/ozma-io/boss-app.git
+cd boss-app
+
+# Install dependencies
 npm install
 
 # Start development server
 npm run dev
-
-# Run on specific platform (first time builds Development Build)
-npm run ios       # iOS simulator (~5-10 min first time)
-npm run android   # Android emulator (~5-10 min first time)
-npm run web       # Web browser
 ```
 
-### 📱 Development Build
+Then choose your platform:
+- Press `w` for Web browser
+- Press `i` for iOS Simulator (requires Xcode)
+- Press `a` for Android Emulator (requires Android Studio)
 
-This project uses **Expo Development Build** for full native module support and production-like environment.
+**Note:** First iOS/Android build takes ~5-10 minutes to compile the Development Build. Subsequent JavaScript changes reload instantly via hot reload.
 
-**Key features:**
-- ✅ Full native module support (Firestore WebSocket works perfectly)
-- ✅ Production-like environment
-- ✅ Custom native code and configurations
-- ✅ Hot reload for JavaScript changes
-- ✅ Pre-auth permission flows for notifications and tracking (custom UI + system prompts)
+## Configuration
 
-**When to rebuild:**
-- Adding native modules or Expo plugins
-- Changing `app.json` or `app.config.js`
-- Updating Expo SDK version
+### 1. Firebase Setup
 
-**Regular development:**
-- JavaScript/TypeScript changes reload instantly (no rebuild needed)
-- Use `npm run dev` and scan QR code
-- Web version unchanged
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable Authentication (Email/Password, Apple, Google)
+3. Create a Firestore database
+4. Download config files:
+   - `google-services.json` → `firebase/google-services.json`
+   - `GoogleService-Info.plist` → `firebase/GoogleService-Info.plist`
 
-### Project Structure
+### 2. Environment Variables
+
+Create configuration based on `.env.example`:
+
+```bash
+# Firebase Web Config (from Firebase Console → Project Settings)
+EXPO_PUBLIC_FIREBASE_API_KEY=your-api-key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+EXPO_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
+```
+
+### 3. Cloud Functions Setup
+
+```bash
+cd functions
+npm install
+
+# Set required secrets (for AI chat)
+firebase functions:secrets:set OPENAI_API_KEY
+
+# Deploy functions
+firebase deploy --only functions
+```
+
+### 4. Deploy Firestore Rules & Indexes
+
+```bash
+./scripts/setup-firestore.sh
+firebase deploy --only firestore
+```
+
+## Project Structure
 
 ```
 boss-app/
-├── app/                    # Expo Router screens (file-based routing)
-│   ├── chat.tsx           # AI chat screen
-│   └── subscription.tsx   # Subscription/IAP screen
+├── app/                    # Expo Router screens
 ├── components/             # Reusable UI components
-├── services/               # Firebase services (auth, firestore, notifications, chat)
-│   ├── chat.service.ts    # Chat service (messages, AI response triggering)
-│   └── iap.service.ts     # In-app purchase service (iOS/Android)
-├── types/                  # TypeScript type definitions (imports from schemas)
-│   └── index.ts           # Derived types for app use
-├── functions/              # Firebase Cloud Functions (TypeScript)
-│   └── src/
-│       ├── chat.ts        # OpenAI integration (GPT-5)
-│       ├── iap-verification.ts # IAP receipt verification (Apple/Google)
-│       └── types/chat.types.ts # Cloud Function types (import from schemas)
-├── functions-python/       # Firebase Cloud Functions (Python) - layered architecture: orchestrators/ (business logic), data/ (Firestore ops), utils/ (logger, sentry)
-├── firestore/              # Database tooling
-│   ├── schemas/           # **SINGLE SOURCE OF TRUTH** for type definitions
-│   │   ├── user.schema.ts    # User document schema
-│   │   ├── boss.schema.ts    # Boss document schema
-│   │   ├── chat.schema.ts    # Chat data schemas (OpenAI-compatible)
-│   │   ├── entry.schema.ts   # Timeline entry schemas
-│   │   └── index.ts          # Exports all schemas
+├── services/               # Firebase services (auth, chat, notifications)
+├── types/                  # TypeScript definitions
+├── firestore/
+│   ├── schemas/           # Type definitions (single source of truth)
 │   └── migrations/        # Data migration scripts
-├── docs/                   # Documentation
-├── scripts/                # Automation scripts
-├── firestore.rules         # Firestore Security Rules
-└── firestore.indexes.json  # Firestore Indexes
+├── functions/              # Cloud Functions (TypeScript)
+├── functions-python/       # Cloud Functions (Python)
+└── docs/                   # Documentation
 ```
 
-### Type System Architecture
+## Documentation
 
-**Single Source of Truth: `firestore/schemas/`**
+- **[Setup Instructions](./SETUP.md)** - Detailed project setup
+- **[Firebase Deployment](./docs/firebase-deployment.md)** - Deploy Cloud Functions, rules, indexes
+- **[Firestore Management](./docs/firestore-management.md)** - Schemas, migrations, security
+- **[Authentication](./docs/authentication.md)** - Email links, Apple/Google sign-in
+- **[Subscriptions & IAP](./docs/subscriptions-iap.md)** - In-app purchases setup
+- **[All Documentation](./docs/README.md)** - Complete documentation index
 
-All Firestore document type definitions originate from schemas:
+## Development
 
-```typescript
-// ✅ CORRECT: Schemas define the structure
-// firestore/schemas/user.schema.ts
-export interface UserSchema {
-  email: string;
-  name: string;
-  // Custom fields with strict typing
-  [key: `custom_${string}`]: string | string[] | number | boolean | null | undefined;
-}
-
-// ✅ CORRECT: App types import from schemas
-// types/index.ts
-import type { UserSchema } from '@/firestore/schemas';
-export type UserProfile = UserSchema;
-
-// ✅ CORRECT: Cloud Functions import from schemas
-// functions/src/types/chat.types.ts
-import type { ChatMessageSchema } from '../../../firestore/schemas';
-export type FirestoreChatMessage = ChatMessageSchema;
+```bash
+npm run dev      # Start dev server (choose platform)
+npm run web      # Web browser only
+npm run ios      # iOS simulator
+npm run android  # Android emulator
+npm test         # Run tests
 ```
 
-**Architecture flow:**
-```
-firestore/schemas/          ← Single Source of Truth
-    ↓ imports
-types/index.ts              ← App types
-    ↓ used by
-app/, services/, components/
+### When to Rebuild
 
-firestore/schemas/          ← Single Source of Truth
-    ↓ imports
-functions/src/types/        ← Cloud Function types
-    ↓ used by
-functions/src/*.ts
-```
+Only rebuild native code when:
+- Adding native modules or Expo plugins
+- Changing `app.config.ts`
+- Updating Expo SDK version
 
-**Never duplicate types** - always import from `firestore/schemas/`
+Regular JavaScript/TypeScript changes use hot reload automatically.
 
-📖 **For detailed setup, see [SETUP.md](./SETUP.md)**
+## Deployment
+
+This repository includes GitHub Actions workflows for CI/CD:
+
+| Workflow | Purpose |
+|----------|---------|
+| `eas-build.yml` | Build iOS/Android apps via Expo EAS |
+| `eas-update.yml` | Push OTA updates via Expo EAS |
+| `firebase-functions-deploy.yml` | Deploy Cloud Functions |
+| `firebase-firestore-deploy.yml` | Deploy Firestore rules and indexes |
+| `firebase-hosting-deploy.yml` | Deploy web version to Firebase Hosting |
+| `firebase-remoteconfig-deploy.yml` | Deploy Remote Config |
+
+Workflows are located in `.github/workflows/`. Configure repository secrets in GitHub Settings for automated deployments.
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please ensure your code:
+- Uses TypeScript with strict typing
+- Follows the existing code style
+- Includes appropriate tests
+- Updates documentation as needed
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+Built with [Expo](https://expo.dev) and [Firebase](https://firebase.google.com) by [Ozma](https://ozma.io)
