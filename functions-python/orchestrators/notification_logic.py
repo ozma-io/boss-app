@@ -81,7 +81,7 @@ MAX_NOTIFICATIONS_PER_CATEGORY: dict[UserCategory, int | None] = {
     'NEW_USER_EMAIL': None,
     'ACTIVE_USER_PUSH': None,
     'ACTIVE_USER_EMAIL': None,
-    'INACTIVE_USER_EMAIL': None,
+    'INACTIVE_USER_EMAIL': 5,  # Stop after 5 attempts to re-engage inactive users
 }
 
 

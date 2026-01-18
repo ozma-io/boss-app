@@ -67,6 +67,7 @@ Each user belongs to exactly ONE category:
    - CTA: "You have unread messages in app"
    - Interval schedule: 1h, 24h, 48h, 7d, 14d (slower cadence for inactive users)
    - Priority category: overrides NEW/ACTIVE if conditions met
+   - Max 5 emails: Stop attempting to re-engage after 5 emails to reduce costs
 
 7. NO_CHANNEL_AVAILABLE
    - User has neither push nor email available (unsubscribed + no push permissions)

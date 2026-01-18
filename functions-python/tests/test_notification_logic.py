@@ -161,7 +161,7 @@ def test_should_send_notification_progressive_intervals():
 
 
 def test_should_send_notification_max_limit():
-    """Test that EMAIL_ONLY_USER stops after 5 notifications."""
+    """Test that EMAIL_ONLY_USER and INACTIVE_USER_EMAIL stop after 5 notifications."""
     now = datetime.now(timezone.utc)
     
     # User with 4 notifications (count=4) - should still send 5th
@@ -193,6 +193,27 @@ def test_should_send_notification_max_limit():
         }
     }
     assert should_send_notification(user_10th, 'EMAIL_ONLY_USER') is False
+    
+    # Test INACTIVE_USER_EMAIL limit
+    # User with 4 inactive emails - should still send 5th
+    user_inactive_4th = {
+        'createdAt': (now - timedelta(days=60)).isoformat(),
+        'notification_state': {
+            'notification_count': 4,
+            'last_notification_at': (now - timedelta(days=15)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_inactive_4th, 'INACTIVE_USER_EMAIL') is True
+    
+    # User with 5 inactive emails - reached limit, should NOT send
+    user_inactive_5th = {
+        'createdAt': (now - timedelta(days=60)).isoformat(),
+        'notification_state': {
+            'notification_count': 5,
+            'last_notification_at': (now - timedelta(days=15)).isoformat(),
+        }
+    }
+    assert should_send_notification(user_inactive_5th, 'INACTIVE_USER_EMAIL') is False
     
     # Test that other categories don't have limits (NEW_USER_PUSH should work with count=10)
     user_push_10th = {
